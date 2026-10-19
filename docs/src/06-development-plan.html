@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Development Plan — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="06-Development-Plan">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Development Plan"; } }</style>
+</head>
+<body class="plan">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Production document</div>
+  <h1>Development Plan</h1>
+  <div class="subtitle">Scope, roadmap, technical architecture, game systems, assets, resources and open questions for a solo developer.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Engine</dt><dd>Babylon.js 9 (TypeScript) · WebGPU + WebGL2</dd>
+    <dt>Team</dt><dd>Solo developer</dd>
+    <dt>First milestone</dt><dd>Episode 1 release (about 34 weeks)</dd>
+    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#decisions">Key Decisions</a></li>
+    <li><span class="n">02</span><a href="#roadmap">Scope and Roadmap</a>
+      <ol><li>The honest size of the project</li><li>Phases and exit criteria</li><li>Episodes 2–5</li><li>Solo cut list</li></ol></li>
+    <li><span class="n">03</span><a href="#architecture">Technical Architecture</a>
+      <ol><li>Stack</li><li>Repository layout</li><li>Core architecture</li><li>Rendering</li><li>Performance budgets</li><li>Save system</li><li>Browser support</li><li>Input and accessibility</li></ol></li>
+    <li><span class="n">04</span><a href="#systems">Game Systems</a>
+      <ol><li>System matrix</li><li>Fail state</li><li>Cross-episode tracking</li><li>Entity catalogue</li></ol></li>
+    <li><span class="n">05</span><a href="#assets">Assets and Resources</a>
+      <ol><li>Tools</li><li>Episode 1 asset list</li><li>Asset sources</li><li>Pipeline</li><li>Learning</li><li>Cultural research</li><li>Budget</li></ol></li>
+    <li><span class="n">06</span><a href="#questions">Open Questions</a></li>
+  </ol>
+</nav>
+
+<h2 id="decisions"><span class="num">01</span>Key Decisions</h2>
+<p class="lead">This plan turns the proposal and the five episode specifications into a plan one person can carry out. These decisions are fixed unless deliberately revisited.</p>
+<table>
+  <thead><tr><th style="width:22%">Decision</th><th style="width:28%">Choice</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Team</strong></td><td>Solo developer</td><td>Sized for one person; art and audio come from libraries plus targeted custom work.</td></tr>
+    <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript)</td><td>Mature WebGPU with WebGL2 fallback from one codebase, built-in Havok physics, spatial audio, inspector, no editor lock-in.</td></tr>
+    <tr><td><strong>Assets</strong></td><td>Libraries + custom Blender work</td><td>Generic props from CC0 or paid libraries; Khmer-specific hero assets made custom.</td></tr>
+    <tr><td><strong>First milestone</strong></td><td>Episode 1 released on its own</td><td>Proves the technology, tone and pipeline before committing to four more episodes.</td></tr>
+  </tbody>
+</table>
+
+<h3>Versions checked (October 2026)</h3>
+<table>
+  <thead><tr><th style="width:50%">Package</th><th>Version</th></tr></thead>
+  <tbody>
+    <tr><td><code>@babylonjs/core</code>, <code>@babylonjs/loaders</code></td><td>9.31.0</td></tr>
+    <tr><td><code>@babylonjs/havok</code></td><td>1.3.14</td></tr>
+    <tr><td><code>vite</code></td><td>8.3.4</td></tr>
+    <tr><td><code>typescript</code></td><td>7.0.2</td></tr>
+    <tr><td>Node.js (installed)</td><td>26.8.2</td></tr>
+  </tbody>
+</table>
+<p class="small">Pin exact versions in <code>package.json</code> when the project is created, and upgrade deliberately.</p>
+
+<h2 id="roadmap"><span class="num">02</span>Scope and Roadmap</h2>
+
+<h3><span class="num">2.1</span>The honest size of the project</h3>
+<p>The original proposal budgeted 11 months for a five-person team, roughly 55 person-months. Doing the same scope alone means expecting <strong>2.5–4 years</strong>, depending on hours per week. That is a reason to plan carefully, not to stop:</p>
+<ol>
+  <li><strong>Ship Episode 1 alone first</strong>, as a free or pay-what-you-want release, to test the idea with real players.</li>
+  <li><strong>Build every system once</strong> in Episode 1 and reuse it in Episodes 2–5.</li>
+  <li><strong>Cut cost, not atmosphere.</strong> Darkness, fog, sound and first-person framing hide a lot.</li>
+</ol>
+<p class="small">Estimates assume about 25 focused hours per week. Scale them to your real availability.</p>
+
+<div class="cards">
+  <div class="card"><div class="k">Phase 0</div><div class="v">Pre-production</div><div class="d">3 weeks</div></div>
+  <div class="card"><div class="k">Phase 1</div><div class="v">Technical spikes</div><div class="d">4 weeks</div></div>
+  <div class="card"><div class="k">Phase 2</div><div class="v">Greybox</div><div class="d">5 weeks</div></div>
+  <div class="card"><div class="k">Phase 3</div><div class="v">Core systems</div><div class="d">7 weeks</div></div>
+  <div class="card"><div class="k">Phase 4</div><div class="v">Art and audio</div><div class="d">10 weeks</div></div>
+  <div class="card"><div class="k">Phase 5</div><div class="v">Polish and release</div><div class="d">5 weeks</div></div>
+</div>
+<p><strong>Total: about 34 weeks (8 months) to the Episode 1 release.</strong> Episodes 2–5 then take about 4–6 months each.</p>
+
+<h3><span class="num">2.2</span>Phases and exit criteria</h3>
+<p>Each phase ends with a checklist. Don't start the next phase until it passes, unless you consciously accept the gap.</p>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 0 · Pre-production</h3><span class="time">3 weeks</span></div>
+  <div class="act-body">
+    <table>
+      <thead><tr><th>Task</th><th style="width:36%">Output</th></tr></thead>
+      <tbody>
+        <tr><td>Resolve the story gaps marked "before Episode 1" (section 6)</td><td>Updated design notes</td></tr>
+        <tr><td>Write the Episode 1 beat sheet: every scene, trigger, item and line in order</td><td>Episode 1 beat sheet</td></tr>
+        <tr><td>Define the fail state (what happens when Sora is caught)</td><td>Short specification</td></tr>
+        <tr><td>Build a visual reference board: 1930s Battambang houses, funeral tents, lamps, clothing</td><td>Reference folder with sources</td></tr>
+        <tr><td>Write a one-page art bible: palette, lighting rules, post-processing, texture density</td><td>Art bible</td></tr>
+        <tr><td>Install the toolchain (section 5.1)</td><td>Working Blender → glb → browser pipeline</td></tr>
+        <tr><td>Work through the Babylon.js getting-started docs and playground</td><td>Comfort with scenes, cameras, lights, materials, loaders</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Exit:</strong> you can describe all of Episode 1 from start to end without opening the specification.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 1 · Technical spikes</h3><span class="time">4 weeks</span></div>
+  <div class="act-body">
+    <p>Small throwaway prototypes that answer risky technical questions before they become expensive.</p>
+    <table>
+      <thead><tr><th style="width:24%">Spike</th><th>Question</th><th style="width:38%">Pass condition</th></tr></thead>
+      <tbody>
+        <tr><td>S1 First-person controller</td><td>Does movement feel right on raised floors, stairs and ladders?</td><td>Walk, crouch, climb stairs, head-bob; no snagging on 1 cm floor gaps</td></tr>
+        <tr><td>S2 Lamp lighting</td><td>Can one shadowed lamp and many small flames run on a laptop?</td><td>30 fps at 720p on integrated graphics with 1 shadowed light and 20+ flame lights</td></tr>
+        <tr><td>S3 Asset pipeline</td><td>Can a Blender model reach the browser compressed?</td><td>.blend → .glb → Draco/meshopt + KTX2 → loads with correct materials</td></tr>
+        <tr><td>S4 Spatial audio</td><td>Can players locate an unseen enemy by sound?</td><td>Eyes closed, you can point to a footstep source</td></tr>
+        <tr><td>S5 Diegetic sketchbook</td><td>Can a 3D book show readable, updatable pages?</td><td>Open, flip, new note appears; readable at 720p</td></tr>
+        <tr><td>S6 Save and load</td><td>Does state survive a refresh and export as a code?</td><td>Save, reload, restore; export and import a save code</td></tr>
+        <tr><td>S7 Atmosphere</td><td>Can the 1930s look be done cheaply?</td><td>Grain, vignette, aberration, sepia grade and fog within budget</td></tr>
+        <tr><td>S8 WebGPU / WebGL2</td><td>Does the same build run on both?</td><td>Same scene runs in Chrome with WebGPU on and off</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Exit:</strong> all spikes pass, or the design is adjusted (for example, fewer shadowed lights).</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 2 · Episode 1 greybox</h3><span class="time">5 weeks</span></div>
+  <div class="act-body">
+    <p>Build the whole episode from grey boxes: no final art, but every room at the right scale and every trigger, puzzle, enemy path and line of text in place. Consider replacing the carriage journey with a fade and a sketchbook entry.</p>
+    <p><strong>Exit:</strong> a friend can play Episode 1 start to finish, and it is scary even with boxes. If it isn't, fix the pacing now; art will not save it.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 3 · Core systems</h3><span class="time">7 weeks</span></div>
+  <div class="act-body">
+    <p>Turn the spike code into reusable systems (section 4): interaction, inventory, sketchbook, lamp and resources, stealth perception, entity AI, scripted events, saves, settings and accessibility. Add automated tests for game logic.</p>
+    <p><strong>Exit:</strong> adding a new item, note or trigger means editing data, not engine code.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 4 · Art and audio</h3><span class="time">10 weeks</span></div>
+  <div class="act-body">
+    <table>
+      <thead><tr><th style="width:18%">Weeks</th><th>Focus</th></tr></thead>
+      <tbody>
+        <tr><td>1–3</td><td>Hero architecture: stilt house, funeral tent, under-house area</td></tr>
+        <tr><td>4–5</td><td>Props: library assets retextured to the palette, plus custom Khmer props</td></tr>
+        <tr><td>6</td><td>Characters: Yay Mey, the corpse, the entity (shadow and mask)</td></tr>
+        <tr><td>7</td><td>Lighting bake, post-processing, rain and wind effects</td></tr>
+        <tr><td>8–9</td><td>Sound: ambience, foley, horror cues, entity sounds, music</td></tr>
+        <tr><td>10</td><td>Performance pass: draw calls, polygons, texture memory, load size</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Exit:</strong> meets the performance budgets (section 3.5) on both reference machines.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Phase 5 · Polish, test, release</h3><span class="time">5 weeks</span></div>
+  <div class="act-body">
+    <ul>
+      <li>Five or more outside playtesters; watch without helping and note where they get lost or bored.</li>
+      <li>Cultural review by at least one Cambodian advisor.</li>
+      <li>Browser testing: Chrome, Edge, Firefox and Safari on Windows and macOS.</li>
+      <li>Store or landing page, trailer capture, release.</li>
+    </ul>
+    <p><strong>Exit:</strong> Episode 1 is public. Collect feedback before starting Episode 2.</p>
+  </div>
+</div>
+
+<h3><span class="num">2.3</span>Episodes 2–5</h3>
+<table>
+  <thead><tr><th style="width:20%">Episode</th><th>New systems</th><th style="width:26%">Reused</th><th style="width:13%">Estimate</th></tr></thead>
+  <tbody>
+    <tr><td>2 · Whispering Pagoda</td><td>Lamp shutter, surface noise, breath, distractions, mirror beams, timed escape</td><td>Everything from Episode 1</td><td>4–5 months</td></tr>
+    <tr><td>3 · Drowned Village</td><td>Rowboat, wetness, safe-zone lights, water-only enemy pathing</td><td>Fuses reuse the key-fragment pattern</td><td>5–6 months</td></tr>
+    <tr><td>4 · Rubber Plantation</td><td>Compass, fog loop, voice-mimic taboo, furnace sequence</td><td>Gears reuse inventory slots</td><td>4–5 months</td></tr>
+    <tr><td>5 · Sunken Sanctuary</td><td>Hub, boss ritual, chant choices, ending logic</td><td>Each trial reuses an earlier system</td><td>5–6 months</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">2.4</span>Solo cut list</h3>
+<p>If time runs short, cut from the top. None of these damages the core experience.</p>
+<ol>
+  <li>Playable carriage or train journey → fade to black with sound and a sketchbook entry.</li>
+  <li>Spoken dialogue → written text, with Khmer voice for key lines only.</li>
+  <li>Full-body characters → Sora is hands-only; NPCs mostly seated, still or in silhouette.</li>
+  <li>Many unique props → fewer props, varied with material tints and decals.</li>
+  <li>Physics-driven debris in escapes → scripted animation.</li>
+  <li>Rowboat physics (Episode 3) → boat on a path with limited steering.</li>
+</ol>
+<div class="callout"><span class="label">Avoid as a solo developer</span>
+<ul>
+  <li>Building a level editor: use Blender as the level editor and export metadata with custom properties.</li>
+  <li>Writing engine features Babylon.js already has (physics, audio, picking, GUI, post-processing).</li>
+  <li>Starting Episode 2 content before Episode 1 is released.</li>
+  <li>Polishing art in a room whose gameplay is not final.</li>
+</ul></div>
+
+<h2 id="architecture"><span class="num">03</span>Technical Architecture</h2>
+
+<h3><span class="num">3.1</span>Stack</h3>
+<table>
+  <thead><tr><th style="width:18%">Layer</th><th style="width:34%">Choice</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Language</td><td>TypeScript (strict)</td><td>Babylon.js itself is written in TypeScript</td></tr>
+    <tr><td>Build</td><td>Vite</td><td>Fast dev server; static build output</td></tr>
+    <tr><td>Engine</td><td><code>@babylonjs/core</code> (ES modules)</td><td>Import only what is used to keep the bundle small</td></tr>
+    <tr><td>Loaders</td><td><code>@babylonjs/loaders</code> (glTF 2.0)</td><td>Draco/meshopt and KTX2 decoders loaded on demand</td></tr>
+    <tr><td>Rendering</td><td>WebGPU with WebGL2 fallback</td><td>Detect support at startup and create the matching engine</td></tr>
+    <tr><td>Physics</td><td>Havok</td><td>Character controller, collisions, triggers</td></tr>
+    <tr><td>Audio</td><td>Babylon.js Audio Engine v2</td><td>Spatial sound, buses, reverb; unlocked on first click</td></tr>
+    <tr><td>Interface</td><td>Babylon GUI on meshes + dynamic textures</td><td>Diegetic sketchbook and gauges; HTML only for menus and loading</td></tr>
+    <tr><td>Navigation</td><td>Recast navmesh plugin</td><td>Enemy pathing (check current docs for the package)</td></tr>
+    <tr><td>Storage</td><td>IndexedDB</td><td>Save slots and settings</td></tr>
+    <tr><td>Tests</td><td>Vitest; Playwright smoke test</td><td>Test game logic, not rendering</td></tr>
+    <tr><td>Assets</td><td>Blender → glTF → glTF-Transform</td><td>One command rebuilds all assets</td></tr>
+    <tr><td>Hosting</td><td>Static host (Cloudflare Pages, Netlify, GitHub Pages, itch.io)</td><td>Check per-file size limits</td></tr>
+    <tr><td>Source control</td><td>Git + Git LFS</td><td>LFS for .blend, .wav and other binary sources</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.2</span>Repository layout</h3>
+<pre>/
+├── docs/                 Design documents, PDFs, sources
+├── art-source/           .blend, textures, raw audio (Git LFS)
+├── tools/                Asset and document build scripts
+├── public/assets/
+│   ├── shared/           Lamp, hands, satchel, sketchbook, common sounds
+│   └── ep1/              Episode 1 compressed models, textures, audio
+├── src/
+│   ├── main.ts           Boot: detect WebGPU, create engine, load menu
+│   ├── core/             Engine wrapper, scene manager, loader, event bus
+│   ├── player/           Controller, camera, interaction, hands
+│   ├── systems/          Inventory, sketchbook, lamp, stealth, save, settings
+│   ├── ai/               Perception, state machines, entity types
+│   ├── audio/            Audio setup, buses, ambience zones, cues
+│   ├── render/           Post-processing, materials, quality presets
+│   ├── ui/               Diegetic widgets, HTML menus
+│   ├── episodes/ep1/     Scene setup, scripted events, puzzles, data
+│   └── data/             Shared item, note and dialogue definitions
+└── tests/</pre>
+
+<h3><span class="num">3.3</span>Core architecture</h3>
+<p><strong>Principle: systems are generic; episodes are data plus a few scripts.</strong></p>
+<table>
+  <thead><tr><th style="width:24%">Part</th><th>How it works</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Event bus</strong></td><td>Systems never call each other directly. The lamp announces <code>lamp:extinguished</code>; the AI listens and lowers visibility. This keeps systems reusable.</td></tr>
+    <tr><td><strong>Game flags</strong></td><td>One key-value store holds all story progress (for example <code>ep1.gramophone.solved</code>). Saves serialise it; Episode 5 reads flags from Episodes 1–4.</td></tr>
+    <tr><td><strong>Scripted sequences</strong></td><td>Written as readable async functions (walk to, play sound, wait for look), so no visual scripting tool is needed.</td></tr>
+    <tr><td><strong>State machines</strong></td><td>Entities and puzzles use small explicit state machines (idle → patrol → investigate → chase → lose track) in plain TypeScript.</td></tr>
+    <tr><td><strong>Blender as level editor</strong></td><td>Triggers, spawn points, patrol nodes, hiding spots and audio zones are empties with custom properties, exported to glTF and turned into game objects by the loader.</td></tr>
+    <tr><td><strong>Area streaming</strong></td><td>Each episode is split into areas loaded and unloaded as asset containers. Shared assets stay loaded; unloaded areas dispose their meshes, materials and textures.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.4</span>Rendering</h3>
+<table>
+  <thead><tr><th style="width:24%">Feature</th><th>Approach</th></tr></thead>
+  <tbody>
+    <tr><td>Lamp light</td><td>One point light with shadows; usually the only dynamic shadow caster.</td></tr>
+    <tr><td>Candles and small flames</td><td>Unshadowed point lights with flicker, emissive meshes and glow; test Babylon 9's clustered lighting in spike S2.</td></tr>
+    <tr><td>Static lighting</td><td>Baked lightmaps or ambient occlusion from Blender for architecture.</td></tr>
+    <tr><td>Fog</td><td>Scene fog plus animated fog cards near the player; a volumetric shader only if it fits the budget (important for Episode 4).</td></tr>
+    <tr><td>Post-processing</td><td>Grain, chromatic aberration, vignette, bloom and colour grading (a sepia look for Episode 1).</td></tr>
+    <tr><td>Special materials</td><td>Node Material Editor for the entity shadow, wet surfaces, blood on the map and glowing runes.</td></tr>
+    <tr><td>Quality presets</td><td>Low / Medium / High, chosen automatically from a quick benchmark on first launch.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.5</span>Performance budgets</h3>
+<table>
+  <thead><tr><th style="width:30%">Budget</th><th style="width:34%">Target</th><th>How to check</th></tr></thead>
+  <tbody>
+    <tr><td>Frame rate</td><td>60 fps at 1080p (dedicated GPU) · 30 fps at 720p (integrated)</td><td>Babylon Inspector on a real integrated-graphics laptop</td></tr>
+    <tr><td>Draw calls</td><td>120 or fewer</td><td>Inspector statistics; instancing and merged meshes</td></tr>
+    <tr><td>Visible polygons</td><td>150,000 or fewer</td><td>Inspector; LODs on large props</td></tr>
+    <tr><td>Initial download</td><td>85 MB or less per episode; first area under 20 MB</td><td>Browser network tab with cache disabled</td></tr>
+    <tr><td>Texture memory</td><td>About 256 MB per area</td><td>KTX2 everywhere; 2K hero, 1K or 512 props</td></tr>
+    <tr><td>JavaScript bundle</td><td>3 MB or less (gzipped)</td><td>Vite build report</td></tr>
+  </tbody>
+</table>
+<p class="small">Choose two reference machines on day one (your main computer and an inexpensive integrated-graphics laptop) and test on both every week.</p>
+
+<h3><span class="num">3.6</span>Save system</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>What is saved</td><td>Episode, area, checkpoint, flags, inventory, sketchbook entries, resource levels, settings and ending counters (taboos broken, lore notes found).</td></tr>
+    <tr><td>When</td><td>Fixed checkpoints and episode completion; no free saving, which keeps the tension.</td></tr>
+    <tr><td>Where</td><td>IndexedDB, three slots, versioned, with migrations for future changes.</td></tr>
+    <tr><td>Save codes</td><td>JSON → compressed → URL-safe base64 with a checksum, for moving progress between devices and into the next episode.</td></tr>
+    <tr><td>Security note</td><td>Browser-side encryption cannot stop a determined player because the key ships with the game. Save codes are tamper-evident, not secret, which is fine for a single-player game.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.7</span>Browser support</h3>
+<table>
+  <thead><tr><th style="width:34%">Browser</th><th>Expected path</th></tr></thead>
+  <tbody>
+    <tr><td>Chrome, Edge</td><td>WebGPU</td></tr>
+    <tr><td>Safari</td><td>WebGPU on macOS 26+; WebGL2 on older macOS</td></tr>
+    <tr><td>Firefox</td><td>WebGPU on Windows and Apple Silicon Macs; WebGL2 elsewhere</td></tr>
+    <tr><td>Mobile</td><td>Not supported; show a friendly message</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.8</span>Input and accessibility</h3>
+<ul>
+  <li>Keyboard and mouse first; gamepad support through the Gamepad API.</li>
+  <li>Rebindable keys, mouse sensitivity, invert Y, field-of-view slider.</li>
+  <li>Subtitles and captions for important sounds, with a visual-cue option for deaf and hard-of-hearing players.</li>
+  <li>Toggles for head-bob, film grain and chromatic aberration (motion sickness and comfort).</li>
+  <li>Brightness calibration screen.</li>
+  <li>English and Khmer text from the start, with all strings stored in data files.</li>
+</ul>
+
+<h2 id="systems"><span class="num">04</span>Game Systems</h2>
+
+<h3><span class="num">4.1</span>System matrix</h3>
+<p>Every mechanic from the five episodes, with the episode that first needs it. Build each system once and extend it.</p>
+<table>
+  <thead><tr><th style="width:30%">System</th><th style="width:7%">Ep</th><th style="width:15%">Reused in</th><th>Build notes</th></tr></thead>
+  <tbody>
+    <tr><td>First-person controller</td><td>1</td><td>All</td><td>Havok character controller; crouch lowers camera and noise</td></tr>
+    <tr><td>Interaction raycast</td><td>1</td><td>All</td><td>Ray from screen centre; feedback on the hands, never a HUD crosshair</td></tr>
+    <tr><td>Inventory (satchel)</td><td>1</td><td>All</td><td>Data-driven items; satchel opens in front of the camera</td></tr>
+    <tr><td>Sketchbook</td><td>1</td><td>All</td><td>3D book; pages rendered to texture; entries unlocked by flags</td></tr>
+    <tr><td>Kerosene lamp</td><td>1</td><td>All</td><td>Oil gauge is a mesh on the lamp; refills are pickups</td></tr>
+    <tr><td>Matches</td><td>1</td><td>5</td><td>Count shown on the matchbox</td></tr>
+    <tr><td>Timed upkeep (incense)</td><td>1</td><td>5</td><td>Generic decaying resource: timer, warnings, consequence</td></tr>
+    <tr><td>Hiding spots</td><td>1</td><td>2, 4</td><td>Trigger volume + lamp off = hidden</td></tr>
+    <tr><td>Perception: sight</td><td>1</td><td>All</td><td>View cone + line-of-sight ray; lamp light raises visibility</td></tr>
+    <tr><td>Perception: hearing</td><td>1</td><td>All</td><td>Noise events with loudness and radius</td></tr>
+    <tr><td>Moves when unwatched</td><td>1</td><td>5</td><td>Checks camera view and occlusion</td></tr>
+    <tr><td>"Do not turn around"</td><td>1</td><td>4, 5</td><td>Tracks camera rotation against a reference direction</td></tr>
+    <tr><td>Scripted sequences</td><td>1</td><td>All</td><td>Async scripts reading and writing flags</td></tr>
+    <tr><td>Puzzle framework</td><td>1</td><td>All</td><td>Slots, dials, combinations</td></tr>
+    <tr><td>Ritual sequence</td><td>1</td><td>3, 4, 5</td><td>Ordered steps with a timer and failure handling</td></tr>
+    <tr><td>Checkpoints and saves</td><td>1</td><td>All</td><td>See section 3.6</td></tr>
+    <tr><td>Lamp shutter</td><td>2</td><td>3, 4, 5</td><td>Lamp states: open / shuttered / out</td></tr>
+    <tr><td>Surface noise</td><td>2</td><td>All</td><td>Material tags on ground meshes</td></tr>
+    <tr><td>Hold breath</td><td>2</td><td>5</td><td>Short timed action with recovery</td></tr>
+    <tr><td>Throwable distractions</td><td>2</td><td>3, 4</td><td>Physics throw + noise event on impact</td></tr>
+    <tr><td>Mirror light beams</td><td>2</td><td>5</td><td>Reflected raycasts between rotatable mirrors</td></tr>
+    <tr><td>Timed escapes</td><td>2</td><td>3, 4</td><td>Scripted hazards with a checkpoint at the start</td></tr>
+    <tr><td>Rowboat</td><td>3</td><td>—</td><td>Simplest viable version first</td></tr>
+    <tr><td>Wetness and temperature</td><td>3</td><td>—</td><td>Drains in water, recovers near heat</td></tr>
+    <tr><td>Safe-zone lights</td><td>3</td><td>4</td><td>Area that repels an entity type</td></tr>
+    <tr><td>Sealing windows</td><td>3</td><td>—</td><td>Puzzle slots that change a room's flooding</td></tr>
+    <tr><td>Water-only enemy</td><td>3</td><td>—</td><td>Separate navmesh of water surfaces</td></tr>
+    <tr><td>Compass</td><td>4</td><td>5</td><td>Needle follows world north</td></tr>
+    <tr><td>Fog loop</td><td>4</td><td>—</td><td>Wrong turns quietly loop the player</td></tr>
+    <tr><td>Voice-mimic taboo</td><td>4</td><td>—</td><td>Turning or noise counts as answering</td></tr>
+    <tr><td>Furnace and valves</td><td>4</td><td>—</td><td>Resource-juggling ritual variant</td></tr>
+    <tr><td>Crawling</td><td>4</td><td>5</td><td>Extends crouch; forced slow speed</td></tr>
+    <tr><td>Hub with trials</td><td>5</td><td>—</td><td>Flags per trial</td></tr>
+    <tr><td>Chant choices</td><td>5</td><td>—</td><td>Choices drawn in the sketchbook</td></tr>
+    <tr><td>Boss ritual</td><td>5</td><td>—</td><td>Ritual sequence + entity attacks</td></tr>
+    <tr><td>Ending resolver</td><td>5</td><td>—</td><td>Reads cross-episode counters</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">4.2</span>Fail state</h3>
+<p>The episode specifications never said what happens when Sora fails. Recommended:</p>
+<ul>
+  <li>Caught → short scare, fade to black, a page torn from the sketchbook, restart at the last checkpoint.</li>
+  <li>No health bar. Episode 5's shadow damage is shown by darkening and sound, with two or three hits before failure.</li>
+  <li>Running out of oil doesn't kill; it makes the dark more dangerous.</li>
+</ul>
+
+<h3><span class="num">4.3</span>Cross-episode tracking</h3>
+<table>
+  <thead><tr><th style="width:30%">Counter</th><th>Example sources</th></tr></thead>
+  <tbody>
+    <tr><td>Taboos broken</td><td>Neglecting vigil duties (Ep 1), wasting rice offerings (Ep 2), answering a mimic (Ep 4)</td></tr>
+    <tr><td>Lore notes found / total</td><td>Hidden notes in every episode</td></tr>
+    <tr><td>Ritual errors</td><td>Mistakes during counter-rituals in Episodes 1–4 and the chants in Episode 5</td></tr>
+    <tr><td>Key choices</td><td>Story choices (to be designed for Episodes 1–4)</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">4.4</span>Entity catalogue</h3>
+<table>
+  <thead><tr><th style="width:20%">Entity</th><th style="width:8%">Ep</th><th style="width:20%">Senses</th><th>Behaviour</th><th style="width:24%">Counter-play</th></tr></thead>
+  <tbody>
+    <tr><td>Neak Ta shadow</td><td>1–5</td><td>Sight + hearing; stronger each episode</td><td>Mostly scripted; roams set areas</td><td>Darkness, hiding, rituals</td></tr>
+    <tr><td>Shadow roamer</td><td>1</td><td>Mostly hearing</td><td>Patrol and investigate noise</td><td>Quiet movement, lamp off</td></tr>
+    <tr><td>Pret</td><td>2, 5</td><td>Hearing only</td><td>Patrol stupa paths; drawn to offerings</td><td>Crouch, soft ground, breath, distractions</td></tr>
+    <tr><td>Chhlong Tonle</td><td>3</td><td>Senses the player in water</td><td>Moves only through water</td><td>Stay dry, safe-zone lights</td></tr>
+    <tr><td>Khmaoch Prey</td><td>4</td><td>Looking back or replying</td><td>Mimics voices from behind</td><td>Walk on, don't turn, stay silent</td></tr>
+    <tr><td>Neak Ta Guardian</td><td>5</td><td>Full awareness</td><td>Area attacks, tendrils</td><td>Complete the ritual while evading</td></tr>
+  </tbody>
+</table>
+
+<h2 id="assets"><span class="num">05</span>Assets and Resources</h2>
+
+<h3><span class="num">5.1</span>Tools</h3>
+<table>
+  <thead><tr><th style="width:26%">Purpose</th><th style="width:30%">Tool</th><th style="width:12%">Cost</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Code editor</td><td>VS Code</td><td>Free</td><td></td></tr>
+    <tr><td>3D, UVs, baking, level layout</td><td>Blender (latest LTS)</td><td>Free</td><td>Not installed yet</td></tr>
+    <tr><td>Asset compression</td><td>glTF-Transform CLI</td><td>Free</td><td>Draco/meshopt, KTX2, resizing</td></tr>
+    <tr><td>KTX2 encoder</td><td>KTX-Software (Khronos)</td><td>Free</td><td>Used by glTF-Transform</td></tr>
+    <tr><td>Texture painting</td><td>Krita · Substance 3D Painter</td><td>Free / paid</td><td>ArmorPaint, Material Maker as open alternatives</td></tr>
+    <tr><td>Image editing</td><td>GIMP · Photopea</td><td>Free</td><td></td></tr>
+    <tr><td>Audio editing</td><td>Audacity · Reaper</td><td>Free / ~US$60</td><td></td></tr>
+    <tr><td>Recording</td><td>USB microphone, quiet room</td><td>—</td><td>Foley is cheap to record yourself</td></tr>
+    <tr><td>Binary version control</td><td>Git LFS</td><td>Free</td><td>Not installed yet</td></tr>
+    <tr><td>Babylon tools</td><td>Playground, Sandbox, Node Material Editor, Inspector</td><td>Free</td><td>Browser-based</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">5.2</span>Episode 1 asset list</h3>
+<p class="small">Source: <strong>C</strong> custom (Blender) · <strong>L</strong> library asset, retextured · <strong>K</strong> kitbash · <strong>R</strong> record yourself.</p>
+<h4>Environments</h4>
+<table>
+  <thead><tr><th style="width:40%">Asset</th><th style="width:10%">Source</th><th style="width:14%">Priority</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Phnom Penh studio interior</td><td>K</td><td><span class="tag high">High</span></td><td>Small room; reuse furniture later</td></tr>
+    <tr><td>Village path and banana grove</td><td>K</td><td><span class="tag med">Medium</span></td><td>Instanced banana plants; mostly darkness and rain</td></tr>
+    <tr><td>Courtyard ground, mud, puddles</td><td>C</td><td><span class="tag high">High</span></td><td>Wet mud material is a key visual</td></tr>
+    <tr><td>Teak stilt house (exterior, hall, Sok's room)</td><td>C</td><td><span class="tag crit">Critical</span></td><td>Modular kit: planks with gaps, walls, posts, stairs, roof, shutters</td></tr>
+    <tr><td>Under-house area and storage shed</td><td>C</td><td><span class="tag high">High</span></td><td>Reuses house pillars</td></tr>
+    <tr><td>White funeral tent</td><td>C</td><td><span class="tag crit">Critical</span></td><td>Bamboo frame; cloth with wind animation</td></tr>
+  </tbody>
+</table>
+<h4>Props, characters and audio</h4>
+<table>
+  <thead><tr><th style="width:40%">Asset</th><th style="width:10%">Source</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Teak coffin and stage</td><td>C</td><td>Hero prop; also used in the bad ending</td></tr>
+    <tr><td>Altar, portrait frame, brass candle holders</td><td>C / L</td><td>Portrait texture swaps for the "eyes open" scare</td></tr>
+    <tr><td>Four brass incense burners and sticks</td><td>C</td><td>Burn-down shader on sticks</td></tr>
+    <tr><td>Protective white thread</td><td>C</td><td>Snaps in two</td></tr>
+    <tr><td>Oil lamps, candles</td><td>C / L</td><td>Emissive flame card + flicker light</td></tr>
+    <tr><td>Clay jars, bamboo benches, mats</td><td>C / L</td><td>2–3 variants, instanced</td></tr>
+    <tr><td>Gramophone with speed dial</td><td>L + edits</td><td>Adjust to the period</td></tr>
+    <tr><td>Desk, pens, palm-leaf manuscripts</td><td>L / C</td><td></td></tr>
+    <tr><td>Iron-bound chest, loose planks, wardrobes</td><td>C / L</td><td>Wardrobes are hiding spots</td></tr>
+    <tr><td>Telephone, wall clock, drafting table</td><td>L</td><td>Prologue</td></tr>
+    <tr><td><strong>Player items:</strong> lamp, matchbox, satchel, sketchbook, key fragments, Bronze Token</td><td>C</td><td>Seen up close all game; most detail</td></tr>
+    <tr><td>First-person hands</td><td>C / L</td><td>No full body needed</td></tr>
+    <tr><td>Yay Mey</td><td>L + custom</td><td>White mourning clothes; few animations</td></tr>
+    <tr><td>Uncle Sok's corpse</td><td>C / L</td><td>Lying pose only</td></tr>
+    <tr><td>Neak Ta entity and shadow roamer</td><td>C</td><td>Mostly shader silhouette plus a detailed brass mask</td></tr>
+    <tr><td>Ambience beds</td><td>L + R</td><td>Rain, thunder, insects, frogs, wind, roof tiles</td></tr>
+    <tr><td>Foley</td><td>R</td><td>Footsteps on teak, dirt and mud; cloth; pages; matches; creaks</td></tr>
+    <tr><td>Horror cues</td><td>R + design</td><td>Backward chant, clock, thread snap, dragging steps, whispers, static</td></tr>
+    <tr><td>Music</td><td>Commission / licence</td><td>Sparse Pinpeat-inspired tones and drones</td></tr>
+    <tr><td>Voice</td><td>Khmer voice actors</td><td>Phone call and key lines, English subtitles</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">5.3</span>Asset sources</h3>
+<p>Check the licence of each individual asset and keep a credits file listing source, author, licence and link.</p>
+<table>
+  <thead><tr><th style="width:24%">Source</th><th style="width:32%">What</th><th>Licence notes</th></tr></thead>
+  <tbody>
+    <tr><td>Poly Haven</td><td>Textures, HDRIs, some models</td><td>CC0</td></tr>
+    <tr><td>ambientCG</td><td>PBR textures</td><td>CC0</td></tr>
+    <tr><td>Sketchfab</td><td>Models, including some Southeast Asian items</td><td>Mixed; filter CC0/CC-BY and credit authors</td></tr>
+    <tr><td>Fab (Epic)</td><td>Megascans and marketplace</td><td>Megascans no longer free after 2024; check the current licence</td></tr>
+    <tr><td>Freesound</td><td>Sound effects</td><td>Per-sound CC licences</td></tr>
+    <tr><td>Sonniss GameAudioGDC bundles</td><td>Large royalty-free SFX packs</td><td>Free; check the included licence</td></tr>
+    <tr><td>Mixamo</td><td>Rigging and animations</td><td>Free with an Adobe account; check terms</td></tr>
+    <tr><td>Google Fonts</td><td>Khmer fonts: Noto Serif Khmer, Battambang, Moul, Koulen, Preahvihear</td><td>Open Font License</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Rule of thumb</span><p>Use library assets for generic objects (furniture, tools, textures) and custom work for anything that makes the game Cambodian: architecture, ritual objects, clothing and the entity. Players notice the second group.</p></div>
+
+<h3><span class="num">5.4</span>Asset pipeline</h3>
+<div class="flow">
+  <div class="node start"><b>Blender source (.blend)</b><span>Stored with Git LFS</span></div><div class="arrow"></div>
+  <div class="node"><b>Export glTF 2.0 (.glb)</b><span>Apply transforms; custom properties become glTF extras</span></div><div class="arrow"></div>
+  <div class="node"><b>glTF-Transform build script</b><span>Dedup, prune, resize (2K hero · 1K props · 512 small), KTX2, Draco/meshopt</span></div><div class="arrow"></div>
+  <div class="node goal"><b>public/assets/ep1/*.glb</b><span>Loaded by Babylon.js</span></div>
+</div>
+<p>Naming: <code>ep1_house_wall_a.glb</code>, <code>shared_lamp.glb</code>; Blender empties named <code>trigger_*</code>, <code>spawn_*</code>, <code>patrol_*</code>, <code>hide_*</code>, <code>audio_zone_*</code> become game objects.</p>
+
+<h3><span class="num">5.5</span>Learning resources</h3>
+<table>
+  <thead><tr><th style="width:30%">Topic</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Babylon.js fundamentals</td><td>doc.babylonjs.com (Getting Started, then Features); playground.babylonjs.com</td></tr>
+    <tr><td>Help and community</td><td>forum.babylonjs.com</td></tr>
+    <tr><td>WebGPU, physics, audio</td><td>doc.babylonjs.com: WebGPU, Physics V2 (character controller), Audio</td></tr>
+    <tr><td>Shaders without code</td><td>nme.babylonjs.com (Node Material Editor)</td></tr>
+    <tr><td>glTF optimisation</td><td>gltf-transform.dev</td></tr>
+    <tr><td>Blender for games</td><td>Blender manual; modular environment and trim-sheet tutorials</td></tr>
+    <tr><td>Horror design</td><td>Play and study <em>Amnesia: The Dark Descent</em>, <em>Fatal Frame</em>, <em>Home Sweet Home</em>, <em>Pamali</em>, <em>DreadOut</em>; GDC talks on horror pacing and audio</td></tr>
+    <tr><td>Web performance</td><td>Babylon.js "Optimizing your scene"; browser performance tools</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">5.6</span>Cultural and historical research</h3>
+<table>
+  <thead><tr><th style="width:26%">Topic</th><th>Sources to start with</th></tr></thead>
+  <tbody>
+    <tr><td>Neak Ta and Khmer spirits</td><td>Ang Choulean, <em>Les êtres surnaturels dans la religion populaire khmère</em> (Paris, CEDORECK, 1986). Neak Ta are usually protective guardians, often represented by stones.</td></tr>
+    <tr><td>Colonial economy and plantations</td><td>Margaret Slocomb, <em>An Economic History of Cambodia in the Twentieth Century</em> (NUS Press, 2010; open access via OAPEN); Michitake Aso, "Rubber and Race in Rural Colonial Cambodia (1920s–1954)".</td></tr>
+    <tr><td>Historical photographs</td><td>Gallica (Bibliothèque nationale de France), Archives nationales d'outre-mer (ANOM), École française d'Extrême-Orient (EFEO), Bophana Audiovisual Resource Center.</td></tr>
+    <tr><td>Funerals, Pchum Ben, offerings</td><td>Ethnographic literature plus interviews with elders and monks (with permission).</td></tr>
+    <tr><td>Pinpeat music</td><td>Cambodian Living Arts and Cambodian musicians; commission or license recordings rather than imitating them.</td></tr>
+    <tr><td>Language</td><td>A native Khmer speaker to check every Khmer term and translate in-game text.</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Advisor plan</span><p>Find one or two Cambodian advisors in Phase 0 (a family elder, a university contact or a cultural organisation). Schedule reviews of the story outline, the Episode 1 greybox and the release candidate. Credit them in the game.</p></div>
+
+<h3><span class="num">5.7</span>Rough budget (Episode 1)</h3>
+<table>
+  <thead><tr><th style="width:40%">Item</th><th>Low</th><th>Comfortable</th></tr></thead>
+  <tbody>
+    <tr><td>Software</td><td>US$0</td><td>~US$300</td></tr>
+    <tr><td>Paid assets</td><td>US$0–100</td><td>~US$400</td></tr>
+    <tr><td>Sound and music</td><td>US$0</td><td>US$500–1,500</td></tr>
+    <tr><td>Voice acting</td><td>US$0</td><td>US$200–600</td></tr>
+    <tr><td>Cultural advisor honorarium</td><td>—</td><td>US$200–500</td></tr>
+    <tr><td>Integrated-graphics test laptop</td><td>—</td><td>US$300–500 used</td></tr>
+    <tr><td>Hosting</td><td>US$0</td><td>US$0–20 / month</td></tr>
+  </tbody>
+</table>
+
+<h2 id="questions"><span class="num">06</span>Open Questions</h2>
+<p>Found by reading the proposal and all five episode specifications together. Each episode document also lists its own open issues.</p>
+
+<h3><span class="num">6.1</span>Story and continuity</h3>
+<table>
+  <thead><tr><th style="width:6%">#</th><th>Issue</th><th style="width:14%">When</th><th style="width:34%">Suggested resolution</th></tr></thead>
+  <tbody>
+    <tr><td>Q1</td><td>The Silver Betel Box is never destroyed or cleansed, yet Episode 5 needs its "inlay"</td><td>Before Ep 2</td><td>Short dawn ritual at the family stupa that releases the inlay</td></tr>
+    <tr><td>Q2</td><td>Two versions of the pact: forest altar (Ep 2) vs estate contract (Ep 4)</td><td>Before Ep 1</td><td>The offering happened at a shrine on estate land; the ledger recorded the contract</td></tr>
+    <tr><td>Q3</td><td>A working rubber estate in 1910 is historically early</td><td>Before Ep 1</td><td>Move the pact to the early 1920s, or make the 1910 site a shrine later built over</td></tr>
+    <tr><td>Q4</td><td>Sora's parents are missing; Yay Mey's place in the bloodline is unclear</td><td>Before Ep 1</td><td>Decide their fate; this can become a strong emotional thread</td></tr>
+    <tr><td>Q5</td><td>Clinic timeline (1920 vs "decades ago" vs 1925 photo)</td><td>Before Ep 3</td><td>Drowned in 1920; Sok hid there afterwards</td></tr>
+    <tr><td>Q6</td><td>Time between episodes is never stated</td><td>Before Ep 2</td><td>Each episode is the following night, noted in the sketchbook</td></tr>
+    <tr><td>Q7</td><td>Time mismatches in v1 headers; sunrise at 4:00 AM</td><td>Done</td><td>Corrected in the v2.0 episode documents</td></tr>
+    <tr><td>Q8</td><td>The Episode 1 map already shows all four locations</td><td>Before Ep 1</td><td>Four faint marks, each revealed by the blood trail</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">6.2</span>Gameplay</h3>
+<table>
+  <thead><tr><th style="width:6%">#</th><th>Issue</th><th style="width:14%">When</th><th style="width:34%">Suggested resolution</th></tr></thead>
+  <tbody>
+    <tr><td>G1</td><td>No fail state defined</td><td>Done</td><td>Checkpoint restart, no health bar (section 4.2)</td></tr>
+    <tr><td>G2</td><td>Ending conditions aren't tracked in Episodes 1–4</td><td>Before Ep 1</td><td>Define counters now; 5–8 hidden lore notes and 1–2 choices per episode</td></tr>
+    <tr><td>G3</td><td>Checkpoints only, or manual saves too?</td><td>Before Ep 1</td><td>Checkpoints only</td></tr>
+    <tr><td>G4</td><td>Single difficulty or a story mode?</td><td>Before release</td><td>A story mode helps players who come for the culture and narrative</td></tr>
+    <tr><td>G5</td><td>"Hand-crank lantern" in Episode 4</td><td>Done</td><td>Changed to an oil lantern in v2.0</td></tr>
+    <tr><td>G6</td><td>"Kerosene spotlights" in Episode 3</td><td>Done</td><td>Changed to fixed wall lamps in v2.0</td></tr>
+    <tr><td>G7</td><td>Pret appear in the Episode 5 Wind trial</td><td>Before Ep 5</td><td>Fine as a callback; explain in the sketchbook</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">6.3</span>Presentation, culture and business</h3>
+<table>
+  <thead><tr><th style="width:6%">#</th><th>Issue</th><th style="width:14%">When</th><th style="width:34%">Suggested resolution</th></tr></thead>
+  <tbody>
+    <tr><td>C1</td><td>Neak Ta as the antagonist; they are normally respected protectors</td><td>Before Ep 1</td><td>A guardian enforcing a broken contract, not evil</td></tr>
+    <tr><td>C2</td><td>Several Khmer terms in v1 need checking (see each episode's glossary)</td><td>Each episode</td><td>Native speaker review; keep one glossary</td></tr>
+    <tr><td>C3</td><td>"Graphic designer" is a modern job title</td><td>Done</td><td>"Illustrator" used in v2.0</td></tr>
+    <tr><td>C4</td><td>Language of voices and text</td><td>Before Ep 1</td><td>Khmer voices; English and Khmer text</td></tr>
+    <tr><td>C5</td><td>The blood offering in Episode 5</td><td>Before Ep 5</td><td>Review with the advisor; keep it restrained</td></tr>
+    <tr><td>B1</td><td>Is Episode 1 free, pay-what-you-want or paid?</td><td>Before release</td><td></td></tr>
+    <tr><td>B2</td><td>Where to publish (itch.io, own site, both)?</td><td>Before release</td><td>itch.io is the easiest start for a browser game</td></tr>
+    <tr><td>B3</td><td>Licence: the README says MIT for everything</td><td>Before publishing assets</td><td>Code open source, art and story all rights reserved</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

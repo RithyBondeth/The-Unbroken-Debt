@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Proposal — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="00-Project-Proposal">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Project Proposal"; } }</style>
+</head>
+<body class="ep1">
+
+<section class="cover">
+  <div class="series">Project Proposal</div>
+  <div class="rule"></div>
+  <div class="eyebrow">A 3D first-person survival horror series for the web</div>
+  <h1>Boon Sop:<br>The Unbroken Debt</h1>
+  <div class="title-km">បុណ្យសព៖ បំណុលមិនដាច់</div>
+  <div class="subtitle">Five episodes of Khmer folk horror, set in French-colonial Cambodia in 1932 and playable in any modern desktop browser with no installation.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Document</dt><dd>Project Proposal</dd>
+    <dt>Version</dt><dd>2.0 (rewrite of v1.0)</dd>
+    <dt>Date</dt><dd>October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+    <dt>Status</dt><dd>Draft for review</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#summary">Executive Summary</a></li>
+    <li><span class="n">02</span><a href="#vision">Vision and Design Pillars</a></li>
+    <li><span class="n">03</span><a href="#story">Story and Setting</a>
+      <ol><li>Series synopsis</li><li>Protagonist</li><li>The antagonist</li></ol></li>
+    <li><span class="n">04</span><a href="#episodes">Episode Roadmap</a></li>
+    <li><span class="n">05</span><a href="#gameplay">Core Gameplay</a></li>
+    <li><span class="n">06</span><a href="#culture">Cultural Foundation</a></li>
+    <li><span class="n">07</span><a href="#tech">Technology and Performance</a></li>
+    <li><span class="n">08</span><a href="#production">Production Plan</a></li>
+    <li><span class="n">09</span><a href="#risks">Risks and Mitigation</a></li>
+    <li><span class="n">10</span><a href="#next">Conclusion and Next Steps</a></li>
+    <li><span class="n">A</span><a href="#docs">Appendix: Document Set</a></li>
+  </ol>
+</nav>
+
+<h2 id="summary"><span class="num">01</span>Executive Summary</h2>
+<p class="lead"><strong>Boon Sop: The Unbroken Debt</strong> (<span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span>) is a first-person atmospheric survival horror game that runs directly in desktop web browsers. It is set in Cambodia in 1932, during the French Protectorate, and draws on Khmer folklore, Buddhist ritual and colonial history.</p>
+<p>The player is <strong>Sora</strong>, a 24-year-old illustrator from Phnom Penh. A broken phone call from her grandmother brings her home to Battambang, where her uncle has died under strange circumstances. She learns that in 1910 her great-grandfather made a pact with a <strong>Neak Ta</strong> (<span class="km">អ្នកតា</span>), a land guardian spirit, and that the debt still binds her family. Across five episodes and five provinces, Sora must find and break five seals of the pact before the debt claims her too.</p>
+<p>The game is released as a <strong>five-episode season</strong>. Each episode is 3–4 hours long, for a total of 15–20 hours. It runs on WebGPU with a WebGL2 fallback and is built with <strong>Babylon.js</strong>, so players start by opening a link, with no download, installer or gaming PC required.</p>
+
+<h3>Project at a glance</h3>
+<div class="cards">
+  <div class="card"><div class="k">Genre</div><div class="v">First-person survival horror</div><div class="d">Atmospheric, narrative, stealth and puzzles</div></div>
+  <div class="card"><div class="k">Platform</div><div class="v">Desktop web browsers</div><div class="d">Chrome, Edge, Firefox, Safari</div></div>
+  <div class="card"><div class="k">Technology</div><div class="v">Babylon.js</div><div class="d">WebGPU with WebGL2 fallback</div></div>
+  <div class="card"><div class="k">Format</div><div class="v">5 episodes</div><div class="d">3–4 hours each · 15–20 hours total</div></div>
+  <div class="card"><div class="k">Setting</div><div class="v">Cambodia, 1932</div><div class="d">French Protectorate era</div></div>
+  <div class="card"><div class="k">Audience</div><div class="v">Psychological horror fans</div><div class="d">Players of <em>Fatal Frame</em>, <em>Silent Hill</em>, folklore horror</div></div>
+</div>
+
+<h3>Why this game, why now</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>An unused setting</td><td>Horror games regularly draw on Western, Japanese and Korean folklore. Khmer folklore and 1930s Cambodia are almost absent from games, so the setting itself is a hook.</td></tr>
+    <tr><td>No-friction access</td><td>Browser technology now supports high-quality 3D on ordinary laptops. A link is easier to share than a store page and a 50 GB download.</td></tr>
+    <tr><td>Built for episodes</td><td>Each episode is a complete story with its own location, enemy and mechanic, released one at a time. Episode 1 tests the idea with real players before the rest is built.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="vision"><span class="num">02</span>Vision and Design Pillars</h2>
+<p class="lead">The player should feel like a stranger in her own family's history: alone in the dark, carrying a small light, and surviving through knowledge of rituals and taboos rather than through force.</p>
+
+<h3><span class="num">2.1</span>Design pillars</h3>
+<table>
+  <thead><tr><th style="width:26%">Pillar</th><th>What it means</th><th style="width:34%">How it shows up in play</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Cultural authenticity</strong></td><td>Khmer architecture, ritual, music and belief are the foundation of the horror, not decoration.</td><td>Stilt houses, pagodas and funeral customs are researched and reviewed by Cambodian advisors. Rituals solve problems.</td></tr>
+    <tr><td><strong>Light is life</strong></td><td>Sora's kerosene lamp is her only real defence and her biggest risk.</td><td>Oil runs out, light attracts some entities, and shutters and matches create constant choices.</td></tr>
+    <tr><td><strong>Fully diegetic interface</strong></td><td>No on-screen HUD. Everything the player knows comes from objects in the world.</td><td>Map, notes and inventory are in Sora's satchel and sketchbook; the oil level is visible on the lamp itself.</td></tr>
+    <tr><td><strong>Knowledge over force</strong></td><td>Sora never fights. She survives by understanding the rules of each spirit.</td><td>Stealth, sound, line of sight, cultural taboos and counter-rituals replace combat.</td></tr>
+    <tr><td><strong>Sound tells the truth</strong></td><td>In the dark, the ears are more reliable than the eyes.</td><td>3D spatial audio lets players locate entities they cannot see.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">2.2</span>Tone</h3>
+<p>Slow dread over cheap shock. The horror builds through silence, the creak of teak floors, rain on roof tiles and the feeling of being watched. Visually, the game looks like a 1930s photograph come to life: film grain, sepia shadows, high-contrast chiaroscuro lighting and warm flame against cold darkness.</p>
+
+<h2 id="story"><span class="num">03</span>Story and Setting</h2>
+
+<h3><span class="num">3.1</span>Series synopsis</h3>
+<p>In 1910, during famine and a cholera outbreak, Sora's great-grandfather made a pact with a Neak Ta to save his family. The price was the devotion and freedom of his bloodline for four generations. The pact was bound by five sacred objects, the <strong>seals</strong>, hidden across Cambodia.</p>
+<p>In 1931, Sora's estranged Uncle Sok tried a forbidden ritual to break the pact and died. In 1932, Sora returns home for his funeral and inherits his unfinished task. Each episode follows a trail of blood across her sketchbook map to the next seal. In the final episode, she faces the Neak Ta itself at a sunken temple on the sacred mountain of Phnom Kulen.</p>
+
+<h3><span class="num">3.2</span>Protagonist: Sora (<span class="km">សូរ៉ា</span>)</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>Age and background</td><td>24. Left her village in Battambang years ago to work as an illustrator in Phnom Penh.</td></tr>
+    <tr><td>Personality</td><td>Independent, educated and creative. Sceptical of the old beliefs at first, she is forced to learn them to survive.</td></tr>
+    <tr><td>Core skill</td><td>Her artist's eye. She sketches what she sees, so clues, maps and symbols appear in her sketchbook as she discovers them.</td></tr>
+    <tr><td>Equipment</td><td>Leather drafting satchel, sketchbook, fountain pens, brass matchbox, kerosene hurricane lamp. Later a compass and the remnants of the broken seals.</td></tr>
+    <tr><td>Arc</td><td>From an outsider who wants to escape her family's past to the one who carries it, understands it and ends it.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.3</span>The antagonist: the Neak Ta</h3>
+<p>The Neak Ta (<span class="km">អ្នកតា</span>) appears as a towering shadow wearing an ancient brass mask, and it grows stronger as each seal breaks. In Khmer belief, Neak Ta are guardian spirits of the land who are traditionally respected and protective. In this story, it is not evil: it is a guardian enforcing a contract that Sora's family entered and then tried to escape. The true ending reflects this, as the spirit bows and releases the family rather than being destroyed.</p>
+
+<h2 id="episodes"><span class="num">04</span>Episode Roadmap</h2>
+<p>Each episode moves to a new province and introduces one new core mechanic and one new type of entity, while reusing everything learned before.</p>
+
+<div class="flow">
+  <div class="node"><b>Episode 1 · The House of Mourning</b><span>Battambang · family stilt house during the funeral vigil</span></div><div class="arrow"></div>
+  <div class="node"><b>Episode 2 · The Whispering Pagoda</b><span>Battambang · village pagoda on the night of Pchum Ben</span></div><div class="arrow"></div>
+  <div class="node"><b>Episode 3 · The Drowned Village</b><span>Tonle Sap · abandoned clinic on stilts in a monsoon flood</span></div><div class="arrow"></div>
+  <div class="node"><b>Episode 4 · The Rubber Plantation</b><span>Kampong Cham · colonial estate lost in fog</span></div><div class="arrow"></div>
+  <div class="node goal"><b>Episode 5 · The Sunken Sanctuary</b><span>Phnom Kulen · temple catacombs and the final ritual</span></div>
+</div>
+
+<table>
+  <thead><tr><th style="width:21%">Episode</th><th style="width:20%">Setting</th><th>Core mechanic</th><th style="width:17%">Entity</th><th style="width:16%">Seal</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1</strong> The House of Mourning<br><span class="km small">ផ្ទះបុណ្យ</span></td><td>Teak stilt house, Battambang</td><td>Resource management: kerosene, incense, matches</td><td>Neak Ta shadow</td><td>Bronze Token</td></tr>
+    <tr><td><strong>2</strong> The Whispering Pagoda<br><span class="km small">វត្តខ្សឹបខ្សៀវ</span></td><td>Village pagoda and stupa yard</td><td>Sound-based stealth and line of sight</td><td>Pret (hungry ghosts)</td><td>Silver Betel Box</td></tr>
+    <tr><td><strong>3</strong> The Drowned Village<br><span class="km small">ភូមិលិចទឹក</span></td><td>Flooded clinic, Tonle Sap</td><td>Boat navigation, wetness and warmth</td><td>Chhlong Tonle (water spirit)</td><td>Terracotta Water Jar</td></tr>
+    <tr><td><strong>4</strong> The Rubber Plantation<br><span class="km small">ចំការកៅស៊ូ</span></td><td>Colonial estate, Kampong Cham</td><td>Compass navigation and the "don't look back" taboo</td><td>Khmaoch Prey (voice mimics)</td><td>Iron Tapping Knife</td></tr>
+    <tr><td><strong>5</strong> The Sunken Sanctuary<br><span class="km small">ប្រាសាទលិចទឹក</span></td><td>Catacombs, Phnom Kulen</td><td>Elemental trials and the severance ritual</td><td>Neak Ta Guardian</td><td>Golden Inscription Slab</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">4.1</span>Episode summaries</h3>
+<table>
+  <tbody>
+    <tr><td class="k">Ep 1 · The House of Mourning</td><td>Sora keeps the night vigil over Uncle Sok's coffin. She must keep her lamp fuelled, the incense burning and the sacred thread around the funeral tent unbroken, while something walks the floorboards above. She finds the Bronze Token and burns it in a counter-ritual before 3:00 AM.</td></tr>
+    <tr><td class="k">Ep 2 · The Whispering Pagoda</td><td>On Pchum Ben, the Festival of the Dead, blind hungry ghosts hunt by sound among the stupas. Sora makes offerings at her ancestors' stupas to reach the scripture library, where a vision reveals the 1910 pact and she recovers the Silver Betel Box.</td></tr>
+    <tr><td class="k">Ep 3 · The Drowned Village</td><td>In a monsoon storm, Sora rows to an abandoned clinic on stilts haunted by the spirit of a woman who drowned there. She must stay dry, restore power to the drainage pump and recover the Terracotta Water Jar from a flooded safe.</td></tr>
+    <tr><td class="k">Ep 4 · The Rubber Plantation</td><td>In fog-bound rows of rubber trees, spirits call Sora's name in the voices of her family. She must not answer or turn around. In the colonial manor she uncovers the full truth of the contract, then melts the Iron Tapping Knife in the factory furnace.</td></tr>
+    <tr><td class="k">Ep 5 · The Sunken Sanctuary</td><td>Beneath Phnom Kulen, Sora completes four elemental trials that test every skill she has learned, then performs the Ritual of Severance before the Neak Ta Guardian. Her choices across the series decide the ending.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="gameplay"><span class="num">05</span>Core Gameplay</h2>
+
+<h3><span class="num">5.1</span>Core loop</h3>
+<div class="flow">
+  <div class="node start"><b>Explore</b><span>Search the location by lamplight</span></div><div class="arrow"></div>
+  <div class="node"><b>Discover</b><span>Find notes, items and clues; the sketchbook records them</span></div><div class="arrow"></div>
+  <div class="node"><b>Survive</b><span>Avoid entities using darkness, sound, hiding and taboos</span></div><div class="arrow"></div>
+  <div class="node"><b>Solve</b><span>Use what you learned to solve environmental puzzles</span></div><div class="arrow"></div>
+  <div class="node goal"><b>Ritual</b><span>Perform the counter-ritual to break the episode's seal</span></div>
+</div>
+
+<h3><span class="num">5.2</span>Key systems</h3>
+<table>
+  <thead><tr><th style="width:26%">System</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Light and resources</strong></td><td>The kerosene lamp burns oil, matches are limited, and later the lamp gains a shutter that hides the light without putting out the flame. Darkness is safer from some entities and more dangerous in every other way.</td></tr>
+    <tr><td><strong>Diegetic sketchbook</strong></td><td>Sora draws maps, copies inscriptions and writes notes automatically. The player opens the satchel to review clues, solve puzzles and track objectives.</td></tr>
+    <tr><td><strong>Stealth and perception</strong></td><td>Entities sense the player by sight, sound or both. Footsteps change with the surface, crouching and holding breath reduce noise, and thrown objects distract.</td></tr>
+    <tr><td><strong>Cultural taboos</strong></td><td>Each episode has rules drawn from Khmer belief, such as never answering a voice calling your name in the forest at night. Breaking them has immediate consequences and affects the ending.</td></tr>
+    <tr><td><strong>Puzzles</strong></td><td>Physical, grounded puzzles: a gramophone speed dial, offerings at stupas, bronze mirrors reflecting moonlight, generator fuses, factory gears.</td></tr>
+    <tr><td><strong>Counter-rituals</strong></td><td>Each episode ends with a ritual performed under pressure, for example lighting incense while the entity stands directly behind the player.</td></tr>
+    <tr><td><strong>Persistence and endings</strong></td><td>Progress, collected lore and broken taboos carry between episodes and decide which of the endings the player receives.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="culture"><span class="num">06</span>Cultural Foundation</h2>
+<p>The game's identity comes from Khmer culture. Every element below is researched and reviewed with Cambodian advisors before it appears in the game.</p>
+<table>
+  <thead><tr><th style="width:24%">Area</th><th>Elements used</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Spirits and beliefs</strong></td><td>Neak Ta (<span class="km">អ្នកតា</span>, land guardian), Pret (<span class="km">ប្រេត</span>, hungry ghosts), Khmaoch Prey (<span class="km">ខ្មោចព្រៃ</span>, forest spirits), a drowned water spirit</td></tr>
+    <tr><td><strong>Rituals and festivals</strong></td><td>Funeral vigil and cremation, Pchum Ben (<span class="km">ភ្ជុំបិណ្ឌ</span>), rice-ball offerings Bay Ben (<span class="km">បាយបិណ្ឌ</span>), protective white cotton thread, incense, chanting</td></tr>
+    <tr><td><strong>Architecture</strong></td><td>Teak stilt houses (<span class="km">ផ្ទះរោងដឿង</span>), pagodas, stupas (<span class="km">ចេតិយ</span>), scripture libraries on stilts, French-colonial manors, Angkorian sandstone temples</td></tr>
+    <tr><td><strong>Objects and texts</strong></td><td>Palm-leaf manuscripts (<span class="km">ស្លឹករឹត</span>), betel boxes, terracotta jars, brass ritual objects</td></tr>
+    <tr><td><strong>Music</strong></td><td>Pinpeat ensemble (<span class="km">ពិណពាទ្យ</span>), especially the roneat (<span class="km">រនាត</span>), used sparingly in an ominous ambient score</td></tr>
+    <tr><td><strong>History</strong></td><td>1930s French Protectorate: colonial rubber plantations, forced labour, famine and epidemic, rural life</td></tr>
+  </tbody>
+</table>
+
+<h2 id="tech"><span class="num">07</span>Technology and Performance</h2>
+
+<h3><span class="num">7.1</span>Technical stack</h3>
+<table>
+  <thead><tr><th style="width:26%">Layer</th><th>Choice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript): WebGPU rendering with automatic WebGL2 fallback</td></tr>
+    <tr><td><strong>Physics</strong></td><td>Havok (bundled with Babylon.js)</td></tr>
+    <tr><td><strong>3D format</strong></td><td>glTF 2.0 (<code>.glb</code>) with Draco or meshopt mesh compression</td></tr>
+    <tr><td><strong>Textures</strong></td><td>KTX2 / Basis Universal, which stay compressed in GPU memory</td></tr>
+    <tr><td><strong>Audio</strong></td><td>Web Audio API through Babylon.js Audio Engine v2: 3D spatial sound and dynamic reverb</td></tr>
+    <tr><td><strong>Saves</strong></td><td>Browser IndexedDB, plus portable save codes for moving between devices and episodes</td></tr>
+    <tr><td><strong>Build and hosting</strong></td><td>Vite build, deployed as a static website</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Change from v1.0</span><p>Version 1.0 left the engine open between Babylon.js and PlayCanvas. Babylon.js has now been chosen. It is code-first and open source, has mature WebGPU support, and suits a programmer-led solo project without depending on a cloud editor.</p></div>
+
+<h3><span class="num">7.2</span>Performance targets</h3>
+<table>
+  <thead><tr><th style="width:34%">Target</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Frame rate (dedicated graphics card)</td><td>60 fps at 1080p</td></tr>
+    <tr><td>Frame rate (integrated laptop graphics)</td><td>30 fps at 720p</td></tr>
+    <tr><td>Draw calls per frame</td><td>120 or fewer, using instancing and merged static meshes</td></tr>
+    <tr><td>Visible polygons per frame</td><td>150,000 or fewer, using level of detail (LOD)</td></tr>
+    <tr><td>Initial download per episode</td><td>85 MB or less, with the first playable area under 20 MB</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">7.3</span>Browser support</h3>
+<p>Chrome and Edge use WebGPU. Safari uses WebGPU on macOS 26 and later. Firefox uses WebGPU on Windows and Apple Silicon Macs. All other desktop browsers fall back to WebGL2. Mobile devices are not supported in the first release.</p>
+
+<h2 id="production"><span class="num">08</span>Production Plan</h2>
+<p>The project is developed by a <strong>solo developer</strong>. Art and audio come from licensed asset libraries for generic objects and custom work for everything culturally specific. The plan is to build and release <strong>Episode 1 first</strong>, learn from players, and then produce the remaining episodes on top of the same systems.</p>
+
+<h3><span class="num">8.1</span>Episode 1 roadmap (about 34 weeks)</h3>
+<table>
+  <thead><tr><th style="width:8%">Phase</th><th style="width:28%">Name</th><th style="width:12%">Length</th><th>Main outcome</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>Pre-production</td><td>3 weeks</td><td>Story gaps resolved, Episode 1 beat sheet, art bible, tools installed</td></tr>
+    <tr><td>1</td><td>Technical spikes</td><td>4 weeks</td><td>Risky technology proven: controller, lighting, asset pipeline, audio, saves</td></tr>
+    <tr><td>2</td><td>Greybox</td><td>5 weeks</td><td>All of Episode 1 playable with placeholder shapes</td></tr>
+    <tr><td>3</td><td>Core systems</td><td>7 weeks</td><td>Reusable, data-driven gameplay systems</td></tr>
+    <tr><td>4</td><td>Art and audio</td><td>10 weeks</td><td>Final environments, characters, sound and lighting</td></tr>
+    <tr><td>5</td><td>Polish and release</td><td>5 weeks</td><td>Playtesting, cultural review, browser testing, public release</td></tr>
+  </tbody>
+</table>
+<p>Episodes 2–5 are estimated at 4–6 months each after Episode 1, because they reuse its systems. The full season is a multi-year project for one person. Releasing episode by episode keeps it achievable and lets each release fund and inform the next. Details are in the <em>Development Plan</em> document.</p>
+
+<h3><span class="num">8.2</span>Roles</h3>
+<p>The original proposal listed five roles. As a solo project, they are covered as follows:</p>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>How it is covered</th></tr></thead>
+  <tbody>
+    <tr><td>Lead web game developer</td><td>Solo developer</td></tr>
+    <tr><td>Technical designer and scripter</td><td>Solo developer</td></tr>
+    <tr><td>3D environment and prop artist</td><td>Solo developer (Blender) plus licensed asset libraries; commissioned work for hero assets if the budget allows</td></tr>
+    <tr><td>Sound designer and composer</td><td>Self-recorded foley and libraries; Pinpeat music commissioned or licensed from Cambodian musicians</td></tr>
+    <tr><td>Writer and cultural consultant</td><td>Writing by the developer; review by one or two Cambodian cultural advisors at fixed milestones</td></tr>
+  </tbody>
+</table>
+
+<h2 id="risks"><span class="num">09</span>Risks and Mitigation</h2>
+<table>
+  <thead><tr><th style="width:26%">Risk</th><th style="width:12%">Impact</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Scope too large for one person</strong></td><td><span class="tag crit">Critical</span></td><td>Release Episode 1 on its own first; build systems once and reuse them; keep a cut list of features to drop first.</td></tr>
+    <tr><td><strong>Browser memory and crashes</strong></td><td><span class="tag high">High</span></td><td>Load and unload assets per area; KTX2 textures; memory profiling during every test cycle.</td></tr>
+    <tr><td><strong>Slow loading</strong></td><td><span class="tag high">High</span></td><td>Lazy-load assets per area; stream audio; keep the initial load under 85 MB and the first area under 20 MB.</td></tr>
+    <tr><td><strong>Performance on laptops</strong></td><td><span class="tag high">High</span></td><td>Test weekly on an integrated-graphics laptop; one shadow-casting light; baked lighting; quality presets.</td></tr>
+    <tr><td><strong>Cultural inaccuracy or misrepresentation</strong></td><td><span class="tag high">High</span></td><td>Cambodian advisors review the story, the Episode 1 greybox and the release candidate; Khmer language checked by native speakers.</td></tr>
+    <tr><td><strong>Browser differences</strong></td><td><span class="tag med">Medium</span></td><td>Always maintain the WebGL2 fallback; test Chrome, Edge, Firefox and Safari before every release.</td></tr>
+    <tr><td><strong>Story inconsistencies across episodes</strong></td><td><span class="tag med">Medium</span></td><td>Open story questions are tracked in the Development Plan and resolved before each episode is built.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="next"><span class="num">10</span>Conclusion and Next Steps</h2>
+<p class="lead"><em>Boon Sop: The Unbroken Debt</em> brings Khmer folklore to a global horror audience through the most accessible platform there is: a web link. Its diegetic interface, light-based survival and ritual-driven puzzles give it a distinct identity, and the episodic structure makes it achievable for a solo developer.</p>
+<h3>Immediate next steps</h3>
+<ol>
+  <li>Resolve the story questions marked "before Episode 1" in the Development Plan.</li>
+  <li>Write the Episode 1 beat sheet and a one-page art bible.</li>
+  <li>Find one or two Cambodian cultural advisors.</li>
+  <li>Install the toolchain and run the technical spikes.</li>
+  <li>Build the Episode 1 greybox and playtest it.</li>
+</ol>
+
+<h2 id="docs"><span class="num">A</span>Appendix: Document Set</h2>
+<table>
+  <thead><tr><th style="width:12%">No.</th><th>Document</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>00</td><td>Project Proposal</td><td>This document: vision, story, scope and plan overview</td></tr>
+    <tr><td>01</td><td>Episode 1 · The House of Mourning</td><td>Full design and narrative specification</td></tr>
+    <tr><td>02</td><td>Episode 2 · The Whispering Pagoda</td><td>Full design and narrative specification</td></tr>
+    <tr><td>03</td><td>Episode 3 · The Drowned Village</td><td>Full design and narrative specification</td></tr>
+    <tr><td>04</td><td>Episode 4 · The Rubber Plantation</td><td>Full design and narrative specification</td></tr>
+    <tr><td>05</td><td>Episode 5 · The Sunken Sanctuary</td><td>Full design and narrative specification</td></tr>
+    <tr><td>06</td><td>Development Plan</td><td>Roadmap, architecture, systems, assets, resources and open questions</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
