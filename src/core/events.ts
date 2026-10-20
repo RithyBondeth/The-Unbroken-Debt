@@ -20,6 +20,7 @@ export type GameEvents = {
   "lamp:oil": { level: number };
   "upkeep:warning": { id: string; stage: 1 | 2 };
   "upkeep:expired": { id: string };
+  "player:step": { surface: string; loudness: number };
   "noise:made": { position: Position; loudness: number; source: string };
   "entity:state": { id: string; state: string };
   "player:caught": { by: string };
