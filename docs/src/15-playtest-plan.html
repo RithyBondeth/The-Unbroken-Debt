@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Playtest Plan — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="15-Playtest-Plan">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Playtest Plan"; } }</style>
+</head>
+<body class="ep4">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Production document</div>
+  <h1>Playtest Plan</h1>
+  <div class="subtitle">When to test, who to test with, how to run a session, what to measure, the questions to ask, and how to turn feedback into changes.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Applies to</dt><dd>Episode 1 in detail · reused for every episode</dd>
+    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#goals">Goals</a></li>
+    <li><span class="n">02</span><a href="#rounds">Test Rounds</a></li>
+    <li><span class="n">03</span><a href="#testers">Recruiting Testers</a></li>
+    <li><span class="n">04</span><a href="#session">Running a Session</a></li>
+    <li><span class="n">05</span><a href="#measure">What to Measure</a></li>
+    <li><span class="n">06</span><a href="#telemetry">Playtest Logging</a></li>
+    <li><span class="n">07</span><a href="#questions">Questionnaire</a></li>
+    <li><span class="n">08</span><a href="#observer">Observer Sheet</a></li>
+    <li><span class="n">09</span><a href="#acting">Turning Feedback into Changes</a></li>
+  </ol>
+</nav>
+
+<h2 id="goals"><span class="num">01</span>Goals</h2>
+<table>
+  <thead><tr><th style="width:26%">Question</th><th>How we find out</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Is it scary?</strong></td><td>Observed reactions, self-reported scares, where players hesitate or retreat</td></tr>
+    <tr><td><strong>Is it clear?</strong></td><td>Where players get lost or stuck; whether they can explain the story afterwards</td></tr>
+    <tr><td><strong>Is it the right length?</strong></td><td>Time per act against the beat sheet targets (1 h 35 – 1 h 55 total)</td></tr>
+    <tr><td><strong>Is it fair?</strong></td><td>Deaths per area, causes of deaths, frustration moments</td></tr>
+    <tr><td><strong>Does it run?</strong></td><td>Frame rate, loading time and crashes on testers' own computers and browsers</td></tr>
+    <tr><td><strong>Is it respectful and accurate?</strong></td><td>Sessions with Cambodian players and the cultural advisor</td></tr>
+  </tbody>
+</table>
+
+<h2 id="rounds"><span class="num">02</span>Test Rounds</h2>
+<table class="dense">
+  <thead><tr><th style="width:16%">Round</th><th style="width:16%">Build</th><th style="width:10%">Testers</th><th>Focus</th></tr></thead>
+  <tbody>
+    <tr><td><strong>R0 · Self</strong></td><td>Every week</td><td>You</td><td>Play the whole episode start to finish; note anything broken or boring.</td></tr>
+    <tr><td><strong>R1 · Greybox</strong></td><td>End of Phase 2</td><td>3–5</td><td>Pacing, clarity, length, whether it is scary with placeholder shapes. Complete the greybox checklist (beat sheet section 8).</td></tr>
+    <tr><td><strong>R2 · Systems</strong></td><td>End of Phase 3</td><td>3–5</td><td>Controls, the satchel and sketchbook, lamp and resources, AI fairness, checkpoints.</td></tr>
+    <tr><td><strong>R3 · Alpha</strong></td><td>Mid Phase 4</td><td>5–8</td><td>Atmosphere, sound, readability in the dark, performance on varied hardware.</td></tr>
+    <tr><td><strong>R4 · Release candidate</strong></td><td>Phase 5</td><td>8–12</td><td>Final polish, bugs, browser coverage, cultural review, first impressions.</td></tr>
+  </tbody>
+</table>
+<p class="small">Use different testers in each round where possible: fresh eyes reveal confusion that returning testers no longer notice.</p>
+
+<h2 id="testers"><span class="num">03</span>Recruiting Testers</h2>
+<table class="dense">
+  <thead><tr><th style="width:28%">Group</th><th>Why</th><th style="width:18%">Share of testers</th></tr></thead>
+  <tbody>
+    <tr><td>Horror game players</td><td>The core audience; they know the genre's conventions</td><td>About half</td></tr>
+    <tr><td>Occasional players</td><td>Reveal control and clarity problems</td><td>About a quarter</td></tr>
+    <tr><td>Cambodian players</td><td>Cultural accuracy, language, emotional resonance</td><td>At least two per round from R3</td></tr>
+    <tr><td>Different hardware</td><td>Minimum-spec PCs (RTX 2060 class), recommended-spec PCs, Apple Silicon Macs; Chrome, Edge, Firefox, Safari</td><td>Mix across all groups</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>Friends of friends are better than close friends, who tend to be kind rather than honest.</li>
+  <li>Communities: local game-developer groups, university game clubs, Cambodian student associations, horror-game forums (for remote tests).</li>
+  <li>Ask for consent to observe or record, explain what is collected, and let testers stop at any time. Warn testers that the game contains horror themes and depictions of death and grief.</li>
+</ul>
+
+<h2 id="session"><span class="num">04</span>Running a Session</h2>
+<table class="dense">
+  <thead><tr><th style="width:16%">Step</th><th style="width:12%">Time</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>1 · Welcome</td><td>5 min</td><td>Explain that you are testing the game, not them; there are no wrong answers; consent and content warning; headphones on.</td></tr>
+    <tr><td>2 · Play</td><td>90–120 min</td><td>Say nothing and do not help. Observe and take notes on the observer sheet. Only step in if they are stuck for more than 5 minutes; note it.</td></tr>
+    <tr><td>3 · Questionnaire</td><td>10 min</td><td>The questions in section 7, filled in alone before talking.</td></tr>
+    <tr><td>4 · Interview</td><td>10–15 min</td><td>Ask them to retell the story; ask about the scariest moment, the most confusing moment, and what they would change.</td></tr>
+    <tr><td>5 · Thank</td><td>—</td><td>Credit testers in the game if they wish.</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Remote sessions</span><p>Testers play the web build at home while sharing their screen and webcam in a video call, or send a recording afterwards. The playtest log (section 6) fills in what you cannot see.</p></div>
+
+<h2 id="measure"><span class="num">05</span>What to Measure</h2>
+<table class="dense">
+  <thead><tr><th style="width:26%">Metric</th><th>Target (Episode 1)</th><th style="width:30%">Red flag</th></tr></thead>
+  <tbody>
+    <tr><td>Total time</td><td>1 h 35 – 1 h 55</td><td>Under 1 h 15 or over 2 h 20</td></tr>
+    <tr><td>Time per act</td><td>Prologue 10 · Act I 30 · Act II 35 · Act III 30 min</td><td>Any act 50% over target</td></tr>
+    <tr><td>Stuck moments</td><td>None longer than 3 min</td><td>Any stuck for 5+ min</td></tr>
+    <tr><td>Catches per area</td><td>Walker 0–1 · roamer 1–3 · ritual 0–1</td><td>4+ catches in one area</td></tr>
+    <tr><td>Scares reported</td><td>At least 2 strong moments</td><td>"Never scared"</td></tr>
+    <tr><td>Story understanding</td><td>Can explain the pact, the seventh night and the fourth name</td><td>Cannot explain why Sora is in danger</td></tr>
+    <tr><td>Optional content</td><td>Half of testers open the shed; average 3 of 5 lore notes</td><td>Almost nobody finds the shed</td></tr>
+    <tr><td>Performance</td><td>60 fps at 1080p on minimum spec; 60 fps at 1440p on recommended</td><td>Below 50 fps on minimum spec, long hitches, crashes</td></tr>
+  </tbody>
+</table>
+
+<h2 id="telemetry"><span class="num">06</span>Playtest Logging</h2>
+<p>Development and playtest builds keep a local event log that testers can export at the end with one button. It is not sent anywhere automatically.</p>
+<table class="dense">
+  <thead><tr><th style="width:30%">Logged</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Beats and checkpoints</td><td>Time each beat starts (P01…R05), so time per act is exact</td></tr>
+    <tr><td>Catches</td><td>Which entity, where (position) and when</td></tr>
+    <tr><td>Hints</td><td>Which control hints appeared, and how long before the action was performed</td></tr>
+    <tr><td>Resources</td><td>Oil level over time, matches used, times the lamp ran dry</td></tr>
+    <tr><td>Optional content</td><td>Shed opened, lore notes found, choice made at dawn</td></tr>
+    <tr><td>Performance</td><td>FPS once per second, area load times, browser, GPU name and WebGPU adapter limits</td></tr>
+  </tbody>
+</table>
+<p class="small">No personal data is recorded. Release builds disable the log unless the player turns it on to report a bug.</p>
+
+<h2 id="questions"><span class="num">07</span>Questionnaire</h2>
+<table class="dense">
+  <thead><tr><th style="width:6%">#</th><th>Question</th><th style="width:26%">Answer type</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>How scary was the episode overall?</td><td>1 (not at all) – 5 (very)</td></tr>
+    <tr><td>2</td><td>What was the scariest moment?</td><td>Free text</td></tr>
+    <tr><td>3</td><td>Was there a moment you didn't know what to do? Where?</td><td>Yes/no + free text</td></tr>
+    <tr><td>4</td><td>In your own words, what is happening to Sora and why?</td><td>Free text</td></tr>
+    <tr><td>5</td><td>How did you feel about Yay Mey, Vuthy and Uncle Sok?</td><td>Free text</td></tr>
+    <tr><td>6</td><td>Did the controls feel comfortable? Anything awkward?</td><td>1–5 + free text</td></tr>
+    <tr><td>7</td><td>Did you understand the lamp, incense and thread duties?</td><td>1–5</td></tr>
+    <tr><td>8</td><td>Was the length right?</td><td>Too short · right · too long</td></tr>
+    <tr><td>9</td><td>Was anything unfair or frustrating?</td><td>Free text</td></tr>
+    <tr><td>10</td><td>How much did you want to play Episode 2?</td><td>1–5</td></tr>
+    <tr><td>11</td><td>(Cambodian testers) Did anything feel inaccurate, disrespectful or especially true to life?</td><td>Free text</td></tr>
+    <tr><td>12</td><td>Computer, browser, and did it run smoothly?</td><td>Free text</td></tr>
+  </tbody>
+</table>
+
+<h2 id="observer"><span class="num">08</span>Observer Sheet</h2>
+<table class="dense">
+  <thead><tr><th style="width:12%">Time</th><th style="width:12%">Beat</th><th>What the player did or said</th><th style="width:16%">Type</th></tr></thead>
+  <tbody>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+    <tr><td>&nbsp;</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+<p class="small">Types: <strong>S</strong> scared (jump, lean back, sound) · <strong>C</strong> confused · <strong>F</strong> frustrated · <strong>B</strong> bored · <strong>D</strong> delight · <strong>X</strong> bug.</p>
+
+<h2 id="acting"><span class="num">09</span>Turning Feedback into Changes</h2>
+<table class="dense">
+  <thead><tr><th style="width:18%">Severity</th><th>Definition</th><th style="width:30%">Action</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag crit">Critical</span></td><td>Blocks progress, crashes, or culturally harmful</td><td>Fix before the next round</td></tr>
+    <tr><td><span class="tag high">High</span></td><td>Most testers confused, stuck or frustrated at the same point</td><td>Fix before the next round</td></tr>
+    <tr><td><span class="tag med">Medium</span></td><td>Some testers affected; pacing or clarity issue</td><td>Fix if time allows; retest</td></tr>
+    <tr><td><span class="tag low">Low</span></td><td>One tester's preference</td><td>Note; act if it recurs</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Watch what players do more than what they say.</strong> If three people walk past the shed, the shed needs a better hint, even if nobody mentions it.</li>
+  <li><strong>Look for patterns.</strong> One person stuck is a data point; three people stuck in the same place is a design problem.</li>
+  <li><strong>Fix the cause, not the symptom.</strong> If players miss the drawer key, improve the gramophone clue rather than adding an arrow.</li>
+  <li>After each round, write a one-page summary: top five problems, decisions made, and what to retest.</li>
+</ul>
+
+</body>
+</html>

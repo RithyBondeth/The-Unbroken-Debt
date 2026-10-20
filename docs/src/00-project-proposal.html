@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Proposal — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="00-Project-Proposal">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Project Proposal"; } }</style>
+</head>
+<body class="ep1">
+
+<section class="cover">
+  <div class="series">Project Proposal</div>
+  <div class="rule"></div>
+  <div class="eyebrow">A 3D first-person survival horror series for the web</div>
+  <h1>Boon Sop:<br>The Unbroken Debt</h1>
+  <div class="title-km">បុណ្យសព៖ បំណុលមិនដាច់</div>
+  <div class="subtitle">Seven nights, five episodes, one family debt. Khmer folk horror set in French-colonial Cambodia in 1932, built for high-end PCs and Macs and playable in the browser with no installation.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Document</dt><dd>Project Proposal</dd>
+    <dt>Version</dt><dd>3.1</dd>
+    <dt>Date</dt><dd>October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+    <dt>Status</dt><dd>Draft for review</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#summary">Executive Summary</a></li>
+    <li><span class="n">02</span><a href="#vision">Vision and Design Pillars</a></li>
+    <li><span class="n">03</span><a href="#story">Story</a>
+      <ol><li>The debt</li><li>The family</li><li>Series synopsis</li><li>The seven nights</li><li>The antagonist</li></ol></li>
+    <li><span class="n">04</span><a href="#episodes">Episode Roadmap</a></li>
+    <li><span class="n">05</span><a href="#gameplay">Core Gameplay</a></li>
+    <li><span class="n">06</span><a href="#endings">Choices and Endings</a></li>
+    <li><span class="n">07</span><a href="#culture">Cultural Foundation</a></li>
+    <li><span class="n">08</span><a href="#tech">Technology and Performance</a></li>
+    <li><span class="n">09</span><a href="#production">Production Plan</a></li>
+    <li><span class="n">10</span><a href="#risks">Risks and Mitigation</a></li>
+    <li><span class="n">11</span><a href="#next">Conclusion and Next Steps</a></li>
+    <li><span class="n">A</span><a href="#docs">Appendix: Document Set and Revision History</a></li>
+  </ol>
+</nav>
+
+<h2 id="summary"><span class="num">01</span>Executive Summary</h2>
+<p class="lead"><strong>Boon Sop: The Unbroken Debt</strong> (<span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span>) is a first-person atmospheric survival horror game that runs directly in desktop web browsers. It is set in Cambodia in 1932, during the French Protectorate, and draws on Khmer folklore, Buddhist ritual and colonial history.</p>
+<p>The player is <strong>Sora</strong>, a 24-year-old illustrator from Phnom Penh. She comes home to Battambang for the funeral of her Uncle Sok and learns that in 1910 her great-grandfather made a pact with a <strong>Neak Ta</strong> (<span class="km">អ្នកតា</span>), a guardian spirit of the land: prosperity for the family in exchange for one life from each of four generations. Three lives have been paid. The fourth falls due on the <strong>seventh night</strong> after Sok's death, and Sora discovers that the name written for that final payment is her own.</p>
+<p>Across five episodes and seven nights she must break the five seals of the pact, uncover what her uncle really did, and decide what to do about the cousin who would rather she paid.</p>
+
+<h3>Project at a glance</h3>
+<div class="cards">
+  <div class="card"><div class="k">Genre</div><div class="v">First-person survival horror</div><div class="d">Atmospheric, narrative, stealth and puzzles</div></div>
+  <div class="card"><div class="k">Platform</div><div class="v">Gaming PCs and Macs</div><div class="d">Discrete GPU · WebGPU browser</div></div>
+  <div class="card"><div class="k">Technology</div><div class="v">Babylon.js</div><div class="d">WebGPU required · high-end visuals</div></div>
+  <div class="card"><div class="k">Format</div><div class="v">5 episodes</div><div class="d">1.5–2.5 hours each · 8–10 hours total</div></div>
+  <div class="card"><div class="k">Setting</div><div class="v">Cambodia, 1932</div><div class="d">Monsoon season, during Pchum Ben</div></div>
+  <div class="card"><div class="k">Endings</div><div class="v">Three</div><div class="d">Decided by choices across all episodes</div></div>
+</div>
+
+<h3>Why this game, why now</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>An unused setting</td><td>Horror games regularly draw on Western, Japanese and Korean folklore. Khmer folklore and 1930s Cambodia are almost absent from games.</td></tr>
+    <tr><td>No-friction access</td><td>WebGPU now brings near-native 3D rendering to the browser on gaming PCs and Apple Silicon Macs. A link is easier to share than a store page, with no installer.</td></tr>
+    <tr><td>Tight, episodic and achievable</td><td>Short, dense episodes respect players' time and keep the project achievable for a solo developer. Episode 1 tests the idea with real players before the rest is built.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="vision"><span class="num">02</span>Vision and Design Pillars</h2>
+<p class="lead">The player should feel like a stranger in her own family's history: alone in the dark, carrying a small light, running out of nights, and surviving through knowledge of rituals and taboos rather than through force.</p>
+
+<h3><span class="num">2.1</span>Design pillars</h3>
+<table>
+  <thead><tr><th style="width:24%">Pillar</th><th>What it means</th><th style="width:36%">How it shows up in play</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Cultural authenticity</strong></td><td>Khmer architecture, ritual, music and belief are the foundation of the horror, not decoration.</td><td>Researched and advisor-reviewed settings; rituals and offerings solve problems.</td></tr>
+    <tr><td><strong>Light is life</strong></td><td>Sora's kerosene lamp is her only defence and her biggest risk.</td><td>Oil runs out, light draws some spirits, and shutters and matches force constant choices.</td></tr>
+    <tr><td><strong>Fully diegetic interface</strong></td><td>No on-screen HUD.</td><td>Map, notes, inventory and the night count live in Sora's satchel and sketchbook.</td></tr>
+    <tr><td><strong>Knowledge over force</strong></td><td>Sora never fights.</td><td>Stealth, sound, line of sight, taboos and counter-rituals replace combat.</td></tr>
+    <tr><td><strong>Every night is different</strong></td><td>No two episodes play the same way.</td><td>A new place, spirit and mechanic each episode, plus a structural surprise: a daylight market, a playable flashback, a companion.</td></tr>
+    <tr><td><strong>Respect is rewarded</strong></td><td>The spirit judges how Sora treats the dead, the living and the truth.</td><td>Offerings, taboos, compassion and honesty feed directly into the ending.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">2.2</span>Pacing</h3>
+<p>Each episode is short and dense: roughly <strong>5–6 puzzles, 3–4 escalating threat encounters, one optional side area and one key choice</strong> in about two hours. Every act introduces something new, and every episode ends with a revelation that changes what the player thinks is happening.</p>
+
+<h2 id="story"><span class="num">03</span>Story</h2>
+
+<h3><span class="num">3.1</span>The debt</h3>
+<p>In 1910, famine and cholera swept a forest village in Kampong Cham. Sora's great-grandfather <strong>Chea</strong> went to the village's Neak Ta shrine and offered the family's silver betel box, pleading for his children's lives and for land and fortune. The guardian accepted. The price was <strong>one life from each of four generations</strong>, the fourth falling due one full twelve-year cycle after the third. The pact was bound by five consecrated objects, the <strong>seals</strong>.</p>
+<p>The family survived and prospered, moving to rich rice land in Battambang. The guardian collected on schedule. In the 1920s a French rubber company cleared the forest and built its factory over the forgotten shrine.</p>
+
+<h3><span class="num">3.2</span>The family</h3>
+<table>
+  <thead><tr><th style="width:14%">Generation</th><th style="width:26%">Member</th><th>Fate</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Chea</strong> <span class="km">ជា</span> · great-grandfather</td><td>Made the pact in 1910. First payment: taken days later.</td></tr>
+    <tr><td>2</td><td><strong>Chhun</strong> <span class="km">ឈុន</span> · grandfather</td><td>Second payment: taken in 1911. His widow <strong>Yay Mey</strong> (<span class="km">យាយម៉ី</span>, 66, not of the bloodline) still runs the house.</td></tr>
+    <tr><td>3</td><td><strong>Kanha</strong> <span class="km">កញ្ញា</span> · Sora's mother</td><td>Third payment: drowned in 1920 during a difficult childbirth at a floating clinic on the Tonle Sap; her baby son Pich died with her. Sora's father Rith took Sora, then 12, to Phnom Penh; he died in 1929.</td></tr>
+    <tr><td>3</td><td><strong>Sok</strong> <span class="km">សុខ</span> · Kanha's brother</td><td>The clinic's medic, who failed to save his sister. Spent twelve years studying the pact. Dies on Night 1.</td></tr>
+    <tr><td>4</td><td><strong>Vuthy</strong> <span class="km">វុទ្ធី</span> · Sok's son, 26</td><td>A clerk for a French trading house who manages the family's land and money. Originally the fourth payment.</td></tr>
+    <tr><td>4</td><td><strong>Sora</strong> <span class="km">សូរ៉ា</span> · 24</td><td>The player. Stopped answering her grandmother's letters after 1929 and never came home. The name now written for the fourth payment.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.3</span>Series synopsis</h3>
+<p>In 1932 the fourth payment falls due. Sok, desperate to save his son, secretly performs a ritual in 1931 that rewrites the debtor's name from <strong>Vuthy</strong> to <strong>Sora</strong>. Riddled with guilt, he then tries to break the seals himself, but only the named debtor can break them, and on Night 1 the guardian strikes him dead. His journal, addressed to "whoever keeps my vigil", is all he leaves behind.</p>
+<p>Sora follows the journal, believing she is ending a curse on the family. In <strong>Episode 3</strong> she lives the truth through her uncle's memory: he chose her to die in his son's place, and the drowned spirit haunting the clinic is her own mother. Sok gave her the burden, and also the only way out: if the named debtor breaks all five seals and performs the Ritual of Severance, the debt ends and no one else has to die.</p>
+<p>Ending the pact has a cost. "The guardian takes back what it gave." The family's land and fortune would return to the earth. And <strong>Vuthy</strong>, told by Yay Mey that his was the first name written, believes that if Sora tries and fails, the guardian will come for him instead. He would rather she simply paid.</p>
+<p>The series is about <strong>what we owe the land and each other</strong>. Chea, the colonial company, Sok and Vuthy all take without paying; Sora, who ran from her family, must decide whether to give back. The full theme, rules of the debt and character arcs are in the <em>Story Bible</em>.</p>
+
+<h3><span class="num">3.4</span>The seven nights</h3>
+<p>The game takes place over seven nights in the monsoon season of 1932, during the fortnight of Pchum Ben. The guardian collects on the seventh night after Sok's death.</p>
+<table>
+  <thead><tr><th style="width:13%">Night</th><th style="width:30%">Episode</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Prologue (Episode 1)</td><td>Sok dies at 8:12 PM trying to burn the first seal. Yay Mey telephones Sora.</td></tr>
+    <tr><td>3</td><td>1 · The House of Mourning</td><td>Sora keeps the funeral vigil and breaks Seal #1.</td></tr>
+    <tr><td>4</td><td>2 · The Whispering Pagoda</td><td>The last night of Pchum Ben. Seal #2.</td></tr>
+    <tr><td>5</td><td>3 · The Drowned Village</td><td>The truth about Sok and Kanha. Seal #3.</td></tr>
+    <tr><td>6</td><td>4 · The Rubber Plantation</td><td>The shrine under the factory; Vuthy's betrayal. Seal #4.</td></tr>
+    <tr><td>7</td><td>5 · The Sunken Sanctuary</td><td>The Ritual of Severance before dawn.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.5</span>The antagonist: the Neak Ta</h3>
+<p>The Neak Ta appears as a towering shadow wearing an ancient brass mask, growing stronger as each seal breaks. In Khmer belief, Neak Ta are respected guardians of the land, and this one is not evil: it is enforcing a contract the family entered willingly and has tried to cheat twice. It watches how Sora treats the dead, the living and the truth. The true ending reflects this: the guardian bows and releases the family rather than being destroyed.</p>
+<p>The game keeps its spirits few and distinct. The hostile spirits are the <strong>Neak Ta</strong> (every shadow and moving statue is one of its forms), the <strong>Pret</strong> and the <strong>Khmaoch Prey</strong>. Two of the family's own dead also appear: Sora's mother <strong>Kanha</strong>, a bound and grieving soul, and her baby son <strong>Pich</strong>, a gentle guardian spirit who helps Sora.</p>
+
+<h2 id="episodes"><span class="num">04</span>Episode Roadmap</h2>
+<table>
+  <thead><tr><th style="width:21%">Episode</th><th style="width:17%">Setting</th><th>Core mechanic and twist on the formula</th><th style="width:16%">Spirit</th><th style="width:15%">Seal</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1</strong> The House of Mourning<br><span class="km small">ផ្ទះបុណ្យ</span></td><td>Stilt house, Battambang · Night 3</td><td>Resource management (kerosene, incense, matches). Ends with Sora finding her own name in Sok's chest.</td><td>Neak Ta shadow</td><td>Bronze Token</td></tr>
+    <tr><td><strong>2</strong> The Whispering Pagoda<br><span class="km small">វត្តខ្សឹបខ្សៀវ</span></td><td>Village pagoda · Night 4</td><td>Sound-based stealth. <em>Formula break:</em> a playable 1910 flashback as Chea.</td><td>Pret (hungry ghosts)</td><td>Silver Betel Box</td></tr>
+    <tr><td><strong>3</strong> The Drowned Village<br><span class="km small">ភូមិលិចទឹក</span></td><td>Floating village and clinic, Tonle Sap · Night 5</td><td>Water and warmth. <em>Formula break:</em> opens in daylight at a floating market. <em>Mid-season twist.</em></td><td>Chhlong Tonle (Sora's mother)</td><td>Terracotta Water Jar</td></tr>
+    <tr><td><strong>4</strong> The Rubber Plantation<br><span class="km small">ចំការកៅស៊ូ</span></td><td>Colonial estate, Kampong Cham · Night 6</td><td>Fog navigation and the "don't look back" taboo. <em>Formula break:</em> Vuthy travels with Sora, then betrays her.</td><td>Khmaoch Prey (voice mimics)</td><td>Iron Tapping Knife</td></tr>
+    <tr><td><strong>5</strong> The Sunken Sanctuary<br><span class="km small">ប្រាសាទលិចទឹក</span></td><td>Phnom Kulen catacombs · Night 7</td><td>Four elemental trials, each with an ancestor's memory, then the Ritual of Severance and the final choice.</td><td>Neak Ta Guardian</td><td>Golden Inscription Slab</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">4.1</span>Episode summaries</h3>
+<table>
+  <tbody>
+    <tr><td class="k">Ep 1 · The House of Mourning</td><td>Sora keeps the night vigil over Uncle Sok's coffin: lamp fuelled, incense burning, protective thread unbroken. His journal reveals the pact and the seven-night deadline. She burns the Bronze Token before 3:00 AM, then finds a slip of paper in Sok's hand with her own name beside the words "the fourth".</td></tr>
+    <tr><td class="k">Ep 2 · The Whispering Pagoda</td><td>On the last night of Pchum Ben, blind hungry ghosts hunt by sound among the stupas. In the scripture library, Sora relives the 1910 pact as Chea himself. At the 4:00 AM bell she returns the betel box to her ancestors' stupa and the seal breaks.</td></tr>
+    <tr><td class="k">Ep 3 · The Drowned Village</td><td>A daylight floating market gives way to a monsoon night. In the abandoned clinic, Sora learns that Sok renamed the debt to spare his son, and that the water spirit is her mother. Someone has cut her boat loose.</td></tr>
+    <tr><td class="k">Ep 4 · The Rubber Plantation</td><td>By telephone, Yay Mey confesses she knew. Vuthy arrives to "help". In the fog, the mimics speak with his voice too. The factory stands on the 1910 shrine. Vuthy tries to stop the seal from breaking and is seized by the guardian. Sora must choose whether to save him.</td></tr>
+    <tr><td class="k">Ep 5 · The Sunken Sanctuary</td><td>Beneath Phnom Kulen, four trials each end with a memory of one generation of the debt. At the altar, Sora performs the Ritual of Severance while the guardian attacks, and decides Vuthy's fate.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="gameplay"><span class="num">05</span>Core Gameplay</h2>
+
+<h3><span class="num">5.1</span>Core loop</h3>
+<div class="flow">
+  <div class="node start"><b>Explore</b><span>Search the location by lamplight</span></div><div class="arrow"></div>
+  <div class="node"><b>Discover</b><span>Notes, items and clues; the sketchbook records them</span></div><div class="arrow"></div>
+  <div class="node"><b>Survive</b><span>Avoid spirits using darkness, sound, hiding and taboos</span></div><div class="arrow"></div>
+  <div class="node"><b>Solve</b><span>Grounded puzzles built on Khmer custom and 1930s technology</span></div><div class="arrow"></div>
+  <div class="node goal"><b>Ritual</b><span>Break the episode's seal, then face a revelation</span></div>
+</div>
+
+<h3><span class="num">5.2</span>Key systems</h3>
+<table>
+  <thead><tr><th style="width:24%">System</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Light and resources</strong></td><td>Kerosene lamp, limited matches, and later a shutter that hides the light without putting out the flame.</td></tr>
+    <tr><td><strong>Diegetic sketchbook</strong></td><td>Sora draws maps, copies inscriptions, writes notes and marks the nights remaining.</td></tr>
+    <tr><td><strong>Stealth and perception</strong></td><td>Spirits sense by sight, sound or both. Surfaces change footstep noise; crouching, breath and distractions help.</td></tr>
+    <tr><td><strong>Escalation</strong></td><td>Each episode's spirit grows more dangerous act by act: more of them, sharper senses, new ways to reach Sora.</td></tr>
+    <tr><td><strong>Cultural taboos</strong></td><td>Rules from Khmer belief, such as never answering a voice calling your name in the forest at night. Breaking them has consequences now and at the end.</td></tr>
+    <tr><td><strong>Puzzles</strong></td><td>Physical and cultural: a betel offering tray, temple bells, Khmer lunar dates, a French–Khmer cipher, mirrors, fuses, gears.</td></tr>
+    <tr><td><strong>Optional areas</strong></td><td>One per episode, holding lore notes that teach the chants needed in the finale.</td></tr>
+    <tr><td><strong>Choices</strong></td><td>One key choice per episode, about honesty, compassion and Vuthy.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="endings"><span class="num">06</span>Choices and Endings</h2>
+<p>Three things are tracked across all five episodes:</p>
+<table>
+  <thead><tr><th style="width:22%">Tracked</th><th>Built from</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Respect</strong></td><td>Keeping taboos, making offerings correctly, choosing the honest memory in Episode 2, freeing Sora's mother in Episode 3.</td></tr>
+    <tr><td><strong>Knowledge</strong></td><td>Lore notes found. They teach the correct chant lines used in the final ritual.</td></tr>
+    <tr><td><strong>Vuthy</strong></td><td>Sharing Sok's journal with him (Episode 1), saving him (Episode 4), forgiving him (Episode 5).</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:24%">Ending</th><th style="width:34%">Conditions</th><th>Outcome</th></tr></thead>
+  <tbody>
+    <tr><td><strong>The Unbroken Freedom</strong><br><span class="small">true ending</span></td><td>Chants correct, high respect, Vuthy saved and forgiven</td><td>Sora and Vuthy offer their blood together. The guardian bows and dissolves; the debt ends with no further death. The family loses its fortune and keeps each other.</td></tr>
+    <tr><td><strong>The Last Payment</strong><br><span class="small">bitter ending</span></td><td>Chants correct, but respect too low or Vuthy not saved or not forgiven</td><td>The pact is fulfilled rather than severed: the guardian takes Vuthy as the fourth life. Sora lives and the family stays rich, at a price she will carry forever.</td></tr>
+    <tr><td><strong>Bound to the Soil</strong><br><span class="small">bad ending</span></td><td>Too many chant errors</td><td>The severance fails. Sora wakes inside the coffin at the Battambang stilt house, trapped in the spirit world as her family mourns her.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="culture"><span class="num">07</span>Cultural Foundation</h2>
+<table>
+  <thead><tr><th style="width:24%">Area</th><th>Elements used</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Spirits and beliefs</strong></td><td>Neak Ta (<span class="km">អ្នកតា</span>), Pret (<span class="km">ប្រេត</span>), Khmaoch Prey (<span class="km">ខ្មោចព្រៃ</span>), a drowned mother's spirit, and Mrenh Kongveal (<span class="km">ម្រេញគង្វាល</span>), a small guardian spirit</td></tr>
+    <tr><td><strong>Dance</strong></td><td>Classical and village dance shown only as moments of beauty and memory, never as ghosts</td></tr>
+    <tr><td><strong>Rituals and time</strong></td><td>Funeral vigil and the seventh-day rites, Pchum Ben (<span class="km">ភ្ជុំបិណ្ឌ</span>), Bay Ben (<span class="km">បាយបិណ្ឌ</span>), betel offerings, protective cotton thread, incense, chanting, the Khmer lunar calendar and twelve-year animal cycle</td></tr>
+    <tr><td><strong>Architecture</strong></td><td>Teak stilt houses (<span class="km">ផ្ទះរោងដឿង</span>), pagodas, stupas (<span class="km">ចេតិយ</span>), floating villages, French-colonial estates, Angkorian sandstone</td></tr>
+    <tr><td><strong>Objects and texts</strong></td><td>Palm-leaf manuscripts (<span class="km">ស្លឹករឹត</span>), betel boxes, terracotta jars, brass ritual objects, Khmer numerals</td></tr>
+    <tr><td><strong>Music</strong></td><td>Pinpeat (<span class="km">ពិណពាទ្យ</span>), especially the roneat (<span class="km">រនាត</span>)</td></tr>
+    <tr><td><strong>History</strong></td><td>The French Protectorate, rubber plantations and their labourers, famine and epidemic, rural and lake life</td></tr>
+  </tbody>
+</table>
+
+<h2 id="tech"><span class="num">08</span>Technology and Performance</h2>
+<table>
+  <thead><tr><th style="width:24%">Layer</th><th>Choice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript) on <strong>WebGPU only</strong>, aimed at high-end desktop hardware</td></tr>
+    <tr><td><strong>Physics</strong></td><td>Havok (bundled with Babylon.js)</td></tr>
+    <tr><td><strong>3D and textures</strong></td><td>glTF 2.0 (<code>.glb</code>) with Draco/meshopt compression; KTX2 / Basis Universal textures</td></tr>
+    <tr><td><strong>Audio</strong></td><td>Web Audio API through Babylon.js Audio Engine v2: 3D spatial sound and reverb</td></tr>
+    <tr><td><strong>Saves</strong></td><td>IndexedDB plus portable save codes that carry choices between episodes</td></tr>
+    <tr><td><strong>Build and hosting</strong></td><td>Vite, deployed as a static website</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:40%">Performance target</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Frame rate</td><td>60 fps at 1080p on minimum spec (High) · 60 fps at 1440p on recommended (Ultra)</td></tr>
+    <tr><td>Visible triangles</td><td>Up to about 3 million per frame, with LODs</td></tr>
+    <tr><td>Download</td><td>First playable area under 150 MB; the rest of the episode (up to about 600 MB) streams in the background and is cached for return visits</td></tr>
+  </tbody>
+</table>
+<h3><span class="num">8.1</span>System requirements</h3>
+<table class="kv"><tbody>
+    <tr><td>Minimum</td><td>NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro · 16 GB RAM · 1080p</td></tr>
+    <tr><td>Recommended</td><td>NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro or better · 16–32 GB RAM · 1440p</td></tr>
+    <tr><td>Browser</td><td>A WebGPU browser: current Chrome or Edge; Safari on macOS 26+; Firefox on Windows or Apple Silicon</td></tr>
+</tbody></table>
+<p>The game targets high-end desktop hardware and requires WebGPU; there is no WebGL2 fallback. A quick compatibility check runs before play, and players on unsupported browsers or hardware see a clear requirements page. Laptops with integrated graphics and mobile devices are not supported.</p>
+
+<h2 id="production"><span class="num">09</span>Production Plan</h2>
+<p>A <strong>solo developer</strong> builds the game, using licensed libraries for generic assets and custom work for everything culturally specific. <strong>Episode 1 is built and released first.</strong></p>
+<table>
+  <thead><tr><th style="width:8%">Phase</th><th style="width:28%">Name</th><th style="width:12%">Length</th><th>Main outcome</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>Pre-production</td><td>3 weeks</td><td>Beat sheet, art bible, tools installed, advisors found</td></tr>
+    <tr><td>1</td><td>Technical spikes</td><td>4 weeks</td><td>Risky technology proven</td></tr>
+    <tr><td>2</td><td>Greybox</td><td>4 weeks</td><td>All of Episode 1 playable with placeholder shapes</td></tr>
+    <tr><td>3</td><td>Core systems</td><td>7 weeks</td><td>Reusable, data-driven systems</td></tr>
+    <tr><td>4</td><td>Art and audio</td><td>12 weeks</td><td>Final environments, characters, sound and lighting</td></tr>
+    <tr><td>5</td><td>Polish and release</td><td>5 weeks</td><td>Playtesting, cultural review, browser testing, release</td></tr>
+  </tbody>
+</table>
+<p>That is about <strong>35 weeks to the Episode 1 release</strong>, then about 4 months per later episode, for a total of roughly 2–2.5 years at about 25 hours a week. Details are in the <em>Development Plan</em>.</p>
+
+<h2 id="risks"><span class="num">10</span>Risks and Mitigation</h2>
+<table>
+  <thead><tr><th style="width:26%">Risk</th><th style="width:12%">Impact</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Scope too large for one person</strong></td><td><span class="tag crit">Critical</span></td><td>Short, dense episodes; release Episode 1 first; build systems once; keep a cut list.</td></tr>
+    <tr><td><strong>Story complexity across episodes</strong></td><td><span class="tag high">High</span></td><td>One series outline (this document) that all episode documents follow; choices stored in saves from Episode 1.</td></tr>
+    <tr><td><strong>Browser memory and loading</strong></td><td><span class="tag high">High</span></td><td>Per-area loading, KTX2 textures, streamed audio, memory profiling every test cycle.</td></tr>
+    <tr><td><strong>High requirements narrow the audience</strong></td><td><span class="tag high">High</span></td><td>Clear system requirements on the store page; a compatibility check before play; a Medium preset tuned for minimum spec.</td></tr>
+    <tr><td><strong>Performance on minimum spec</strong></td><td><span class="tag high">High</span></td><td>Weekly tests on an RTX 2060-class PC; GPU profiling; scalable quality presets.</td></tr>
+    <tr><td><strong>Cultural misrepresentation</strong></td><td><span class="tag high">High</span></td><td>Cambodian advisors review the story, the greybox and the release candidate; native-speaker language checks.</td></tr>
+    <tr><td><strong>WebGPU differences between browsers</strong></td><td><span class="tag med">Medium</span></td><td>Test Chrome, Edge, Safari and Firefox WebGPU before each release; use only widely supported WebGPU features.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="next"><span class="num">11</span>Conclusion and Next Steps</h2>
+<p class="lead"><em>Boon Sop: The Unbroken Debt</em> brings Khmer folklore to a global horror audience through the most accessible platform there is. Its seven-night countdown, betrayal at the heart of the family and choice-driven endings give a short series real weight.</p>
+<ol>
+  <li>Review this version of the story with one or two Cambodian cultural advisors.</li>
+  <li>Write the Episode 1 beat sheet and a one-page art bible.</li>
+  <li>Install the toolchain and run the technical spikes.</li>
+  <li>Build the Episode 1 greybox and playtest it.</li>
+</ol>
+
+<h2 id="docs"><span class="num">A</span>Appendix: Document Set and Revision History</h2>
+<table>
+  <thead><tr><th style="width:10%">No.</th><th>Document</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>00</td><td>Project Proposal</td><td>Vision, story, scope and plan overview</td></tr>
+    <tr><td>01–05</td><td>Episode specifications</td><td>Full design and narrative specification for each episode</td></tr>
+    <tr><td>06</td><td>Development Plan</td><td>Roadmap, architecture, systems, assets, resources and open questions</td></tr>
+    <tr><td>07</td><td>Story Bible</td><td>Theme, rules of the debt, character arcs, series structure, timeline</td></tr>
+    <tr><td>08–12</td><td>Phase 0 production documents</td><td>Episode 1 beat sheet and level layout, art bible, Episode 1 script, technical design document, controls and interface</td></tr>
+    <tr><td>13–15</td><td>Production documents</td><td>Audio design document, cultural guide and glossary, playtest plan; plus the asset tracker spreadsheet</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:12%">Version</th><th>Changes</th></tr></thead>
+  <tbody>
+    <tr><td>1.0</td><td>Original proposal and episode documents.</td></tr>
+    <tr><td>2.0</td><td>Professional rewrite and reorganisation; Babylon.js chosen; solo production plan; Khmer text fixed.</td></tr>
+    <tr><td>3.0</td><td>Shorter, denser episodes (8–10 hours total). New story layer: the four-payment debt, Sora's family, Sok's renaming twist, cousin Vuthy, the seven-night countdown, the 1910 shrine under the estate, three endings, escalation, new cultural puzzles, optional areas and one key choice per episode.</td></tr>
+    <tr><td>3.1</td><td>Story Bible added. Theme set; rules of the debt fixed; Sora given a flaw and an artistic climax; Yay Mey's confession; Vuthy's motive changed from money to fear; major reveals made playable or audible instead of read.</td></tr>
+    <tr><td>3.3</td><td>Target changed to high-end desktop hardware: WebGPU required (no WebGL2), minimum RTX 2060 class, higher performance, art and download budgets.</td></tr>
+    <tr><td>3.2</td><td>Spirit roster fixed: Neak Ta (all shadows and statues are its forms), Pret and Khmaoch Prey, plus Kanha and her baby Pich as a gentle Mrenh Kongveal; dance used only as respectful moments.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

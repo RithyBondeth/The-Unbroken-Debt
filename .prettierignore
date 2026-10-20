@@ -1,0 +1,6 @@
+dist/
+node_modules/
+docs/
+public/
+art-source/
+art-export/
