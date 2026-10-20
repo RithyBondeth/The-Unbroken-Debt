@@ -33,5 +33,6 @@
 | 04 | [Episode 4 · The Rubber Plantation](docs/pdf/04-Episode-4-The-Rubber-Plantation.pdf) |
 | 05 | [Episode 5 · The Sunken Sanctuary](docs/pdf/05-Episode-5-The-Sunken-Sanctuary.pdf) |
 | 06 | [Development Plan](docs/pdf/06-Development-Plan.pdf) |
+| 07 | [Story Bible](docs/pdf/07-Story-Bible.pdf) |
 
 See [docs/README.md](docs/README.md) for the folder layout and how to rebuild the PDFs.

@@ -13,6 +13,7 @@ All design documents for the game. **Read the PDFs** in [`pdf/`](pdf/). Edit the
 | 04 | [Episode 4 · The Rubber Plantation](pdf/04-Episode-4-The-Rubber-Plantation.pdf) | Kampong Cham estate: fog navigation, voice-mimic taboo, Seal #4 |
 | 05 | [Episode 5 · The Sunken Sanctuary](pdf/05-Episode-5-The-Sunken-Sanctuary.pdf) | Phnom Kulen: elemental trials, severance ritual, endings |
 | 06 | [Development Plan](pdf/06-Development-Plan.pdf) | Roadmap, architecture, game systems, assets, resources, open questions |
+| 07 | [Story Bible](pdf/07-Story-Bible.pdf) | Theme, rules of the debt, character arcs, structure, timeline |
 
 Every episode document follows the same structure: overview, characters, locations, acts, mechanics, puzzles, entities, items, audio/visual, glossary, and revision notes with open issues.
 
