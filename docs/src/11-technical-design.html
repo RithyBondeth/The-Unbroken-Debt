@@ -371,6 +371,15 @@ export async function A3_07_ritual(s: SequenceContext) {
 </ul>
 <p class="small">S2 result on the reference MacBook Pro M1 Pro: Medium at 1080p averages 62.5 fps; Low about 100 fps at 900p. The 1% low (about 30 fps, one slow frame roughly every 1.1 s) is still open; see Development Plan, Phase 1.</p>
 
+<h3>Atmosphere (S7)</h3>
+<ul>
+  <li><strong>Colour grade.</strong> Each episode keeps its grade as data (<code>episodes/ep1/data/grade.ts</code>: saturation, shadow, mid-tone and highlight tints from the palette, black point). <code>render/grade.ts</code> bakes it into a 32³ 3D lookup table applied after tone mapping; it replaces the S2 colour curves and costs no more.</li>
+  <li><strong>Eye adaptation.</strong> <code>render/Atmosphere.ts</code> sets exposure from the light reaching Sora (her lamp at arm's length = 1, flames by distance). It moves 90% of the way in 2.5 s towards the dark and 0.8 s towards light, and wins back only a quarter of the lost stops, capped at 3× the base: full compensation made rooms brighter with the lamp out. It runs on real elapsed time, so slow frames don't slow it.</li>
+  <li><strong>Night sight.</strong> A faint, cool, unshadowed point light on the camera (range 2.5 m) grows with adaptation and darkness, so shapes within about 2 m show in a dark room (Art Bible darkness rule) while the rest stays black. It counts towards each material's eight lights.</li>
+  <li><strong>Mood and settings.</strong> Fear (0–1) raises the vignette from 1.5 to 4; a scare jolts the aberration from 8 to 32 and fades in about a second; memories raise grain to 14. The grain and aberration settings switch them off; brightness calibration adds ±1 stop.</li>
+  <li><strong>Cost (M1 Pro, Medium, 1080p).</strong> The look together costs about 1–1.5 ms; bloom is the largest part. Effects are switched on and off only when their setting changes, because toggling rebuilds post-processes.</li>
+</ul>
+
 <h3>Sketchbook pages (S5)</h3>
 <ul>
   <li><strong>Pages.</strong> A5 pages laid out in millimetres of paper and painted into <code>DynamicTexture</code>s with mipmaps and 8× anisotropic filtering: 1024 px high on Low, 1536 on Medium, 2048 on High and Ultra. Four textures: the two open pages and both sides of the turning leaf. Each section starts on a left-hand page; the ribbon tabs are drawn along the bottom of right-hand pages.</li>
