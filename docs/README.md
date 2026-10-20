@@ -19,8 +19,12 @@ All design documents for the game. **Read the PDFs** in [`pdf/`](pdf/). Edit the
 | 10 | [Episode 1 Script and Text](pdf/10-Episode-1-Script.pdf) | All dialogue, Sok's recording, journal pages, lore notes, sketchbook text |
 | 11 | [Technical Design Document](pdf/11-Technical-Design-Document.pdf) | Modules, events, data formats, Blender conventions, saves, AI, rendering, audio, deployment |
 | 12 | [Controls and Interface](pdf/12-Controls-and-Interface.pdf) | Bindings, satchel and sketchbook UX, feedback without a HUD, menus, settings, accessibility |
+| 13 | [Audio Design Document](pdf/13-Audio-Design-Document.pdf) | Mix, ambience, footsteps, spirits, music brief, voice, Episode 1 sound list |
+| 14 | [Cultural Guide and Glossary](pdf/14-Cultural-Guide-and-Glossary.pdf) | Advisor process, topic briefings, master glossary, sensitive content register, review log |
+| 15 | [Playtest Plan](pdf/15-Playtest-Plan.pdf) | Test rounds, recruiting, session protocol, metrics, questionnaire, acting on feedback |
+| — | [Asset tracker](production/asset-tracker.csv) | Spreadsheet of every Episode 1 asset, status and licence (see [production/README.md](production/README.md)) |
 
-Documents 08–12 are the **Phase 0 production documents** used to build Episode 1. Every episode document follows the same structure: overview, characters, locations, acts, mechanics, puzzles, entities, items, audio/visual, glossary, and revision notes with open issues.
+Documents 08–12 are the **Phase 0 production documents** used to build Episode 1; 13–15 and the asset tracker are used **during production**. Every episode document follows the same structure: overview, characters, locations, acts, mechanics, puzzles, entities, items, audio/visual, glossary, and revision notes with open issues.
 
 ## Folder layout
 
@@ -29,6 +33,7 @@ docs/
 ├── pdf/            Generated PDFs (read these)
 ├── src/            HTML sources + shared style.css (edit these)
 │   └── fonts/      Ubuntu (English) and Preah Vihear (Khmer), with licences
+├── production/     Asset tracker spreadsheet and tracking notes
 └── archive/v1/     Original v1.0 documents, kept for reference
 ```
 

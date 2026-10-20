@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audio Design Document — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="13-Audio-Design-Document">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Audio Design Document"; } }</style>
+</head>
+<body class="ep3">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Production document</div>
+  <h1>Audio Design Document</h1>
+  <div class="subtitle">How the game sounds: principles, the mix, ambience, footsteps, spirits, music, voice, the full Episode 1 sound list and technical specifications.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Applies to</dt><dd>All episodes · Episode 1 sound list in full</dd>
+    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#pillars">Audio Pillars</a></li>
+    <li><span class="n">02</span><a href="#mix">The Mix</a></li>
+    <li><span class="n">03</span><a href="#ambience">Ambience</a></li>
+    <li><span class="n">04</span><a href="#foley">Footsteps and Foley</a></li>
+    <li><span class="n">05</span><a href="#spirits">Spirit Sound Design</a></li>
+    <li><span class="n">06</span><a href="#music">Music Brief</a></li>
+    <li><span class="n">07</span><a href="#voice">Voice Production</a></li>
+    <li><span class="n">08</span><a href="#ep1">Episode 1 Sound List</a></li>
+    <li><span class="n">09</span><a href="#recording">Recording Plan</a></li>
+    <li><span class="n">10</span><a href="#specs">Technical Specifications</a></li>
+  </ol>
+</nav>
+
+<h2 id="pillars"><span class="num">01</span>Audio Pillars</h2>
+<table>
+  <thead><tr><th style="width:28%">Pillar</th><th>In practice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Sound tells the truth</strong></td><td>In the dark, sound is the player's main sense. Every threat must be locatable by ear alone, so spirit sounds are always spatial, distinct and honest (no fake positions).</td></tr>
+    <tr><td><strong>Silence is a sound</strong></td><td>Quiet stretches are planned. Insects and rain stopping is one of the strongest warnings in the game.</td></tr>
+    <tr><td><strong>The world is alive</strong></td><td>Rain, frogs, wood and wind are dense, layered and specific to Cambodia, never generic "horror ambience".</td></tr>
+    <tr><td><strong>Music is rare</strong></td><td>Most of the game has no music. When the Pinpeat tones arrive, they mean something.</td></tr>
+    <tr><td><strong>Respect sacred sound</strong></td><td>Chanting, bells and Pinpeat are used with permission and correct context, never distorted for cheap scares (section 6.3).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="mix"><span class="num">02</span>The Mix</h2>
+<table class="dense">
+  <thead><tr><th style="width:18%">Bus</th><th style="width:16%">Level guide</th><th>Rules</th></tr></thead>
+  <tbody>
+    <tr><td>Voice</td><td>Loudest</td><td>Always intelligible; ducks ambience by 6 dB and music by 4 dB while speaking.</td></tr>
+    <tr><td>Threat</td><td>High</td><td>Never ducked. HRTF spatialisation for precise positioning.</td></tr>
+    <tr><td>SFX</td><td>Medium</td><td>Player's own sounds slightly quieter than threats so threats stand out.</td></tr>
+    <tr><td>Ambience</td><td>Low–medium</td><td>Two to four layers per zone; crossfade over 2–3 s between zones.</td></tr>
+    <tr><td>Music</td><td>Low</td><td>Sits under everything; never masks a threat.</td></tr>
+    <tr><td>UI</td><td>Low</td><td>Paper, pencil, satchel sounds; dry, non-spatial.</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>Loudness target:</strong> the overall mix averages around −18 LUFS on a test playthrough, with peaks below −1 dBTP. Dialogue sits around −20 to −18 LUFS.</li>
+  <li><strong>Dynamic range:</strong> wide on purpose; horror needs quiet. A "night mode" setting compresses the range for players without headphones.</li>
+  <li><strong>Headphones recommended:</strong> the start screen says so; "headphone mode" sharpens 3D positioning.</li>
+</ul>
+
+<h2 id="ambience"><span class="num">03</span>Ambience</h2>
+<table class="dense">
+  <thead><tr><th style="width:20%">Zone (Ep 1)</th><th>Layers</th><th style="width:20%">Reverb</th></tr></thead>
+  <tbody>
+    <tr><td>Studio (prologue)</td><td>Rain on glass · distant city traffic and a tram bell · room tone · clock ticking</td><td>Small room</td></tr>
+    <tr><td>Village path</td><td>Heavy rain on banana leaves · wind gusts · frogs · distant thunder</td><td>Open, dense foliage</td></tr>
+    <tr><td>Courtyard and tent</td><td>Rain on wet cloth · dripping from the tent edges · cicadas between showers · bullfrogs · the hiss of oil lamps</td><td>Open courtyard</td></tr>
+    <tr><td>Upper house</td><td>Rain on roof tiles · creaking teak · wind through shutters · muffled tent sounds through the floor gaps</td><td>Small wooden room</td></tr>
+    <tr><td>Under the house</td><td>Rain falling around the edges · dripping between floorboards · muddy ground · insects close up · floor creaks above</td><td>Low, semi-open</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">The silence rule</span><p>Before every major threat, the insect and frog layers fade out over 3–5 seconds. Players learn quickly that silence means danger, and the game can use that expectation later.</p></div>
+
+<h2 id="foley"><span class="num">04</span>Footsteps and Foley</h2>
+<h3><span class="num">4.1</span>Footstep matrix</h3>
+<table class="dense">
+  <thead><tr><th style="width:18%">Surface</th><th>Walk</th><th>Crouch</th><th>Hurry</th><th style="width:16%">Noise (0–1)</th></tr></thead>
+  <tbody>
+    <tr><td>Teak floor</td><td>8 variations</td><td>6</td><td>8</td><td>0.5 · creaks</td></tr>
+    <tr><td>Dirt</td><td>8</td><td>6</td><td>8</td><td>0.3</td></tr>
+    <tr><td>Mud</td><td>8 (suction)</td><td>6</td><td>8</td><td>0.6</td></tr>
+    <tr><td>Dry leaves (Ep 2)</td><td>8</td><td>6</td><td>8</td><td>0.9</td></tr>
+    <tr><td>Stone</td><td>8</td><td>6</td><td>8</td><td>0.5</td></tr>
+    <tr><td>Moss (Ep 2)</td><td>6</td><td>6</td><td>6</td><td>0.15</td></tr>
+    <tr><td>Shallow water (Ep 3)</td><td>8 (splash)</td><td>6</td><td>8</td><td>0.7</td></tr>
+  </tbody>
+</table>
+<p class="small">Noise values feed the AI (Technical Design Document, section 10). Crouching halves them; hurrying doubles them.</p>
+
+<h3><span class="num">4.2</span>Player foley</h3>
+<table class="dense">
+  <thead><tr><th style="width:24%">Group</th><th>Sounds</th></tr></thead>
+  <tbody>
+    <tr><td>Clothing</td><td>Cotton blouse rustle on turning and crouching; heavier when wet</td></tr>
+    <tr><td>Satchel</td><td>Leather open, close, buckle; items shifting inside</td></tr>
+    <tr><td>Sketchbook</td><td>Page turns, pencil scratch for new entries, ink pen</td></tr>
+    <tr><td>Lamp</td><td>Wick turn, glass chimney lift, flame catch, flicker, sputter, shutter open/close, oil pour</td></tr>
+    <tr><td>Matches</td><td>Box slide, strike, flare, burn, blow out (several takes; failed strikes too)</td></tr>
+    <tr><td>Breathing</td><td>Calm, nervous, frightened, holding, gasp, shivering</td></tr>
+  </tbody>
+</table>
+
+<h2 id="spirits"><span class="num">05</span>Spirit Sound Design</h2>
+<table class="dense">
+  <thead><tr><th style="width:18%">Spirit</th><th>Signature</th><th style="width:30%">Source ideas</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Neak Ta</strong></td><td>Grinding stone under a deep, slow breath; a layered voice (low human, stone, distant wind); brass resonance when it is close.</td><td>Stones dragged on concrete, slowed; a brass bowl struck and bowed; voice layered and pitched down</td></tr>
+    <tr><td><strong>Walker / roamer</strong></td><td>Wet, dragging footsteps; heavy breathing with a rattle; wood groaning under weight.</td><td>Wet cloth dragged on wood; breathing through cupped hands</td></tr>
+    <tr><td><strong>Pret</strong> (Ep 2)</td><td>Thin, high, raspy breathing through a tiny mouth; long sniffing; a shriek when food is wasted.</td><td>Breathing through a straw; pitched and filtered</td></tr>
+    <tr><td><strong>Chhlong Tonle</strong> (Ep 3)</td><td>Water moving where nothing moves it; muffled crying under water; fragments of a lullaby.</td><td>Hydrophone recordings; a voice recorded through water</td></tr>
+    <tr><td><strong>Khmaoch Prey</strong> (Ep 4)</td><td>Perfect imitations of family voices, slightly wrong in timing and breath; creaking like wood when they move.</td><td>The real voice actors' lines, re-edited and lightly processed</td></tr>
+  </tbody>
+</table>
+<p><strong>Rule:</strong> each spirit has a sound the player can learn and that always means the same thing. Never play a spirit's signature unless that spirit is really there.</p>
+
+<h2 id="music"><span class="num">06</span>Music Brief</h2>
+<h3><span class="num">6.1</span>Direction</h3>
+<p>A sparse score built on traditional Khmer instruments, especially the <strong>roneat</strong> (<span class="km">រនាត</span>) and the <strong>Pinpeat</strong> (<span class="km">ពិណពាទ្យ</span>) ensemble, played slowly and quietly, with long silences, low drones and natural room sound. It should feel like music heard from far away across water at night.</p>
+<h3><span class="num">6.2</span>Episode 1 cues</h3>
+<table class="dense">
+  <thead><tr><th class="id">Cue</th><th style="width:20%">Moment</th><th>Description</th><th style="width:12%">Length</th></tr></thead>
+  <tbody>
+    <tr><td class="id">M1-01</td><td>Main menu</td><td>Solo roneat, slow, a simple melancholy phrase with long gaps; rain underneath</td><td>2–3 min loop</td></tr>
+    <tr><td class="id">M1-02</td><td>Arrival (A1-02)</td><td>One low sustained tone and a few struck notes as the tent comes into view</td><td>30 s</td></tr>
+    <tr><td class="id">M1-03</td><td>Portrait (A2-09)</td><td>A single dissonant struck chord, then silence</td><td>5 s</td></tr>
+    <tr><td class="id">M1-04</td><td>Ritual (A3-07)</td><td>Low drone rising under the chant; no melody</td><td>40 s</td></tr>
+    <tr><td class="id">M1-05</td><td>Dawn (R01)</td><td>Gentle roneat phrase (the menu theme, warmer)</td><td>45 s</td></tr>
+    <tr><td class="id">M1-06</td><td>The name (R03)</td><td>Silence, then one quiet note as the blood spreads</td><td>15 s</td></tr>
+    <tr><td class="id">M1-07</td><td>Credits</td><td>Full version of the main theme</td><td>2 min</td></tr>
+  </tbody>
+</table>
+<h3><span class="num">6.3</span>Working with musicians</h3>
+<ul>
+  <li>Commission Cambodian musicians to record, or license existing recordings with clear written permission. Credit them by name.</li>
+  <li>Ask the musicians which pieces and modes are appropriate for funerals and which must not be used in a game.</li>
+  <li>Record instruments dry (close microphones) and with room sound, so they can be placed in the game's spaces.</li>
+  <li>Do not use real chanting or ceremonial music as a horror sting, and do not reverse or distort it.</li>
+</ul>
+
+<h2 id="voice"><span class="num">07</span>Voice Production</h2>
+<table class="kv">
+  <tbody>
+    <tr><td>Language</td><td>Khmer for all characters (Episode 1 Script, section 1); English and Khmer subtitles.</td></tr>
+    <tr><td>Casting</td><td>See the Episode 1 Script, section 2. Prefer actors from or familiar with Battambang for Yay Mey's accent.</td></tr>
+    <tr><td>Recording</td><td>Quiet, treated room; large-diaphragm or broadcast dynamic microphone; 48 kHz, 24-bit WAV; 20–30 cm from the mouth; pop filter.</td></tr>
+    <tr><td>Takes</td><td>Three versions of each line (normal, quieter, more emotional) plus breaths and reactions (gasps, sighs) for Sora.</td></tr>
+    <tr><td>Processing</td><td>Light noise reduction, gentle compression, high-pass at 80 Hz. Sok's recording gets a gramophone treatment (band-limited, crackle, slight wow and flutter).</td></tr>
+    <tr><td>Files</td><td><code>vo_&lt;lineID&gt;_t&lt;take&gt;.wav</code>, e.g. <code>vo_E1-A1-03-2_t2.wav</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="ep1"><span class="num">08</span>Episode 1 Sound List</h2>
+<p class="small">Source: <strong>R</strong> record yourself · <strong>L</strong> library (check licence) · <strong>D</strong> designed from layers · <strong>M</strong> musicians. Priority: A = needed for the greybox, B = needed for release.</p>
+<table class="dense">
+  <thead><tr><th class="id">ID</th><th>Sound</th><th style="width:14%">Type</th><th style="width:9%">Source</th><th style="width:7%">Pri</th></tr></thead>
+  <tbody>
+    <tr><td class="id">S1-001</td><td>Rain layers: on glass, leaves, cloth, roof tiles, ground edges</td><td>Ambience loop</td><td>L + R</td><td>A</td></tr>
+    <tr><td class="id">S1-002</td><td>Thunder (near, far) ×8</td><td>One-shot</td><td>L</td><td>A</td></tr>
+    <tr><td class="id">S1-003</td><td>Cicadas, bullfrogs, night insects</td><td>Ambience loop</td><td>L</td><td>A</td></tr>
+    <tr><td class="id">S1-004</td><td>Phnom Penh street at night 1932 (traffic, tram bell)</td><td>Ambience loop</td><td>L + D</td><td>B</td></tr>
+    <tr><td class="id">S1-005</td><td>Wall clock tick and stop; clock chime (quarter hour)</td><td>Loop / one-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-006</td><td>Brass telephone ring; lifting the earpiece; static; dead line</td><td>One-shot / loop</td><td>L + D</td><td>A</td></tr>
+    <tr><td class="id">S1-007</td><td>Phone scream, glass shatter, thuds (through the line)</td><td>One-shot</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-008</td><td>Ink spill, pen scratch, candle blown out</td><td>One-shot</td><td>R</td><td>B</td></tr>
+    <tr><td class="id">S1-009</td><td>Train and horse-carriage montage under the fade</td><td>One-shot</td><td>L</td><td>B</td></tr>
+    <tr><td class="id">S1-010</td><td>Carriage stop, horse snort, wheels in mud</td><td>One-shot</td><td>L</td><td>B</td></tr>
+    <tr><td class="id">S1-011</td><td>Footsteps: teak, dirt, mud (walk, crouch, hurry)</td><td>One-shot sets</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-012</td><td>Teak creaks and groans (random, under weight)</td><td>One-shot set</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-013</td><td>Lamp set (wick, chimney, catch, flicker, sputter, oil pour)</td><td>One-shot / loop</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-014</td><td>Match set (box, strike, fail, flare, burn)</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-015</td><td>Satchel and sketchbook set</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-016</td><td>Hanging oil lamps hiss; wax candle flicker</td><td>Loop</td><td>R</td><td>B</td></tr>
+    <tr><td class="id">S1-017</td><td>Incense crackle; burn-out puff</td><td>Loop / one-shot</td><td>R</td><td>B</td></tr>
+    <tr><td class="id">S1-018</td><td>Whispers (incense neglected); layered, unintelligible</td><td>Loop</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-019</td><td>Cold gust; lamps going out in a ripple (A2-01)</td><td>One-shot</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-020</td><td>Wet footsteps above (A2-01)</td><td>One-shot</td><td>R + D</td><td>A</td></tr>
+    <tr><td class="id">S1-021</td><td>Doors: wooden door open, creak, ajar swing; drawer open; lid slides</td><td>One-shot set</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-022</td><td>Loose wall planks pulled away</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-023</td><td>Gramophone: crank, needle drop, crackle, speed dial, warped and corrected playback</td><td>Interactive</td><td>R + D</td><td>A</td></tr>
+    <tr><td class="id">S1-024</td><td>Backward funeral chant on the gramophone</td><td>Loop</td><td>M + D</td><td>B</td></tr>
+    <tr><td class="id">S1-025</td><td>Hallway walker: dragging steps, breathing, pause at door</td><td>Spatial set</td><td>R + D</td><td>A</td></tr>
+    <tr><td class="id">S1-026</td><td>Wardrobe hide: door close, muffled filter, heartbeat</td><td>One-shot / loop</td><td>R + L</td><td>A</td></tr>
+    <tr><td class="id">S1-027</td><td>Portrait reveal sound cue (subtle frame creak, intake of breath)</td><td>One-shot</td><td>D</td><td>B</td></tr>
+    <tr><td class="id">S1-028</td><td>Thread snap (sharp, echoing)</td><td>One-shot</td><td>R + D</td><td>A</td></tr>
+    <tr><td class="id">S1-029</td><td>Corpse shift (cloth, wood creak), five variations</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-030</td><td>Clay jar lid lift; hand in water; fragment found</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-031</td><td>Roamer: patrol drag, wet breath, investigate sniff, chase rush</td><td>Spatial set</td><td>R + D</td><td>A</td></tr>
+    <tr><td class="id">S1-032</td><td>Key fragments click together; chest lock and heavy lid</td><td>One-shot</td><td>R</td><td>A</td></tr>
+    <tr><td class="id">S1-033</td><td>Presence behind Sora: breath at the ear, stone grind, the whispered name</td><td>Spatial, close</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-034</td><td>Token burning; wind blast tearing the tent; fading screech</td><td>One-shot</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-035</td><td>Dawn: birdsong, dripping, distant rooster</td><td>Ambience</td><td>L</td><td>B</td></tr>
+    <tr><td class="id">S1-036</td><td>Blood spreading on paper (wet, slow)</td><td>One-shot</td><td>R + D</td><td>B</td></tr>
+    <tr><td class="id">S1-037</td><td>Caught: scare hit, page tear, fade</td><td>One-shot</td><td>D</td><td>A</td></tr>
+    <tr><td class="id">S1-038</td><td>Funeral chanting for the ritual</td><td>Loop</td><td>M (with permission)</td><td>B</td></tr>
+  </tbody>
+</table>
+
+<h2 id="recording"><span class="num">09</span>Recording Plan</h2>
+<table class="dense">
+  <thead><tr><th style="width:26%">Session</th><th>What to record</th><th style="width:28%">Where / props</th></tr></thead>
+  <tbody>
+    <tr><td>Wood session</td><td>Footsteps on old boards, creaks, doors, drawers, planks, chest, wardrobe</td><td>An old wooden house or floor; a wooden box</td></tr>
+    <tr><td>Fire session</td><td>Matches, a real hurricane lamp, candles, incense</td><td>Safe outdoor space; fire precautions</td></tr>
+    <tr><td>Paper and leather</td><td>Sketchbook, pages, pencils, fountain pen, satchel, letters</td><td>Quiet room</td></tr>
+    <tr><td>Water and mud</td><td>Hands in a clay jar, mud footsteps, dripping, wet cloth drags</td><td>Garden; a large pot of water</td></tr>
+    <tr><td>Rain (field)</td><td>Rain on leaves, cloth, tin and tiles in Cambodia during the monsoon if possible</td><td>Portable recorder, wind protection</td></tr>
+    <tr><td>Body</td><td>Breathing set, cloth movement, heartbeat</td><td>Quiet room</td></tr>
+  </tbody>
+</table>
+<p class="small">Equipment: a portable recorder (for example a handheld stereo recorder) plus one dynamic and one condenser microphone is enough. Record at 48 kHz / 24-bit, several takes, with a few seconds of room tone each time.</p>
+
+<h2 id="specs"><span class="num">10</span>Technical Specifications</h2>
+<table class="dense">
+  <thead><tr><th style="width:26%">Item</th><th>Specification</th></tr></thead>
+  <tbody>
+    <tr><td>Source files</td><td>48 kHz, 24-bit WAV in <code>art-source/audio/</code> (Git LFS)</td></tr>
+    <tr><td>Shipped format</td><td>Ogg Opus (96 kbps stereo ambience and music, 64 kbps mono effects and voice), with AAC fallback</td></tr>
+    <tr><td>Channels</td><td>Spatial effects and voice mono; ambience and music stereo</td></tr>
+    <tr><td>Loops</td><td>Seamless loop points; at least 30 s for ambience to avoid audible repetition</td></tr>
+    <tr><td>Streaming</td><td>Ambience and music streamed; short effects preloaded per area</td></tr>
+    <tr><td>Naming</td><td><code>&lt;bus&gt;_&lt;ep&gt;_&lt;name&gt;_&lt;variant&gt;</code>, e.g. <code>sfx_ep1_teak_step_03.ogg</code>, <code>amb_ep1_tent_rain.ogg</code>, <code>mus_M1-04_ritual.ogg</code></td></tr>
+    <tr><td>Budget</td><td>About 15–20 MB of audio in Episode 1's initial download; the rest streamed</td></tr>
+    <tr><td>Licences</td><td>Every library sound logged in the asset tracker with source, licence and credit</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

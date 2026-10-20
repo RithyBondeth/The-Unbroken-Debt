@@ -39,5 +39,9 @@
 | 10 | [Episode 1 Script and Text](docs/pdf/10-Episode-1-Script.pdf) |
 | 11 | [Technical Design Document](docs/pdf/11-Technical-Design-Document.pdf) |
 | 12 | [Controls and Interface](docs/pdf/12-Controls-and-Interface.pdf) |
+| 13 | [Audio Design Document](docs/pdf/13-Audio-Design-Document.pdf) |
+| 14 | [Cultural Guide and Glossary](docs/pdf/14-Cultural-Guide-and-Glossary.pdf) |
+| 15 | [Playtest Plan](docs/pdf/15-Playtest-Plan.pdf) |
+| — | [Asset tracker](docs/production/asset-tracker.csv) (spreadsheet) |
 
 See [docs/README.md](docs/README.md) for the folder layout and how to rebuild the PDFs.
