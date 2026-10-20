@@ -26,7 +26,7 @@ async function boot(): Promise<void> {
 
   useLocalDecoders();
 
-  // Phase 1 spikes: ?spike=s1 (movement), ?spike=s2 (lighting) or ?spike=s3 (assets).
+  // Phase 1 spikes: ?spike=s1 (movement), ?spike=s2 (lighting), ?spike=s3 (assets) or ?spike=s5 (sketchbook).
   const params = new URLSearchParams(window.location.search);
   const spike = params.get("spike");
   if (hasSpike(spike)) {

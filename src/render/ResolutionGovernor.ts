@@ -29,6 +29,8 @@ export class ResolutionGovernor {
   private overTime = 0;
   private sinceProbe = Infinity;
   private probeInterval = 3;
+  /** Temporary lower limit, e.g. while the sketchbook is open. */
+  private floor = 0;
 
   constructor(options: GovernorOptions) {
     this.targetMs = options.targetMs;
@@ -37,6 +39,16 @@ export class ResolutionGovernor {
     this.step = options.step ?? 0.05;
     this.scale = this.maxScale;
     this.smoothedMs = options.targetMs;
+  }
+
+  /**
+   * Holds the scale at or above `floor` until released with `null`: text on the
+   * sketchbook's pages blurs below about 85% of 900p (Spike S5), and reading is
+   * a calm moment where a few missed frames matter less than legible text.
+   */
+  setFloor(floor: number | null): void {
+    this.floor = floor === null ? 0 : Math.min(this.maxScale, floor);
+    if (this.scale < this.floor) this.scale = this.floor;
   }
 
   /**
@@ -65,7 +77,7 @@ export class ResolutionGovernor {
       this.headroomTime = 0;
       this.overTime += dt;
       // React to sustained load (0.2 s), not to a single hitch.
-      if (this.overTime >= 0.2 && this.cooldown === 0 && this.scale > this.minScale) {
+      if (this.overTime >= 0.2 && this.cooldown === 0 && this.scale > this.lowest) {
         this.lower();
         // A probe that caused this means the last scale was the limit: wait longer next time.
         if (this.sinceProbe < 1.5) this.probeInterval = Math.min(this.probeInterval * 2, 30);
@@ -94,8 +106,12 @@ export class ResolutionGovernor {
     return this.scale;
   }
 
+  private get lowest(): number {
+    return Math.max(this.minScale, this.floor);
+  }
+
   private lower(): void {
-    this.scale = Math.max(this.minScale, round(this.scale - this.step));
+    this.scale = Math.max(this.lowest, round(this.scale - this.step));
     this.cooldown = 0.3;
   }
 

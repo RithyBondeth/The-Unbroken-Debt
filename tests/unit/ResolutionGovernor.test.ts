@@ -57,3 +57,21 @@ describe("ResolutionGovernor without GPU timing", () => {
     expect(run(g, 20, TARGET, null)).toBe(1);
   });
 });
+
+describe("ResolutionGovernor floor (sketchbook open)", () => {
+  it("jumps up to the floor and stays there under load", () => {
+    const g = new ResolutionGovernor({ targetMs: TARGET, minScale: 0.6 });
+    expect(run(g, 5, TARGET, 22)).toBe(0.6);
+    g.setFloor(0.85);
+    expect(g.scale).toBe(0.85);
+    expect(run(g, 5, TARGET, 22)).toBe(0.85);
+  });
+
+  it("lowers again once released", () => {
+    const g = new ResolutionGovernor({ targetMs: TARGET, minScale: 0.6 });
+    g.setFloor(0.85);
+    run(g, 5, TARGET, 22);
+    g.setFloor(null);
+    expect(run(g, 5, TARGET, 22)).toBe(0.6);
+  });
+});

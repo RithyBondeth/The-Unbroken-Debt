@@ -38,6 +38,15 @@ export class DynamicResolution {
     return this.enabled ? this.governor.scale : 1;
   }
 
+  /**
+   * While text must stay sharp (the sketchbook is open), never drop below this
+   * share of the preset's height; `null` releases it. Spike S5: 0.85.
+   */
+  holdAtLeast(scale: number | null): void {
+    this.governor.setFloor(scale);
+    this.apply();
+  }
+
   dispose(): void {
     this.observer.remove();
   }

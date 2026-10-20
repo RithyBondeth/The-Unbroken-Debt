@@ -49,6 +49,8 @@ V1-047,1,Courtyard,Character,Vuthy,ch_vuthy.glb,L+C,High,Not started,60000-10000
 V1-048,1,Courtyard,Character,Uncle Sok's corpse (5 poses),ch_sok_corpse.glb,C,High,Not started,60000-100000 tris,,,,,Wrapped in white cloth
 V1-049,1,Shared,Creature,Neak Ta shadow and brass mask,cr_neak_ta.glb,C,Critical,Not started,30000-60000 tris,,,,,Mostly shader; mask detailed
 V1-050,1,House,Creature,"Neak Ta shadow forms (house walker, under-house patrol)",cr_shadow_figure.glb,C,High,Not started,30000-60000 tris,,,,,Same entity reused in Ep 4 (manor) with different settings
+V1-052,1,Shared,Font,"Sora's English handwriting (sketchbook, hints)",PatrickHand-Regular.ttf,L,Critical,In progress,,https://fonts.google.com/specimen/Patrick+Hand,Patrick Wagesreiter,SIL OFL 1.1,Yes,Licence in public/fonts/PatrickHand-OFL.txt; chosen in Spike S5
+V1-053,1,Shared,Font,"Sora's Khmer handwriting (sketchbook)",Freehand-Regular.ttf,L,Critical,In progress,,https://fonts.google.com/specimen/Freehand,Danh Hong,SIL OFL 1.1,Yes,Licence in public/fonts/Freehand-OFL.txt; chosen in Spike S5; Khmer text needs native-speaker review
 S1-001,1,Audio,Sound (Ambience loop),"Rain layers: on glass, leaves, cloth, roof tiles, ground edges",,L + R,High,Not started,,,,,,Priority A in Audio Design Document
 S1-002,1,Audio,Sound (One-shot),"Thunder (near, far) ×8",,L,High,Not started,,,,,,Priority A in Audio Design Document
 S1-003,1,Audio,Sound (Ambience loop),"Cicadas, bullfrogs, night insects",,L,High,Not started,,,,,,Priority A in Audio Design Document
