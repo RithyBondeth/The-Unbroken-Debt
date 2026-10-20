@@ -1,0 +1,10 @@
+{
+  "requirements.title": "This game needs WebGPU",
+  "requirements.body": "Boon Sop: The Unbroken Debt is built for high-end desktop computers and runs only in browsers with WebGPU enabled.",
+  "requirements.minimum": "Minimum",
+  "requirements.minimum.value": "NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro · 16 GB RAM",
+  "requirements.recommended": "Recommended",
+  "requirements.recommended.value": "NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro · 16–32 GB RAM",
+  "requirements.browser": "Browser",
+  "requirements.browser.value": "Current Chrome or Edge · Safari on macOS 26+ · Firefox on Windows or Apple Silicon"
+}

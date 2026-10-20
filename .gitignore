@@ -1,1 +1,25 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Intermediate art exports (regenerated from art-source/ by Blender)
+art-export/*
+!art-export/README.md
+
+# Reference images are for study only and may be copyrighted
+art-source/reference/*
+!art-source/reference/README.md
+
+# Blender backups
+*.blend1
+*.blend2
+
+# OS and editor files
 .DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

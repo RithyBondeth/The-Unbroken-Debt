@@ -33,6 +33,54 @@
 
 Laptops with integrated graphics and mobile devices are not supported.
 
+## 🚀 Getting Started
+
+Requires [Node.js](https://nodejs.org) 20+ and a WebGPU browser. Before adding art or audio files, install [Git LFS](https://git-lfs.com) (`git lfs install`).
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the development server at http://localhost:5173 |
+| `npm run build` | Type-check and build for production into `dist/` |
+| `npm test` | Run the unit tests |
+| `npm run typecheck` | Type-check only |
+| `npm run format` | Format the code with Prettier |
+| `npm run assets` | Optimise Blender exports from `art-export/` into `public/assets/` (needs KTX-Software) |
+| `npm run docs` | Rebuild the design PDFs from `docs/src/` (needs Google Chrome) |
+
+## 🗂️ Project Structure
+
+```
+.
+├── src/                 Game source code (TypeScript, Babylon.js) — see src/README.md
+│   ├── main.ts          Boot: WebGPU check, engine, game start
+│   ├── core/            Game, event bus, flags, loading, localisation
+│   ├── player/          Controller, camera, interaction, hands
+│   ├── systems/         Inventory, sketchbook, lamp, saves, settings …
+│   ├── ai/              Perception, state machines, spirit entities
+│   ├── sequences/       Scripted scenes
+│   ├── audio/           Audio engine, buses, ambience
+│   ├── render/          Engine, post-processing, quality presets, materials
+│   ├── ui/              Diegetic UI and HTML menus
+│   ├── episodes/ep1/    Episode 1 scripts and data
+│   └── data/            Shared definitions and strings (en, km)
+├── tests/unit/          Unit tests (Vitest)
+├── public/              Static files served as-is
+│   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS
+│   └── fonts/           Ubuntu and Preah Vihear, with licences
+├── art-source/          Editable art: blender/, textures/, audio/ — Git LFS
+├── art-export/          Unoptimised Blender exports (not committed)
+├── tools/               build-assets.mjs, build-docs.sh
+└── docs/                Design documents (pdf/), their sources (src/) and production tracking
+```
+
 ## 📚 Documentation
 
 | No. | Document |

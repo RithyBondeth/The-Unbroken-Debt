@@ -33,8 +33,7 @@ docs/
 ├── pdf/            Generated PDFs (read these)
 ├── src/            HTML sources + shared style.css (edit these)
 │   └── fonts/      Ubuntu (English) and Preah Vihear (Khmer), with licences
-├── production/     Asset tracker spreadsheet and tracking notes
-└── archive/v1/     Original v1.0 documents, kept for reference
+└── production/     Asset tracker spreadsheet and tracking notes
 ```
 
 ## Rebuilding the PDFs
