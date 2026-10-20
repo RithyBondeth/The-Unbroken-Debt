@@ -139,6 +139,24 @@ export function createClusteredLights(
   return { container, lights };
 }
 
+/**
+ * SSAO2 (Babylon 9.31) hands its SSAO pass the camera only when the pipeline's
+ * first pass, a copy of the scene colour, draws, and without a camera the SSAO
+ * pass never binds its noise texture. Shaders load asynchronously in no fixed
+ * order: when the SSAO shader is ready a frame before the copy's, its first draw
+ * throws in createBindGroup, the exception ends Babylon's render loop and the
+ * screen stays black (about 1 load in 4 of the Phase 2 studio). The camera is
+ * known now, so set it up front.
+ */
+function giveSsaoItsCamera(ssao: SSAO2RenderingPipeline, camera: Camera): void {
+  const internals = ssao as unknown as {
+    _thinSSAORenderingPipeline?: { camera: Camera | null };
+  };
+  const thin = internals._thinSSAORenderingPipeline;
+  if (thin) thin.camera = camera;
+  else console.warn("[render] SSAO2 internals changed: recheck giveSsaoItsCamera");
+}
+
 export interface PostPipeline {
   ssao: SSAO2RenderingPipeline | null;
   fog: VolumetricFog | null;
@@ -172,6 +190,7 @@ export function createPostPipeline(
     ssao.totalStrength = 1.1;
     ssao.maxZ = 40;
     ssao.expensiveBlur = preset.ssaoRatio >= 1;
+    giveSsaoItsCamera(ssao, camera);
   }
 
   let fog: VolumetricFog | null = null;
