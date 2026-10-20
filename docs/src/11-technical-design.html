@@ -19,7 +19,7 @@
   <dl class="meta">
     <dt>Stack</dt><dd>TypeScript 6 · Babylon.js 9.31 · Havok 1.3 · Vite 8</dd>
     <dt>Extends</dt><dd>Development Plan, section 3</dd>
-    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>Version</dt><dd>1.1 · October 2026</dd>
     <dt>Author</dt><dd>Rithy Bondeth</dd>
   </dl>
 </section>
@@ -28,7 +28,7 @@
   <h2>Contents</h2>
   <ol>
     <li><span class="n">01</span><a href="#principles">Principles</a></li>
-    <li><span class="n">02</span><a href="#setup">Project Setup</a></li>
+    <li><span class="n">02</span><a href="#setup">Project Setup and Babylon 9 Pitfalls</a></li>
     <li><span class="n">03</span><a href="#modules">Modules</a></li>
     <li><span class="n">04</span><a href="#boot">Boot and Game Loop</a></li>
     <li><span class="n">05</span><a href="#events">Event Catalogue</a></li>
@@ -58,7 +58,7 @@
 </table>
 <p class="small">API names below match Babylon.js 9. Check the current documentation when implementing, since minor APIs change between releases.</p>
 
-<h2 id="setup"><span class="num">02</span>Project Setup</h2>
+<h2 id="setup"><span class="num">02</span>Project Setup and Babylon 9 Pitfalls</h2>
 <h3><span class="num">2.1</span>Dependencies (pinned exact versions)</h3>
 <pre>"dependencies": {
   "@babylonjs/core":    "9.31.0",
@@ -109,10 +109,31 @@
 ├── ai/                     Perception, NoiseSystem, StateMachine, entities/
 ├── sequences/              Sequencer runtime + shared helper actions
 ├── audio/                  AudioSystem, Buses, AmbienceZones, Cues
-├── render/                 RenderSetup, PostFx, QualityPresets, materials/
+├── render/                 RenderSetup, QualityPresets, DeviceProfile, DynamicResolution,
+│                           ShadowScheduler, StaticBatcher, VolumetricFog, materials/
+├── debug/                  PerfOverlay (F3), Benchmark
+├── spikes/                 Phase 1 spikes, loaded with ?spike=s1 … (dev builds only)
 ├── ui/                     diegetic/ (sketchbook pages, gauges), html/ (menus)
 ├── episodes/ep1/           index.ts, sequences.ts, data/*.json
 └── data/                   items.json, notes.json, strings/en.json, strings/km.json</pre>
+
+
+<h3><span class="num">2.4</span>Babylon 9 pitfalls found in Phase 1</h3>
+<table class="dense">
+  <thead><tr><th style="width:30%">Symptom</th><th>Cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td>"No Physics Engine available"</td><td>With tree-shaken imports, <code>scene.enablePhysics</code> also needs <code>Physics/joinedPhysicsEngineComponent</code>, not only <code>Physics/v2/physicsEngineComponent</code>.</td></tr>
+    <tr><td><code>createMultipleRenderTarget is not a function</code></td><td>WebGPU engine features (multiple and cube render targets, timestamp queries) need <code>import "@babylonjs/core/Engines/WebGPU/Extensions"</code>.</td></tr>
+    <tr><td>Classes that fail <code>instanceof</code>; a second load of Babylon</td><td>Vite pre-bundles a second copy for code it finds late (lazy spike modules). List every entry in <code>optimizeDeps.entries</code>.</td></tr>
+    <tr><td>Meshes render with nothing</td><td>There is no default material when importing by path; give every mesh a material.</td></tr>
+    <tr><td>Every material recompiles every frame (about 120 MB/s of garbage)</td><td>When a shadow caster list goes from empty to filled, Babylon marks every mesh's lights dirty. Filling the list in <code>renderListPredicate</code> each frame did exactly that. Keep one caster array per light and update it in place, by index.</td></tr>
+    <tr><td>A half-resolution post-process runs at full resolution</td><td>Setting <code>postProcess</code> on a pre-pass effect configuration forces that post-process to full size. Attach the configuration with <code>_prePassEffectConfiguration</code> only.</td></tr>
+    <tr><td>SSAO costs more than its ratio suggests</td><td>SSAO2's main pass is always full resolution; only the blur uses the ratio.</td></tr>
+    <tr><td>Soft point-light shadows look wrong</td><td>PCF falls back on cube shadow maps; point lights use Poisson sampling.</td></tr>
+    <tr><td><code>scene.deltaTime</code> is undefined</td><td>Read <code>engine.getDeltaTime()</code> instead.</td></tr>
+    <tr><td>Player wedges on stair edges</td><td>The character controller's step-up only moves a few centimetres a frame. Stairs get hidden ramp colliders; <code>maxStepHeight</code> is 0 (section 7.1).</td></tr>
+  </tbody>
+</table>
 
 <h2 id="modules"><span class="num">03</span>Modules</h2>
 <table class="dense">
@@ -139,9 +160,15 @@
 
 <h2 id="boot"><span class="num">04</span>Boot and Game Loop</h2>
 <pre>1. main.ts
-   ├─ if (!(await WebGPUEngine.IsSupportedAsync)) → show requirements page; stop
+   ├─ detectDevice(): requestAdapter({ powerPreference: "high-performance" }),
+   │    adapter.info (vendor, architecture), userAgentData.mobile, touch points, pointer type
+   ├─ classifyDevice() → blocked (no WebGPU, software/fallback adapter, phone or tablet
+   │    including iPad) → show requirements page; stop
+   │    otherwise → starting preset from the GPU family (Apple → Medium, Intel/AMD
+   │    integrated → Low, NVIDIA by architecture …); the player can change it
    ├─ new WebGPUEngine(canvas); await initAsync()          // WebGPU only
-   ├─ read adapter info and limits → pick a quality preset (or warn if below minimum)
+   ├─ DynamicResolution: cap render height per preset; lower the scale on sustained
+   │    overload, probe upwards now and then (section 11)
    ├─ show HTML loading screen
    ├─ load Havok WASM: await HavokPhysics() → new HavokPlugin(true, havok)
    ├─ scene.enablePhysics(new Vector3(0, -9.81, 0), plugin)
@@ -232,7 +259,8 @@ interface NoteDef {
     <tr><td><code>hide_</code></td><td>Hiding spot volume</td><td>—</td></tr>
     <tr><td><code>audiozone_</code></td><td>Ambience and reverb zone</td><td><code>ambience</code>, <code>reverb</code></td></tr>
     <tr><td><code>light_flame_</code></td><td>Flickering point light + flame card</td><td><code>radius</code>, <code>intensity</code></td></tr>
-    <tr><td><code>col_</code></td><td>Invisible collision mesh (static physics)</td><td><code>surface</code> ("teak", "dirt", "mud", "leaves", "stone", "water")</td></tr>
+    <tr><td><code>col_</code></td><td>Invisible collision mesh (static physics). Every staircase needs a <code>col_</code> ramp from the bottom nosing to the top floor: the character controller can't climb steps (S1).</td><td><code>surface</code> ("teak", "dirt", "mud", "leaves", "stone", "water")</td></tr>
+    <tr><td><code>ladder_</code></td><td>Climbable box; its bounds become the ladder volume. W climbs, looking down and pressing W descends, and at the top the player steps onto the floor. Extend the box about 30 cm above the top floor.</td><td><code>facing</code> (direction from the ladder towards the climber, e.g. "-x")</td></tr>
     <tr><td><code>nav_</code></td><td>Navigation mesh source (not rendered)</td><td>—</td></tr>
   </tbody>
 </table>
@@ -304,27 +332,38 @@ export async function A3_07_ritual(s: SequenceContext) {
 
 <h2 id="render"><span class="num">11</span>Rendering</h2>
 <table class="dense">
-  <thead><tr><th style="width:24%">Setting</th><th>Medium (min spec)</th><th>High</th><th>Ultra</th></tr></thead>
+  <thead><tr><th style="width:22%">Setting</th><th>Low</th><th>Medium</th><th>High</th><th>Ultra</th></tr></thead>
   <tbody>
-    <tr><td>Target</td><td>1080p · RTX 2060</td><td>1440p · RTX 3060 Ti</td><td>1440p–4K · RTX 3070+</td></tr>
-    <tr><td>Render scale</td><td>1.0</td><td>1.0</td><td>1.0 (up to native 4K)</td></tr>
-    <tr><td>Lamp shadow map</td><td>2048, soft</td><td>4096, soft</td><td>4096, contact-hardening</td></tr>
-    <tr><td>Extra shadowed flames</td><td>2</td><td>4</td><td>4</td></tr>
-    <tr><td>Unshadowed lights (clustered)</td><td>32</td><td>64</td><td>128</td></tr>
-    <tr><td>SSAO</td><td>Half resolution</td><td>Full</td><td>Full, high quality</td></tr>
-    <tr><td>Screen-space reflections</td><td>Off</td><td>Wet surfaces</td><td>Wet surfaces, high quality</td></tr>
-    <tr><td>Volumetric fog and light</td><td>Low resolution</td><td>Medium</td><td>High</td></tr>
-    <tr><td>Texture quality</td><td>2K hero</td><td>4K hero</td><td>4K everywhere available</td></tr>
-    <tr><td>Grain, vignette, grading, bloom, TAA</td><td>On</td><td>On</td><td>On</td></tr>
+    <tr><td>Target</td><td>Integrated · Iris Xe, M1, Snapdragon X</td><td>1080p · RTX 2060 / M1 Pro</td><td>1440p · RTX 3060 Ti</td><td>1440p–4K · RTX 3070+</td></tr>
+    <tr><td>Max render height</td><td>900p</td><td>1080p</td><td>1440p</td><td>2160p</td></tr>
+    <tr><td>Dynamic resolution floor</td><td>60%</td><td>75%</td><td>75%</td><td>75%</td></tr>
+    <tr><td>Lamp shadow map</td><td>1024</td><td>2048, soft</td><td>4096, soft</td><td>4096, soft</td></tr>
+    <tr><td>Live-shadowed flames</td><td>0 (baked)</td><td>2 at 512</td><td>4 at 1024</td><td>4 at 1024</td></tr>
+    <tr><td>Unshadowed lights (clustered)</td><td>16</td><td>32</td><td>64</td><td>128</td></tr>
+    <tr><td>SSAO</td><td>Off</td><td>Half resolution, 8 samples</td><td>Full, 16 samples</td><td>Full, 32 samples</td></tr>
+    <tr><td>Screen-space reflections</td><td>Off</td><td>Off</td><td>Wet surfaces</td><td>Wet surfaces</td></tr>
+    <tr><td>Fog</td><td>Exponential height fog</td><td>Volumetric, half resolution, 12 steps</td><td>Volumetric, half, 24 steps</td><td>Volumetric, 75%, 32 steps</td></tr>
+    <tr><td>Textures</td><td>1K</td><td>2K</td><td>4K</td><td>4K</td></tr>
+    <tr><td>Anti-aliasing</td><td>FXAA</td><td>TAA</td><td>TAA</td><td>TAA</td></tr>
+    <tr><td>Grain, vignette, grading, bloom</td><td>On</td><td>On</td><td>On</td><td>On</td></tr>
   </tbody>
 </table>
+<p>Low looks plainer but plays the same: darkness, the lamp's shadow and fog are mechanics, so scares are tested on Low too. The values live in <code>render/QualityPresets.ts</code>.</p>
 <ul>
-  <li>Post-processing through <code>DefaultRenderingPipeline</code>; per-episode colour grading lookup tables.</li>
-  <li>Static architecture uses baked lightmaps; meshes in each area are merged by material where possible.</li>
-  <li>The first launch runs a 3-second benchmark scene and chooses a preset; the player can change it. Below the minimum, the game warns but still lets the player try.</li>
+  <li><strong>Device check and presets.</strong> The boot picks a starting preset from the GPU family (section 4); the player can change it in Settings. A short benchmark scene may refine the choice later.</li>
+  <li><strong>Dynamic resolution.</strong> The render height is capped per preset and the hardware scaling level set from it. <code>ResolutionGovernor</code> lowers the scale in 5% steps when both the current frame and the quarter-second average are over budget for 0.2 s; it ignores single hitches and frames over 250 ms. With a GPU timer it steps up after a second of light load; without one (GPU timestamps read 0 on the reference Mac) frame times are capped at the display refresh, so it probes upwards every few seconds and backs off for longer after a failed probe.</li>
+  <li><strong>Flame shadows are cached.</strong> <code>ShadowScheduler</code> renders each flame's cube shadow map once and redraws it only when something moves within its range (at most one per frame on Medium). The lamp's shadow is live every frame.</li>
+  <li><strong>Shadow casters.</strong> Small detail props (offerings, ornaments, carvings) don't cast shadows. Each light keeps one caster array, updated in place (section 2.4).</li>
+  <li><strong>Light range culling.</strong> Each flame light lists only the meshes inside its range (<code>includedOnlyMeshes</code>); in S2 this saved about 3 ms a frame.</li>
+  <li><strong>Static batching.</strong> Static meshes are merged by material in 3 m grid cells, so frustum culling still works; S2 started at 11,193 draw calls.</li>
+  <li><strong>Clustered lights.</strong> <code>ClusteredLightContainer</code> with its default 64×64 tiles; coarser tiles were slower.</li>
+  <li><strong>Volumetric fog</strong> is a custom WGSL ray-march at half resolution (12 steps on Medium, jittered with interleaved gradient noise and smoothed by TAA), lit by the lamp and up to four flames, then composited over the scene. It reads depth from the pre-pass.</li>
+  <li>Post-processing through <code>DefaultRenderingPipeline</code> (bloom, ACES tone mapping, grain, chromatic aberration, vignette, colour curves); per-episode colour grading lookup tables.</li>
+  <li>Static architecture uses baked lightmaps.</li>
   <li>WebGPU-only features are allowed (compute shaders for volumetrics and particles, snapshot rendering for draw-call reduction), as long as they work in all supported browsers.</li>
   <li>Diegetic pages use <code>DynamicTexture</code> or <code>AdvancedDynamicTexture.CreateForMesh</code> on the sketchbook mesh.</li>
 </ul>
+<p class="small">S2 result on the reference MacBook Pro M1 Pro: Medium at 1080p averages 62.5 fps; Low about 100 fps at 900p. The 1% low (about 30 fps, one slow frame roughly every 1.1 s) is still open; see Development Plan, Phase 1.</p>
 
 <h2 id="audio"><span class="num">12</span>Audio</h2>
 <table class="dense">
@@ -372,14 +411,14 @@ export async function A3_07_ritual(s: SequenceContext) {
     <tr><td>Budgets</td><td>As in the Development Plan: about 1,000 draw calls, about 3 million triangles, about 2–3 GB GPU memory per area, first playable area under 150 MB.</td></tr>
     <tr><td>Area unload</td><td>Dispose the asset container (meshes, materials, textures), stop and dispose area sounds, clear entity references; verify counts in the Inspector return to baseline.</td></tr>
     <tr><td>Allocation</td><td>No new objects in per-frame code paths (reuse vectors); pool frequently spawned objects.</td></tr>
-    <tr><td>Profiling routine</td><td>Weekly on both reference machines: FPS, draw calls, triangles, JS heap, GPU memory; record results in a simple log.</td></tr>
+    <tr><td>Profiling routine</td><td>Weekly on the reference MacBook Pro M1 Pro with other apps closed and the machine cool: run the S2 benchmark (<code>?spike=s2&amp;bench=1</code>) and note average fps, 1% low, draw calls, triangles and JS heap. On a 120 Hz display frame times snap to multiples of 8.3 ms, and browser tabs left open in the background skew results.</td></tr>
   </tbody>
 </table>
 
 <h2 id="quality"><span class="num">15</span>Testing, Standards and Deployment</h2>
 <h3>Testing</h3>
 <ul>
-  <li><strong>Unit tests:</strong> Flags, Inventory (including combining), Upkeep timers, Saves (round trip and migrations), save codes, perception maths, AI transitions.</li>
+  <li><strong>Unit tests:</strong> movement maths, head-bob, frame statistics, quality presets, device classification, the resolution governor, the S1 snag detector; later Flags, Inventory (including combining), Upkeep timers, Saves (round trip and migrations), save codes, perception maths, AI transitions.</li>
   <li><strong>Smoke test:</strong> Playwright boots the build in Chrome with WebGPU on and off and checks the menu appears without console errors.</li>
   <li><strong>Debug tools</strong> (development builds only): jump to any beat or checkpoint, set flags, refill oil, show perception radii, toggle the Babylon Inspector.</li>
 </ul>

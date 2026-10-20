@@ -2,6 +2,7 @@ import { EngineInstrumentation } from "@babylonjs/core/Instrumentation/engineIns
 import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation";
 import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import type { Scene } from "@babylonjs/core/scene";
+import type { Observer } from "@babylonjs/core/Misc/observable";
 
 /**
  * Small live readout for spikes and profiling: fps, frame and GPU time,
@@ -12,6 +13,7 @@ export class PerfOverlay {
   readonly sceneStats: SceneInstrumentation;
   private readonly element: HTMLElement;
   private readonly abort = new AbortController();
+  private readonly observer: Observer<Scene>;
   private lastUpdate = 0;
 
   constructor(
@@ -39,7 +41,7 @@ export class PerfOverlay {
       },
       { signal: this.abort.signal },
     );
-    scene.onAfterRenderObservable.add(() => this.update());
+    this.observer = scene.onAfterRenderObservable.add(() => this.update());
   }
 
   /** Average GPU frame time over the last second in ms, or null if the browser can't measure it. */
@@ -50,6 +52,7 @@ export class PerfOverlay {
   }
 
   dispose(): void {
+    this.observer.remove();
     this.abort.abort();
     this.engineStats.dispose();
     this.sceneStats.dispose();

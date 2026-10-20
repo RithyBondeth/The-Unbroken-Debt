@@ -20,7 +20,7 @@
     <dt>Engine</dt><dd>Babylon.js 9 (TypeScript) · WebGPU only</dd>
     <dt>Team</dt><dd>Solo developer</dd>
     <dt>First milestone</dt><dd>Episode 1 release (about 35 weeks)</dd>
-    <dt>Version</dt><dd>2.0 · October 2026</dd>
+    <dt>Version</dt><dd>2.1 · October 2026</dd>
     <dt>Author</dt><dd>Rithy Bondeth</dd>
   </dl>
 </section>
@@ -48,7 +48,7 @@
   <tbody>
     <tr><td><strong>Team</strong></td><td>Solo developer</td><td>Sized for one person; art and audio come from libraries plus targeted custom work.</td></tr>
     <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript)</td><td>Mature WebGPU renderer, built-in Havok physics, spatial audio, inspector, no editor lock-in.</td></tr>
-    <tr><td><strong>Target hardware</strong></td><td>High-end desktop, WebGPU required</td><td>Minimum RTX 2060 / RX 5700 / M1 Pro; recommended RTX 3070 / RX 6800 / M2 Pro. No WebGL2 fallback, so effects can use WebGPU fully and testing is simpler.</td></tr>
+    <tr><td><strong>Target hardware</strong></td><td>Any laptop or desktop with WebGPU; phones and tablets not supported</td><td>Minimum: integrated graphics (Iris Xe, Radeon 680M, Apple M1, Snapdragon X) on Low. Recommended: RTX 2060 / RX 5700 / M1 Pro on Medium at 1080p. High-end: RTX 3070 / RX 6800 / M2 Pro on High or Ultra. A Low preset and dynamic resolution roughly double the audience for 2–3 weeks of work; phones would cost 2–3 months (touch controls, memory, heat), so a mobile version waits until after release. No WebGL2 fallback, so effects can use WebGPU fully and testing is simpler.</td></tr>
     <tr><td><strong>Assets</strong></td><td>Libraries + custom Blender work</td><td>Generic props from CC0 or paid libraries; Khmer-specific hero assets made custom.</td></tr>
     <tr><td><strong>First milestone</strong></td><td>Episode 1 released on its own</td><td>Proves the technology, tone and pipeline before committing to four more episodes.</td></tr>
     <tr><td><strong>Episode length</strong></td><td>1.5–2.5 hours each, 8–10 hours total</td><td>Short, dense episodes (5–6 puzzles, 3–4 escalating encounters, one optional area, one key choice) are better for players and achievable alone.</td></tr>
@@ -117,19 +117,26 @@
   <div class="act-body">
     <p>Small throwaway prototypes that answer risky technical questions before they become expensive.</p>
     <table>
-      <thead><tr><th style="width:24%">Spike</th><th>Question</th><th style="width:38%">Pass condition</th></tr></thead>
+      <thead><tr><th style="width:20%">Spike</th><th>Question</th><th style="width:34%">Pass condition</th><th style="width:13%">Status</th></tr></thead>
       <tbody>
-        <tr><td>S1 First-person controller</td><td>Does movement feel right on raised floors, stairs and ladders?</td><td>Walk, crouch, climb stairs, head-bob; no snagging on 1 cm floor gaps</td></tr>
-        <tr><td>S2 Lamp lighting</td><td>Can the full lighting target run on minimum spec?</td><td>60 fps at 1080p on an RTX 2060-class GPU with the lamp, 4 shadowed flames, 32+ unshadowed lights, SSAO and volumetric fog</td></tr>
-        <tr><td>S3 Asset pipeline</td><td>Can a Blender model reach the browser compressed?</td><td>.blend → .glb → Draco/meshopt + KTX2 → loads with correct materials</td></tr>
-        <tr><td>S4 Spatial audio</td><td>Can players locate an unseen enemy by sound?</td><td>Eyes closed, you can point to a footstep source</td></tr>
-        <tr><td>S5 Diegetic sketchbook</td><td>Can a 3D book show readable, updatable pages?</td><td>Open, flip, new note appears; readable at 1080p</td></tr>
-        <tr><td>S6 Save and load</td><td>Does state survive a refresh and export as a code?</td><td>Save, reload, restore; export and import a save code</td></tr>
-        <tr><td>S7 Atmosphere</td><td>Can the 1930s look be done cheaply?</td><td>Grain, vignette, aberration, sepia grade and fog within budget</td></tr>
-        <tr><td>S8 WebGPU browsers</td><td>Does the build run in every WebGPU browser?</td><td>Same scene runs in Chrome, Edge, Safari (macOS 26) and Firefox (Windows); unsupported browsers show the requirements page</td></tr>
+        <tr><td>S1 First-person controller</td><td>Does movement feel right on raised floors, stairs and ladders?</td><td>Walk, crouch, climb stairs, head-bob; no snagging on 1 cm floor gaps</td><td><span class="tag low">Passed</span></td></tr>
+        <tr><td>S2 Lamp lighting</td><td>Can the lighting target run on recommended spec?</td><td>60 fps at 1080p on Medium (RTX 2060 / M1 Pro class) with the lamp, 2 live-shadowed flames, 32+ unshadowed lights, SSAO and volumetric fog</td><td><span class="tag med">Average passed; 1% low open</span></td></tr>
+        <tr><td>S3 Asset pipeline</td><td>Can a Blender model reach the browser compressed?</td><td>.blend → .glb → Draco/meshopt + KTX2 → loads with correct materials</td><td>Not started</td></tr>
+        <tr><td>S4 Spatial audio</td><td>Can players locate an unseen enemy by sound?</td><td>Eyes closed, you can point to a footstep source</td><td>Not started</td></tr>
+        <tr><td>S5 Diegetic sketchbook</td><td>Can a 3D book show readable, updatable pages?</td><td>Open, flip, new note appears; readable at 1080p</td><td>Not started</td></tr>
+        <tr><td>S6 Save and load</td><td>Does state survive a refresh and export as a code?</td><td>Save, reload, restore; export and import a save code</td><td>Not started</td></tr>
+        <tr><td>S7 Atmosphere</td><td>Can the 1930s look be done cheaply?</td><td>Grain, vignette, aberration, sepia grade and fog within budget</td><td>Not started</td></tr>
+        <tr><td>S8 WebGPU browsers</td><td>Does the build run in every WebGPU browser?</td><td>Same scene runs in Chrome, Edge, Safari (macOS 26) and Firefox (Windows); unsupported browsers and devices show the requirements page</td><td>Device check done; browsers not tested</td></tr>
       </tbody>
     </table>
     <p><strong>Exit:</strong> all spikes pass, or the design is adjusted (for example, fewer shadowed lights).</p>
+    <h4>Findings so far (October 2026)</h4>
+    <table class="kv"><tbody>
+      <tr><td>S1 controller</td><td>A bot walks the whole test course (stilt-house floor with 1 cm plank gaps, 20 cm and 25 cm stairs, a 6 cm threshold, a low passage and a granary ladder) with no snags. Havok's character controller can't step up stairs at walking pace, so stairs get hidden ramp colliders (<code>col_</code> meshes in Blender) and step-up is off; the rounded capsule rides over edges up to about 10 cm. Ground snapping runs on flat floors only, so it never pushes the capsule into a ramp. Ladders are trigger volumes (<code>ladder_</code>); crouching checks headroom before standing up.</td></tr>
+      <tr><td>S2 lighting</td><td>On the reference MacBook Pro M1 Pro, Medium at 1080p averages 62.5 fps (from 15 fps in the first build); Low runs at about 100 fps at 900p. The design was adjusted to fit: 2 flames cast live shadows on Medium, and their shadow maps are cached and redrawn only when something moves nearby; small props don't cast shadows; flame lights only affect meshes in range; static meshes are merged by material in 3 m cells; fog and SSAO blur run at half resolution. Two engine pitfalls cost the most: a pre-pass setting that forced the fog to full resolution, and shadow caster lists rebuilt each frame, which recompiled every material every frame.</td></tr>
+      <tr><td>Still open</td><td>The 1% low on Medium is about 30 fps: one frame in roughly every 1.1 seconds takes an extra display refresh. It isn't garbage collection, shader compiles or any one effect, and may come from the in-app browser or the macOS compositor; retest in standalone Chrome and Safari. Not yet measured on an RTX 2060 or on integrated graphics, and GPU timing isn't available on this Mac, so dynamic resolution works from frame times.</td></tr>
+    </tbody></table>
+    <p class="small">Spikes run in the dev build: <code>?spike=s1</code> (add <code>&amp;auto=1</code> for the bot) and <code>?spike=s2</code> (add <code>&amp;bench=1</code> for a timed benchmark, <code>&amp;quality=low|medium|high|ultra</code> for a preset). F3 shows the performance overlay.</p>
   </div>
 </div>
 
@@ -240,16 +247,18 @@
 │   ├── shared/           Lamp, hands, satchel, sketchbook, common sounds
 │   └── ep1/              Episode 1 compressed models, textures, audio
 ├── src/
-│   ├── main.ts           Boot: detect WebGPU, create engine, load menu
+│   ├── main.ts           Boot: device check, create engine, load menu
 │   ├── core/             Engine wrapper, scene manager, loader, event bus
 │   ├── player/           Controller, camera, interaction, hands
 │   ├── systems/          Inventory, sketchbook, lamp, stealth, save, settings
 │   ├── ai/               Perception, state machines, entity types
 │   ├── audio/            Audio setup, buses, ambience zones, cues
-│   ├── render/           Post-processing, materials, quality presets
+│   ├── render/           Device check, quality presets, dynamic resolution, post-processing
 │   ├── ui/               Diegetic widgets, HTML menus
 │   ├── episodes/ep1/     Scene setup, scripted events, puzzles, data
-│   └── data/             Shared item, note and dialogue definitions
+│   ├── data/             Shared item, note and dialogue definitions
+│   ├── debug/            Performance overlay and benchmark
+│   └── spikes/           Phase 1 technical spikes
 └── tests/</pre>
 
 <h3><span class="num">3.3</span>Core architecture</h3>
@@ -278,7 +287,7 @@
     <tr><td>Fog</td><td>Volumetric fog and light shafts (WebGPU compute), essential for Episodes 2 and 4.</td></tr>
     <tr><td>Post-processing</td><td>Temporal anti-aliasing, grain, chromatic aberration, vignette, bloom, depth of field in memories, and colour grading (a sepia look for Episode 1).</td></tr>
     <tr><td>Special materials</td><td>Node Material Editor for the entity shadow, wet surfaces, blood on the map and glowing runes.</td></tr>
-    <tr><td>Quality presets</td><td>Medium (tuned for minimum spec) / High / Ultra, chosen automatically from a quick benchmark on first launch.</td></tr>
+    <tr><td>Quality presets</td><td>Low (integrated graphics) / Medium (recommended spec) / High / Ultra. The device check picks a starting preset from the graphics adapter; dynamic resolution lowers the render scale when frames run over budget. Gameplay is identical on every preset.</td></tr>
   </tbody>
 </table>
 
@@ -286,15 +295,15 @@
 <table>
   <thead><tr><th style="width:30%">Budget</th><th style="width:34%">Target</th><th>How to check</th></tr></thead>
   <tbody>
-    <tr><td>Frame rate</td><td>60 fps at 1080p on minimum spec (Medium/High) · 60 fps at 1440p on recommended (Ultra)</td><td>Babylon Inspector and browser GPU profiling on both reference machines</td></tr>
+    <tr><td>Frame rate</td><td>60 fps at 1080p on recommended spec (Medium) · 60 fps at 1440p on high-end (High/Ultra) · Low on integrated graphics aims for 60 fps, with dynamic resolution down to 60% of 900p</td><td>The S2 benchmark (<code>&amp;bench=1</code>), the F3 overlay and browser GPU profiling</td></tr>
     <tr><td>Draw calls</td><td>About 1,000 or fewer</td><td>Inspector statistics; instancing and WebGPU snapshot rendering</td></tr>
     <tr><td>Visible triangles</td><td>Up to about 3 million</td><td>Inspector; LODs on everything beyond hero range</td></tr>
     <tr><td>Download</td><td>First playable area under 150 MB; full episode up to about 600 MB, streamed and cached</td><td>Browser network tab with cache disabled</td></tr>
-    <tr><td>GPU memory</td><td>About 3 GB per area at Ultra, about 2 GB at Medium</td><td>KTX2 everywhere; 4K hero, 2K props</td></tr>
+    <tr><td>GPU memory</td><td>About 3 GB per area at Ultra, about 2 GB at Medium, about 1 GB at Low</td><td>KTX2 everywhere; 1K, 2K and 4K texture tiers</td></tr>
     <tr><td>JavaScript bundle</td><td>3 MB or less (gzipped)</td><td>Vite build report</td></tr>
   </tbody>
 </table>
-<p class="small">Choose two reference machines on day one, a minimum-spec PC (RTX 2060 class) and a recommended-spec machine, and test on both every week.</p>
+<p class="small">The reference machine is a MacBook Pro M1 Pro (recommended spec, Medium), benchmarked every week with other apps closed. Before release, check Low on an integrated-graphics laptop and Medium on an RTX 2060-class PC, borrowed, bought used or through playtesters.</p>
 
 <h3><span class="num">3.6</span>Save system</h3>
 <table class="kv">
@@ -314,8 +323,9 @@
     <tr><td>Chrome, Edge</td><td>WebGPU</td></tr>
     <tr><td>Safari</td><td>WebGPU on macOS 26+; older macOS not supported</td></tr>
     <tr><td>Firefox</td><td>WebGPU on Windows and Apple Silicon Macs; other platforms not supported</td></tr>
-    <tr><td>No WebGPU / below minimum spec</td><td>Requirements page with the system requirements and supported browsers</td></tr>
-    <tr><td>Laptops with integrated graphics, mobile</td><td>Not supported</td></tr>
+    <tr><td>No WebGPU, or a software renderer</td><td>Requirements page with the system requirements and supported browsers</td></tr>
+    <tr><td>Integrated graphics</td><td>Supported on Low</td></tr>
+    <tr><td>Phones and tablets (including iPad)</td><td>Requirements page; not supported in Episode 1</td></tr>
   </tbody>
 </table>
 
@@ -541,7 +551,7 @@
     <tr><td>Sound and music</td><td>US$0</td><td>US$500–1,500</td></tr>
     <tr><td>Voice acting</td><td>US$0</td><td>US$200–600</td></tr>
     <tr><td>Cultural advisor honorarium</td><td>—</td><td>US$200–500</td></tr>
-    <tr><td>Minimum-spec test PC or GPU (RTX 2060 class, used)</td><td>—</td><td>US$250–500</td></tr>
+    <tr><td>Test hardware (used integrated-graphics laptop; RTX 2060-class GPU)</td><td>—</td><td>US$250–500</td></tr>
     <tr><td>Hosting</td><td>US$0</td><td>US$0–20 / month</td></tr>
   </tbody>
 </table>
