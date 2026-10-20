@@ -19,8 +19,8 @@
   <dl class="meta">
     <dt>Engine</dt><dd>Babylon.js 9 (TypeScript) · WebGPU + WebGL2</dd>
     <dt>Team</dt><dd>Solo developer</dd>
-    <dt>First milestone</dt><dd>Episode 1 release (about 34 weeks)</dd>
-    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>First milestone</dt><dd>Episode 1 release (about 31 weeks)</dd>
+    <dt>Version</dt><dd>2.0 · October 2026</dd>
     <dt>Author</dt><dd>Rithy Bondeth</dd>
   </dl>
 </section>
@@ -50,6 +50,7 @@
     <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript)</td><td>Mature WebGPU with WebGL2 fallback from one codebase, built-in Havok physics, spatial audio, inspector, no editor lock-in.</td></tr>
     <tr><td><strong>Assets</strong></td><td>Libraries + custom Blender work</td><td>Generic props from CC0 or paid libraries; Khmer-specific hero assets made custom.</td></tr>
     <tr><td><strong>First milestone</strong></td><td>Episode 1 released on its own</td><td>Proves the technology, tone and pipeline before committing to four more episodes.</td></tr>
+    <tr><td><strong>Episode length</strong></td><td>1.5–2.5 hours each, 8–10 hours total</td><td>Short, dense episodes (5–6 puzzles, 3–4 escalating encounters, one optional area, one key choice) are better for players and achievable alone.</td></tr>
   </tbody>
 </table>
 
@@ -69,7 +70,7 @@
 <h2 id="roadmap"><span class="num">02</span>Scope and Roadmap</h2>
 
 <h3><span class="num">2.1</span>The honest size of the project</h3>
-<p>The original proposal budgeted 11 months for a five-person team, roughly 55 person-months. Doing the same scope alone means expecting <strong>2.5–4 years</strong>, depending on hours per week. That is a reason to plan carefully, not to stop:</p>
+<p>The original proposal budgeted 11 months for a five-person team, roughly 55 person-months. With the shorter, denser episodes chosen in v3.0 (8–10 hours in total instead of 15–20), a solo developer should expect about <strong>2–2.5 years</strong> at 25 hours per week. To keep it achievable:</p>
 <ol>
   <li><strong>Ship Episode 1 alone first</strong>, as a free or pay-what-you-want release, to test the idea with real players.</li>
   <li><strong>Build every system once</strong> in Episode 1 and reuse it in Episodes 2–5.</li>
@@ -80,12 +81,12 @@
 <div class="cards">
   <div class="card"><div class="k">Phase 0</div><div class="v">Pre-production</div><div class="d">3 weeks</div></div>
   <div class="card"><div class="k">Phase 1</div><div class="v">Technical spikes</div><div class="d">4 weeks</div></div>
-  <div class="card"><div class="k">Phase 2</div><div class="v">Greybox</div><div class="d">5 weeks</div></div>
+  <div class="card"><div class="k">Phase 2</div><div class="v">Greybox</div><div class="d">4 weeks</div></div>
   <div class="card"><div class="k">Phase 3</div><div class="v">Core systems</div><div class="d">7 weeks</div></div>
-  <div class="card"><div class="k">Phase 4</div><div class="v">Art and audio</div><div class="d">10 weeks</div></div>
+  <div class="card"><div class="k">Phase 4</div><div class="v">Art and audio</div><div class="d">8 weeks</div></div>
   <div class="card"><div class="k">Phase 5</div><div class="v">Polish and release</div><div class="d">5 weeks</div></div>
 </div>
-<p><strong>Total: about 34 weeks (8 months) to the Episode 1 release.</strong> Episodes 2–5 then take about 4–6 months each.</p>
+<p><strong>Total: about 31 weeks (7–8 months) to the Episode 1 release.</strong> Episodes 2–5 then take about 3–4 months each.</p>
 
 <h3><span class="num">2.2</span>Phases and exit criteria</h3>
 <p>Each phase ends with a checklist. Don't start the next phase until it passes, unless you consciously accept the gap.</p>
@@ -131,9 +132,9 @@
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Phase 2 · Episode 1 greybox</h3><span class="time">5 weeks</span></div>
+  <div class="act-head"><h3>Phase 2 · Episode 1 greybox</h3><span class="time">4 weeks</span></div>
   <div class="act-body">
-    <p>Build the whole episode from grey boxes: no final art, but every room at the right scale and every trigger, puzzle, enemy path and line of text in place. Consider replacing the carriage journey with a fade and a sketchbook entry.</p>
+    <p>Build the whole episode from grey boxes: no final art, but every room at the right scale and every trigger, puzzle, enemy path, line of text and the dawn key choice in place. Target: 1.5–2 hours for a first-time player.</p>
     <p><strong>Exit:</strong> a friend can play Episode 1 start to finish, and it is scary even with boxes. If it isn't, fix the pacing now; art will not save it.</p>
   </div>
 </div>
@@ -147,17 +148,16 @@
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Phase 4 · Art and audio</h3><span class="time">10 weeks</span></div>
+  <div class="act-head"><h3>Phase 4 · Art and audio</h3><span class="time">8 weeks</span></div>
   <div class="act-body">
     <table>
       <thead><tr><th style="width:18%">Weeks</th><th>Focus</th></tr></thead>
       <tbody>
-        <tr><td>1–3</td><td>Hero architecture: stilt house, funeral tent, under-house area</td></tr>
-        <tr><td>4–5</td><td>Props: library assets retextured to the palette, plus custom Khmer props</td></tr>
-        <tr><td>6</td><td>Characters: Yay Mey, the corpse, the entity (shadow and mask)</td></tr>
-        <tr><td>7</td><td>Lighting bake, post-processing, rain and wind effects</td></tr>
-        <tr><td>8–9</td><td>Sound: ambience, foley, horror cues, entity sounds, music</td></tr>
-        <tr><td>10</td><td>Performance pass: draw calls, polygons, texture memory, load size</td></tr>
+        <tr><td>1–2</td><td>Hero architecture: stilt house, funeral tent, under-house area, shed</td></tr>
+        <tr><td>3–4</td><td>Props (library assets retextured, custom Khmer props, betel tray set) and characters (Yay Mey, Vuthy, the corpse, the entity)</td></tr>
+        <tr><td>5</td><td>Lighting bake, post-processing, rain and wind effects</td></tr>
+        <tr><td>6–7</td><td>Sound: ambience, foley, horror cues, entity sounds, music</td></tr>
+        <tr><td>8</td><td>Performance pass: draw calls, polygons, texture memory, load size</td></tr>
       </tbody>
     </table>
     <p><strong>Exit:</strong> meets the performance budgets (section 3.5) on both reference machines.</p>
@@ -181,22 +181,22 @@
 <table>
   <thead><tr><th style="width:20%">Episode</th><th>New systems</th><th style="width:26%">Reused</th><th style="width:13%">Estimate</th></tr></thead>
   <tbody>
-    <tr><td>2 · Whispering Pagoda</td><td>Lamp shutter, surface noise, breath, distractions, mirror beams, timed escape</td><td>Everything from Episode 1</td><td>4–5 months</td></tr>
-    <tr><td>3 · Drowned Village</td><td>Rowboat, wetness, safe-zone lights, water-only enemy pathing</td><td>Fuses reuse the key-fragment pattern</td><td>5–6 months</td></tr>
-    <tr><td>4 · Rubber Plantation</td><td>Compass, fog loop, voice-mimic taboo, furnace sequence</td><td>Gears reuse inventory slots</td><td>4–5 months</td></tr>
-    <tr><td>5 · Sunken Sanctuary</td><td>Hub, boss ritual, chant choices, ending logic</td><td>Each trial reuses an earlier system</td><td>5–6 months</td></tr>
+    <tr><td>2 · Whispering Pagoda</td><td>Lamp shutter, surface noise, breath, distractions, mirror beams, playable flashback (alternate hands and pace), timed escape</td><td>Everything from Episode 1</td><td>3–4 months</td></tr>
+    <tr><td>3 · Drowned Village</td><td>Daylight lighting and simple NPCs, rowboat, wetness, safe-zone lights, water-only enemy</td><td>Fuses reuse the key-fragment pattern</td><td>3.5–4 months</td></tr>
+    <tr><td>4 · Rubber Plantation</td><td>Compass, fog loop, voice-mimic taboo, companion AI (follow, wait, carry light), furnace sequence</td><td>Gears reuse inventory slots</td><td>3–4 months</td></tr>
+    <tr><td>5 · Sunken Sanctuary</td><td>Hub with escalation, boss ritual, chant choices, ending resolver</td><td>Each trial reuses an earlier system</td><td>3.5–4 months</td></tr>
   </tbody>
 </table>
 
 <h3><span class="num">2.4</span>Solo cut list</h3>
 <p>If time runs short, cut from the top. None of these damages the core experience.</p>
 <ol>
-  <li>Playable carriage or train journey → fade to black with sound and a sketchbook entry.</li>
   <li>Spoken dialogue → written text, with Khmer voice for key lines only.</li>
   <li>Full-body characters → Sora is hands-only; NPCs mostly seated, still or in silhouette.</li>
   <li>Many unique props → fewer props, varied with material tints and decals.</li>
   <li>Physics-driven debris in escapes → scripted animation.</li>
   <li>Rowboat physics (Episode 3) → boat on a path with limited steering.</li>
+  <li>Daylight market crowd (Episode 3) → a few static vendors and ambient sound.</li>
 </ol>
 <div class="callout"><span class="label">Avoid as a solo developer</span>
 <ul>
@@ -347,12 +347,16 @@
     <tr><td>Puzzle framework</td><td>1</td><td>All</td><td>Slots, dials, combinations</td></tr>
     <tr><td>Ritual sequence</td><td>1</td><td>3, 4, 5</td><td>Ordered steps with a timer and failure handling</td></tr>
     <tr><td>Checkpoints and saves</td><td>1</td><td>All</td><td>See section 3.6</td></tr>
+    <tr><td>Night count</td><td>1</td><td>All</td><td>Seven circles in the sketchbook; one filled per episode</td></tr>
+    <tr><td>Choices and counters</td><td>1</td><td>All</td><td>Respect, knowledge, Vuthy; stored in flags and save codes</td></tr>
     <tr><td>Lamp shutter</td><td>2</td><td>3, 4, 5</td><td>Lamp states: open / shuttered / out</td></tr>
     <tr><td>Surface noise</td><td>2</td><td>All</td><td>Material tags on ground meshes</td></tr>
     <tr><td>Hold breath</td><td>2</td><td>5</td><td>Short timed action with recovery</td></tr>
     <tr><td>Throwable distractions</td><td>2</td><td>3, 4</td><td>Physics throw + noise event on impact</td></tr>
     <tr><td>Mirror light beams</td><td>2</td><td>5</td><td>Reflected raycasts between rotatable mirrors</td></tr>
     <tr><td>Timed escapes</td><td>2</td><td>3, 4</td><td>Scripted hazards with a checkpoint at the start</td></tr>
+    <tr><td>Playable flashback</td><td>2</td><td>5 (memories)</td><td>Swap hands model, speed and post-processing; no fail state</td></tr>
+    <tr><td>Daylight scene and NPCs</td><td>3</td><td>—</td><td>Second lighting preset; simple talk-to NPCs</td></tr>
     <tr><td>Rowboat</td><td>3</td><td>—</td><td>Simplest viable version first</td></tr>
     <tr><td>Wetness and temperature</td><td>3</td><td>—</td><td>Drains in water, recovers near heat</td></tr>
     <tr><td>Safe-zone lights</td><td>3</td><td>4</td><td>Area that repels an entity type</td></tr>
@@ -363,10 +367,11 @@
     <tr><td>Voice-mimic taboo</td><td>4</td><td>—</td><td>Turning or noise counts as answering</td></tr>
     <tr><td>Furnace and valves</td><td>4</td><td>—</td><td>Resource-juggling ritual variant</td></tr>
     <tr><td>Crawling</td><td>4</td><td>5</td><td>Extends crouch; forced slow speed</td></tr>
-    <tr><td>Hub with trials</td><td>5</td><td>—</td><td>Flags per trial</td></tr>
+    <tr><td>Companion AI</td><td>4</td><td>—</td><td>Follow, wait, carry a light; never speaks from behind the player</td></tr>
+    <tr><td>Hub with trials</td><td>5</td><td>—</td><td>Flags per trial; difficulty scales with trials completed</td></tr>
     <tr><td>Chant choices</td><td>5</td><td>—</td><td>Choices drawn in the sketchbook</td></tr>
     <tr><td>Boss ritual</td><td>5</td><td>—</td><td>Ritual sequence + entity attacks</td></tr>
-    <tr><td>Ending resolver</td><td>5</td><td>—</td><td>Reads cross-episode counters</td></tr>
+    <tr><td>Ending resolver</td><td>5</td><td>—</td><td>Three endings from chant errors, respect and Vuthy (section 4.3)</td></tr>
   </tbody>
 </table>
 
@@ -382,10 +387,11 @@
 <table>
   <thead><tr><th style="width:30%">Counter</th><th>Example sources</th></tr></thead>
   <tbody>
-    <tr><td>Taboos broken</td><td>Neglecting vigil duties (Ep 1), wasting rice offerings (Ep 2), answering a mimic (Ep 4)</td></tr>
-    <tr><td>Lore notes found / total</td><td>Hidden notes in every episode</td></tr>
-    <tr><td>Ritual errors</td><td>Mistakes during counter-rituals in Episodes 1–4 and the chants in Episode 5</td></tr>
-    <tr><td>Key choices</td><td>Story choices (to be designed for Episodes 1–4)</td></tr>
+    <tr><td>Respect (0–9)</td><td>Ep 1: betel tray, incense (+2) · Ep 2: offerings, honest memory, names at dawn (+3) · Ep 3: mother freed (+2) · Ep 4: no taboo broken, boundary stones (+2)</td></tr>
+    <tr><td>Knowledge</td><td>About 5 lore notes per episode; they confirm the true chant lines in Episode 5</td></tr>
+    <tr><td>Vuthy</td><td>Journal shared (Ep 1, dialogue only) · saved (Ep 4) · forgiven (Ep 5)</td></tr>
+    <tr><td>Chant errors</td><td>Wrong verses in Episode 5, Phase 2</td></tr>
+    <tr><td><strong>Endings</strong></td><td>3+ chant errors → Bound to the Soil · otherwise respect ≥ 6 + Vuthy saved + forgiven → The Unbroken Freedom · otherwise → The Last Payment</td></tr>
   </tbody>
 </table>
 
@@ -452,6 +458,8 @@
     <tr><td><strong>Player items:</strong> lamp, matchbox, satchel, sketchbook, key fragments, Bronze Token</td><td>C</td><td>Seen up close all game; most detail</td></tr>
     <tr><td>First-person hands</td><td>C / L</td><td>No full body needed</td></tr>
     <tr><td>Yay Mey</td><td>L + custom</td><td>White mourning clothes; few animations</td></tr>
+    <tr><td>Vuthy</td><td>L + custom</td><td>1930s town suit; standing and talking only in Episode 1</td></tr>
+    <tr><td>Betel tray set (leaves, areca, lime pot, tray)</td><td>C</td><td>Puzzle props; check against reference</td></tr>
     <tr><td>Uncle Sok's corpse</td><td>C / L</td><td>Lying pose only</td></tr>
     <tr><td>Neak Ta entity and shadow roamer</td><td>C</td><td>Mostly shader silhouette plus a detailed brass mask</td></tr>
     <tr><td>Ambience beds</td><td>L + R</td><td>Rain, thunder, insects, frogs, wind, roof tiles</td></tr>
@@ -538,14 +546,15 @@
 <table>
   <thead><tr><th style="width:6%">#</th><th>Issue</th><th style="width:14%">When</th><th style="width:34%">Suggested resolution</th></tr></thead>
   <tbody>
-    <tr><td>Q1</td><td>The Silver Betel Box is never destroyed or cleansed, yet Episode 5 needs its "inlay"</td><td>Before Ep 2</td><td>Short dawn ritual at the family stupa that releases the inlay</td></tr>
-    <tr><td>Q2</td><td>Two versions of the pact: forest altar (Ep 2) vs estate contract (Ep 4)</td><td>Before Ep 1</td><td>The offering happened at a shrine on estate land; the ledger recorded the contract</td></tr>
-    <tr><td>Q3</td><td>A working rubber estate in 1910 is historically early</td><td>Before Ep 1</td><td>Move the pact to the early 1920s, or make the 1910 site a shrine later built over</td></tr>
-    <tr><td>Q4</td><td>Sora's parents are missing; Yay Mey's place in the bloodline is unclear</td><td>Before Ep 1</td><td>Decide their fate; this can become a strong emotional thread</td></tr>
-    <tr><td>Q5</td><td>Clinic timeline (1920 vs "decades ago" vs 1925 photo)</td><td>Before Ep 3</td><td>Drowned in 1920; Sok hid there afterwards</td></tr>
-    <tr><td>Q6</td><td>Time between episodes is never stated</td><td>Before Ep 2</td><td>Each episode is the following night, noted in the sketchbook</td></tr>
+    <tr><td>Q1</td><td>The Silver Betel Box is never destroyed or cleansed, yet Episode 5 needs its "inlay"</td><td>Done</td><td>Dawn offering at Chea's stupa added in v3.0</td></tr>
+    <tr><td>Q2</td><td>Two versions of the pact: forest altar (Ep 2) vs estate contract (Ep 4)</td><td>Done</td><td>1910 forest shrine; the estate was built over it in 1923</td></tr>
+    <tr><td>Q3</td><td>A working rubber estate in 1910 is historically early</td><td>Done</td><td>Resolved by Q2</td></tr>
+    <tr><td>Q4</td><td>Sora's parents are missing; Yay Mey's place in the bloodline is unclear</td><td>Done</td><td>Kanha was the third payment (1920); father Rith died 1929; Yay Mey married in</td></tr>
+    <tr><td>Q5</td><td>Clinic timeline (1920 vs "decades ago" vs 1925 photo)</td><td>Done</td><td>Kanha drowned in 1920; Sok returned in 1931; photo dated 1920</td></tr>
+    <tr><td>Q6</td><td>Time between episodes is never stated</td><td>Done</td><td>Seven-night countdown: Nights 1, 3, 4, 5, 6, 7</td></tr>
     <tr><td>Q7</td><td>Time mismatches in v1 headers; sunrise at 4:00 AM</td><td>Done</td><td>Corrected in the v2.0 episode documents</td></tr>
-    <tr><td>Q8</td><td>The Episode 1 map already shows all four locations</td><td>Before Ep 1</td><td>Four faint marks, each revealed by the blood trail</td></tr>
+    <tr><td>Q8</td><td>The Episode 1 map already shows all four locations</td><td>Done</td><td>Four faint marks, revealed one at a time</td></tr>
+    <tr><td>Q9</td><td>What happened to Kanha's baby in 1920?</td><td>Before Ep 3</td><td>Lost with her, or a sibling Sora never knew</td></tr>
   </tbody>
 </table>
 
@@ -554,7 +563,7 @@
   <thead><tr><th style="width:6%">#</th><th>Issue</th><th style="width:14%">When</th><th style="width:34%">Suggested resolution</th></tr></thead>
   <tbody>
     <tr><td>G1</td><td>No fail state defined</td><td>Done</td><td>Checkpoint restart, no health bar (section 4.2)</td></tr>
-    <tr><td>G2</td><td>Ending conditions aren't tracked in Episodes 1–4</td><td>Before Ep 1</td><td>Define counters now; 5–8 hidden lore notes and 1–2 choices per episode</td></tr>
+    <tr><td>G2</td><td>Ending conditions aren't tracked in Episodes 1–4</td><td>Done</td><td>Respect, knowledge and Vuthy counters; one key choice per episode (section 4.3)</td></tr>
     <tr><td>G3</td><td>Checkpoints only, or manual saves too?</td><td>Before Ep 1</td><td>Checkpoints only</td></tr>
     <tr><td>G4</td><td>Single difficulty or a story mode?</td><td>Before release</td><td>A story mode helps players who come for the culture and narrative</td></tr>
     <tr><td>G5</td><td>"Hand-crank lantern" in Episode 4</td><td>Done</td><td>Changed to an oil lantern in v2.0</td></tr>

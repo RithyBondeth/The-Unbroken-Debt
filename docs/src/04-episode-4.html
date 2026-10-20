@@ -18,11 +18,11 @@
   <div class="subtitle">Game Design and Narrative Specification</div>
   <div class="spacer"></div>
   <dl class="meta">
-    <dt>Setting</dt><dd>Colonial rubber estate and processing cellars, Kampong Cham Province</dd>
-    <dt>In-story time</dt><dd>Dense midnight fog · 11:30 PM – 4:00 AM</dd>
-    <dt>Playtime</dt><dd>3 – 4 hours</dd>
+    <dt>Setting</dt><dd>Colonial rubber estate, manor and factory cellars, Kampong Cham Province</dd>
+    <dt>Night</dt><dd>Night 6 · 11:30 PM – 4:00 AM</dd>
+    <dt>Playtime</dt><dd>1.5 – 2 hours</dd>
     <dt>Seal</dt><dd>#4 · The Iron Tapping Knife</dd>
-    <dt>Version</dt><dd>2.0 · October 2026 · Draft for review</dd>
+    <dt>Version</dt><dd>3.0 · October 2026 · Draft for review</dd>
   </dl>
 </section>
 
@@ -33,248 +33,267 @@
     <li><span class="n">02</span><a href="#characters">Characters</a></li>
     <li><span class="n">03</span><a href="#locations">Locations and Layout</a></li>
     <li><span class="n">04</span><a href="#story">Story and Gameplay by Act</a>
-      <ol><li>Act I · The Grid of Voices</li><li>Act II · Secrets of the Manor</li><li>Act III · The Furnace Vault and Seal #4</li><li>Resolution and Cliffhanger</li></ol></li>
-    <li><span class="n">05</span><a href="#mechanics">Mechanics Reference</a></li>
-    <li><span class="n">06</span><a href="#puzzles">Puzzle Walkthroughs</a></li>
-    <li><span class="n">07</span><a href="#entities">Entities</a></li>
-    <li><span class="n">08</span><a href="#items">Items and Collectibles</a></li>
-    <li><span class="n">09</span><a href="#av">Audio and Visual Specification</a></li>
-    <li><span class="n">10</span><a href="#glossary">Glossary</a></li>
-    <li><span class="n">11</span><a href="#notes">Revision Notes and Open Issues</a></li>
+      <ol><li>Act I · Two Lanterns in the Fog</li><li>Act II · What the Overseer Wrote</li><li>Act III · The Shrine Beneath the Furnace</li><li>Resolution · One Night Left</li></ol></li>
+    <li><span class="n">05</span><a href="#escalation">Threat Escalation</a></li>
+    <li><span class="n">06</span><a href="#puzzles">Puzzles</a></li>
+    <li><span class="n">07</span><a href="#choice">Key Choice and Tracking</a></li>
+    <li><span class="n">08</span><a href="#mechanics">Mechanics Reference</a></li>
+    <li><span class="n">09</span><a href="#items">Items and Lore Notes</a></li>
+    <li><span class="n">10</span><a href="#av">Audio and Visual Specification</a></li>
+    <li><span class="n">11</span><a href="#notes">Glossary, Revision Notes and Open Issues</a></li>
   </ol>
 </nav>
 
 <h2 id="overview"><span class="num">01</span>Episode Overview</h2>
-<p class="lead">The colonial rubber stamp leads Sora east to a vast plantation in Kampong Cham, swallowed by an unnatural fog. In the endless rows of trees, spirits call her name in the voices of the people she loves. In the abandoned manor, she finally learns the full truth of what her great-grandfather signed.</p>
+<p class="lead">The rubber stamp leads Sora to a colonial estate in Kampong Cham, built over the forest where her great-grandfather made the pact. Vuthy is waiting at the gate, asking to help. In the fog, the spirits call her name in the voices of her family, his voice included, and before the night is over Sora must decide whether the cousin who betrayed her deserves to be saved.</p>
 
 <div class="cards">
-  <div class="card"><div class="k">Location</div><div class="v">Kampong Cham</div><div class="d">Rubber estate, manor, factory</div></div>
-  <div class="card"><div class="k">Weather</div><div class="v">Dense fog</div><div class="d">Visibility 3–4 metres</div></div>
-  <div class="card"><div class="k">Playtime</div><div class="v">3 – 4 hours</div><div class="d">3 acts</div></div>
-  <div class="card"><div class="k">Core mechanic</div><div class="v">Navigation and taboo</div><div class="d">Compass, grid map, "don't look back"</div></div>
-  <div class="card"><div class="k">Entities</div><div class="v">Khmaoch Prey · Neak Ta</div><div class="d">Voice mimics · fog stalker</div></div>
+  <div class="card"><div class="k">Location</div><div class="v">Kampong Cham</div><div class="d">Rubber grid, manor, factory</div></div>
+  <div class="card"><div class="k">Night</div><div class="v">Night 6 of 7</div><div class="d">Dense fog</div></div>
+  <div class="card"><div class="k">Playtime</div><div class="v">1.5 – 2 hours</div><div class="d">3 acts</div></div>
+  <div class="card"><div class="k">Core mechanic</div><div class="v">Navigation and taboo</div><div class="d">Compass, grid, "don't look back"</div></div>
+  <div class="card"><div class="k">Threats</div><div class="v">Khmaoch Prey · Neak Ta</div><div class="d">Voice mimics · full manifestation</div></div>
   <div class="card"><div class="k">Seal</div><div class="v">#4 Iron Tapping Knife</div><div class="d">Melted in the furnace</div></div>
 </div>
 
 <h3><span class="num">1.1</span>Episode goal</h3>
-<p>Cross the fog-bound rubber grid to the colonial manor, uncover the original contract, open the factory cellars and melt the <strong>Iron Tapping Knife</strong> (Seal #4) in the coal furnace.</p>
+<p>Cross the rubber grid to the manor, uncover the history of the shrine beneath the factory, open the cellar, and melt the <strong>Iron Tapping Knife</strong>, the blade Chea cut his palm with in 1910, in the coal furnace.</p>
 
-<h3><span class="num">1.2</span>Role in the series</h3>
+<h3><span class="num">1.2</span>Content at a glance</h3>
 <table class="kv">
   <tbody>
-    <tr><td>Introduces</td><td>The hand-held compass, grid-map navigation, the fog loop, the voice-mimic taboo, the gear and valve puzzle, the furnace defence and crawling through tight spaces.</td></tr>
-    <tr><td>Reveals</td><td>The full truth: in 1910, during famine and cholera, Sora's great-grandfather, a labour supervisor on the estate, signed a blood contract with the Neak Ta, pledging his bloodline for four generations. Uncle Sok came here in 1928 to burn the contract ledger and failed.</td></tr>
-    <tr><td>Leads to</td><td>The molten ingot fuses the blood lines on the map into one path to Phnom Kulen, the setting of Episode 5.</td></tr>
+    <tr><td>Puzzles (5)</td><td>Boundary-stone offerings · compass navigation · overseer's cipher · factory gears and valves · smelting ritual</td></tr>
+    <tr><td>Threat encounters (4)</td><td>Mimic voices in the grid (escalating) · manor shadows · locked out by Vuthy · furnace defence and crawl escape</td></tr>
+    <tr><td>Optional area</td><td>The labourers' barracks (two lore notes, oil)</td></tr>
+    <tr><td>Formula break</td><td>Vuthy travels with Sora as a companion until he betrays her</td></tr>
+    <tr><td>Key choice</td><td>Save Vuthy from the guardian, or leave him</td></tr>
+    <tr><td>Revelation</td><td>The factory stands on the 1910 shrine; severing the pact means "the guardian takes back what it gave"</td></tr>
   </tbody>
 </table>
 
-<h3><span class="num">1.3</span>Visual identity</h3>
-<p>Dense grey volumetric fog, muted olive green, rusty iron orange, decaying yellow French stucco, brown dirt trails, and the warm amber sphere of lantern light.</p>
-
 <h2 id="characters"><span class="num">02</span>Characters</h2>
 <table>
-  <thead><tr><th style="width:22%">Character</th><th style="width:16%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
+  <thead><tr><th style="width:22%">Character</th><th style="width:15%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
   <tbody>
-    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span></td><td>Protagonist</td><td>Now uncovering the deep historical roots of the curse. She relies on her compass, her map-drawing skill and her hearing to cross the disorienting grid of trees.</td><td>Player character.</td></tr>
-    <tr><td><strong>Overseer Jean-Luc</strong><br><span class="small">in letters and ledgers</span></td><td>Historical witness</td><td>A long-dead French plantation manager. His archived ledgers and journals describe the forced labour conditions and the contract signed by Sora's great-grandfather.</td><td>Lore source; key clues for the manor and factory.</td></tr>
-    <tr><td><strong>Khmaoch Prey</strong><br><span class="km">ខ្មោចព្រៃ</span></td><td>Enemies</td><td>Tall, slender, disfigured forest spirits living among the rubber trees. They imitate familiar voices, calling Sora's name as her grandmother, Uncle Sok or dead relatives, to lure her off the safe paths.</td><td>Taboo enemies: never answer, never turn around.</td></tr>
-    <tr><td><strong>The Neak Ta shadow</strong><br><span class="km">អ្នកតា</span></td><td>Antagonist</td><td>An inescapable dark presence weaving through the fog, trying to crush Sora's lantern and break her sense of direction.</td><td>Pressure in the grid; boss-like force in the cellar.</td></tr>
+    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span></td><td>Protagonist</td><td>Angry and grieving after the clinic. She knows what Sok did and suspects Vuthy, but has nobody else.</td><td>Player character.</td></tr>
+    <tr><td><strong>Vuthy</strong><br><span class="km">វុទ្ធី</span></td><td>Cousin, companion</td><td>Meets her at the gate, admits he cut her boat ("I wanted you to give up and go home, not die out there") and offers to help. He carries a second lantern. He has read his father's letters too.</td><td>Companion in Act I; betrays in Act II; in danger in Act III.</td></tr>
+    <tr><td><strong>Overseer Jean-Luc</strong><br><span class="small">in ledgers and notebooks</span></td><td>Historical witness</td><td>The French estate manager in the 1920s. His records describe clearing the forest, the labourers who refused to work near the old shrine, and what they found there.</td><td>Lore; cipher; route to the cellar.</td></tr>
+    <tr><td><strong>Khmaoch Prey</strong><br><span class="km">ខ្មោចព្រៃ</span></td><td>Enemies</td><td>Tall, slender, disfigured forest spirits among the rubber trees that imitate familiar voices: Yay Mey, Sok, Kanha, and Vuthy.</td><td>Taboo enemies.</td></tr>
+    <tr><td><strong>The Neak Ta</strong><br><span class="km">អ្នកតា</span></td><td>Antagonist</td><td>Weaves through the fog, then manifests fully in the cellar above its old shrine.</td><td>Seizes Vuthy; furnace defence.</td></tr>
   </tbody>
 </table>
 
 <h2 id="locations"><span class="num">03</span>Locations and Layout</h2>
-
-<h3><span class="num">3.1</span>Progression map</h3>
 <div class="flow">
-  <div class="node start"><b>From Episode 3</b><span>The 1928 colonial rubber stamp</span></div><div class="arrow"></div>
-  <div class="node"><b>The Endless Rubber Grid</b><span>Rows of trees, latex cups, dense fog, compass navigation</span></div><div class="arrow"></div>
-  <div class="node"><b>Decaying Colonial Manor</b><span>Yellow stucco, verandas, archways, broken shutters</span></div><div class="arrow"></div>
+  <div class="node start"><b>Estate Gate</b><span>Vuthy waiting with a second lantern</span></div><div class="arrow"></div>
+  <div class="node"><b>The Rubber Grid</b><span>Numbered rows, latex cups, old boundary stones, dense fog</span></div><div class="arrow"></div>
+  <div class="node"><b>Colonial Manor</b><span>Yellow stucco, verandas, overseer's archive</span></div><div class="arrow"></div>
   <div class="split">
-    <div class="node"><b>Latex Processing Factory</b><span>Gears, rusty vats, pipe networks</span></div>
-    <div class="node"><b>Overseer's Archive Office</b><span>Ledgers, maps, gear keys</span></div>
+    <div class="node"><b>Processing Factory</b><span>Gears, vats, boiler valves</span></div>
+    <div class="node"><b>Labourers' Barracks</b><span>Optional</span></div>
   </div><div class="arrow"></div>
-  <div class="node goal"><b>Underground Cellar and Furnace Vault</b><span>Tunnels, mechanical puzzles, Iron Tapping Knife</span></div>
+  <div class="node goal"><b>Cellar and Furnace Vault</b><span>Built over the 1910 shrine stone</span></div>
 </div>
-
-<h3><span class="num">3.2</span>Area details</h3>
 <table>
-  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:22%">Lighting</th><th style="width:20%">Gameplay use</th></tr></thead>
+  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:24%">Gameplay use</th></tr></thead>
   <tbody>
-    <tr><td><strong>The Rubber Grid</strong><br><span class="km small">ចំការកៅស៊ូ</span></td><td>Hundreds of tall, perfectly straight rubber trees in rigid rows. Each trunk has diagonal spiral tapping cuts and a small rusted clay cup collecting latex. Tapper stations hold small oil cans.</td><td>Thick ground fog limits visibility to 3–4 m; the lantern makes a soft amber sphere full of drifting fog particles</td><td>Navigation, voice-mimic taboo, fuel collection</td></tr>
-    <tr><td><strong>Colonial Manor</strong><br><span class="km small">ផ្ទះបារាំង</span></td><td>A two-storey French-colonial mansion with peeling yellow stucco, arched verandas, wrought-iron balconies and collapsed tiled roofs overgrown with vines. Inside: dusty gramophones, broken ceiling fans, overturned rattan armchairs, antique safes, faded French maps of Kampong Cham.</td><td>Fog-filtered moonlight, lantern</td><td>Lore, evasion, gear search</td></tr>
-    <tr><td><strong>Factory and Cellars</strong></td><td>Large brick and corrugated-iron processing sheds connected to a network of concrete cellars. Rusted latex vats, iron pressure valves, heavy gear assemblies, overhead conveyor rails and an industrial coal furnace.</td><td>Furnace glow, rusted wall braziers</td><td>Gear puzzle, furnace ritual, escape</td></tr>
+    <tr><td><strong>The Rubber Grid</strong><br><span class="km small">ចំការកៅស៊ូ</span></td><td>Hundreds of straight rubber trees in rigid rows with painted row numbers, spiral tapping cuts and rusted latex cups. Visibility 3–4 m. Scattered among the rows: moss-covered stones from the old forest shrine's path. Tapper stations hold oil cans.</td><td>Navigation; taboo; offerings</td></tr>
+    <tr><td><strong>Colonial Manor</strong><br><span class="km small">ផ្ទះបារាំង</span></td><td>Two-storey French-colonial mansion: peeling yellow stucco, arched verandas, wrought-iron balconies, vines through a collapsed roof. Dusty gramophone, broken ceiling fans, rattan chairs, faded maps; the overseer's archive office.</td><td>Lore; cipher; gear search; evasion</td></tr>
+    <tr><td><strong>Labourers' Barracks</strong> · optional</td><td>Long wooden sheds where the plantation workers lived, many brought from Vietnam alongside local Khmer villagers. Sleeping platforms, names carved into posts, a small altar the workers kept.</td><td>Two lore notes; oil; respectful history</td></tr>
+    <tr><td><strong>Factory and Cellar</strong></td><td>Brick and corrugated-iron sheds: latex vats, pressure valves, gear assemblies, conveyor rails. Below, concrete cellars; in the deepest, the coal furnace stands beside the original shrine stone, still wrapped in rotted cloth.</td><td>Gears; furnace ritual; vent escape</td></tr>
   </tbody>
 </table>
 
 <h2 id="story"><span class="num">04</span>Story and Gameplay by Act</h2>
 
 <div class="act">
-  <div class="act-head"><h3>Act I · The Grid of Voices</h3><span class="time">Playtime 0:00 – 1:00 · Story 11:30 PM – 12:30 AM</span></div>
+  <div class="act-head"><h3>Act I · Two Lanterns in the Fog <span class="tag">formula break</span></h3><span class="time">Playtime 0:00 – 0:30 · 11:30 PM – 12:45 AM</span></div>
   <div class="act-body">
-    <h4>Narrative</h4>
-    <p>Sora reaches the edge of the vast Kampong Cham (<span class="km">កំពង់ចាម</span>) estate late at night. An unnatural fog has smothered the region and hidden the moon. With a brass compass and her oil lantern, she enters the grid of rubber trees to find the abandoned manor.</p>
-    <p>In the silence, soft voices begin to drift through the fog. Her grandmother calls: <em>"Sora… over here… I'm lost in the trees…"</em> Then Uncle Sok's voice calls from another direction.</p>
-    <p>Sora remembers a taboo her elders taught her:</p>
+    <p>At the gate, Vuthy confesses to cutting the boat and asks to come. For the first time, Sora is not alone: Vuthy walks a few steps ahead with his own lantern, talks quietly, and sometimes points out the row numbers.</p>
+    <p>The fog thickens. A voice calls behind them: Yay Mey, lost in the trees. Then Sok. Then Kanha, singing the lullaby from the clinic. Sora remembers the elders' rule:</p>
     <blockquote class="line">If you hear a voice calling your name in the dark forest at night, never answer, and never turn around.<cite>Khmer folk taboo</cite></blockquote>
-    <h4>Gameplay</h4>
+    <p>Then Vuthy's voice calls her name from behind, while Vuthy is walking in front of her. From here on, the player can never be sure which Vuthy is real.</p>
     <table>
       <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>Compass and map navigation</td><td>The player holds a brass compass and follows Sora's hand-drawn grid map between numbered tree rows. Wrong turns quietly loop back in the fog.</td></tr>
-        <tr><td>"Don't look back" taboo</td><td>When a Khmaoch Prey speaks in a familiar voice behind Sora, a distinct sound cue plays. The player must keep walking forward without turning the camera or making a sound until the voice fades.</td></tr>
-        <tr><td>Lantern fuel</td><td>The lantern burns oil faster in the dense fog. Small oil cans hang at tapper stations throughout the grid.</td></tr>
+        <tr><td>Compass and grid map</td><td>Follow the hand-drawn map between numbered rows; wrong turns loop back in the fog.</td></tr>
+        <tr><td><strong>Boundary-stone offerings</strong> <span class="tag">new</span></td><td>Small offerings at the old shrine's path stones reveal the guardian's ancient route through the grid (section 6.1).</td></tr>
+        <tr><td>Voice-mimic taboo</td><td>When a mimic speaks behind Sora, keep walking forward without turning or replying.</td></tr>
+        <tr><td>Companion</td><td>Vuthy follows Sora's lead, stops when she stops, and never speaks from behind her. That is the player's only tell.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Act II · Secrets of the Manor</h3><span class="time">Playtime 1:00 – 2:30 · Story 12:30 – 2:30 AM</span></div>
+  <div class="act-head"><h3>Act II · What the Overseer Wrote</h3><span class="time">Playtime 0:30 – 1:05 · 12:45 – 2:30 AM</span></div>
   <div class="act-body">
-    <h4>Narrative</h4>
-    <p>Sora escapes the grid and reaches the overgrown manor. Inside, she searches Overseer Jean-Luc's archived letters and the estate ledgers from 1910.</p>
-    <p>There she finds the dark truth of her family line. During a devastating famine and cholera outbreak in 1910, her great-grandfather was a labour supervisor on this estate. To save his dying family and secure wealth, he signed a <strong>blood contract</strong> with the ancient land guardian, pledging the spiritual devotion and freedom of his bloodline for four generations. Uncle Sok came here in 1928 to burn the original contract ledger but was driven out by the entities guarding the cellar.</p>
-    <p>To reach the cellar vault where the contract's tool is kept, Sora must solve the gear puzzle in the factory shed.</p>
-    <h4>Gameplay</h4>
+    <p>In the manor's archive, Jean-Luc's ledgers record the clearing of the forest in 1923: workers refused to dig near a stone shrine; the old men of a nearby village told him of a man called Chea who made a bargain there in 1910; when the shrine was dug out, the workers found an iron knife crusted with old blood. Jean-Luc built the factory over the site anyway and kept the knife "as a curiosity" in the cellar. His private notebook is in cipher (section 6.2).</p>
+    <p>The decoded notebook holds the line that changes everything for Vuthy: the villagers said that if the pact is ever broken, <strong>"the guardian takes back what it gave"</strong>. The land, the house, the money would all return to the earth.</p>
+    <p>While Sora repairs the factory's gear mechanism, Vuthy reads it over her shoulder and goes quiet. When the cellar doors open, he steps through first and slams them shut behind him. Sora is locked out and must find another way down through the factory's ventilation shafts.</p>
     <table>
       <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>Factory gears and pipes</td><td>Study French mechanical drawings copied into the sketchbook, collect three missing iron gears from the manor and set the boiler's pressure valves to open the heavy cellar doors (see section 6.1).</td></tr>
-        <tr><td>Indoor evasion</td><td>Move through dark, creaking corridors while avoiding shadow shapes lurking in window frames and wardrobes.</td></tr>
+        <tr><td>Overseer's cipher <span class="tag">new</span></td><td>Decode Jean-Luc's notebook using a Khmer proverb his interpreter taught him.</td></tr>
+        <tr><td>Gears and valves</td><td>Collect three iron gears in the manor; fit them and set the boiler valves from the schematic (section 6.3).</td></tr>
+        <tr><td>Manor shadows</td><td>Shapes lurk in window frames and wardrobes and lunge at bright light.</td></tr>
+        <tr><td>Optional: barracks</td><td>The workers' own records of the shrine, and the altar they kept to appease it.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Act III · The Furnace Vault and Seal #4</h3><span class="time">Playtime 2:30 – 3:30 · Story 2:30 – 4:00 AM</span></div>
+  <div class="act-head"><h3>Act III · The Shrine Beneath the Furnace</h3><span class="time">Playtime 1:05 – 1:45 · 2:30 – 4:00 AM</span></div>
   <div class="act-body">
-    <h4>Narrative</h4>
-    <p>Sora descends into the latex cellars beneath the factory. The air is thick with the smell of old sulphur and dried latex. In the deepest chamber, resting in the frame of an open coal furnace, she finds the fourth seal: an <strong>Iron Tapping Knife</strong> crusted with dried blood and engraved with binding runes.</p>
-    <p>As she lifts it, the Neak Ta manifests in full physical force, blocking the cellar exit with towering shadow tendrils as the steam pipes burst around her.</p>
-    <h4>Gameplay</h4>
+    <p>Sora crawls through the ventilation shafts into the deepest cellar. Vuthy stands at the shrine stone holding the Iron Tapping Knife, meaning to carry it away so that the seal can never be broken. "If you pay, it ends and we keep everything. I'm sorry, Sora. I'm so sorry."</p>
+    <p>The ground shakes. The Neak Ta rises from the shrine stone in full physical force. Shadow tendrils wrap around Vuthy and lift him off the floor; the knife falls at Sora's feet. Steam pipes burst all around.</p>
     <table>
       <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td>Smelting ritual</td><td>Load coal into the furnace and light it with matches. Place the knife in the crucible and work the bellows until the metal melts completely.</td></tr>
-        <tr><td>Pressure defence</td><td>While the knife melts, manage the steam valves to keep the shadows back and keep the lantern lit, under intense spatial audio.</td></tr>
-        <tr><td>Ventilation escape</td><td>As the knife melts, the seal breaks with a supernatural shockwave that collapses the cellar stairs. Sora crawls through a collapsing concrete ventilation tunnel to the surface.</td></tr>
+        <tr><td>Smelting ritual</td><td>Load coal, light the furnace with matches, place the knife in the crucible, work the bellows until it melts.</td></tr>
+        <tr><td>Pressure defence</td><td>Use the steam valves to drive back the shadows while the knife melts, and keep the lantern lit.</td></tr>
+        <tr><td>The choice</td><td>One valve is aimed at the tendrils holding Vuthy (section 7).</td></tr>
+        <tr><td>Vent escape</td><td>The seal breaks with a shockwave that collapses the stairs; crawl out through the collapsing ventilation tunnel.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Resolution and Cliffhanger</h3><span class="time">Story 4:00 AM</span></div>
+  <div class="act-head"><h3>Resolution · One Night Left</h3><span class="time">4:00 AM</span></div>
   <div class="act-body">
-    <p>Sora crawls out of the ventilation shaft into damp grass as the fog begins to lift at <strong>4:00 AM</strong>. In her hand is the molten silver-iron ingot from the furnace.</p>
-    <p>When she opens her sketchbook, the ingot reacts with the paper: the blood lines on the map fuse into one, pointing far north to the sacred mountain of <strong>Phnom Kulen</strong>, where an ancient sunken temple holds the Neak Ta's central altar. The stage is set for <strong>Episode 5: The Sunken Sanctuary</strong>.</p>
+    <p>Sora crawls into the wet grass as the fog lifts, the molten silver-iron ingot cooling in her hand. When she opens her sketchbook, the ingot draws the blood lines together into one path, north to <strong>Phnom Kulen</strong>, the ancient seat of the guardian, where the contract itself is inscribed.</p>
+    <p>If she saved Vuthy, he sits beside her, shaking, and asks to come: "Let me at least stand at the door." If she didn't, she finds him at dawn at the edge of the estate, silent, his eyes not quite his own. Sora fills in the sixth circle. <strong>One night remains.</strong></p>
   </div>
 </div>
 
-<h2 id="mechanics"><span class="num">05</span>Mechanics Reference</h2>
-<p>New mechanics in this episode. Values marked <em>target</em> are starting points for playtesting.</p>
+<h2 id="escalation"><span class="num">05</span>Threat Escalation</h2>
 <table>
-  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback to the player</th></tr></thead>
+  <thead><tr><th style="width:14%">Stage</th><th>Threat</th><th style="width:44%">What changes</th></tr></thead>
   <tbody>
-    <tr><td><strong>Compass</strong></td><td>A held item; the needle always points north. It can be held while walking, which lowers the lantern to the other hand.</td><td>Physical needle on the compass model.</td></tr>
-    <tr><td><strong>Grid navigation and fog loop</strong></td><td>Trees carry painted row numbers. Following the map reaches the manor. Wrong turns loop the player back to an earlier row without warning.</td><td>Repeating landmarks; row numbers.</td></tr>
-    <tr><td><strong>Voice-mimic taboo</strong></td><td>When a mimic speaks behind Sora, turning the camera beyond a set angle (<em>target</em> 90°) or making noise counts as answering. The mimic attacks and a broken taboo is recorded.</td><td>Distinct audio cue; voice moves around the player.</td></tr>
-    <tr><td><strong>Fog fuel drain</strong></td><td>The lantern uses oil faster in the grid (<em>target</em> 1.5× normal).</td><td>Gauge drops visibly faster.</td></tr>
-    <tr><td><strong>Steam valves</strong></td><td>Opening a valve releases steam that pushes shadows back for a short time, but valves need time to rebuild pressure.</td><td>Hissing; pressure gauges.</td></tr>
-    <tr><td><strong>Crawling</strong></td><td>Forced low movement in tight spaces; slow speed; the lantern is pushed ahead.</td><td>Very low view; scraping sounds.</td></tr>
+    <tr><td>Act I start</td><td>Mimics (family voices)</td><td>Occasional calls from far behind; easy to ignore.</td></tr>
+    <tr><td>Act I end</td><td>Mimics (Kanha, Vuthy)</td><td>Closer and more frequent; they use the voices that hurt most, including the companion's.</td></tr>
+    <tr><td>Act II</td><td>Manor shadows</td><td>Lunge from window frames and wardrobes at bright light; the lantern must be shaded indoors.</td></tr>
+    <tr><td>Act III</td><td>Neak Ta, fully manifested</td><td>Tendrils, bursting steam pipes and a collapsing tunnel.</td></tr>
   </tbody>
 </table>
 
-<h2 id="puzzles"><span class="num">06</span>Puzzle Walkthroughs</h2>
-
-<h3><span class="num">6.1</span>The factory gears and valves</h3>
+<h2 id="puzzles"><span class="num">06</span>Puzzles</h2>
+<h3><span class="num">6.1</span>The boundary stones <span class="tag">new</span></h3>
 <table>
   <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>Find the French mechanical drawings in the archive office.</td><td>Schematic copied into the sketchbook.</td></tr>
-    <tr><td>2</td><td>Collect three missing iron gears from rooms in the manor.</td><td>Three gears.</td></tr>
-    <tr><td>3</td><td>Fit the gears into the assembly as shown in the schematic.</td><td>The mechanism turns.</td></tr>
-    <tr><td>4</td><td>Set the boiler's pressure valves to the values in the drawings.</td><td>The cellar blast doors open.</td></tr>
+    <tr><td>1</td><td>Notice the old moss-covered stones between the rows; the sketchbook recognises the shrine carvings from the Episode 2 flashback.</td><td>Stones marked on the map.</td></tr>
+    <tr><td>2</td><td>Leave a small offering (rice, incense or a flower) at each stone.</td><td>A faint path of disturbed fog reveals the next stone.</td></tr>
+    <tr><td>3</td><td>Follow the stones to the manor; skipping them means navigating by compass alone.</td><td>Safer route; respect +1 if every stone is honoured.</td></tr>
   </tbody>
 </table>
 
-<h3><span class="num">6.2</span>The smelting ritual</h3>
+<h3><span class="num">6.2</span>The overseer's cipher <span class="tag">new</span></h3>
 <table>
   <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>Load coal into the furnace and light it with matches.</td><td>The furnace heats; checkpoint saved.</td></tr>
-    <tr><td>2</td><td>Place the Iron Tapping Knife in the crucible.</td><td>Shadows close in.</td></tr>
-    <tr><td>3</td><td>Work the bellows while using steam valves to hold off the shadows.</td><td>The knife melts; Seal #4 breaks.</td></tr>
-    <tr><td>4</td><td>Crawl through the ventilation tunnel.</td><td>Escape to the surface.</td></tr>
+    <tr><td>1</td><td>Find Jean-Luc's notebook (archive) and his interpreter's card with a Khmer proverb and its French translation (manor bedroom).</td><td>Cipher key.</td></tr>
+    <tr><td>2</td><td>Use the proverb's letters as the substitution key to decode the marked passages.</td><td>The knife's location, the cellar route and the "takes back what it gave" warning.</td></tr>
   </tbody>
 </table>
 
-<h2 id="entities"><span class="num">07</span>Entities</h2>
+<h3><span class="num">6.3</span>Gears and valves</h3>
 <table>
-  <thead><tr><th style="width:20%">Entity</th><th style="width:16%">Senses</th><th>Behaviour</th><th style="width:24%">How to survive</th></tr></thead>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
   <tbody>
-    <tr><td><strong>Khmaoch Prey</strong><br><span class="km">ខ្មោចព្រៃ</span></td><td>React to the player looking back or making noise</td><td>Follow Sora through the grid and speak behind her in the voices of her family, trying to make her turn or reply.</td><td>Keep walking forward, stay silent, never turn around.</td></tr>
-    <tr><td><strong>Manor shadows</strong></td><td>Sight</td><td>Lurk in window frames and wardrobes; lunge when Sora passes in the open with her lantern bright.</td><td>Shade the lantern; keep distance from frames and wardrobes.</td></tr>
-    <tr><td><strong>Neak Ta shadow</strong></td><td>Full awareness (scripted)</td><td>Tries to crush the lantern in the fog; blocks the cellar exit with tendrils in Act III.</td><td>Steam valves; finish the ritual.</td></tr>
+    <tr><td>1</td><td>Copy the French mechanical drawing into the sketchbook.</td><td>Schematic.</td></tr>
+    <tr><td>2</td><td>Collect three iron gears from manor rooms; fit them as drawn.</td><td>The mechanism turns.</td></tr>
+    <tr><td>3</td><td>Set the boiler valves to the values on the drawing.</td><td>The cellar doors open (and Vuthy locks them).</td></tr>
   </tbody>
 </table>
 
-<h2 id="items"><span class="num">08</span>Items and Collectibles</h2>
+<h3><span class="num">6.4</span>The smelting ritual</h3>
 <table>
-  <thead><tr><th style="width:26%">Item</th><th style="width:14%">Type</th><th>Found / use</th></tr></thead>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
   <tbody>
-    <tr><td>Brass magnetic compass</td><td>Equipment</td><td>Carried from the start of the episode (source to confirm).</td></tr>
-    <tr><td>Oil cans</td><td>Consumable</td><td>Tapper stations in the grid.</td></tr>
-    <tr><td>Jean-Luc's letters and the 1910 ledgers</td><td>Lore</td><td>Manor and archive office. Reveal the contract.</td></tr>
-    <tr><td>French mechanical drawings</td><td>Clue</td><td>Archive office.</td></tr>
-    <tr><td>Iron gears ×3</td><td>Key items</td><td>Manor rooms.</td></tr>
-    <tr><td>Coal</td><td>Puzzle item</td><td>Cellar.</td></tr>
-    <tr><td><strong>Iron Tapping Knife</strong></td><td>Seal #4</td><td>Furnace frame in the deepest cellar. Melted down.</td></tr>
-    <tr><td>Molten silver-iron ingot</td><td>Story item</td><td>Product of the ritual. Points to Episode 5.</td></tr>
+    <tr><td>1</td><td>Load coal and light the furnace.</td><td>Checkpoint.</td></tr>
+    <tr><td>2</td><td>Place the knife in the crucible and work the bellows while venting steam at the shadows.</td><td>The knife melts; Seal #4 breaks.</td></tr>
+    <tr><td>3</td><td>Crawl through the collapsing vent.</td><td>Escape.</td></tr>
   </tbody>
 </table>
 
-<h2 id="av"><span class="num">09</span>Audio and Visual Specification</h2>
+<h2 id="choice"><span class="num">07</span>Key Choice and Tracking</h2>
+<div class="cols">
+  <div class="callout"><span class="label">Save Vuthy</span><p>Sora turns the valve on the tendrils holding him. It leaves one fewer valve to defend the furnace, so the defence is noticeably harder. Freed, Vuthy grabs the bellows and works them with her. They crawl out together. <strong>Vuthy: saved</strong> (required for the true ending).</p></div>
+  <div class="callout"><span class="label">Leave him</span><p>Sora keeps every valve on the furnace. The tendrils drag Vuthy into the dark behind the shrine stone. He survives, but the guardian has marked him. <strong>Vuthy: not saved.</strong> The true ending is no longer possible.</p></div>
+</div>
+<table>
+  <thead><tr><th style="width:30%">Tracked in this episode</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr><td>Respect</td><td>Never answering or turning to a mimic (+1); every boundary stone honoured (+1)</td></tr>
+    <tr><td>Knowledge (lore notes)</td><td>5 notes: two ledgers, the decoded notebook, two in the barracks</td></tr>
+    <tr><td>Vuthy</td><td>Saved or not saved</td></tr>
+  </tbody>
+</table>
+
+<h2 id="mechanics"><span class="num">08</span>Mechanics Reference</h2>
+<table>
+  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Compass</strong></td><td>Held item; the needle points north; holding it moves the lantern to the other hand.</td><td>Needle on the model.</td></tr>
+    <tr><td><strong>Fog loop</strong></td><td>Wrong turns loop back to an earlier row without warning.</td><td>Repeating landmarks; row numbers.</td></tr>
+    <tr><td><strong>Voice-mimic taboo</strong></td><td>Turning beyond about 90° (<em>target</em>) or making noise while a mimic speaks counts as answering: the mimic attacks and a taboo is recorded.</td><td>Distinct audio cue.</td></tr>
+    <tr><td><strong>Companion</strong></td><td>Vuthy follows, waits, carries light; he never speaks from behind Sora. The mimic of his voice always does.</td><td>His lantern ahead in the fog.</td></tr>
+    <tr><td><strong>Fog fuel drain</strong></td><td>Lantern oil burns about 1.5× faster in the grid (<em>target</em>).</td><td>Gauge drops faster.</td></tr>
+    <tr><td><strong>Steam valves</strong></td><td>Venting steam pushes shadows back briefly; each valve needs time to rebuild pressure.</td><td>Hiss; pressure gauges.</td></tr>
+    <tr><td><strong>Crawling</strong></td><td>Forced low movement in tight spaces.</td><td>Very low view; scraping.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="items"><span class="num">09</span>Items and Lore Notes</h2>
+<table>
+  <thead><tr><th style="width:30%">Item</th><th style="width:14%">Type</th><th>Found / use</th></tr></thead>
+  <tbody>
+    <tr><td>Brass compass</td><td>Equipment</td><td>Pa Lok gives it to Sora at the end of Episode 3</td></tr>
+    <tr><td>Oil cans</td><td>Consumable</td><td>Tapper stations, barracks</td></tr>
+    <tr><td>Offerings (rice, incense, flowers)</td><td>Consumable</td><td>Carried; the barracks altar</td></tr>
+    <tr><td>Jean-Luc's ledgers and cipher notebook; interpreter's proverb card</td><td>Lore / clues</td><td>Archive, manor bedroom</td></tr>
+    <tr><td>Iron gears ×3; coal</td><td>Puzzle items</td><td>Manor rooms; cellar</td></tr>
+    <tr><td><strong>Iron Tapping Knife</strong></td><td>Seal #4</td><td>Shrine stone; melted</td></tr>
+    <tr><td>Molten silver-iron ingot</td><td>Remnant</td><td>From the furnace; guides Sora to Phnom Kulen</td></tr>
+  </tbody>
+</table>
+
+<h2 id="av"><span class="num">10</span>Audio and Visual Specification</h2>
 <table class="kv">
   <tbody>
-    <tr><td>Colour palette</td><td>Grey fog, muted olive green, rust orange, yellowed stucco, earthy brown, amber flame.</td></tr>
-    <tr><td>Post-processing</td><td>Volumetric fog, depth-of-field blur, vignetting during movement, lantern light falling off into the fog, film grain.</td></tr>
-    <tr><td>Light sources</td><td>Oil lantern, furnace glow, rusted wall braziers, faint fog-filtered moonlight.</td></tr>
-    <tr><td>Ambience</td><td>Dead forest silence, latex dripping into clay cups, wind through the tree rows, creaking factory iron.</td></tr>
-    <tr><td>Horror sound cues</td><td>Mimicked voices of relatives calling Sora's name, hissing steam pipes, grinding gears, collapsing concrete.</td></tr>
-    <tr><td>Interface</td><td>100% diegetic. Compass held in the hand; oil level in the lantern's glass tube; maps in the sketchbook.</td></tr>
+    <tr><td>Colour palette</td><td>Grey fog, muted olive, rust orange, yellowed stucco, earthy brown, amber lantern light (two lanterns in Act I).</td></tr>
+    <tr><td>Post-processing</td><td>Volumetric fog, depth of field, movement vignette, lantern falloff, film grain.</td></tr>
+    <tr><td>Ambience</td><td>Dead forest silence, latex dripping into cups, wind through the rows, creaking iron.</td></tr>
+    <tr><td>Horror cues</td><td>Mimicked voices (Yay Mey, Sok, Kanha's lullaby, Vuthy), steam hiss, grinding gears, collapsing concrete.</td></tr>
+    <tr><td>Interface</td><td>100% diegetic: compass in hand; oil level in the lantern's glass; map in the sketchbook.</td></tr>
   </tbody>
 </table>
 
-<h2 id="glossary"><span class="num">10</span>Glossary</h2>
+<h2 id="notes"><span class="num">11</span>Glossary, Revision Notes and Open Issues</h2>
 <table>
-  <thead><tr><th style="width:20%">Term (v1)</th><th style="width:18%">Khmer</th><th>Meaning</th><th style="width:28%">Note</th></tr></thead>
+  <thead><tr><th style="width:20%">Term</th><th style="width:20%">Khmer</th><th>Meaning</th><th style="width:26%">Note</th></tr></thead>
   <tbody>
-    <tr><td>Chamkar Kaosou</td><td class="km">ចំការកៅស៊ូ</td><td>Rubber plantation</td><td>Also the episode title</td></tr>
-    <tr><td>Phteah Barang</td><td class="km">ផ្ទះបារាំង</td><td>French (colonial) house</td><td></td></tr>
+    <tr><td>Chamkar Kaosou</td><td class="km">ចំការកៅស៊ូ</td><td>Rubber plantation</td><td></td></tr>
+    <tr><td>Phteah Barang</td><td class="km">ផ្ទះបារាំង</td><td>French colonial house</td><td></td></tr>
     <tr><td>Khmaoch Prey</td><td class="km">ខ្មោចព្រៃ</td><td>Forest ghost</td><td></td></tr>
-    <tr><td>Kabit Chrok Kaosou</td><td>—</td><td>Rubber-tapping knife</td><td>v1 term unclear; confirm</td></tr>
-    <tr><td>Compagnie des Caoutchoucs de Kampong Cham</td><td>—</td><td>Fictional colonial rubber company</td><td>French: "Kampong Cham Rubber Company"</td></tr>
+    <tr><td>Tapping knife</td><td>—</td><td>Rubber-tapping knife</td><td>v1 "Kabit Chrok Kaosou"; confirm</td></tr>
+    <tr><td>Compagnie des Caoutchoucs de Kampong Cham</td><td>—</td><td>Fictional rubber company</td><td>French: "Kampong Cham Rubber Company"</td></tr>
   </tbody>
 </table>
-
-<h2 id="notes"><span class="num">11</span>Revision Notes and Open Issues</h2>
-<h3>Changes from v1.0</h3>
+<h3>Changes in v3.0</h3>
 <ul>
-  <li>Reorganised into the standard episode structure; added mechanics, puzzle, entity, item and glossary sections.</li>
-  <li>In-story time changed from "11:30 PM – 3:30 AM" to <strong>11:30 PM – 4:00 AM</strong> to match the ending.</li>
-  <li>"Hand-crank lantern fuel" changed to "lantern fuel"; v1.0 mixed up a hand-crank light with an oil lantern.</li>
-  <li>Khmer text now renders correctly.</li>
+  <li>Playtime reduced to 1.5–2 hours.</li>
+  <li>History resolved: the 1910 pact was made at a forest shrine; the estate cleared the forest in 1923 and built the factory over it; the knife is Chea's blood-oath blade.</li>
+  <li>New: Vuthy as companion, mimics using his voice, betrayal, the save-him choice; boundary-stone offerings; the overseer's cipher; the optional labourers' barracks; escalation.</li>
 </ul>
-<h3>Open issues</h3>
-<div class="callout issue"><span class="label">Decide before building Episode 4</span>
+<div class="callout issue"><span class="label">Open issues</span>
 <ul>
-  <li><strong>Historical date:</strong> large rubber plantations in Kampong Cham were mostly established in the 1920s. A working estate with ledgers in 1910 is early. Either move the pact to the early 1920s or make the 1910 site a forest shrine that the estate was later built over.</li>
-  <li><strong>The pact must match Episode 2's flashback</strong> (an offering of the silver betel box at a forest altar). One option: the offering happened at a shrine on estate land, and the ledger recorded the "contract".</li>
-  <li><strong>"Four generations":</strong> clarify who those generations are (great-grandfather, grandparent, Sok and Sora's parent, Sora), and where Sora's parents are.</li>
-  <li><strong>Forced labour and colonial history</strong> should be portrayed accurately and respectfully; many plantation workers were brought from Vietnam. Review with a historian.</li>
-  <li><strong>Where the compass comes from</strong> (carried over or found at the start of the episode).</li>
+  <li>Portray plantation labour, including workers brought from Vietnam, accurately and with dignity; review with a historian.</li>
+  <li>Choose the Khmer proverb for the cipher with the cultural advisor.</li>
+  <li>Companion AI is new work; keep Vuthy's behaviour simple (follow, wait, light) to fit a solo budget.</li>
 </ul></div>
 
 </body>

@@ -19,10 +19,10 @@
   <div class="spacer"></div>
   <dl class="meta">
     <dt>Setting</dt><dd>Phnom Kulen and its hidden temple catacombs, Siem Reap Province</dd>
-    <dt>In-story time</dt><dd>3:00 AM – sunrise (about 6:00 AM)</dd>
-    <dt>Playtime</dt><dd>3.5 – 4.5 hours</dd>
+    <dt>Night</dt><dd>Night 7 · 2:30 AM – sunrise (about 6:00 AM)</dd>
+    <dt>Playtime</dt><dd>2 – 2.5 hours</dd>
     <dt>Seal</dt><dd>#5 · The Golden Inscription Slab</dd>
-    <dt>Version</dt><dd>2.0 · October 2026 · Draft for review</dd>
+    <dt>Version</dt><dd>3.0 · October 2026 · Draft for review</dd>
   </dl>
 </section>
 
@@ -33,239 +33,241 @@
     <li><span class="n">02</span><a href="#characters">Characters</a></li>
     <li><span class="n">03</span><a href="#locations">Locations and Layout</a></li>
     <li><span class="n">04</span><a href="#story">Story and Gameplay by Act</a>
-      <ol><li>Act I · The Mountain Path and the Four Gateways</li><li>Act II · The Four Elemental Trials</li><li>Act III · The Ritual of Severance</li></ol></li>
-    <li><span class="n">05</span><a href="#boss">The Ritual of Severance (Boss Sequence)</a></li>
-    <li><span class="n">06</span><a href="#endings">Endings</a></li>
-    <li><span class="n">07</span><a href="#mechanics">Mechanics Reference</a></li>
-    <li><span class="n">08</span><a href="#items">Items and Collectibles</a></li>
-    <li><span class="n">09</span><a href="#av">Audio and Visual Specification</a></li>
-    <li><span class="n">10</span><a href="#glossary">Glossary</a></li>
-    <li><span class="n">11</span><a href="#notes">Revision Notes and Open Issues</a></li>
+      <ol><li>Act I · The Mountain and the Four Gateways</li><li>Act II · The Four Generations</li><li>Act III · The Ritual of Severance</li></ol></li>
+    <li><span class="n">05</span><a href="#escalation">Threat Escalation</a></li>
+    <li><span class="n">06</span><a href="#boss">The Ritual of Severance</a></li>
+    <li><span class="n">07</span><a href="#endings">Endings</a></li>
+    <li><span class="n">08</span><a href="#mechanics">Mechanics Reference</a></li>
+    <li><span class="n">09</span><a href="#items">Items and Lore Notes</a></li>
+    <li><span class="n">10</span><a href="#av">Audio and Visual Specification</a></li>
+    <li><span class="n">11</span><a href="#notes">Glossary, Revision Notes and Open Issues</a></li>
   </ol>
 </nav>
 
 <h2 id="overview"><span class="num">01</span>Episode Overview</h2>
-<p class="lead">The fused blood line leads Sora to Phnom Kulen, the sacred mountain. Behind a waterfall lies a sunken temple where the Neak Ta keeps the original contract. Everything she has learned is tested in four elemental trials before she faces the guardian itself and performs the ritual that will either free her family or bind her forever.</p>
+<p class="lead">On the seventh night, Sora climbs Phnom Kulen to the guardian's ancient seat. Four trials beneath the mountain each end in a memory of one generation the debt has taken. At the altar, with the guardian towering over her, she performs the Ritual of Severance and decides what to do with the cousin who wanted her to pay.</p>
 
 <div class="cards">
-  <div class="card"><div class="k">Location</div><div class="v">Phnom Kulen</div><div class="d">Waterfall cave and catacombs</div></div>
-  <div class="card"><div class="k">Time</div><div class="v">3:00 AM – dawn</div><div class="d">The final night</div></div>
-  <div class="card"><div class="k">Playtime</div><div class="v">3.5 – 4.5 hours</div><div class="d">3 acts + endings</div></div>
+  <div class="card"><div class="k">Location</div><div class="v">Phnom Kulen</div><div class="d">Mountain path and catacombs</div></div>
+  <div class="card"><div class="k">Night</div><div class="v">Night 7 of 7</div><div class="d">The debt falls due at dawn</div></div>
+  <div class="card"><div class="k">Playtime</div><div class="v">2 – 2.5 hours</div><div class="d">3 acts + three endings</div></div>
   <div class="card"><div class="k">Core mechanic</div><div class="v">Trials and ritual</div><div class="d">Hub, four trials, boss ritual</div></div>
-  <div class="card"><div class="k">Entity</div><div class="v">Neak Ta Guardian</div><div class="d">Fully manifested</div></div>
-  <div class="card"><div class="k">Seal</div><div class="v">#5 Golden Inscription Slab</div><div class="d">The original contract</div></div>
+  <div class="card"><div class="k">Threat</div><div class="v">Neak Ta Guardian</div><div class="d">Fully manifested</div></div>
+  <div class="card"><div class="k">Seal</div><div class="v">#5 Golden Inscription Slab</div><div class="d">The contract itself</div></div>
 </div>
 
 <h3><span class="num">1.1</span>Episode goal</h3>
-<p>Place the four cleansed seal remnants on their elemental shrines, open the Sanctum of the Banyan Tree, and complete the <strong>Ritual of Severance</strong> on the Golden Inscription Slab to end the ancestral debt.</p>
+<p>Place the four seal remnants on their shrines, open the Sanctum of the Banyan Tree and complete the <strong>Ritual of Severance</strong> on the Golden Inscription Slab before sunrise.</p>
 
-<h3><span class="num">1.2</span>Role in the series</h3>
+<h3><span class="num">1.2</span>Content at a glance</h3>
 <table class="kv">
   <tbody>
-    <tr><td>Introduces</td><td>A hub with trials playable in any order, the chant choice interface, a three-phase boss ritual and the ending resolver.</td></tr>
-    <tr><td>Reuses</td><td>Every earlier skill: watched/unwatched (Episode 1), mirror beams (Episode 2), sound stealth (Episode 2), resource timing (Episode 1), and the white thread and incense rituals.</td></tr>
-    <tr><td>Concludes</td><td>The story of the debt, with two endings decided by the player's actions across all five episodes.</td></tr>
+    <tr><td>Puzzles (6)</td><td>Remnant placement · Earth trial · Water trial · Wind trial · Fire trial · the chants</td></tr>
+    <tr><td>Threat encounters</td><td>Each trial grows harder as the guardian strengthens, followed by the three-phase boss ritual</td></tr>
+    <tr><td>Optional area</td><td>The riverbed carvings on the mountain path (lore notes that teach chant lines)</td></tr>
+    <tr><td>Key choice</td><td>Forgive Vuthy and share the offering, or refuse him</td></tr>
+    <tr><td>Endings</td><td>The Unbroken Freedom · The Last Payment · Bound to the Soil</td></tr>
   </tbody>
 </table>
 
-<h3><span class="num">1.3</span>Visual identity</h3>
-<p>Ancient mossy sandstone, glowing spirit amber, deep jungle green, golden runes that glow on their own, drifting mist, and a dramatic final change to warm golden morning light.</p>
-
 <h2 id="characters"><span class="num">02</span>Characters</h2>
 <table>
-  <thead><tr><th style="width:22%">Character</th><th style="width:16%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
+  <thead><tr><th style="width:22%">Character</th><th style="width:15%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
   <tbody>
-    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span></td><td>Protagonist</td><td>Exhausted and battle-tested, carrying the weight of four generations of family history. She brings together everything she has learned: stealth, sound, spatial awareness and ritual knowledge.</td><td>Player character.</td></tr>
-    <tr><td><strong>The Neak Ta Guardian</strong><br><span class="km">អ្នកតា</span></td><td>Final antagonist</td><td>The land guardian fully manifested: a towering multi-armed silhouette of shadow and ancient stone, wearing a glowing, distorted brass mask. It rules the catacombs and bends space and light to protect its contract.</td><td>Boss of the severance ritual.</td></tr>
-    <tr><td><strong>Ancestral voices</strong><br><span class="small">Uncle Sok and the great-grandfather</span></td><td>Guides and testers</td><td>Echoing memories that guide or test Sora through choices inside the trial chambers.</td><td>Story choices; hints.</td></tr>
+    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span></td><td>Protagonist</td><td>Exhausted and changed: no longer running from her family's past but carrying it.</td><td>Player character.</td></tr>
+    <tr><td><strong>The Neak Ta Guardian</strong><br><span class="km">អ្នកតា</span></td><td>Final antagonist</td><td>The guardian fully manifested: a towering multi-armed being of shadow and ancient stone in a glowing, distorted brass mask. It bends space and light to protect its contract, but it is a judge, not a monster.</td><td>Boss of the severance ritual.</td></tr>
+    <tr><td><strong>Ancestral memories</strong><br><span class="small">Chea · Chhun · Kanha · Sok</span></td><td>Guides and testers</td><td>Each trial ends with a memory of one person the debt has claimed.</td><td>Story beats and hints.</td></tr>
+    <tr><td><strong>Vuthy</strong><br><span class="km">វុទ្ធី</span></td><td>Cousin</td><td><em>If saved:</em> climbs with Sora and waits at the waterfall; only the named may enter. <em>If not saved:</em> follows her in silence, marked by the guardian.</td><td>Appears at the altar for the final choice.</td></tr>
   </tbody>
 </table>
 
 <h2 id="locations"><span class="num">03</span>Locations and Layout</h2>
-
-<h3><span class="num">3.1</span>Progression map</h3>
 <div class="flow">
-  <div class="node start"><b>From Episode 4</b><span>The molten ingot fuses the map toward Phnom Kulen</span></div><div class="arrow"></div>
-  <div class="node"><b>Sacred Mountain Path and Waterfall Cave</b><span>Naga balustrades, mossy steps, roaring waterfall entrance</span></div><div class="arrow"></div>
-  <div class="node"><b>Central Rotunda of the Four Elements</b><span>Hub with four elemental gateways and carved pillars</span></div><div class="arrow"></div>
+  <div class="node start"><b>Mountain Path</b><span>Naga staircase, mist · optional riverbed carvings</span></div><div class="arrow"></div>
+  <div class="node"><b>Waterfall Cave</b><span>Entrance; only the named may pass</span></div><div class="arrow"></div>
+  <div class="node"><b>Central Rotunda of the Four Elements</b><span>Hub · relief map of Cambodia · four niches</span></div><div class="arrow"></div>
   <div class="split">
-    <div class="node"><b>Earth</b><span>Banyan root maze</span></div>
-    <div class="node"><b>Water</b><span>Mirror puzzle</span></div>
-    <div class="node"><b>Wind</b><span>Sound corridor</span></div>
-    <div class="node"><b>Fire</b><span>Brazier trial</span></div>
+    <div class="node"><b>Earth</b><span>Chea</span></div>
+    <div class="node"><b>Water</b><span>Kanha</span></div>
+    <div class="node"><b>Wind</b><span>Chhun</span></div>
+    <div class="node"><b>Fire</b><span>Sok</span></div>
   </div><div class="arrow"></div>
-  <div class="node goal"><b>Sanctum of the Banyan Tree</b><span>Banyan-root altar, linga and yoni stone, Golden Inscription Slab</span></div>
+  <div class="node goal"><b>Sanctum of the Banyan Tree</b><span>Banyan-root altar · Golden Inscription Slab</span></div>
 </div>
-
-<h3><span class="num">3.2</span>Area details</h3>
 <table>
-  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:28%">Gameplay use</th></tr></thead>
+  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:24%">Gameplay use</th></tr></thead>
   <tbody>
-    <tr><td><strong>Mountain Approach and Waterfall</strong></td><td>A steep sandstone staircase carved into the jungle cliffside, flanked by moss-covered seven-headed Naga balustrades. A roaring waterfall hides the catacomb entrance. Fallen carvings, Khmer boundary stones (<span class="km">សីមា</span>), flickering stone oil braziers, overgrown banyan roots.</td><td>Ascent; arrival; mood</td></tr>
-    <tr><td><strong>Central Rotunda</strong></td><td>A massive circular underground chamber of carved sandstone blocks. In the centre, a stone relief map of Cambodia and an altar with four empty niches. Four monumental archways lead to the trials.</td><td>Hub; seal-remnant placement</td></tr>
-    <tr><td><strong>Earth · Chamber of Roots</strong></td><td>A labyrinth of huge banyan roots (<span class="km">ជ្រៃ</span>) bursting through the stone walls, forming shifting maze paths.</td><td>Sight trial</td></tr>
-    <tr><td><strong>Water · Chamber of Reflections</strong></td><td>Submerged stone basins fed by mountain springs, lined with Apsara (<span class="km">អប្សរា</span>) carvings that reflect light off the water.</td><td>Light-reflection trial</td></tr>
-    <tr><td><strong>Wind · Chamber of Whispers</strong></td><td>A narrow carved corridor lined with ancient Pali inscriptions, where heavy gusts howl through stone lattice windows.</td><td>Sound and timing trial</td></tr>
-    <tr><td><strong>Fire · Chamber of Flames</strong></td><td>A hot chamber lit by rows of ancient iron oil braziers and stone incense altars.</td><td>Resource and timing trial</td></tr>
-    <tr><td><strong>Sanctum of the Banyan Tree</strong></td><td>A towering circular sanctum whose open dome shows the night sky. At its centre, an ancient banyan's roots wrap around a sacred linga and yoni altar holding the Golden Inscription Slab.</td><td>Boss ritual; endings</td></tr>
+    <tr><td><strong>Mountain Path</strong></td><td>A steep sandstone staircase carved into the jungle cliff, flanked by seven-headed Naga balustrades; boundary stones (<span class="km">សីមា</span>), stone braziers, banyan roots. A side path follows a stream whose bed is carved with ancient figures.</td><td>Ascent; optional lore</td></tr>
+    <tr><td><strong>Riverbed Carvings</strong> · optional</td><td>Ancient carvings beneath shallow running water, lit by Sora's lamp. Some carved verses match the funeral chants.</td><td>Lore notes with chant lines</td></tr>
+    <tr><td><strong>Central Rotunda</strong></td><td>A vast circular sandstone chamber; a stone relief map of Cambodia; an altar with four empty niches; four monumental archways.</td><td>Hub; remnant placement</td></tr>
+    <tr><td><strong>Earth · Chamber of Roots</strong></td><td>A labyrinth of huge banyan roots (<span class="km">ជ្រៃ</span>) through the stone, with weathered statues among them.</td><td>Sight trial</td></tr>
+    <tr><td><strong>Water · Chamber of Reflections</strong></td><td>Spring-fed stone basins and Apsara (<span class="km">អប្សរា</span>) reliefs.</td><td>Mirror trial</td></tr>
+    <tr><td><strong>Wind · Chamber of Whispers</strong></td><td>A narrow corridor and a stone bridge over a chasm; wind through stone lattices; Pali inscriptions.</td><td>Sound trial</td></tr>
+    <tr><td><strong>Fire · Chamber of Flames</strong></td><td>Rows of iron oil braziers and stone incense altars.</td><td>Resource trial</td></tr>
+    <tr><td><strong>Sanctum of the Banyan Tree</strong></td><td>A circular sanctum with an open dome to the night sky; an ancient banyan whose roots wrap a linga and yoni altar holding the Golden Inscription Slab; four corner pillars.</td><td>Boss ritual; endings</td></tr>
   </tbody>
 </table>
 
 <h2 id="story"><span class="num">04</span>Story and Gameplay by Act</h2>
 
 <div class="act">
-  <div class="act-head"><h3>Act I · The Mountain Path and the Four Gateways</h3><span class="time">Playtime 0:00 – 1:00 · Story 3:00 – 3:45 AM</span></div>
+  <div class="act-head"><h3>Act I · The Mountain and the Four Gateways</h3><span class="time">Playtime 0:00 – 0:30 · 2:30 – 3:30 AM</span></div>
   <div class="act-body">
-    <h4>Narrative</h4>
-    <p>At <strong>3:00 AM</strong>, Sora reaches Phnom Kulen (<span class="km">ភ្នំគូលេន</span>). Guided by her sketchbook and the molten ingot, she climbs the ancient Naga staircase through tropical mist and enters a hidden cave behind a roaring waterfall.</p>
-    <p>Inside lies the Central Rotunda of the Four Elements. A stone altar shows four empty niches, one for each seal she broke in Episodes 1–4. To open the way to the Final Sanctum, she must enter the four elemental chambers and place each cleansed seal remnant on its matching shrine.</p>
-    <h4>Gameplay</h4>
+    <p>Sora climbs the Naga staircase of Phnom Kulen (<span class="km">ភ្នំគូលេន</span>) through tropical mist, following the ingot's pull. If Vuthy was saved, he climbs beside her, and at the waterfall he stops: an unseen force will not let him pass. "Only the named," Sora says. If he was not saved, she hears steps behind her all the way up and never sees who it is.</p>
+    <p>An optional side path follows a stream over ancient carvings, where verses in the stone match the funeral chants (section 6). Behind the waterfall lies the Central Rotunda. Sora places each remnant in its niche:</p>
     <table>
-      <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
+      <thead><tr><th style="width:24%">Shrine</th><th>Remnant</th><th style="width:34%">Why</th></tr></thead>
       <tbody>
-        <tr><td>Hub navigation</td><td>The four trials can be played in any order from the rotunda.</td></tr>
-        <tr><td>Placing the remnants</td><td>Sora takes each cleansed remnant from her satchel (Bronze Token fragment, Silver Betel Box inlay, Terracotta Jar soil, molten iron ingot) and places it on its elemental altar.</td></tr>
+        <tr><td>Fire</td><td>Bronze Token fragment (Ep 1)</td><td>Burned in the incense fire</td></tr>
+        <tr><td>Wind</td><td>Silver Betel Box inlay (Ep 2)</td><td>Returned at the bell, under the whispering stupas</td></tr>
+        <tr><td>Water</td><td>Terracotta Jar soil (Ep 3)</td><td>Purified over the lake</td></tr>
+        <tr><td>Earth</td><td>Molten iron ingot (Ep 4)</td><td>Melted above the shrine stone</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Act II · The Four Elemental Trials</h3><span class="time">Playtime 1:00 – 2:30 · Story 3:45 – 4:45 AM</span></div>
+  <div class="act-head"><h3>Act II · The Four Generations</h3><span class="time">Playtime 0:30 – 1:30 · 3:30 – 5:00 AM</span></div>
   <div class="act-body">
-    <p>Each chamber tests one of the core skills Sora has mastered on her journey.</p>
+    <p>The trials can be played in any order. Each tests a skill from an earlier episode and ends with a memory of one generation of the debt.</p>
     <table>
-      <thead><tr><th style="width:18%">Trial</th><th style="width:20%">Skill tested</th><th>Challenge</th><th style="width:16%">Origin</th></tr></thead>
+      <thead><tr><th style="width:12%">Trial</th><th style="width:18%">Skill</th><th>Challenge</th><th style="width:26%">Memory</th></tr></thead>
       <tbody>
-        <tr><td><strong>Earth</strong></td><td>Sight and line of sight</td><td>Cross a maze of banyan roots where stone statues move only when Sora looks away. Use the lamp shutter and careful camera control to freeze them and clear the path.</td><td>Episode 1 (the corpse)</td></tr>
-        <tr><td><strong>Water</strong></td><td>Light reflection</td><td>Rotate polished bronze mirrors across the basins to aim a moonbeam at three crystal gems in an Apsara relief, draining the central basin.</td><td>Episode 2 (library mirrors)</td></tr>
-        <tr><td><strong>Wind</strong></td><td>Sound stealth and timing</td><td>Cross a narrow stone bridge over a chasm. Gusts mask footsteps; when the wind stops, Pret listen from the shadows. Move only while the wind howls and stand completely still when it falls silent.</td><td>Episode 2 (Pret)</td></tr>
-        <tr><td><strong>Fire</strong></td><td>Resource management and timing</td><td>Light a series of stone braziers in a precise geometric order using the remaining matches and lamp oil, while dodging moving fire traps.</td><td>Episode 1 (incense, matches)</td></tr>
+        <tr><td><strong>Earth</strong></td><td>Sight (Ep 1)</td><td>A banyan-root maze where statues move only when unwatched. Use the shutter and camera to freeze them.</td><td><strong>Chea</strong>, 1910: walking home with the earth-filled box, already afraid of what he has done.</td></tr>
+        <tr><td><strong>Water</strong></td><td>Reflection (Ep 2)</td><td>Rotate bronze mirrors to strike three crystals in an Apsara relief and drain the basin.</td><td><strong>Kanha</strong>, 1920: singing to Sora as a child. If freed in Ep 3, her voice hints where to aim; if not, her sorrow ripples the water and distorts the beams.</td></tr>
+        <tr><td><strong>Wind</strong></td><td>Sound (Ep 2)</td><td>Cross a stone bridge, moving only while gusts mask footsteps; Pret listen in the silences.</td><td><strong>Chhun</strong>, 1911: Yay Mey's young husband, at peace with going if it spares his child.</td></tr>
+        <tr><td><strong>Fire</strong></td><td>Resources (Ep 1)</td><td>Light braziers in a geometric order with the last matches and oil while dodging fire traps.</td><td><strong>Sok</strong>, Night 1: burning the token, knowing it will kill him. "Forgive me, Sora. Or don't. But finish it."</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Act III · The Ritual of Severance</h3><span class="time">Playtime 2:30 – 4:00 · Story 4:45 AM – sunrise</span></div>
+  <div class="act-head"><h3>Act III · The Ritual of Severance</h3><span class="time">Playtime 1:30 – 2:15 · 5:00 AM – sunrise</span></div>
   <div class="act-body">
-    <h4>Narrative</h4>
-    <p>With all four shrines active, the heavy stone doors of the rotunda slide open to reveal the Sanctum of the Banyan Tree.</p>
-    <p>At its centre lies the <strong>Golden Inscription Slab</strong>, the fifth and final seal, bearing the original blood contract of 1910. As Sora approaches, the ground trembles and the Neak Ta Guardian manifests in its full, terrifying form: a multi-armed being of shadow and ancient stone, towering over the altar.</p>
-    <p>Sora cannot fight it. She must complete the Ritual of Severance while evading its attacks (see section 5).</p>
+    <p>With four shrines lit, the rotunda's stone doors open onto the Sanctum of the Banyan Tree. On the altar lies the <strong>Golden Inscription Slab</strong>, the contract of 1910, with four names, three of them faded. The fourth reads <strong>Sora</strong>, with the ghost of another name scraped out beneath it.</p>
+    <p>The ground trembles and the Neak Ta Guardian rises over the altar. Sora cannot fight it. She must perform the Ritual of Severance while it attacks (section 6). As the final phase begins, Vuthy is there, though no one but the named should be able to enter.</p>
   </div>
 </div>
 
-<h2 id="boss"><span class="num">05</span>The Ritual of Severance (Boss Sequence)</h2>
-<p>The ritual has three phases. Throughout, the Guardian attacks the area with sweeping blows and reaches for Sora with shadow tendrils. Each phase starts from its own checkpoint.</p>
+<h2 id="escalation"><span class="num">05</span>Threat Escalation</h2>
+<p>Because the trials can be played in any order, escalation is tied to <strong>how many are complete</strong>, not which.</p>
 <table>
-  <thead><tr><th style="width:20%">Phase</th><th>Player actions</th><th style="width:28%">Pressure and failure</th></tr></thead>
+  <thead><tr><th style="width:24%">Trials complete</th><th>What changes</th></tr></thead>
   <tbody>
-    <tr><td><strong>1 · The Four Corners</strong></td><td>Run to the four corner pillars of the sanctum, tie blessed white cotton thread around each, and light sanctified incense at each.</td><td>Area attacks and tendrils between pillars. Being hit costs time and causes shadow damage.</td></tr>
-    <tr><td><strong>2 · The Chants</strong></td><td>At the central altar, recite the counter-mantras by choosing lines that match the funeral chants (<span class="km">ស្មូត</span>) recorded in the sketchbook.</td><td>Each wrong choice causes shadow damage and is counted toward the ending.</td></tr>
-    <tr><td><strong>3 · The Blood Offering</strong></td><td>Prick a finger with a brass pin and place a drop of blood on the Golden Inscription Slab to formally nullify the ancestral debt.</td><td>Final, uninterrupted moment; the outcome depends on the ending conditions.</td></tr>
+    <tr><td>0 (first trial)</td><td>Each trial at its base difficulty.</td></tr>
+    <tr><td>1</td><td>The guardian's presence enters the rotunda; the hub is no longer safe to linger in.</td></tr>
+    <tr><td>2</td><td>Trials gain an extra hazard: more statues, one more Pret, faster fire traps, extra ripples.</td></tr>
+    <tr><td>3</td><td>The light falters: oil drains faster and braziers gutter.</td></tr>
+    <tr><td>4 → Sanctum</td><td>The full manifestation and the three-phase ritual.</td></tr>
   </tbody>
 </table>
-<div class="callout"><span class="label">Shadow damage</span><p>There is no health bar. Damage is shown by the screen darkening, sound distortion and Sora's breathing. After two or three hits (<em>target</em>) Sora is overwhelmed and the phase restarts from its checkpoint.</p></div>
 
-<h2 id="endings"><span class="num">06</span>Endings</h2>
+<h2 id="boss"><span class="num">06</span>The Ritual of Severance</h2>
+<table>
+  <thead><tr><th style="width:20%">Phase</th><th>Player actions</th><th style="width:30%">Pressure</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1 · The Four Corners</strong></td><td>Run to the four corner pillars; tie the blessed thread (from Ep 2) around each; light sanctified incense at each.</td><td>Area attacks and tendrils between pillars.</td></tr>
+    <tr><td><strong>2 · The Chants</strong></td><td>At the altar, choose each verse of the counter-mantra from lines written in the sketchbook. Lore notes from every episode reveal which lines are true; without them, some choices are guesses.</td><td>Each wrong verse causes shadow damage and counts as a chant error.</td></tr>
+    <tr><td><strong>3 · The Offering</strong></td><td>Prick a finger with the brass pin and place a drop of blood on the slab beside her name. Vuthy steps forward (section 7).</td><td>The final choice.</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Shadow damage</span><p>There is no health bar. The screen darkens, sound distorts and Sora's breathing grows ragged. After two or three hits (<em>target</em>) the phase restarts from its checkpoint. Chant errors are counted even when the phase restarts.</p></div>
+<div class="callout"><span class="label">How lore unlocks the chants</span><p>The counter-mantra has six verses. For each, the sketchbook offers three candidate lines copied from different sources. Lore notes across the series (journal pages, Chea's confession, the clinic records, the overseer's notes, the riverbed carvings) confirm which line is genuine. A player who found most of the notes can complete the chants with certainty; one who found few must guess.</p></div>
 
+<h2 id="endings"><span class="num">07</span>Endings</h2>
+<h3><span class="num">7.1</span>The final choice</h3>
 <div class="cols">
-  <div class="callout">
-    <span class="label">True ending · The Unbroken Freedom</span>
-    <p><strong>Conditions:</strong> the player kept the cultural taboos, collected all hidden lore notes, and completed the ritual chants without error.</p>
-    <p><strong>Resolution:</strong> As Sora places her blood on the slab and recites the final chant, a blinding golden light bursts from the banyan tree. The Neak Ta lowers its hands, bows its masked head in respect and dissolves into glowing dust. Above the open dome, the night sky turns into a golden sunrise. Sora walks out of the catacombs into the morning sun, free from the past. Back in Battambang, Uncle Sok's cremation fire burns peacefully under a clear sky as her family finds peace.</p>
-  </div>
-  <div class="callout issue">
-    <span class="label">Bad ending · Bound to the Soil</span>
-    <p><strong>Conditions:</strong> the player made major errors in the chants or failed key lore choices during the series.</p>
-    <p><strong>Resolution:</strong> Sora completes the ritual, but the counter-mantra is incomplete. The Neak Ta rejects the severance and declares the debt unpaid. Darkness swallows the sanctum. Sora wakes inside the wooden coffin at the Battambang stilt house from Episode 1, trapped forever in the spirit world, while her family mourns over her lifeless body in the world of the living.</p>
-  </div>
+  <div class="callout"><span class="label">Forgive him</span><p>Sora holds out her hand. Vuthy pricks his finger and adds his blood to hers. The debt was written on the whole bloodline; two of its last generation now answer it together.</p></div>
+  <div class="callout"><span class="label">Refuse him</span><p>Sora turns away and makes the offering alone. Vuthy stands at the edge of the light, the guardian's shadow falling over him.</p></div>
 </div>
 
-<h3><span class="num">6.1</span>Ending conditions</h3>
-<p>These counters must be tracked from Episode 1 onward and saved between episodes.</p>
+<h3><span class="num">7.2</span>Conditions</h3>
 <table>
-  <thead><tr><th style="width:28%">Counter</th><th>Examples of sources</th><th style="width:26%">True ending requires</th></tr></thead>
+  <thead><tr><th style="width:24%">Ending</th><th>Requires</th></tr></thead>
   <tbody>
-    <tr><td>Taboos broken</td><td>Wasting rice offerings (Ep 2), answering or turning to a mimic (Ep 4), neglecting the vigil duties (Ep 1)</td><td>None, or below a set limit</td></tr>
-    <tr><td>Hidden lore notes found</td><td>Optional letters, photographs and records in every episode</td><td>All</td></tr>
-    <tr><td>Chant errors</td><td>Wrong choices in Phase 2</td><td>None</td></tr>
-    <tr><td>Key lore choices</td><td>Story choices across Episodes 1–4 (to be defined)</td><td>The "right" choices (to be defined)</td></tr>
+    <tr><td><strong>Bound to the Soil</strong></td><td>Three or more chant errors (<em>target</em>). Checked first.</td></tr>
+    <tr><td><strong>The Unbroken Freedom</strong></td><td>Fewer than three chant errors <em>and</em> respect of 6 or more out of 9 <em>and</em> Vuthy saved in Episode 4 <em>and</em> forgiven here.</td></tr>
+    <tr><td><strong>The Last Payment</strong></td><td>Fewer than three chant errors, but any true-ending condition unmet.</td></tr>
+  </tbody>
+</table>
+<table>
+  <thead><tr><th style="width:40%">Respect sources (9 total)</th><th>Episode</th></tr></thead>
+  <tbody>
+    <tr><td>Betel tray correct first time · incense never fully out</td><td>1 (+2)</td></tr>
+    <tr><td>No offerings wasted · honest memory · names in order at dawn</td><td>2 (+3)</td></tr>
+    <tr><td>Mother freed</td><td>3 (+2)</td></tr>
+    <tr><td>No taboo broken in the grid · every boundary stone honoured</td><td>4 (+2)</td></tr>
   </tbody>
 </table>
 
-<h2 id="mechanics"><span class="num">07</span>Mechanics Reference</h2>
+<h3><span class="num">7.3</span>Outcomes</h3>
+<div class="callout"><span class="label">True ending · The Unbroken Freedom</span><p>Two drops of blood touch the slab and the names on it burn away. Golden light pours from the banyan. The guardian lowers its arms, bows its masked head and dissolves into drifting dust. Through the open dome, the sky turns gold. Sora and Vuthy walk out into the sunrise together. In Battambang, Sok's cremation fire burns under a clear sky. The rice fields will flood and fail next season, the fortune is gone, and Yay Mey holds both grandchildren and says it was never theirs to keep.</p></div>
+<div class="callout"><span class="label">Bitter ending · The Last Payment</span><p>The slab accepts Sora's blood, but the guardian is not satisfied: the contract is fulfilled, not severed. Its shadow falls over Vuthy and the fourth name on the slab changes back to his. He is gone when the light returns. Sora walks into the sunrise alone. The family keeps its land and money, and at Sok's cremation she stands apart, knowing what they cost.</p></div>
+<div class="callout issue"><span class="label">Bad ending · Bound to the Soil</span><p>The counter-mantra breaks apart. The guardian rejects the severance and declares the debt unpaid. Darkness swallows the sanctum. Sora wakes inside the coffin in the funeral tent in Battambang, unable to move or speak, as her family weeps over her body on the eighth morning.</p></div>
+
+<h2 id="mechanics"><span class="num">08</span>Mechanics Reference</h2>
 <table>
-  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback to the player</th></tr></thead>
+  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback</th></tr></thead>
   <tbody>
-    <tr><td><strong>Hub and trials</strong></td><td>Four trials playable in any order. Completing a trial lights its shrine; four lit shrines open the sanctum.</td><td>Glowing runes on the rotunda altar.</td></tr>
-    <tr><td><strong>Remnant placement</strong></td><td>Each remnant fits one elemental altar. Placement is done physically from the satchel.</td><td>Remnant settles into its niche with light and sound.</td></tr>
-    <tr><td><strong>Moving statues</strong></td><td>Statues move only when out of view or in darkness. Lamp light and direct view freeze them.</td><td>Grinding stone when the player looks away.</td></tr>
-    <tr><td><strong>Wind timing</strong></td><td>Movement is safe only during gusts. Moving during silence alerts the Pret.</td><td>Wind volume; lattice whistling.</td></tr>
-    <tr><td><strong>Brazier order</strong></td><td>Braziers must be lit in a geometric order shown in the sketchbook. Wrong order resets the sequence; each attempt costs matches and oil.</td><td>Flames flare or die.</td></tr>
-    <tr><td><strong>Chant choices</strong></td><td>Lines are presented as choices in the sketchbook. The player picks the line matching the recorded chant.</td><td>Correct lines glow; wrong lines bring shadow damage.</td></tr>
+    <tr><td><strong>Hub and trials</strong></td><td>Four trials in any order; each lit shrine raises the guardian's strength; four open the sanctum.</td><td>Runes glow on the rotunda altar.</td></tr>
+    <tr><td><strong>Moving statues</strong></td><td>Move only when unseen or in darkness; lamp light and direct view freeze them.</td><td>Grinding stone behind the player.</td></tr>
+    <tr><td><strong>Wind timing</strong></td><td>Movement is safe during gusts; moving in silence alerts the Pret.</td><td>Wind volume; lattice whistle.</td></tr>
+    <tr><td><strong>Brazier order</strong></td><td>Light braziers in the order sketched from the chamber's relief; a wrong order resets and costs matches and oil.</td><td>Flames flare or die.</td></tr>
+    <tr><td><strong>Chant choices</strong></td><td>Six verses, three candidate lines each; lore confirms the true line.</td><td>True lines glow; false ones bring shadow.</td></tr>
   </tbody>
 </table>
 
-<h2 id="items"><span class="num">08</span>Items and Collectibles</h2>
+<h2 id="items"><span class="num">09</span>Items and Lore Notes</h2>
 <table>
-  <thead><tr><th style="width:30%">Item</th><th style="width:14%">Type</th><th>Use</th></tr></thead>
+  <thead><tr><th style="width:32%">Item</th><th style="width:14%">Type</th><th>Use</th></tr></thead>
   <tbody>
-    <tr><td>Bronze Token fragment</td><td>Remnant</td><td>From Episode 1. Placed on its elemental shrine.</td></tr>
-    <tr><td>Silver Betel Box inlay</td><td>Remnant</td><td>From Episode 2. Placed on its elemental shrine.</td></tr>
-    <tr><td>Terracotta Jar soil</td><td>Remnant</td><td>From Episode 3. Placed on its elemental shrine.</td></tr>
-    <tr><td>Molten iron ingot</td><td>Remnant</td><td>From Episode 4. Guides the way; placed on its elemental shrine.</td></tr>
-    <tr><td>Blessed white cotton thread</td><td>Ritual item</td><td>From Episode 2. Tied around the four pillars.</td></tr>
-    <tr><td>Sanctified incense, matches, lamp oil</td><td>Consumables</td><td>Fire trial and Phase 1.</td></tr>
-    <tr><td>Brass pin</td><td>Ritual item</td><td>Phase 3 blood offering.</td></tr>
-    <tr><td><strong>Golden Inscription Slab</strong></td><td>Seal #5</td><td>The original contract; target of the ritual.</td></tr>
+    <tr><td>Bronze Token fragment · Silver inlay · Jar soil · Molten ingot</td><td>Remnants</td><td>Placed on the Fire, Wind, Water and Earth shrines</td></tr>
+    <tr><td>Blessed white cotton thread</td><td>Ritual item</td><td>From Ep 2; tied around the four pillars</td></tr>
+    <tr><td>Sanctified incense, matches, oil</td><td>Consumables</td><td>Fire trial; Phase 1</td></tr>
+    <tr><td>Brass pin</td><td>Ritual item</td><td>The offering</td></tr>
+    <tr><td><strong>Golden Inscription Slab</strong></td><td>Seal #5</td><td>The contract</td></tr>
+    <tr><td>Lore notes ×4</td><td>Optional</td><td>Riverbed carvings; each confirms chant lines</td></tr>
   </tbody>
 </table>
 
-<h2 id="av"><span class="num">09</span>Audio and Visual Specification</h2>
+<h2 id="av"><span class="num">10</span>Audio and Visual Specification</h2>
 <table class="kv">
   <tbody>
-    <tr><td>Colour palette</td><td>Ancient sandstone grey, moss green, glowing rune gold, amber, deep navy turning to golden dawn.</td></tr>
-    <tr><td>Post-processing</td><td>Strong bloom, light shafts through the open dome, screen distortion during boss attacks, film grain.</td></tr>
-    <tr><td>Light sources</td><td>Oil lantern, glowing golden runes, stone braziers, moonlight turning to sunlight.</td></tr>
-    <tr><td>Ambience</td><td>Deep underground bass, wind through stone lattices, dripping water, slow and ominous Pinpeat (<span class="km">ពិណពាទ្យ</span>) roneat phrases.</td></tr>
-    <tr><td>Horror sound cues</td><td>Sliding stone blocks, the Neak Ta's layered echoing voice, roaring wind, shattering glass, ritual chanting.</td></tr>
-    <tr><td>Interface</td><td>100% diegetic. Inventory, chants and puzzle solutions are tracked only in Sora's sketchbook.</td></tr>
+    <tr><td>Colour palette</td><td>Sandstone grey, moss green, glowing rune gold, amber, deep navy turning to golden dawn. Memories in warm sepia.</td></tr>
+    <tr><td>Post-processing</td><td>Strong bloom, light shafts through the dome, distortion during attacks, film grain.</td></tr>
+    <tr><td>Ambience</td><td>Underground bass, wind through lattices, dripping water, slow roneat (<span class="km">រនាត</span>) phrases.</td></tr>
+    <tr><td>Horror cues</td><td>Sliding stone, the guardian's layered voice, roaring wind, shattering glass, chanting.</td></tr>
+    <tr><td>Interface</td><td>100% diegetic: chants, remnants and puzzle notes in the sketchbook.</td></tr>
   </tbody>
 </table>
 
-<h2 id="glossary"><span class="num">10</span>Glossary</h2>
+<h2 id="notes"><span class="num">11</span>Glossary, Revision Notes and Open Issues</h2>
 <table>
-  <thead><tr><th style="width:20%">Term (v1)</th><th style="width:18%">Khmer</th><th>Meaning</th><th style="width:28%">Note</th></tr></thead>
+  <thead><tr><th style="width:20%">Term</th><th style="width:20%">Khmer</th><th>Meaning</th><th style="width:26%">Note</th></tr></thead>
   <tbody>
-    <tr><td>Phnom Kulen</td><td class="km">ភ្នំគូលេន</td><td>Sacred mountain north of Angkor</td><td></td></tr>
-    <tr><td>Sima</td><td class="km">សីមា</td><td>Sacred boundary stone</td><td></td></tr>
-    <tr><td>Sprean</td><td class="km">ជ្រៃ</td><td>Banyan tree</td><td>v1 term unclear; "chrey" suggested</td></tr>
+    <tr><td>Phnom Kulen</td><td class="km">ភ្នំគូលេន</td><td>Sacred mountain</td><td></td></tr>
+    <tr><td>Sima</td><td class="km">សីមា</td><td>Boundary stone</td><td></td></tr>
+    <tr><td>Banyan</td><td class="km">ជ្រៃ</td><td>Banyan tree</td><td>Replaces v1 "Sprean"</td></tr>
     <tr><td>Apsara</td><td class="km">អប្សរា</td><td>Celestial dancer</td><td></td></tr>
-    <tr><td>Linga / Yoni</td><td class="km">លិង្គ / យោនី</td><td>Shaivite sacred stones</td><td>Treat respectfully; still venerated</td></tr>
-    <tr><td>Smat</td><td class="km">ស្មូត</td><td>Buddhist funeral chanting</td><td>Usually romanised "smot"</td></tr>
-    <tr><td>Mukhalingi</td><td class="km">មុខលិង្គ</td><td>—</td><td>"Mukhalinga" is a linga carved with a face, not a mask; rename the Guardian's mask</td></tr>
-    <tr><td>Pinpeat / Roneat</td><td class="km">ពិណពាទ្យ / រនាត</td><td>Classical ensemble / xylophone</td><td></td></tr>
+    <tr><td>Linga / Yoni</td><td class="km">លិង្គ / យោនី</td><td>Shaivite sacred stones</td><td>Still venerated; treat respectfully</td></tr>
+    <tr><td>Smot</td><td class="km">ស្មូត</td><td>Buddhist funeral chanting</td><td>v1 spelled "Smat"</td></tr>
   </tbody>
 </table>
-
-<h2 id="notes"><span class="num">11</span>Revision Notes and Open Issues</h2>
-<h3>Changes from v1.0</h3>
+<h3>Changes in v3.0</h3>
 <ul>
-  <li>Reorganised into the standard episode structure; separated the boss sequence and endings into their own sections; added ending-condition tracking, mechanics, item and glossary sections.</li>
-  <li>Defined shadow damage (no health bar; two or three hits restart the phase).</li>
-  <li>Khmer text now renders correctly.</li>
+  <li>Playtime 2–2.5 hours. Each trial ends with an ancestor's memory; escalation is tied to trials completed; remnant-to-shrine mapping defined.</li>
+  <li>Lore notes now unlock the true chant lines; the optional riverbed carvings added.</li>
+  <li>Vuthy's final choice and three endings with exact conditions (replacing the undefined "key lore choices").</li>
+  <li>The Guardian's mask is no longer called "Mukhalingi" (a mukhalinga is a carved linga, not a mask).</li>
 </ul>
-<h3>Open issues</h3>
-<div class="callout issue"><span class="label">Decide before building Episode 5</span>
+<div class="callout issue"><span class="label">Open issues</span>
 <ul>
-  <li><strong>"Four artifacts she destroyed":</strong> the Silver Betel Box is never destroyed or cleansed in Episode 2. Add that ritual to Episode 2 so the "inlay" remnant exists.</li>
-  <li><strong>"Key lore choices"</strong> are not defined in any earlier episode. Design one or two meaningful choices per episode, or remove this condition.</li>
-  <li><strong>Which remnant belongs to which element</strong> (for example earth = token, water = jar soil, fire = ingot, wind = betel box inlay).</li>
-  <li><strong>Pret in the Wind trial:</strong> explain in the sketchbook why they appear here.</li>
-  <li><strong>The blood offering</strong> and the linga/yoni altar are sensitive; review with the cultural advisor and keep the presentation restrained.</li>
-  <li><strong>The Guardian's mask name</strong> ("Mukhalingi") needs replacing with an accurate term.</li>
+  <li>The blood offering and the linga/yoni altar are sensitive; review with the cultural advisor and keep the presentation restrained.</li>
+  <li>The riverbed carvings evoke real sacred sites near Phnom Kulen; keep the in-game version fictional and respectful.</li>
+  <li>Name the Guardian's mask with an accurate term.</li>
+  <li>Playtest the respect threshold (6 of 9) and the chant-error limit (3).</li>
 </ul></div>
 
 </body>
