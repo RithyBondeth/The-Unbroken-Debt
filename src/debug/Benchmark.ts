@@ -33,6 +33,9 @@ export function runBenchmark(
   const frames: number[] = [];
   const gpuSamples: number[] = [];
   let maxDrawCalls = 0;
+  let resolutionChanged = false;
+  const startWidth = engine.getRenderWidth();
+  const startHeight = engine.getRenderHeight();
   let elapsed = 0;
   const total = options.warmupSec + options.durationSec;
 
@@ -44,6 +47,9 @@ export function runBenchmark(
       if (elapsed < options.warmupSec) return;
 
       frames.push(dt);
+      if (engine.getRenderWidth() !== startWidth || engine.getRenderHeight() !== startHeight) {
+        resolutionChanged = true;
+      }
       const gpuNs = perf.engineStats.gpuFrameTimeCounter.current;
       if (gpuNs > 0) gpuSamples.push(gpuNs * 1e-6);
       maxDrawCalls = Math.max(maxDrawCalls, perf.sceneStats.drawCallsCounter.current);
@@ -53,10 +59,15 @@ export function runBenchmark(
         const summary = summarizeFrames(frames);
         const gpuAvgMs =
           gpuSamples.length > 0 ? gpuSamples.reduce((a, b) => a + b, 0) / gpuSamples.length : null;
+        const budget = checkSixtyFps(summary, gpuAvgMs);
+        if (resolutionChanged) {
+          budget.pass = false;
+          budget.reasons.push("render resolution changed during the run; result not valid");
+        }
         resolve({
           summary,
           gpuAvgMs,
-          budget: checkSixtyFps(summary, gpuAvgMs),
+          budget,
           width: engine.getRenderWidth(),
           height: engine.getRenderHeight(),
           maxDrawCalls,

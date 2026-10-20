@@ -60,6 +60,26 @@ export function createShadowedPointLight(
   return { light, shadows };
 }
 
+/**
+ * Limits a light that never moves to the meshes its range reaches (plus any
+ * moving meshes). Pixels on other meshes then skip its shading and shadow
+ * lookups entirely, instead of computing a zero contribution. With static
+ * batching in 3 m cells, most batches end up lit by one or two flames, not four.
+ */
+export function limitLightToRange(
+  light: PointLight,
+  staticMeshes: readonly AbstractMesh[],
+  movingMeshes: readonly AbstractMesh[] = [],
+): void {
+  const position = light.getAbsolutePosition();
+  const reached = staticMeshes.filter((mesh) => {
+    const sphere = mesh.getBoundingInfo().boundingSphere;
+    const reach = light.range + sphere.radiusWorld;
+    return Vector3.DistanceSquared(sphere.centerWorld, position) < reach * reach;
+  });
+  light.includedOnlyMeshes = [...reached, ...movingMeshes];
+}
+
 /** Small unshadowed lights (candles, embers, incense) handled by clustered lighting. */
 export function createClusteredLights(
   scene: Scene,
