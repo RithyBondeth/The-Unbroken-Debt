@@ -427,6 +427,8 @@ export async function A3_07_ritual(s: SequenceContext) {
   <li><strong>Save code</strong> = <code>"BS1." + base64url(deflate(JSON)) + "." + checksum</code>. It carries flags and series counters between devices and into the next episode. It is tamper-evident, not secret.</li>
   <li><strong>Migrations:</strong> <code>migrations[n]</code> converts version <em>n</em> to <em>n+1</em>; old saves are upgraded on load.</li>
   <li><strong>Checkpoints</strong> store the same structure in memory; reaching a checkpoint also writes slot autosave.</li>
+  <li><strong>Built in S6</strong> (<code>systems/saves/</code>): <code>SaveData.ts</code> (format and a field-by-field check of untrusted data), <code>migrations.ts</code>, <code>saveCode.ts</code> (deflate-raw through the browser's <code>CompressionStream</code>, base64url, CRC-32 in base 36; spaces and line breaks from copying are ignored) and <code>SaveStore.ts</code> (IndexedDB through <code>idb-keyval</code>; arms the "leave site?" warning and the save indicator while writing). A finished Episode 1 makes a 570-character code; a save takes about 1 ms.</li>
+  <li><strong>Damaged saves</strong> never crash the game: loading reports the problem and the menu offers a new game. Saves from a newer build are refused with a message rather than guessed at.</li>
 </ul>
 
 <h2 id="perf"><span class="num">14</span>Performance and Memory</h2>
