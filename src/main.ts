@@ -1,5 +1,6 @@
 import { Game } from "./core/Game";
 import { createEngine } from "./render/createEngine";
+import { useLocalDecoders } from "./render/decoders";
 import { detectDevice } from "./render/detectDevice";
 import { hasSpike, runSpike } from "./spikes";
 import { showRequirementsPage } from "./ui/html/RequirementsPage";
@@ -23,7 +24,9 @@ async function boot(): Promise<void> {
     return;
   }
 
-  // Phase 1 spikes: ?spike=s1 (movement) or ?spike=s2 (lighting).
+  useLocalDecoders();
+
+  // Phase 1 spikes: ?spike=s1 (movement), ?spike=s2 (lighting) or ?spike=s3 (assets).
   const params = new URLSearchParams(window.location.search);
   const spike = params.get("spike");
   if (hasSpike(spike)) {
