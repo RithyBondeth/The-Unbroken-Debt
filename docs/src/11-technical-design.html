@@ -404,7 +404,8 @@ export async function A3_07_ritual(s: SequenceContext) {
 </table>
 <ul>
   <li>Audio Engine v2 (<code>CreateAudioEngineAsync</code>); the engine is unlocked on the first user click (browser autoplay rules).</li>
-  <li>Spatial sounds use HRTF panning for threat sounds (positional accuracy matters) and equal-power panning for minor sounds to save CPU.</li>
+  <li>Spatial sounds use HRTF panning for threat sounds (positional accuracy matters) and equal-power panning for minor sounds to save CPU. <code>audio/AudioSystem.ts</code> creates the buses, attaches the listener to the camera and places sounds by bus (<code>PANNING</code>); distance model inverse, full volume within 1 m.</li>
+  <li>Panning is tested without listening: the engine also runs on an <code>OfflineAudioContext</code>, so S4 renders a footstep from known directions and measures each ear (level, level above 3 kHz, and arrival-time difference). Run this check again after any audio engine update.</li>
   <li>Reverb per audio zone: small wooden room, open courtyard, under-house, large stone hall.</li>
   <li>Formats: Ogg Opus as the primary format, with an AAC fallback for browsers that need it.</li>
 </ul>
