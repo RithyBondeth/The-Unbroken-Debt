@@ -1,5 +1,6 @@
 import { Game } from "./core/Game";
 import { createEngine } from "./render/createEngine";
+import { hasSpike, runSpike } from "./spikes";
 import { showRequirementsPage } from "./ui/html/RequirementsPage";
 
 async function boot(): Promise<void> {
@@ -10,6 +11,14 @@ async function boot(): Promise<void> {
   const engine = await createEngine(canvas);
   if (!engine) {
     showRequirementsPage(overlay);
+    return;
+  }
+
+  // Phase 1 spikes: ?spike=s1 (movement) or ?spike=s2 (lighting).
+  const params = new URLSearchParams(window.location.search);
+  const spike = params.get("spike");
+  if (hasSpike(spike)) {
+    await runSpike(spike, engine, params);
     return;
   }
 

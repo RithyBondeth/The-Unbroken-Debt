@@ -74,3 +74,75 @@ body {
 .requirements dd {
   margin: 0;
 }
+
+/* Development overlays: spike panel and performance readout. Not game UI. */
+.spike-hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  max-width: 26rem;
+  padding: 0.8rem 1rem;
+  background: rgb(23 18 15 / 0.82);
+  color: var(--paper);
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.spike-hud h1 {
+  margin: 0 0 0.3rem;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--flame);
+}
+
+.spike-hud p {
+  margin: 0 0 0.4rem;
+}
+
+.spike-hud .spike-controls {
+  opacity: 0.75;
+}
+
+.spike-hud ul {
+  margin: 0.4rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spike-hud li.done {
+  color: #9fd38a;
+}
+
+.spike-hud pre,
+.perf-overlay {
+  margin: 0.4rem 0 0;
+  font-family: "Ubuntu Mono", ui-monospace, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.spike-report {
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.spike-report.pass {
+  background: rgb(80 140 60 / 0.35);
+}
+
+.spike-report.fail {
+  background: rgb(170 50 40 / 0.4);
+}
+
+.perf-overlay {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  padding: 0.5rem 0.7rem;
+  background: rgb(23 18 15 / 0.82);
+  color: var(--paper);
+  border-radius: 6px;
+  pointer-events: none;
+}
