@@ -1,6 +1,38 @@
-import { defineConfig } from "vite";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { defineConfig, type Plugin } from "vite";
+
+/**
+ * Development server only: POST /__debug/shot?name=<name> with a PNG data URL
+ * saves it to debug-shots/<name>.png, so spike screenshots can be checked at
+ * full resolution (src/debug/saveShot.ts).
+ */
+function debugShots(): Plugin {
+  return {
+    name: "debug-shots",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use("/__debug/shot", (req, res) => {
+        const name = new URL(req.url ?? "", "http://x").searchParams.get("name") ?? "shot";
+        const chunks: Buffer[] = [];
+        req.on("data", (c: Buffer) => chunks.push(c));
+        req.on("end", () => {
+          const data = Buffer.concat(chunks)
+            .toString()
+            .replace(/^data:image\/png;base64,/, "");
+          mkdirSync("debug-shots", { recursive: true });
+          writeFileSync(
+            `debug-shots/${name.replace(/[^\w-]/g, "_")}.png`,
+            Buffer.from(data, "base64"),
+          );
+          res.end("saved");
+        });
+      });
+    },
+  };
+}
 
 export default defineConfig({
+  plugins: [debugShots()],
   optimizeDeps: {
     // Havok ships a WebAssembly file that must not be pre-bundled.
     exclude: ["@babylonjs/havok"],
