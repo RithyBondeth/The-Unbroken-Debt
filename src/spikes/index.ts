@@ -16,6 +16,7 @@ const SPIKES: Record<string, () => Promise<SpikeRunner>> = {
   s1: async () => (await import("./s1-movement/S1MovementSpike")).runS1,
   s2: async () => (await import("./s2-lighting/S2LightingSpike")).runS2,
   s3: async () => (await import("./s3-assets/S3AssetSpike")).runS3,
+  s4: async () => (await import("./s4-audio/S4SpatialAudioSpike")).runS4,
   s5: async () => (await import("./s5-sketchbook/S5SketchbookSpike")).runS5,
   s7: async () => (await import("./s7-atmosphere/S7AtmosphereSpike")).runS7,
 };
