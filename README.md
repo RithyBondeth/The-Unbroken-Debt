@@ -7,7 +7,8 @@
 ![Graphics API](https://img.shields.io/badge/Graphics-WebGPU-green)
 ![Engine](https://img.shields.io/badge/Engine-Babylon.js-orange)
 ![Genre](https://img.shields.io/badge/Genre-Survival_Horror-red)
-![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![Code License](https://img.shields.io/badge/Code-MIT-lightgrey)
+![Content](https://img.shields.io/badge/Content-All_rights_reserved-lightgrey)
 
 ---
 
@@ -51,6 +52,8 @@ npm run dev
 | `npm run build` | Type-check and build for production into `dist/` |
 | `npm test` | Run the unit tests |
 | `npm run typecheck` | Type-check only |
+| `npm run lint` | Lint with ESLint |
+| `npm run check` | Everything CI runs: type-check, lint, tests, build |
 | `npm run format` | Format the code with Prettier |
 | `npm run assets` | Optimise Blender exports from `art-export/` into `public/assets/` (needs KTX-Software) |
 | `npm run docs` | Rebuild the design PDFs from `docs/src/` (needs Google Chrome) |
@@ -78,6 +81,7 @@ npm run dev
 ├── art-source/          Editable art: blender/, textures/, audio/ — Git LFS
 ├── art-export/          Unoptimised Blender exports (not committed)
 ├── tools/               build-assets.mjs, build-docs.sh
+├── .github/workflows/   CI: type-check, lint, test, build on every push
 └── docs/                Design documents (pdf/), their sources (src/) and production tracking
 ```
 
@@ -104,3 +108,9 @@ npm run dev
 | — | [Asset tracker](docs/production/asset-tracker.csv) (spreadsheet) |
 
 See [docs/README.md](docs/README.md) for the folder layout and how to rebuild the PDFs.
+
+## ⚖️ License
+
+- **Code** (`src/`, `tests/`, `tools/`, configuration): [MIT License](LICENSE).
+- **Content** (story, characters, design documents, art, audio, branding): © 2026 Rithy Bondeth, all rights reserved. See [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
+- Fonts and third-party assets keep their own licences.

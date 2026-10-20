@@ -2,7 +2,8 @@
   "name": "boon-sop-the-unbroken-debt",
   "version": "0.1.0",
   "private": true,
-  "description": "Boon Sop: The Unbroken Debt — a first-person survival horror game for the web (Babylon.js, WebGPU)",
+  "description": "Boon Sop: The Unbroken Debt \u2014 a first-person survival horror game for the web (Babylon.js, WebGPU)",
+  "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -12,11 +13,13 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "assets": "node tools/build-assets.mjs",
-    "docs": "bash tools/build-docs.sh"
+    "docs": "bash tools/build-docs.sh",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
@@ -26,9 +29,13 @@
     "idb-keyval": "6.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@gltf-transform/cli": "4.5.1",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
     "prettier": "3.9.10",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
     "vite": "8.3.4",
     "vitest": "5.0.5"
   }

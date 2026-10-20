@@ -14,12 +14,12 @@ export class EventBus<Events extends Record<string, unknown>> {
       set = new Set();
       this.handlers.set(type, set);
     }
-    set.add(handler as EventHandler<never>);
+    set.add(handler);
     return () => this.off(type, handler);
   }
 
   off<K extends keyof Events>(type: K, handler: EventHandler<Events[K]>): void {
-    this.handlers.get(type)?.delete(handler as EventHandler<never>);
+    this.handlers.get(type)?.delete(handler);
   }
 
   /** Calls every handler. A failing handler is logged and never stops the others. */
