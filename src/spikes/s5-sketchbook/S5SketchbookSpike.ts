@@ -1,12 +1,6 @@
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
-import { Scene } from "@babylonjs/core/scene";
-import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
-import { Camera } from "@babylonjs/core/Cameras/camera";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
-import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { enablePhysics } from "../../core/Physics";
 import { KeyboardMouseInput, type InputSource } from "../../player/InputSource";
 import type { MoveIntent } from "../../player/movement";
 import { PlayerController } from "../../player/PlayerController";
@@ -14,17 +8,9 @@ import { PerfOverlay } from "../../debug/PerfOverlay";
 import { saveShot } from "../../debug/saveShot";
 import { getPreset, isQualityName, type QualityName } from "../../render/QualityPresets";
 import type { DeviceProfile } from "../../render/DeviceProfile";
-import {
-  createClusteredLights,
-  createPostPipeline,
-  createShadowedPointLight,
-  FLAME_COLOR,
-  limitLightToRange,
-} from "../../render/RenderSetup";
-import { mergeStaticMeshes } from "../../render/StaticBatcher";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { FLAME_COLOR } from "../../render/RenderSetup";
+import { createHallEnvironment, lockRenderSize } from "../hallEnvironment";
 import { SpikeHud } from "../SpikeHud";
-import { buildHall } from "../s2-lighting/hall";
 import { Sketchbook } from "../../ui/diegetic/Sketchbook";
 import { loadSketchbookFonts } from "../../ui/diegetic/fonts";
 import { SECTIONS } from "../../ui/diegetic/sketchbookContent";
@@ -93,65 +79,10 @@ export async function runS5(
   const textureHeight = Number(params.get("tex")) || TEXTURE_HEIGHT[quality];
 
   const res = Number(params.get("res"));
-  if (res >= 360) {
-    engine.setHardwareScalingLevel(1);
-    engine.setSize(Math.round((res * 16) / 9), res);
-    engine.resize = () => undefined;
-  }
+  if (res >= 360) lockRenderSize(engine, res);
 
   await loadSketchbookFonts();
-  const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.004, 0.005, 0.008, 1);
-  scene.skipPointerMovePicking = true;
-  await enablePhysics(scene);
-
-  const camera = new UniversalCamera("eye", new Vector3(0, 1.58, -3.5), scene);
-  camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED;
-  camera.fov = (80 * Math.PI) / 180;
-  camera.minZ = 0.05;
-  camera.maxZ = 60;
-  scene.activeCamera = camera;
-
-  const hall = buildHall(scene, preset.clusteredLights);
-  // The room as S2 renders it at 60 fps: static meshes merged in 3 m cells.
-  const statics = scene.meshes.filter((m): m is Mesh => m instanceof Mesh && m.isVisible);
-  const batches = mergeStaticMeshes(statics, {
-    cellSize: 3,
-    group: (m) => (hall.noShadow.has(m) ? "noShadow" : ""),
-  });
-  const noShadow = new Set(
-    batches.filter((m) => (m.metadata as { batchGroup?: string }).batchGroup === "noShadow"),
-  );
-  const moon = new HemisphericLight("moon", new Vector3(0.3, 1, -0.2), scene);
-  moon.diffuse = new Color3(0.25, 0.3, 0.45);
-  moon.groundColor = new Color3(0.02, 0.02, 0.03);
-  moon.intensity = 0.04;
-
-  // Sora's lamp, held low in her left hand.
-  const lamp = createShadowedPointLight(
-    scene,
-    "lamp",
-    new Vector3(-0.28, -0.3, 0.45),
-    8,
-    preset.lampShadowMapSize,
-    (m) => m.isVisible && !noShadow.has(m as Mesh) && !m.name.startsWith("sketchbook"),
-  );
-  lamp.light.parent = camera;
-  lamp.light.intensity = 14;
-
-  const flames = hall.flamePositions.map((p, i) => {
-    const light = new PointLight(`flame_${i}`, p, scene);
-    light.diffuse = FLAME_COLOR.clone();
-    light.range = i === 3 ? 6 : 4;
-    light.intensity = i === 3 ? 14 : 6;
-    return light;
-  });
-  createClusteredLights(scene, hall.candlePositions, 2.5, 0.9);
-  // Each flame shades only the meshes in its range (S2), which also keeps it off the book.
-  const roomMeshes = [...scene.meshes];
-  for (const flame of flames) limitLightToRange(flame, roomMeshes);
-  const pipeline = createPostPipeline(scene, camera, preset, { ssao: preset.ssao, fog: true });
-  pipeline.fog?.lights.push(lamp.light, ...flames);
+  const { scene, camera, hall, lamp } = await createHallEnvironment(engine, preset);
 
   const keyboard = new KeyboardMouseInput(canvas, 0.0022);
   const input = new ReadingInput(keyboard);

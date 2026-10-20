@@ -76,7 +76,7 @@ npm run dev
 │   ├── episodes/ep1/    Episode 1 scripts and data
 │   ├── data/            Shared definitions and strings (en, km)
 │   ├── debug/           Performance overlay (F3) and benchmark
-│   └── spikes/          Phase 1 technical spikes (?spike=s1, s2, s3, s5)
+│   └── spikes/          Phase 1 technical spikes (?spike=s1, s2, s3, s5, s7)
 ├── tests/unit/          Unit tests (Vitest)
 ├── public/              Static files served as-is
 │   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS
