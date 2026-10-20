@@ -48,10 +48,11 @@ fn density3(p: vec3f, t: f32) -> f32 {
 }
 
 // Henyey-Greenstein phase: light scatters mostly forwards, so flames glow when you look towards them.
+// Schlick's approximation of Henyey-Greenstein (g = 0.35): same shape, no pow().
 fn phase(cosTheta: f32) -> f32 {
-  let g = 0.35;
-  let g2 = g * g;
-  return (1.0 - g2) / (12.566 * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
+  let k = 0.5189; // 1.55 g - 0.55 g³
+  let denom = 1.0 - k * cosTheta;
+  return (1.0 - k * k) / (12.566 * denom * denom);
 }
 
 fn pointLight(p: vec3f, dir: vec3f, light: vec4f, color: vec3f) -> vec3f {
@@ -59,14 +60,19 @@ fn pointLight(p: vec3f, dir: vec3f, light: vec4f, color: vec3f) -> vec3f {
   // Clamp close to the light: the held lamp is half a metre from the eye and an
   // unclamped 1/d² would fill the screen with glare.
   let d2 = max(dot(v, v), 0.6);
-  let r = light.w;
-  if (d2 > r * r) {
-    return vec3f(0.0);
-  }
-  var att = clamp(1.0 - d2 / (r * r), 0.0, 1.0);
+  let r2 = light.w * light.w;
+  var att = clamp(1.0 - d2 / r2, 0.0, 1.0);
   att = att * att / d2;
   // Light travels L→p then scatters back along -dir: cos θ = dot(v̂, dir).
-  return color * att * phase(dot(normalize(v), dir));
+  return color * att * phase(dot(v, dir) * inverseSqrt(d2));
+}
+
+// Does this light's range reach the ray segment at all? Checked once per pixel,
+// so the step loop only pays for lights the ray actually passes near.
+fn reaches(origin: vec3f, dir: vec3f, rayLength: f32, light: vec4f) -> bool {
+  let t = clamp(dot(light.xyz - origin, dir), 0.0, rayLength);
+  let closest = origin + dir * t - light.xyz;
+  return dot(closest, closest) < light.w * light.w;
 }
 
 #define CUSTOM_FRAGMENT_DEFINITIONS
@@ -91,17 +97,24 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
   var transmittance = 1.0;
   var scattered = vec3f(0.0);
 
+  let origin = uniforms.cameraPos;
+  let use0 = reaches(origin, dir, rayLength, uniforms.light0);
+  let use1 = reaches(origin, dir, rayLength, uniforms.light1);
+  let use2 = reaches(origin, dir, rayLength, uniforms.light2);
+  let use3 = reaches(origin, dir, rayLength, uniforms.light3);
+  let use4 = reaches(origin, dir, rayLength, uniforms.light4);
+
   for (var i = 0; i < stepCount; i++) {
     let p = uniforms.cameraPos + dir * t;
     let heightFog = exp(-max(p.y - uniforms.fogBaseY, 0.0) * uniforms.heightFalloff);
     let sigma = uniforms.density * heightFog * (0.4 + 1.2 * density3(p, uniforms.time));
 
     var light = uniforms.ambient;
-    light += pointLight(p, dir, uniforms.light0, uniforms.color0);
-    light += pointLight(p, dir, uniforms.light1, uniforms.color1);
-    light += pointLight(p, dir, uniforms.light2, uniforms.color2);
-    light += pointLight(p, dir, uniforms.light3, uniforms.color3);
-    light += pointLight(p, dir, uniforms.light4, uniforms.color4);
+    if (use0) { light += pointLight(p, dir, uniforms.light0, uniforms.color0); }
+    if (use1) { light += pointLight(p, dir, uniforms.light1, uniforms.color1); }
+    if (use2) { light += pointLight(p, dir, uniforms.light2, uniforms.color2); }
+    if (use3) { light += pointLight(p, dir, uniforms.light3, uniforms.color3); }
+    if (use4) { light += pointLight(p, dir, uniforms.light4, uniforms.color4); }
 
     let stepTransmittance = exp(-sigma * stepLength);
     // Energy-conserving integration of in-scattered light over the step.
@@ -226,7 +239,8 @@ export class VolumetricFog {
     this.march.onApply = (effect) => this.applyMarch(effect);
     // Registers the depth requirement the way Babylon's own effects do (SSAO2): the
     // pre-pass renderer re-enables configurations attached to camera post-processes.
-    config.postProcess = this.march;
+    // Don't set config.postProcess: the pre-pass then forces this pass to render at
+    // full resolution into its own target, which cost ~6 ms at 1080p (Spike S2).
     this.march._prePassEffectConfiguration = config;
 
     this.composite = new PostProcess("fogComposite", "volumetricFogComposite", {

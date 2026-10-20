@@ -31,6 +31,7 @@ import {
   createPostPipeline,
   createShadowedPointLight,
   FLAME_COLOR,
+  limitLightToRange,
 } from "../../render/RenderSetup";
 import { mergeStaticMeshes } from "../../render/StaticBatcher";
 import { ShadowScheduler } from "../../render/ShadowScheduler";
@@ -57,7 +58,8 @@ export interface S2Result {
  * `merge=0` (no static batching), `flameRefresh=all|rotate` (flame shadows every
  * frame, or 2 per frame in rotation, instead of cached and re-rendered only when
  * the spirit is in range), `spirit=0` (no moving shadow caster),
- * `bench=1` (scripted 20 s run at 1080p), `res=1440` (bench at 2560×1440).
+ * `lightCull=0` (every flame shades every mesh), `bench=1` (scripted 20 s run at 1080p,
+ * after `warmup=<s>` seconds, default 5), `res=<height>` (bench height, e.g. 1440; default 1080).
  */
 export async function runS2(
   engine: WebGPUEngine,
@@ -169,13 +171,15 @@ export async function runS2(
     ? null
     : new ShadowScheduler(scene, flameShadows, {
         rotatePerFrame: flameRefresh === "rotate" ? 2 : 0,
-        maxDirtyPerFrame: 2,
+        maxDirtyPerFrame: 1,
       });
 
+  const movingMeshes: Mesh[] = [...lampMeshes];
   // A spirit stand-in walking slowly around the coffin: it casts shadows from the
   // lamp and flames, and makes nearby flame shadows re-render (the realistic case).
   if (withSpirit) {
     const spirit = CreateCapsule("spirit", { height: 1.9, radius: 0.28, tessellation: 24 }, scene);
+    movingMeshes.push(spirit);
     const spiritMat = new PBRMaterial("M_spirit", scene);
     spiritMat.albedoColor = new Color3(0.02, 0.02, 0.025);
     spiritMat.roughness = 0.9;
@@ -188,6 +192,13 @@ export async function runS2(
     });
   }
   const candles = createClusteredLights(scene, hall.candlePositions, 2.5, 0.9);
+
+  // Each flame only shades the meshes within its range (and anything that moves).
+  if (flag("lightCull")) {
+    const staticMeshes = scene.meshes.filter((m) => !movingMeshes.includes(m as Mesh));
+    for (const flame of [...flames, ...unshadowedFlames])
+      limitLightToRange(flame, staticMeshes, movingMeshes);
+  }
 
   const pipeline = createPostPipeline(scene, camera, preset, features);
   pipeline.fog?.lights.push(lampRig.light, ...flames, ...unshadowedFlames);
@@ -230,7 +241,7 @@ export async function runS2(
   const result: S2Result = { preset, features };
   (window as unknown as { spikeResult: S2Result }).spikeResult = result;
   if (import.meta.env.DEV)
-    (window as unknown as { spike: unknown }).spike = { scene, pipeline, camera };
+    (window as unknown as { spike: unknown }).spike = { scene, pipeline, camera, scheduler, perf };
 
   const describe = () => [
     `lamp: shadow ${preset.lampShadowMapSize}px cube · shadowed flames: ${flames.length} × ${preset.flameShadowMapSize}px (${{ all: "every frame", cached: "cached, re-rendered when the spirit is near", rotate: "2 per frame in rotation" }[flameRefresh] ?? flameRefresh})`,
@@ -242,15 +253,23 @@ export async function runS2(
 
   if (bench) {
     // Render at exactly the target resolution, whatever the window size.
-    const height = params.get("res") === "1440" ? 1440 : 1080;
+    const height = clampInt(params.get("res"), 360, 2160, 1080);
+    const width = Math.round((height * 16) / 9);
     engine.setHardwareScalingLevel(1);
-    engine.setSize(Math.round((height * 16) / 9), height);
+    engine.setSize(width, height);
+    // Window resizes (the pane moving, a monitor change) call engine.resize();
+    // put the fixed size back so every measured frame is at the target resolution.
+    engine.onBeginFrameObservable.add(() => {
+      if (engine.getRenderWidth() !== width || engine.getRenderHeight() !== height) {
+        engine.setSize(width, height);
+      }
+    });
     const path = hall.benchPath;
     hud.setReadout([...describe(), "benchmark running: 5 s warm-up, then 20 s measured…"]);
     await scene.whenReadyAsync();
     engine.runRenderLoop(() => scene.render());
     const benchmark = await runBenchmark(scene, perf, {
-      warmupSec: 5,
+      warmupSec: clampInt(params.get("warmup"), 1, 60, 5),
       durationSec: 20,
       onProgress: (t) => moveAlongLoop(camera, path, hall.benchLookAt, t * 1.25),
     });
