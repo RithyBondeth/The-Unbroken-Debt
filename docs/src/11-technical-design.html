@@ -255,15 +255,17 @@ interface NoteDef {
     <tr><td><code>trigger_</code></td><td>Invisible trigger volume (box)</td><td><code>beat</code> (e.g. "A2-01"), <code>once</code> (bool), <code>requires</code> (flag)</td></tr>
     <tr><td><code>interact_</code></td><td>Interactable object</td><td><code>action</code> ("pickup", "open", "use"), <code>item</code>, <code>note</code></td></tr>
     <tr><td><code>spawn_</code></td><td>Player or NPC spawn point</td><td><code>checkpoint</code> (e.g. "CP3")</td></tr>
-    <tr><td><code>patrol_&lt;id&gt;_NN</code></td><td>Ordered patrol nodes</td><td><code>wait</code> (seconds)</td></tr>
+    <tr><td><code>patrol_&lt;id&gt;_NN</code></td><td>Ordered patrol nodes (empties); numbers may skip</td><td><code>wait</code> (seconds); <code>reach</code> (bool, test routes: the node's height must be reached)</td></tr>
     <tr><td><code>hide_</code></td><td>Hiding spot volume</td><td>—</td></tr>
     <tr><td><code>audiozone_</code></td><td>Ambience and reverb zone</td><td><code>ambience</code>, <code>reverb</code></td></tr>
     <tr><td><code>light_flame_</code></td><td>Flickering point light + flame card</td><td><code>radius</code>, <code>intensity</code></td></tr>
-    <tr><td><code>col_</code></td><td>Invisible collision mesh (static physics). Every staircase needs a <code>col_</code> ramp from the bottom nosing to the top floor: the character controller can't climb steps (S1).</td><td><code>surface</code> ("teak", "dirt", "mud", "leaves", "stone", "water")</td></tr>
-    <tr><td><code>ladder_</code></td><td>Climbable box; its bounds become the ladder volume. W climbs, looking down and pressing W descends, and at the top the player steps onto the floor. Extend the box about 30 cm above the top floor.</td><td><code>facing</code> (direction from the ladder towards the climber, e.g. "-x")</td></tr>
+    <tr><td><code>col_</code></td><td>Invisible collision mesh (static physics). Only <code>col_</code> meshes collide; render meshes have no physics, so keep colliders simple. A box (8 corners, any rotation) becomes a box collider; any other shape a triangle-mesh collider. Every staircase needs a <code>col_</code> ramp from the bottom nosing to the top floor: the character controller can't climb steps (S1).</td><td><code>surface</code> ("teak", "dirt", "mud", "leaves", "stone", "water")</td></tr>
+    <tr><td><code>ladder_</code></td><td>Climbable box; its bounds become the ladder volume. W climbs, looking down and pressing W descends, and at the top the player steps onto the floor. Extend the box about 30 cm above the top floor.</td><td><code>facing</code>: direction from the ladder towards the climber in Blender's world axes ("+x", "-x", "+y", "-y")</td></tr>
     <tr><td><code>nav_</code></td><td>Navigation mesh source (not rendered)</td><td>—</td></tr>
   </tbody>
 </table>
+
+<p class="small">Prefixes are matched at the start of the object name, so visible parts must not use them: name a ladder's mesh <code>granary_ladder</code>, not <code>ladder_granary_mesh</code>. Collections whose name starts with <code>_</code> hold working notes and reference objects and are never exported. Babylon mirrors glTF scenes into its left-handed space (Blender +X becomes −X), so <code>LevelBuilder</code> reads positions in world space and builds colliders there.</p>
 
 <h3><span class="num">7.2</span>Asset naming</h3>
 <ul>
@@ -272,18 +274,21 @@ interface NoteDef {
   <li>Materials: <code>M_&lt;name&gt;</code>; textures: <code>T_&lt;name&gt;_&lt;map&gt;</code> where map is <code>BC</code>, <code>N</code> or <code>ORM</code>.</li>
 </ul>
 <h3><span class="num">7.3</span>Export settings</h3>
-<p>glTF Binary (<code>.glb</code>), +Y up, apply modifiers, export custom properties, selected collections only, no cameras or Blender lights (lights are created from <code>light_</code> nodes).</p>
+<p>glTF Binary (<code>.glb</code>), +Y up, apply modifiers, export custom properties, everything except <code>_</code> collections, no cameras or Blender lights (lights are created from <code>light_</code> nodes). <code>npm run export</code> runs <code>tools/export-blend.py</code> in Blender for every <code>.blend</code> in <code>art-source/blender/</code>, writing to the same sub-folder of <code>art-export/</code> (set <code>BLENDER</code> if Blender is not in <code>/Applications</code> or on the <code>PATH</code>).</p>
+<p>Materials: Principled BSDF with image textures for colour (sRGB), normal (Non-Color, through a Normal Map node) and ORM (Non-Color, through Separate Color: green to Roughness, blue to Metallic, red to the Occlusion input of a <code>glTF Material Output</code> node group). Turn on Backface Culling for closed meshes; otherwise the material exports double-sided and is drawn from both sides. <code>tools/s3/make_test_room.py</code> builds an example scene with every convention.</p>
 
 <h2 id="pipeline"><span class="num">08</span>Asset Pipeline</h2>
-<pre># tools/build-assets (run by: npm run assets) — per file in art-export/
-gltf-transform dedup   in.glb  tmp.glb
-gltf-transform prune   tmp.glb tmp.glb
-gltf-transform weld    tmp.glb tmp.glb
-gltf-transform resize  tmp.glb tmp.glb --width 2048 --height 2048   # 1024 for props
-gltf-transform etc1s   tmp.glb tmp.glb --slots "{baseColorTexture,emissiveTexture}"
-gltf-transform uastc   tmp.glb tmp.glb --slots "{normalTexture,occlusionTexture}"
-gltf-transform meshopt tmp.glb public/assets/ep1/out.glb               # or draco</pre>
-<p class="small">KTX2 encoding needs KTX-Software (<code>toktx</code>) installed. Check exact flags with <code>gltf-transform --help</code> for the installed version.</p>
+<pre># npm run export: art-source/blender/**/*.blend → art-export/**/*.glb (Blender)
+# npm run assets: art-export/**/*.glb → public/assets/**/*.glb (tools/build-assets.mjs)
+gltf-transform dedup   in.glb  out.glb
+gltf-transform prune   out.glb out.glb --keep-leaves true      # keep spawn_ and patrol_ empties
+gltf-transform weld    out.glb out.glb
+gltf-transform resize  out.glb out.glb --width 2048 --height 2048   # 4096 for shared_ and hero_
+gltf-transform etc1s   out.glb out.glb --slots "@(baseColorTexture|emissiveTexture)"
+gltf-transform uastc   out.glb out.glb --slots "@(normalTexture|occlusionTexture|metallicRoughnessTexture)"
+gltf-transform meshopt out.glb out.glb</pre>
+<p class="small">KTX2 encoding needs KTX-Software 4.4+ (the <code>ktx</code> command; gltf-transform 4 no longer uses <code>toktx</code>). Write slot globs as <code>@(a|b)</code>: the CLI splits <code>{a,b}</code> into separate arguments. Without <code>--keep-leaves</code>, <code>prune</code> deletes every empty node. Colour maps use ETC1S (small, lower quality); normal and ORM maps use UASTC with Zstandard (larger, no block artefacts in lighting). Spike S3 measured 2.8 MB → 1.6 MB on disk and about 50 MB → 10 MB of GPU memory. UASTC RDO saves about 8% on ORM maps and nothing on normal maps, so it stays off.</p>
+<p class="small">Decoders: Babylon fetches the meshopt and KTX2 decoders from its CDN by default. <code>tools/vendor-decoders.mjs</code> (run by <code>npm install</code>) copies them from <code>meshoptimizer</code> and <code>@babylonjs/ktx2decoder</code> into <code>public/vendor/</code>, bundling the KTX2 decoder into the classic script its worker needs, and <code>render/decoders.ts</code> points Babylon at them at boot. Keep both packages at the versions Babylon expects.</p>
 
 <h2 id="sequences"><span class="num">09</span>Scripted Sequences</h2>
 <p>Sequences are async functions given a context of helper actions. They read like the beat sheet.</p>
@@ -418,7 +423,7 @@ export async function A3_07_ritual(s: SequenceContext) {
 <h2 id="quality"><span class="num">15</span>Testing, Standards and Deployment</h2>
 <h3>Testing</h3>
 <ul>
-  <li><strong>Unit tests:</strong> movement maths, head-bob, frame statistics, quality presets, device classification, the resolution governor, the S1 snag detector; later Flags, Inventory (including combining), Upkeep timers, Saves (round trip and migrations), save codes, perception maths, AI transitions.</li>
+  <li><strong>Unit tests:</strong> movement maths, head-bob, frame statistics, quality presets, device classification, the resolution governor, the S1 snag detector, level node naming and oriented collider boxes; later Flags, Inventory (including combining), Upkeep timers, Saves (round trip and migrations), save codes, perception maths, AI transitions.</li>
   <li><strong>Smoke test:</strong> Playwright boots the build in Chrome with WebGPU on and off and checks the menu appears without console errors.</li>
   <li><strong>Debug tools</strong> (development builds only): jump to any beat or checkpoint, set flags, refill oil, show perception radii, toggle the Babylon Inspector.</li>
 </ul>
@@ -431,7 +436,8 @@ export async function A3_07_ritual(s: SequenceContext) {
 </ul>
 <h3>Deployment</h3>
 <ul>
-  <li>Static hosting. Serve <code>.wasm</code> as <code>application/wasm</code>, <code>.ktx2</code> as <code>image/ktx2</code>, and enable Brotli or gzip compression.</li>
+  <li>Static hosting. Serve <code>.wasm</code> as <code>application/wasm</code>, <code>.ktx2</code> as <code>image/ktx2</code>, and enable Brotli or gzip compression (it helps code and JSON; optimised <code>.glb</code> files are already compressed).</li>
+  <li>No run-time CDN: the Havok, meshopt and KTX2 WebAssembly and scripts are served from the game's own origin (<code>public/vendor/</code>).</li>
   <li>Hashed file names for long-term caching; <code>index.html</code> never cached.</li>
   <li>Check each host's per-file size limit against the largest <code>.glb</code>.</li>
 </ul>

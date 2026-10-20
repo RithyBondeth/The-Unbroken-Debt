@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Optimises every .glb in art-export/ into public/assets/ (same sub-folders).
-// Steps follow the Technical Design Document, section 8. KTX2 needs KTX-Software (toktx).
+// Steps follow the Technical Design Document, section 8. KTX2 needs KTX-Software 4.4+ (ktx).
 // Usage: npm run assets            (all files)
 //        npm run assets -- ep1     (only files under art-export/ep1/)
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 const SRC = "art-export";
@@ -13,6 +13,7 @@ const OUT = "public/assets";
 const filter = process.argv[2] ?? "";
 
 function findGlbs(dir) {
+  if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return findGlbs(path);
@@ -29,14 +30,19 @@ function gltf(...args) {
   execFileSync("npx", ["gltf-transform", ...args], { stdio: "inherit" });
 }
 
+// gltf-transform 4 calls KTX-Software's `ktx create` (the older `toktx` is not used).
 try {
-  execFileSync("toktx", ["--version"], { stdio: "ignore" });
+  execFileSync("ktx", ["--version"], { stdio: "ignore" });
 } catch {
   console.error(
-    "toktx not found. Install KTX-Software: https://github.com/KhronosGroup/KTX-Software",
+    "ktx not found. Install KTX-Software 4.4+: https://github.com/KhronosGroup/KTX-Software/releases",
   );
   process.exit(1);
 }
+
+const kb = (bytes) => `${(bytes / 1024).toFixed(0)} KB`;
+let totalIn = 0;
+let totalOut = 0;
 
 const files = findGlbs(SRC).filter((f) => relative(SRC, f).startsWith(filter));
 if (files.length === 0) {
@@ -51,18 +57,26 @@ for (const input of files) {
   console.log(`\n▶ ${input} → ${output} (max ${size}px)`);
 
   gltf("dedup", input, output);
-  gltf("prune", output, output);
+  // Keep empty leaf nodes: spawn_ and patrol_ markers are empties (TDD section 7.1).
+  gltf("prune", output, output, "--keep-leaves", "true");
   gltf("weld", output, output);
   gltf("resize", output, output, "--width", size, "--height", size);
-  gltf("etc1s", output, output, "--slots", "{baseColorTexture,emissiveTexture}");
+  // Slot globs use @(a|b): the CLI's argument parser splits {a,b} into separate arguments.
+  gltf("etc1s", output, output, "--slots", "@(baseColorTexture|emissiveTexture)");
   gltf(
     "uastc",
     output,
     output,
     "--slots",
-    "{normalTexture,occlusionTexture,metallicRoughnessTexture}",
+    "@(normalTexture|occlusionTexture|metallicRoughnessTexture)",
   );
   gltf("meshopt", output, output);
+
+  const before = statSync(input).size;
+  const after = statSync(output).size;
+  totalIn += before;
+  totalOut += after;
+  console.log(`✔ ${kb(before)} → ${kb(after)} (${((after / before) * 100).toFixed(0)}%)`);
 }
 
-console.log(`\nDone: ${files.length} file(s).`);
+console.log(`\nDone: ${files.length} file(s), ${kb(totalIn)} → ${kb(totalOut)}.`);

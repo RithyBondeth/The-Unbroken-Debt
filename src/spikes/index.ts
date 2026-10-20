@@ -15,6 +15,7 @@ export type SpikeRunner = (
 const SPIKES: Record<string, () => Promise<SpikeRunner>> = {
   s1: async () => (await import("./s1-movement/S1MovementSpike")).runS1,
   s2: async () => (await import("./s2-lighting/S2LightingSpike")).runS2,
+  s3: async () => (await import("./s3-assets/S3AssetSpike")).runS3,
 };
 
 export function hasSpike(id: string | null): id is string {

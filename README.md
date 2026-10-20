@@ -55,7 +55,8 @@ npm run dev
 | `npm run lint` | Lint with ESLint |
 | `npm run check` | Everything CI runs: type-check, lint, tests, build |
 | `npm run format` | Format the code with Prettier |
-| `npm run assets` | Optimise Blender exports from `art-export/` into `public/assets/` (needs KTX-Software) |
+| `npm run export` | Export every `.blend` in `art-source/blender/` to `art-export/` (needs [Blender](https://www.blender.org)) |
+| `npm run assets` | Optimise Blender exports from `art-export/` into `public/assets/` (needs [KTX-Software](https://github.com/KhronosGroup/KTX-Software/releases) 4.4+) |
 | `npm run docs` | Rebuild the design PDFs from `docs/src/` (needs Google Chrome) |
 
 ## 🗂️ Project Structure
@@ -75,14 +76,14 @@ npm run dev
 │   ├── episodes/ep1/    Episode 1 scripts and data
 │   ├── data/            Shared definitions and strings (en, km)
 │   ├── debug/           Performance overlay (F3) and benchmark
-│   └── spikes/          Phase 1 technical spikes (?spike=s1, ?spike=s2)
+│   └── spikes/          Phase 1 technical spikes (?spike=s1, ?spike=s2, ?spike=s3)
 ├── tests/unit/          Unit tests (Vitest)
 ├── public/              Static files served as-is
 │   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS
 │   └── fonts/           Ubuntu and Preah Vihear, with licences
 ├── art-source/          Editable art: blender/, textures/, audio/ — Git LFS
 ├── art-export/          Unoptimised Blender exports (not committed)
-├── tools/               build-assets.mjs, build-docs.sh
+├── tools/               export-blends.mjs, build-assets.mjs, vendor-decoders.mjs, build-docs.sh
 ├── .github/workflows/   CI: type-check, lint, test, build on every push
 └── docs/                Design documents (pdf/), their sources (src/) and production tracking
 ```
