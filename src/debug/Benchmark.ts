@@ -5,6 +5,8 @@ import { checkSixtyFps, summarizeFrames, type BudgetResult, type FrameSummary } 
 
 export interface BenchmarkResult {
   summary: FrameSummary;
+  /** Every measured frame time (ms), for finding when slow frames happen. */
+  frameMs: number[];
   gpuAvgMs: number | null;
   budget: BudgetResult;
   width: number;
@@ -66,6 +68,7 @@ export function runBenchmark(
         }
         resolve({
           summary,
+          frameMs: frames,
           gpuAvgMs,
           budget,
           width: engine.getRenderWidth(),

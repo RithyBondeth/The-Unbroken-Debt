@@ -11,6 +11,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import type { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import type { QualityPreset } from "./QualityPresets";
 import { VolumetricFog } from "./VolumetricFog";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -24,7 +25,14 @@ export const FLAME_COLOR = Color3.FromHexString("#FF9A3C");
 
 /**
  * A point light that casts soft shadows. Point lights render a cube map (six
- * views), so each one only draws casters within its range, chosen every frame.
+ * views), so each one only draws casters within its range, re-checked every
+ * frame as the light or the casters move.
+ *
+ * The caster list is one array updated in place by index. Babylon watches
+ * render lists: when one goes from empty to non-empty it marks every mesh in the
+ * scene light-dirty, so every material rebuilds its shader setup. Refilling a
+ * list each frame (as `renderListPredicate` does) did exactly that and cost
+ * ~120 MB/s of garbage and a GC stall every second (Spike S2).
  */
 export function createShadowedPointLight(
   scene: Scene,
@@ -47,17 +55,49 @@ export function createShadowedPointLight(
 
   const map = shadows.getShadowMap();
   if (map) {
-    map.renderList = null;
-    map.renderListPredicate = (mesh) => {
-      if (!isCaster(mesh)) return false;
-      const sphere = mesh.getBoundingInfo().boundingSphere;
-      const reach = range + sphere.radiusWorld;
-      return (
-        Vector3.DistanceSquared(sphere.centerWorld, light.getAbsolutePosition()) < reach * reach
-      );
+    const casters: AbstractMesh[] = [];
+    const update = () => {
+      const origin = light.getAbsolutePosition();
+      let count = 0;
+      for (const mesh of scene.meshes) {
+        if (!isCaster(mesh)) continue;
+        const sphere = mesh.getBoundingInfo().boundingSphere;
+        const reach = range + sphere.radiusWorld;
+        if (Vector3.DistanceSquared(sphere.centerWorld, origin) < reach * reach) {
+          casters[count++] = mesh; // index writes and length changes don't trigger the watcher
+        }
+      }
+      casters.length = count;
     };
+    update();
+    map.renderList = casters;
+    scene.onBeforeRenderObservable.add(update);
   }
+  cacheShadowReadiness(shadows, scene);
   return { light, shadows };
+}
+
+/**
+ * ShadowGenerator.isReady() rebuilds and joins its shader define strings for
+ * every caster on every cube face, every frame: the largest remaining source of
+ * garbage after the render-list fix. Once a caster is ready for a render pass
+ * the answer rarely changes, so re-check each caster/pass once a second.
+ */
+function cacheShadowReadiness(shadows: ShadowGenerator, scene: Scene): void {
+  const original = shadows.isReady.bind(shadows);
+  const readyAt = new Map<number, WeakMap<SubMesh, number>>();
+  const engine = scene.getEngine();
+  shadows.isReady = (subMesh, useInstances, isTransparent) => {
+    const pass = engine.currentRenderPassId;
+    let perPass = readyAt.get(pass);
+    if (!perPass) readyAt.set(pass, (perPass = new WeakMap()));
+    const frame = scene.getFrameId();
+    const last = perPass.get(subMesh);
+    if (last !== undefined && frame - last < 60) return true;
+    const ready = original(subMesh, useInstances, isTransparent);
+    if (ready) perPass.set(subMesh, frame);
+    return ready;
+  };
 }
 
 /**
