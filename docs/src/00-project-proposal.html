@@ -19,7 +19,7 @@
   <div class="spacer"></div>
   <dl class="meta">
     <dt>Document</dt><dd>Project Proposal</dd>
-    <dt>Version</dt><dd>3.1</dd>
+    <dt>Version</dt><dd>3.4</dd>
     <dt>Date</dt><dd>October 2026</dd>
     <dt>Author</dt><dd>Rithy Bondeth</dd>
     <dt>Status</dt><dd>Draft for review</dd>
@@ -53,7 +53,7 @@
 <h3>Project at a glance</h3>
 <div class="cards">
   <div class="card"><div class="k">Genre</div><div class="v">First-person survival horror</div><div class="d">Atmospheric, narrative, stealth and puzzles</div></div>
-  <div class="card"><div class="k">Platform</div><div class="v">Gaming PCs and Macs</div><div class="d">Discrete GPU · WebGPU browser</div></div>
+  <div class="card"><div class="k">Platform</div><div class="v">Laptops and desktops</div><div class="d">Any WebGPU computer · Low to Ultra</div></div>
   <div class="card"><div class="k">Technology</div><div class="v">Babylon.js</div><div class="d">WebGPU required · high-end visuals</div></div>
   <div class="card"><div class="k">Format</div><div class="v">5 episodes</div><div class="d">1.5–2.5 hours each · 8–10 hours total</div></div>
   <div class="card"><div class="k">Setting</div><div class="v">Cambodia, 1932</div><div class="d">Monsoon season, during Pchum Ben</div></div>
@@ -228,18 +228,19 @@
 <table>
   <thead><tr><th style="width:40%">Performance target</th><th>Value</th></tr></thead>
   <tbody>
-    <tr><td>Frame rate</td><td>60 fps at 1080p on minimum spec (High) · 60 fps at 1440p on recommended (Ultra)</td></tr>
+    <tr><td>Frame rate</td><td>60 fps at 1080p on recommended spec (Medium) · 60 fps at 1440p on high-end (High/Ultra) · integrated graphics on Low, with dynamic resolution holding the frame rate</td></tr>
     <tr><td>Visible triangles</td><td>Up to about 3 million per frame, with LODs</td></tr>
     <tr><td>Download</td><td>First playable area under 150 MB; the rest of the episode (up to about 600 MB) streams in the background and is cached for return visits</td></tr>
   </tbody>
 </table>
 <h3><span class="num">8.1</span>System requirements</h3>
 <table class="kv"><tbody>
-    <tr><td>Minimum</td><td>NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro · 16 GB RAM · 1080p</td></tr>
-    <tr><td>Recommended</td><td>NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro or better · 16–32 GB RAM · 1440p</td></tr>
+    <tr><td>Minimum</td><td>Integrated graphics: Intel Iris Xe / AMD Radeon 680M / Apple M1 / Snapdragon X · 8 GB RAM · Low quality</td></tr>
+    <tr><td>Recommended</td><td>NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro or better · 16 GB RAM · Medium at 1080p</td></tr>
+    <tr><td>High-end</td><td>NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro or better · 16–32 GB RAM · High or Ultra at 1440p</td></tr>
     <tr><td>Browser</td><td>A WebGPU browser: current Chrome or Edge; Safari on macOS 26+; Firefox on Windows or Apple Silicon</td></tr>
 </tbody></table>
-<p>The game targets high-end desktop hardware and requires WebGPU; there is no WebGL2 fallback. A quick compatibility check runs before play, and players on unsupported browsers or hardware see a clear requirements page. Laptops with integrated graphics and mobile devices are not supported.</p>
+<p>The game requires WebGPU; there is no WebGL2 fallback. It scales from integrated-graphics laptops to gaming PCs: four quality presets (Low, Medium, High, Ultra) and dynamic resolution, with the same gameplay on every preset, because darkness, the lamp's shadow and fog are mechanics. A quick device check runs before play and picks a starting preset. Phones, tablets (including iPad), browsers without WebGPU and software renderers see a clear requirements page instead. A mobile version may follow after release.</p>
 
 <h2 id="production"><span class="num">09</span>Production Plan</h2>
 <p>A <strong>solo developer</strong> builds the game, using licensed libraries for generic assets and custom work for everything culturally specific. <strong>Episode 1 is built and released first.</strong></p>
@@ -263,8 +264,8 @@
     <tr><td><strong>Scope too large for one person</strong></td><td><span class="tag crit">Critical</span></td><td>Short, dense episodes; release Episode 1 first; build systems once; keep a cut list.</td></tr>
     <tr><td><strong>Story complexity across episodes</strong></td><td><span class="tag high">High</span></td><td>One series outline (this document) that all episode documents follow; choices stored in saves from Episode 1.</td></tr>
     <tr><td><strong>Browser memory and loading</strong></td><td><span class="tag high">High</span></td><td>Per-area loading, KTX2 textures, streamed audio, memory profiling every test cycle.</td></tr>
-    <tr><td><strong>High requirements narrow the audience</strong></td><td><span class="tag high">High</span></td><td>Clear system requirements on the store page; a compatibility check before play; a Medium preset tuned for minimum spec.</td></tr>
-    <tr><td><strong>Performance on minimum spec</strong></td><td><span class="tag high">High</span></td><td>Weekly tests on an RTX 2060-class PC; GPU profiling; scalable quality presets.</td></tr>
+    <tr><td><strong>WebGPU narrows the audience</strong></td><td><span class="tag med">Medium</span></td><td>A Low preset and dynamic resolution let integrated graphics play; clear system requirements on the store page; a device check before play.</td></tr>
+    <tr><td><strong>Performance across devices</strong></td><td><span class="tag high">High</span></td><td>Weekly benchmarks on the reference MacBook Pro M1 Pro (recommended spec, Medium); Low checked on a borrowed integrated-graphics laptop and by playtesters; scalable presets and dynamic resolution.</td></tr>
     <tr><td><strong>Cultural misrepresentation</strong></td><td><span class="tag high">High</span></td><td>Cambodian advisors review the story, the greybox and the release candidate; native-speaker language checks.</td></tr>
     <tr><td><strong>WebGPU differences between browsers</strong></td><td><span class="tag med">Medium</span></td><td>Test Chrome, Edge, Safari and Firefox WebGPU before each release; use only widely supported WebGPU features.</td></tr>
   </tbody>
@@ -298,8 +299,9 @@
     <tr><td>2.0</td><td>Professional rewrite and reorganisation; Babylon.js chosen; solo production plan; Khmer text fixed.</td></tr>
     <tr><td>3.0</td><td>Shorter, denser episodes (8–10 hours total). New story layer: the four-payment debt, Sora's family, Sok's renaming twist, cousin Vuthy, the seven-night countdown, the 1910 shrine under the estate, three endings, escalation, new cultural puzzles, optional areas and one key choice per episode.</td></tr>
     <tr><td>3.1</td><td>Story Bible added. Theme set; rules of the debt fixed; Sora given a flaw and an artistic climax; Yay Mey's confession; Vuthy's motive changed from money to fear; major reveals made playable or audible instead of read.</td></tr>
-    <tr><td>3.3</td><td>Target changed to high-end desktop hardware: WebGPU required (no WebGL2), minimum RTX 2060 class, higher performance, art and download budgets.</td></tr>
     <tr><td>3.2</td><td>Spirit roster fixed: Neak Ta (all shadows and statues are its forms), Pret and Khmaoch Prey, plus Kanha and her baby Pich as a gentle Mrenh Kongveal; dance used only as respectful moments.</td></tr>
+    <tr><td>3.3</td><td>Target changed to high-end desktop hardware: WebGPU required (no WebGL2), minimum RTX 2060 class, higher performance, art and download budgets.</td></tr>
+    <tr><td>3.4</td><td>Target widened to all laptops and desktops with WebGPU: a Low preset and dynamic resolution for integrated graphics; RTX 2060 / M1 Pro becomes the recommended spec; phones and tablets stay unsupported for Episode 1.</td></tr>
   </tbody>
 </table>
 

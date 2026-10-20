@@ -17,7 +17,7 @@
 **Boon Sop: The Unbroken Debt** is an episodic 3D first-person survival horror game running directly in modern web browsers without installation. Step into the shoes of **Sora**, a 24-year-old illustrator from Phnom Penh, as she returns to rural Cambodia to break an ancient ancestral debt tied to a land guardian spirit (*Neak Ta*).
 
 ### 🎮 Core Features
-* **Zero Installation:** Play in Chrome, Edge, Safari or Firefox via **WebGPU**, with high-end visuals aimed at gaming PCs and Apple Silicon Macs.
+* **Zero Installation:** Play in Chrome, Edge, Safari or Firefox via **WebGPU**, scaling from integrated-graphics laptops (Low) up to gaming PCs (Ultra).
 * **Diegetic 3D UI:** No screen HUD. Manage maps, notes, and inventory through Sora's physical 3D satchel and sketchbook.
 * **Stealth & Cultural Taboos:** Dodge supernatural entities using spatial audio, visual cones, and traditional cultural rules.
 * **Resource Management:** Balance kerosene oil levels, match supplies, and lamp shutter controls to survive the dark.
@@ -25,14 +25,14 @@
 
 ## 🖥️ System Requirements
 
-| | Minimum | Recommended |
-|---|---|---|
-| GPU | NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro | NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro |
-| Memory | 16 GB | 16–32 GB |
-| Resolution | 1080p at 60 fps | 1440p at 60 fps |
-| Browser | WebGPU required: current Chrome or Edge; Safari on macOS 26+; Firefox on Windows or Apple Silicon | |
+| | Minimum | Recommended | High-end |
+|---|---|---|---|
+| GPU | Integrated: Intel Iris Xe / AMD Radeon 680M / Apple M1 / Snapdragon X | NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro | NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro |
+| Memory | 8 GB | 16 GB | 16–32 GB |
+| Quality | Low, up to 900p with dynamic resolution | Medium, 1080p at 60 fps | High or Ultra, 1440p at 60 fps |
+| Browser | WebGPU required: current Chrome or Edge; Safari on macOS 26+; Firefox on Windows or Apple Silicon | | |
 
-Laptops with integrated graphics and mobile devices are not supported.
+The game picks a starting preset from the graphics adapter and lowers the render resolution on the fly when a frame runs over budget. Any laptop or desktop with WebGPU can play; phones and tablets (including iPad) are not supported in Episode 1. The reference test machine is a MacBook Pro M1 Pro.
 
 ## 🚀 Getting Started
 
@@ -63,17 +63,19 @@ npm run dev
 ```
 .
 ├── src/                 Game source code (TypeScript, Babylon.js) — see src/README.md
-│   ├── main.ts          Boot: WebGPU check, engine, game start
+│   ├── main.ts          Boot: device check, engine, game start
 │   ├── core/            Game, event bus, flags, loading, localisation
 │   ├── player/          Controller, camera, interaction, hands
 │   ├── systems/         Inventory, sketchbook, lamp, saves, settings …
 │   ├── ai/              Perception, state machines, spirit entities
 │   ├── sequences/       Scripted scenes
 │   ├── audio/           Audio engine, buses, ambience
-│   ├── render/          Engine, post-processing, quality presets, materials
+│   ├── render/          Engine, device check, quality presets, dynamic resolution, post-processing
 │   ├── ui/              Diegetic UI and HTML menus
 │   ├── episodes/ep1/    Episode 1 scripts and data
-│   └── data/            Shared definitions and strings (en, km)
+│   ├── data/            Shared definitions and strings (en, km)
+│   ├── debug/           Performance overlay (F3) and benchmark
+│   └── spikes/          Phase 1 technical spikes (?spike=s1, ?spike=s2)
 ├── tests/unit/          Unit tests (Vitest)
 ├── public/              Static files served as-is
 │   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS
