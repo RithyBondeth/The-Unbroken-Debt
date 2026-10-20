@@ -7,10 +7,10 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Scene } from "@babylonjs/core/scene";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import type { Scene } from "@babylonjs/core/scene";
 import type { QualityPreset } from "./QualityPresets";
 import { VolumetricFog } from "./VolumetricFog";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -96,10 +96,11 @@ export function createPostPipeline(
   scene: Scene,
   camera: Camera,
   preset: QualityPreset,
-  features: { ssao: boolean; fog: boolean } = { ssao: true, fog: true },
+  /** Switch effects off on top of the preset (spikes use this to measure costs). */
+  overrides: { ssao?: boolean; fog?: boolean } = {},
 ): PostPipeline {
   let ssao: SSAO2RenderingPipeline | null = null;
-  if (features.ssao) {
+  if (preset.ssao && overrides.ssao !== false) {
     ssao = new SSAO2RenderingPipeline(
       "ssao",
       scene,
@@ -110,12 +111,21 @@ export function createPostPipeline(
     ssao.radius = 1.2;
     ssao.totalStrength = 1.1;
     ssao.maxZ = 40;
-    ssao.expensiveBlur = preset.name !== "medium";
+    ssao.expensiveBlur = preset.ssaoRatio >= 1;
   }
 
-  const fog = features.fog
-    ? new VolumetricFog(scene, camera, { ratio: preset.fogRatio, steps: preset.fogSteps })
-    : null;
+  let fog: VolumetricFog | null = null;
+  if (overrides.fog !== false) {
+    if (preset.volumetricFog) {
+      fog = new VolumetricFog(scene, camera, { ratio: preset.fogRatio, steps: preset.fogSteps });
+    } else {
+      // Low: classic exponential fog in the materials. No glow around the lamp,
+      // but distance still disappears into darkness the same way.
+      scene.fogMode = Scene.FOGMODE_EXP2;
+      scene.fogDensity = 0.06;
+      scene.fogColor = new Color3(0.012, 0.011, 0.012);
+    }
+  }
 
   let taa: TAARenderingPipeline | null = null;
   if (preset.taa) {
