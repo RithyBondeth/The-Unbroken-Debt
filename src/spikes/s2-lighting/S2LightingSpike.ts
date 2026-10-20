@@ -9,7 +9,7 @@ import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { CreateCapsule } from "@babylonjs/core/Meshes/Builders/capsuleBuilder";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { enablePhysics } from "../../core/Physics";
@@ -17,7 +17,15 @@ import { KeyboardMouseInput } from "../../player/InputSource";
 import { PlayerController } from "../../player/PlayerController";
 import { PerfOverlay } from "../../debug/PerfOverlay";
 import { formatBenchmark, runBenchmark, type BenchmarkResult } from "../../debug/Benchmark";
-import { getPreset, isQualityName, type QualityPreset } from "../../render/QualityPresets";
+import {
+  getPreset,
+  isQualityName,
+  QUALITY_ORDER,
+  type QualityName,
+  type QualityPreset,
+} from "../../render/QualityPresets";
+import type { DeviceProfile } from "../../render/DeviceProfile";
+import { DynamicResolution } from "../../render/DynamicResolution";
 import {
   createClusteredLights,
   createPostPipeline,
@@ -41,29 +49,50 @@ export interface S2Result {
  * minimum spec? Pass: 60 fps at 1080p on an RTX 2060-class GPU with the lamp,
  * 4 shadowed flames, 32+ unshadowed lights, SSAO and volumetric fog.
  *
- * URL options: `quality=medium|high|ultra` (default medium), `flames=0–4`
- * (default 4, the spike target), `candles=<n>` (default from the preset),
+ * URL options: `quality=auto|low|medium|high|ultra` (default: auto from the
+ * device check; the benchmark defaults to medium), `flames=0–4` (default 4 on
+ * Medium, the spike target; otherwise the preset), `candles=<n>`, `dynres=0`
+ * (fixed resolution instead of dynamic),
  * `ssao=0`, `fog=0`, `taa=0` (switch features off to find their cost),
  * `merge=0` (no static batching), `flameRefresh=all|rotate` (flame shadows every
  * frame, or 2 per frame in rotation, instead of cached and re-rendered only when
  * the spirit is in range), `spirit=0` (no moving shadow caster),
  * `bench=1` (scripted 20 s run at 1080p), `res=1440` (bench at 2560×1440).
  */
-export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Promise<void> {
+export async function runS2(
+  engine: WebGPUEngine,
+  params: URLSearchParams,
+  device: DeviceProfile,
+): Promise<void> {
   const canvas = engine.getRenderingCanvas() as HTMLCanvasElement;
+  const bench = params.get("bench") === "1";
   const qualityParam = params.get("quality");
-  const quality = isQualityName(qualityParam) ? qualityParam : "medium";
+  const quality: QualityName = isQualityName(qualityParam)
+    ? qualityParam
+    : bench
+      ? "medium"
+      : device.quality;
   const flag = (name: string) => params.get(name) !== "0";
+  const base = getPreset(quality);
   const preset = getPreset(quality, {
-    shadowedFlames: clampInt(params.get("flames"), 0, 4, 4),
-    clusteredLights: clampInt(params.get("candles"), 0, 256, getPreset(quality).clusteredLights),
-    taa: flag("taa") && getPreset(quality).taa,
+    shadowedFlames: clampInt(
+      params.get("flames"),
+      0,
+      4,
+      quality === "medium" ? 4 : base.shadowedFlames,
+    ),
+    clusteredLights: clampInt(params.get("candles"), 0, 256, base.clusteredLights),
+    taa: flag("taa") && base.taa,
   });
-  const features = { ssao: flag("ssao"), fog: flag("fog"), taa: preset.taa, merge: flag("merge") };
+  const features = {
+    ssao: flag("ssao") && preset.ssao,
+    fog: flag("fog"),
+    taa: preset.taa,
+    merge: flag("merge"),
+  };
   const flameRefresh = params.get("flameRefresh") ?? "cached";
   const flamesEveryFrame = flameRefresh === "all";
   const withSpirit = flag("spirit");
-  const bench = params.get("bench") === "1";
 
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.004, 0.005, 0.008, 1);
@@ -112,7 +141,16 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
   for (const m of lampMeshes) noShadow.add(m);
 
   const flames: PointLight[] = [];
+  const unshadowedFlames: PointLight[] = [];
   const flameShadows: ShadowGenerator[] = [];
+  for (let i = preset.shadowedFlames; i < hall.flamePositions.length; i++) {
+    // Flames without live shadows still light the room (their shadows would be baked).
+    const light = new PointLight(`flame_${i}`, hall.flamePositions[i], scene);
+    light.diffuse = FLAME_COLOR.clone();
+    light.range = i === 3 ? 6 : 4;
+    light.intensity = i === 3 ? 14 : 6;
+    unshadowedFlames.push(light);
+  }
   for (let i = 0; i < preset.shadowedFlames; i++) {
     // Useful light radius: about 4 m for candles and the altar lamp, 6 m for the brazier.
     const rig = createShadowedPointLight(
@@ -152,11 +190,11 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
   const candles = createClusteredLights(scene, hall.candlePositions, 2.5, 0.9);
 
   const pipeline = createPostPipeline(scene, camera, preset, features);
-  pipeline.fog?.lights.push(lampRig.light, ...flames);
+  pipeline.fog?.lights.push(lampRig.light, ...flames, ...unshadowedFlames);
 
   // Flicker: each flame breathes on its own rhythm (Audio and Art Bibles: never steady).
   const baseIntensity = new Map<PointLight, number>(
-    [lampRig.light, ...flames, ...candles.lights].map((l) => [l, l.intensity]),
+    [lampRig.light, ...flames, ...unshadowedFlames, ...candles.lights].map((l) => [l, l.intensity]),
   );
   scene.onBeforeRenderObservable.add(() => {
     const t = performance.now() / 1000;
@@ -184,6 +222,7 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
       "5 batching",
       "6 flame refresh",
       "7 spirit",
+      "8 dynamic resolution",
       "F2 hide panel",
       "F3 stats",
     ],
@@ -197,7 +236,8 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
     `lamp: shadow ${preset.lampShadowMapSize}px cube · shadowed flames: ${flames.length} × ${preset.flameShadowMapSize}px (${{ all: "every frame", cached: "cached, re-rendered when the spirit is near", rotate: "2 per frame in rotation" }[flameRefresh] ?? flameRefresh})`,
     `static batching ${features.merge ? "on (3 m cells)" : "off"} · meshes ${scene.meshes.length} · spirit ${withSpirit ? "walking" : "off"}`,
     `clustered lights: ${candles.lights.length} · SSAO ${features.ssao ? `on (${preset.ssaoRatio}×, ${preset.ssaoSamples} samples)` : "off"}`,
-    `fog ${features.fog ? `on (${preset.fogRatio}×, ${preset.fogSteps} steps)` : "off"} · TAA ${features.taa ? "on" : "off"}`,
+    `fog ${!features.fog ? "off" : preset.volumetricFog ? `volumetric (${preset.fogRatio}×, ${preset.fogSteps} steps)` : "height fog"} · TAA ${features.taa ? "on" : "off (FXAA)"}`,
+    `device: ${device.label} → suggested ${device.quality}`,
   ];
 
   if (bench) {
@@ -223,10 +263,18 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
 
   const keyboard = new KeyboardMouseInput(canvas, 0.0022);
   const player = new PlayerController(scene, camera, keyboard, hall.spawn);
-  hud.setReadout([
-    ...describe(),
-    "Walk around: watch fps and GPU time (F3) near the flames and the door.",
-  ]);
+  const resolution = new DynamicResolution(engine, preset, {
+    enabled: flag("dynres"),
+    gpuMs: () => perf.gpuMs,
+  });
+  const readout = () =>
+    hud.setReadout([
+      ...describe(),
+      `render ${engine.getRenderWidth()}×${engine.getRenderHeight()} · scale ${resolution.scale.toFixed(2)} (dynamic ${resolution.enabled ? "on" : "off"}, max ${preset.maxRenderHeight}p)`,
+      "Walk around: watch fps and GPU time (F3) near the flames and the door.",
+    ]);
+  readout();
+  window.setInterval(readout, 500);
 
   const reloadWith = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(window.location.search);
@@ -240,7 +288,9 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
   window.addEventListener("keydown", (e) => {
     if (e.code === "KeyB") reloadWith({ bench: "1" });
     if (e.code === "KeyQ")
-      reloadWith({ quality: { medium: "high", high: "ultra", ultra: "medium" }[quality] });
+      reloadWith({
+        quality: QUALITY_ORDER[(QUALITY_ORDER.indexOf(quality) + 1) % QUALITY_ORDER.length],
+      });
     if (e.code === "Digit1") toggle("ssao");
     if (e.code === "Digit2") toggle("fog");
     if (e.code === "Digit3") toggle("taa");
@@ -251,6 +301,7 @@ export async function runS2(engine: WebGPUEngine, params: URLSearchParams): Prom
         flameRefresh: { cached: "rotate", rotate: "all", all: null }[flameRefresh] ?? null,
       });
     if (e.code === "Digit7") toggle("spirit");
+    if (e.code === "Digit8") toggle("dynres");
   });
   if (import.meta.env.DEV)
     (window as unknown as { spike: Record<string, unknown> }).spike.player = player;

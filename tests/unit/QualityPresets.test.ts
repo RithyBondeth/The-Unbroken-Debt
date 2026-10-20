@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getPreset, isQualityName, QUALITY_PRESETS } from "../../src/render/QualityPresets";
+import {
+  getPreset,
+  isQualityName,
+  QUALITY_ORDER,
+  QUALITY_PRESETS,
+} from "../../src/render/QualityPresets";
 
 describe("quality presets", () => {
   it("match the TDD minimum-spec targets for Medium", () => {
@@ -10,18 +15,26 @@ describe("quality presets", () => {
     expect(medium.taa).toBe(true);
   });
 
-  it("never lower quality from Medium to Ultra", () => {
-    const [m, h, u] = [QUALITY_PRESETS.medium, QUALITY_PRESETS.high, QUALITY_PRESETS.ultra];
-    for (const key of [
+  it("never lower quality from Low to Ultra", () => {
+    const presets = QUALITY_ORDER.map((name) => QUALITY_PRESETS[name]);
+    const keys = [
+      "maxRenderHeight",
+      "textureSize",
       "lampShadowMapSize",
       "shadowedFlames",
       "clusteredLights",
       "ssaoSamples",
       "fogSteps",
-    ] as const) {
-      expect(h[key]).toBeGreaterThanOrEqual(m[key]);
-      expect(u[key]).toBeGreaterThanOrEqual(h[key]);
+    ] as const;
+    for (let i = 1; i < presets.length; i++) {
+      for (const key of keys) expect(presets[i][key]).toBeGreaterThanOrEqual(presets[i - 1][key]);
     }
+  });
+
+  it("keeps Low cheap but still gives the lamp a shadow (it is gameplay)", () => {
+    const low = QUALITY_PRESETS.low;
+    expect(low).toMatchObject({ ssao: false, volumetricFog: false, taa: false, shadowedFlames: 0 });
+    expect(low.lampShadowMapSize).toBeGreaterThan(0);
   });
 
   it("applies overrides without changing the table", () => {

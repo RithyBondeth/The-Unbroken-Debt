@@ -1,5 +1,6 @@
 import { Game } from "./core/Game";
 import { createEngine } from "./render/createEngine";
+import { detectDevice } from "./render/detectDevice";
 import { hasSpike, runSpike } from "./spikes";
 import { showRequirementsPage } from "./ui/html/RequirementsPage";
 
@@ -8,9 +9,17 @@ async function boot(): Promise<void> {
   const overlay = document.getElementById("overlay") as HTMLElement;
   overlay.hidden = true;
 
+  // Phones, tablets and browsers without (hardware) WebGPU get the requirements page.
+  const device = await detectDevice();
+  console.info(`[boot] ${device.label} → ${device.blocked ?? `${device.quality} preset`}`);
+  if (device.blocked) {
+    showRequirementsPage(overlay, device.blocked);
+    return;
+  }
+
   const engine = await createEngine(canvas);
   if (!engine) {
-    showRequirementsPage(overlay);
+    showRequirementsPage(overlay, "no-webgpu");
     return;
   }
 
@@ -18,7 +27,7 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const spike = params.get("spike");
   if (hasSpike(spike)) {
-    await runSpike(spike, engine, params);
+    await runSpike(spike, engine, params, device);
     return;
   }
 
