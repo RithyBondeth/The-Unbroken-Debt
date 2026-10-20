@@ -17,9 +17,9 @@
   <div class="subtitle">Scope, roadmap, technical architecture, game systems, assets, resources and open questions for a solo developer.</div>
   <div class="spacer"></div>
   <dl class="meta">
-    <dt>Engine</dt><dd>Babylon.js 9 (TypeScript) · WebGPU + WebGL2</dd>
+    <dt>Engine</dt><dd>Babylon.js 9 (TypeScript) · WebGPU only</dd>
     <dt>Team</dt><dd>Solo developer</dd>
-    <dt>First milestone</dt><dd>Episode 1 release (about 31 weeks)</dd>
+    <dt>First milestone</dt><dd>Episode 1 release (about 35 weeks)</dd>
     <dt>Version</dt><dd>2.0 · October 2026</dd>
     <dt>Author</dt><dd>Rithy Bondeth</dd>
   </dl>
@@ -47,7 +47,8 @@
   <thead><tr><th style="width:22%">Decision</th><th style="width:28%">Choice</th><th>Reason</th></tr></thead>
   <tbody>
     <tr><td><strong>Team</strong></td><td>Solo developer</td><td>Sized for one person; art and audio come from libraries plus targeted custom work.</td></tr>
-    <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript)</td><td>Mature WebGPU with WebGL2 fallback from one codebase, built-in Havok physics, spatial audio, inspector, no editor lock-in.</td></tr>
+    <tr><td><strong>Engine</strong></td><td>Babylon.js (TypeScript)</td><td>Mature WebGPU renderer, built-in Havok physics, spatial audio, inspector, no editor lock-in.</td></tr>
+    <tr><td><strong>Target hardware</strong></td><td>High-end desktop, WebGPU required</td><td>Minimum RTX 2060 / RX 5700 / M1 Pro; recommended RTX 3070 / RX 6800 / M2 Pro. No WebGL2 fallback, so effects can use WebGPU fully and testing is simpler.</td></tr>
     <tr><td><strong>Assets</strong></td><td>Libraries + custom Blender work</td><td>Generic props from CC0 or paid libraries; Khmer-specific hero assets made custom.</td></tr>
     <tr><td><strong>First milestone</strong></td><td>Episode 1 released on its own</td><td>Proves the technology, tone and pipeline before committing to four more episodes.</td></tr>
     <tr><td><strong>Episode length</strong></td><td>1.5–2.5 hours each, 8–10 hours total</td><td>Short, dense episodes (5–6 puzzles, 3–4 escalating encounters, one optional area, one key choice) are better for players and achievable alone.</td></tr>
@@ -83,10 +84,10 @@
   <div class="card"><div class="k">Phase 1</div><div class="v">Technical spikes</div><div class="d">4 weeks</div></div>
   <div class="card"><div class="k">Phase 2</div><div class="v">Greybox</div><div class="d">4 weeks</div></div>
   <div class="card"><div class="k">Phase 3</div><div class="v">Core systems</div><div class="d">7 weeks</div></div>
-  <div class="card"><div class="k">Phase 4</div><div class="v">Art and audio</div><div class="d">8 weeks</div></div>
+  <div class="card"><div class="k">Phase 4</div><div class="v">Art and audio</div><div class="d">12 weeks</div></div>
   <div class="card"><div class="k">Phase 5</div><div class="v">Polish and release</div><div class="d">5 weeks</div></div>
 </div>
-<p><strong>Total: about 31 weeks (7–8 months) to the Episode 1 release.</strong> Episodes 2–5 then take about 3–4 months each.</p>
+<p><strong>Total: about 35 weeks (8 months) to the Episode 1 release.</strong> Episodes 2–5 then take about 4 months each. Art and audio take longer because of the high-end quality target.</p>
 
 <h3><span class="num">2.2</span>Phases and exit criteria</h3>
 <p>Each phase ends with a checklist. Don't start the next phase until it passes, unless you consciously accept the gap.</p>
@@ -119,13 +120,13 @@
       <thead><tr><th style="width:24%">Spike</th><th>Question</th><th style="width:38%">Pass condition</th></tr></thead>
       <tbody>
         <tr><td>S1 First-person controller</td><td>Does movement feel right on raised floors, stairs and ladders?</td><td>Walk, crouch, climb stairs, head-bob; no snagging on 1 cm floor gaps</td></tr>
-        <tr><td>S2 Lamp lighting</td><td>Can one shadowed lamp and many small flames run on a laptop?</td><td>30 fps at 720p on integrated graphics with 1 shadowed light and 20+ flame lights</td></tr>
+        <tr><td>S2 Lamp lighting</td><td>Can the full lighting target run on minimum spec?</td><td>60 fps at 1080p on an RTX 2060-class GPU with the lamp, 4 shadowed flames, 32+ unshadowed lights, SSAO and volumetric fog</td></tr>
         <tr><td>S3 Asset pipeline</td><td>Can a Blender model reach the browser compressed?</td><td>.blend → .glb → Draco/meshopt + KTX2 → loads with correct materials</td></tr>
         <tr><td>S4 Spatial audio</td><td>Can players locate an unseen enemy by sound?</td><td>Eyes closed, you can point to a footstep source</td></tr>
-        <tr><td>S5 Diegetic sketchbook</td><td>Can a 3D book show readable, updatable pages?</td><td>Open, flip, new note appears; readable at 720p</td></tr>
+        <tr><td>S5 Diegetic sketchbook</td><td>Can a 3D book show readable, updatable pages?</td><td>Open, flip, new note appears; readable at 1080p</td></tr>
         <tr><td>S6 Save and load</td><td>Does state survive a refresh and export as a code?</td><td>Save, reload, restore; export and import a save code</td></tr>
         <tr><td>S7 Atmosphere</td><td>Can the 1930s look be done cheaply?</td><td>Grain, vignette, aberration, sepia grade and fog within budget</td></tr>
-        <tr><td>S8 WebGPU / WebGL2</td><td>Does the same build run on both?</td><td>Same scene runs in Chrome with WebGPU on and off</td></tr>
+        <tr><td>S8 WebGPU browsers</td><td>Does the build run in every WebGPU browser?</td><td>Same scene runs in Chrome, Edge, Safari (macOS 26) and Firefox (Windows); unsupported browsers show the requirements page</td></tr>
       </tbody>
     </table>
     <p><strong>Exit:</strong> all spikes pass, or the design is adjusted (for example, fewer shadowed lights).</p>
@@ -149,16 +150,16 @@
 </div>
 
 <div class="act">
-  <div class="act-head"><h3>Phase 4 · Art and audio</h3><span class="time">8 weeks</span></div>
+  <div class="act-head"><h3>Phase 4 · Art and audio</h3><span class="time">12 weeks</span></div>
   <div class="act-body">
     <table>
       <thead><tr><th style="width:18%">Weeks</th><th>Focus</th></tr></thead>
       <tbody>
-        <tr><td>1–2</td><td>Hero architecture: stilt house, funeral tent, under-house area, shed</td></tr>
-        <tr><td>3–4</td><td>Props (library assets retextured, custom Khmer props, betel tray set) and characters (Yay Mey, Vuthy, the corpse, the entity)</td></tr>
-        <tr><td>5</td><td>Lighting bake, post-processing, rain and wind effects</td></tr>
-        <tr><td>6–7</td><td>Sound: ambience, foley, horror cues, entity sounds, music</td></tr>
-        <tr><td>8</td><td>Performance pass: draw calls, polygons, texture memory, load size</td></tr>
+        <tr><td>1–3</td><td>Hero architecture: stilt house, funeral tent, under-house area, shed</td></tr>
+        <tr><td>4–7</td><td>Props (library assets retextured, custom Khmer props, betel tray set) and characters (Yay Mey, Vuthy, the corpse, the entity)</td></tr>
+        <tr><td>8–9</td><td>Lighting bake, post-processing, rain and wind effects</td></tr>
+        <tr><td>10–11</td><td>Sound: ambience, foley, horror cues, entity sounds, music</td></tr>
+        <tr><td>12</td><td>Performance pass: draw calls, polygons, texture memory, load size</td></tr>
       </tbody>
     </table>
     <p><strong>Exit:</strong> meets the performance budgets (section 3.5) on both reference machines.</p>
@@ -217,7 +218,7 @@
     <tr><td>Build</td><td>Vite</td><td>Fast dev server; static build output</td></tr>
     <tr><td>Engine</td><td><code>@babylonjs/core</code> (ES modules)</td><td>Import only what is used to keep the bundle small</td></tr>
     <tr><td>Loaders</td><td><code>@babylonjs/loaders</code> (glTF 2.0)</td><td>Draco/meshopt and KTX2 decoders loaded on demand</td></tr>
-    <tr><td>Rendering</td><td>WebGPU with WebGL2 fallback</td><td>Detect support at startup and create the matching engine</td></tr>
+    <tr><td>Rendering</td><td>WebGPU only</td><td>Check support at startup; show the requirements page if WebGPU is missing</td></tr>
     <tr><td>Physics</td><td>Havok</td><td>Character controller, collisions, triggers</td></tr>
     <tr><td>Audio</td><td>Babylon.js Audio Engine v2</td><td>Spatial sound, buses, reverb; unlocked on first click</td></tr>
     <tr><td>Interface</td><td>Babylon GUI on meshes + dynamic textures</td><td>Diegetic sketchbook and gauges; HTML only for menus and loading</td></tr>
@@ -269,13 +270,15 @@
 <table>
   <thead><tr><th style="width:24%">Feature</th><th>Approach</th></tr></thead>
   <tbody>
-    <tr><td>Lamp light</td><td>One point light with shadows; usually the only dynamic shadow caster.</td></tr>
-    <tr><td>Candles and small flames</td><td>Unshadowed point lights with flicker, emissive meshes and glow; test Babylon 9's clustered lighting in spike S2.</td></tr>
-    <tr><td>Static lighting</td><td>Baked lightmaps or ambient occlusion from Blender for architecture.</td></tr>
-    <tr><td>Fog</td><td>Scene fog plus animated fog cards near the player; a volumetric shader only if it fits the budget (important for Episode 4).</td></tr>
-    <tr><td>Post-processing</td><td>Grain, chromatic aberration, vignette, bloom and colour grading (a sepia look for Episode 1).</td></tr>
+    <tr><td>Lamp light</td><td>Point light with high-resolution soft shadows (the hero light).</td></tr>
+    <tr><td>Shadowed flames</td><td>Up to 4 additional shadow-casting flame lights in key moments (the tent, the altar, the ritual).</td></tr>
+    <tr><td>Candles and small flames</td><td>Dozens of unshadowed point lights with flicker, using Babylon 9's clustered lighting; emissive flames and bloom.</td></tr>
+    <tr><td>Static lighting</td><td>Baked lightmaps from Blender for architecture, combined with real-time SSAO and contact shadows.</td></tr>
+    <tr><td>Reflections</td><td>Screen-space reflections on wet mud, puddles and floodwater (Episodes 1 and 3).</td></tr>
+    <tr><td>Fog</td><td>Volumetric fog and light shafts (WebGPU compute), essential for Episodes 2 and 4.</td></tr>
+    <tr><td>Post-processing</td><td>Temporal anti-aliasing, grain, chromatic aberration, vignette, bloom, depth of field in memories, and colour grading (a sepia look for Episode 1).</td></tr>
     <tr><td>Special materials</td><td>Node Material Editor for the entity shadow, wet surfaces, blood on the map and glowing runes.</td></tr>
-    <tr><td>Quality presets</td><td>Low / Medium / High, chosen automatically from a quick benchmark on first launch.</td></tr>
+    <tr><td>Quality presets</td><td>Medium (tuned for minimum spec) / High / Ultra, chosen automatically from a quick benchmark on first launch.</td></tr>
   </tbody>
 </table>
 
@@ -283,15 +286,15 @@
 <table>
   <thead><tr><th style="width:30%">Budget</th><th style="width:34%">Target</th><th>How to check</th></tr></thead>
   <tbody>
-    <tr><td>Frame rate</td><td>60 fps at 1080p (dedicated GPU) · 30 fps at 720p (integrated)</td><td>Babylon Inspector on a real integrated-graphics laptop</td></tr>
-    <tr><td>Draw calls</td><td>120 or fewer</td><td>Inspector statistics; instancing and merged meshes</td></tr>
-    <tr><td>Visible polygons</td><td>150,000 or fewer</td><td>Inspector; LODs on large props</td></tr>
-    <tr><td>Initial download</td><td>85 MB or less per episode; first area under 20 MB</td><td>Browser network tab with cache disabled</td></tr>
-    <tr><td>Texture memory</td><td>About 256 MB per area</td><td>KTX2 everywhere; 2K hero, 1K or 512 props</td></tr>
+    <tr><td>Frame rate</td><td>60 fps at 1080p on minimum spec (Medium/High) · 60 fps at 1440p on recommended (Ultra)</td><td>Babylon Inspector and browser GPU profiling on both reference machines</td></tr>
+    <tr><td>Draw calls</td><td>About 1,000 or fewer</td><td>Inspector statistics; instancing and WebGPU snapshot rendering</td></tr>
+    <tr><td>Visible triangles</td><td>Up to about 3 million</td><td>Inspector; LODs on everything beyond hero range</td></tr>
+    <tr><td>Download</td><td>First playable area under 150 MB; full episode up to about 600 MB, streamed and cached</td><td>Browser network tab with cache disabled</td></tr>
+    <tr><td>GPU memory</td><td>About 3 GB per area at Ultra, about 2 GB at Medium</td><td>KTX2 everywhere; 4K hero, 2K props</td></tr>
     <tr><td>JavaScript bundle</td><td>3 MB or less (gzipped)</td><td>Vite build report</td></tr>
   </tbody>
 </table>
-<p class="small">Choose two reference machines on day one (your main computer and an inexpensive integrated-graphics laptop) and test on both every week.</p>
+<p class="small">Choose two reference machines on day one, a minimum-spec PC (RTX 2060 class) and a recommended-spec machine, and test on both every week.</p>
 
 <h3><span class="num">3.6</span>Save system</h3>
 <table class="kv">
@@ -309,9 +312,10 @@
   <thead><tr><th style="width:34%">Browser</th><th>Expected path</th></tr></thead>
   <tbody>
     <tr><td>Chrome, Edge</td><td>WebGPU</td></tr>
-    <tr><td>Safari</td><td>WebGPU on macOS 26+; WebGL2 on older macOS</td></tr>
-    <tr><td>Firefox</td><td>WebGPU on Windows and Apple Silicon Macs; WebGL2 elsewhere</td></tr>
-    <tr><td>Mobile</td><td>Not supported; show a friendly message</td></tr>
+    <tr><td>Safari</td><td>WebGPU on macOS 26+; older macOS not supported</td></tr>
+    <tr><td>Firefox</td><td>WebGPU on Windows and Apple Silicon Macs; other platforms not supported</td></tr>
+    <tr><td>No WebGPU / below minimum spec</td><td>Requirements page with the system requirements and supported browsers</td></tr>
+    <tr><td>Laptops with integrated graphics, mobile</td><td>Not supported</td></tr>
   </tbody>
 </table>
 
@@ -537,7 +541,7 @@
     <tr><td>Sound and music</td><td>US$0</td><td>US$500–1,500</td></tr>
     <tr><td>Voice acting</td><td>US$0</td><td>US$200–600</td></tr>
     <tr><td>Cultural advisor honorarium</td><td>—</td><td>US$200–500</td></tr>
-    <tr><td>Integrated-graphics test laptop</td><td>—</td><td>US$300–500 used</td></tr>
+    <tr><td>Minimum-spec test PC or GPU (RTX 2060 class, used)</td><td>—</td><td>US$250–500</td></tr>
     <tr><td>Hosting</td><td>US$0</td><td>US$0–20 / month</td></tr>
   </tbody>
 </table>

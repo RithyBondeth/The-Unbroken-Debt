@@ -83,7 +83,7 @@
     <tr><td><code>npm run dev</code></td><td>Vite dev server with hot reload</td></tr>
     <tr><td><code>npm run build</code></td><td>Type-check and production build to <code>dist/</code></td></tr>
     <tr><td><code>npm run test</code></td><td>Vitest unit tests</td></tr>
-    <tr><td><code>npm run e2e</code></td><td>Playwright smoke test: the game boots to the menu in WebGPU and WebGL2 modes</td></tr>
+    <tr><td><code>npm run e2e</code></td><td>Playwright smoke test: the game boots to the menu with WebGPU, and shows the requirements page without it</td></tr>
     <tr><td><code>npm run assets</code></td><td>Optimise everything in <code>art-export/</code> into <code>public/assets/</code> (section 8)</td></tr>
     <tr><td><code>npm run docs</code></td><td>Rebuild the design PDFs (<code>tools/build-docs.sh</code>)</td></tr>
   </tbody>
@@ -136,8 +136,9 @@
 
 <h2 id="boot"><span class="num">04</span>Boot and Game Loop</h2>
 <pre>1. main.ts
-   ├─ if (await WebGPUEngine.IsSupportedAsync) → new WebGPUEngine(canvas); await initAsync()
-   │  else → new Engine(canvas, true)                      // WebGL2
+   ├─ if (!(await WebGPUEngine.IsSupportedAsync)) → show requirements page; stop
+   ├─ new WebGPUEngine(canvas); await initAsync()          // WebGPU only
+   ├─ read adapter info and limits → pick a quality preset (or warn if below minimum)
    ├─ show HTML loading screen
    ├─ load Havok WASM: await HavokPhysics() → new HavokPlugin(true, havok)
    ├─ scene.enablePhysics(new Vector3(0, -9.81, 0), plugin)
@@ -300,21 +301,25 @@ export async function A3_07_ritual(s: SequenceContext) {
 
 <h2 id="render"><span class="num">11</span>Rendering</h2>
 <table class="dense">
-  <thead><tr><th style="width:24%">Setting</th><th>Low</th><th>Medium</th><th>High</th></tr></thead>
+  <thead><tr><th style="width:24%">Setting</th><th>Medium (min spec)</th><th>High</th><th>Ultra</th></tr></thead>
   <tbody>
-    <tr><td>Render scale</td><td>0.75</td><td>1.0</td><td>1.0</td></tr>
-    <tr><td>Lamp shadow map</td><td>512</td><td>1024</td><td>2048</td></tr>
-    <tr><td>Unshadowed flame lights</td><td>8</td><td>16</td><td>32</td></tr>
-    <tr><td>Grain, vignette, grading</td><td>On</td><td>On</td><td>On</td></tr>
-    <tr><td>Bloom</td><td>Off</td><td>On</td><td>On</td></tr>
-    <tr><td>Chromatic aberration</td><td>Off</td><td>On</td><td>On</td></tr>
-    <tr><td>Volumetric fog (Ep 4)</td><td>Fog cards</td><td>Fog cards</td><td>Volumetric</td></tr>
+    <tr><td>Target</td><td>1080p · RTX 2060</td><td>1440p · RTX 3060 Ti</td><td>1440p–4K · RTX 3070+</td></tr>
+    <tr><td>Render scale</td><td>1.0</td><td>1.0</td><td>1.0 (up to native 4K)</td></tr>
+    <tr><td>Lamp shadow map</td><td>2048, soft</td><td>4096, soft</td><td>4096, contact-hardening</td></tr>
+    <tr><td>Extra shadowed flames</td><td>2</td><td>4</td><td>4</td></tr>
+    <tr><td>Unshadowed lights (clustered)</td><td>32</td><td>64</td><td>128</td></tr>
+    <tr><td>SSAO</td><td>Half resolution</td><td>Full</td><td>Full, high quality</td></tr>
+    <tr><td>Screen-space reflections</td><td>Off</td><td>Wet surfaces</td><td>Wet surfaces, high quality</td></tr>
+    <tr><td>Volumetric fog and light</td><td>Low resolution</td><td>Medium</td><td>High</td></tr>
+    <tr><td>Texture quality</td><td>2K hero</td><td>4K hero</td><td>4K everywhere available</td></tr>
+    <tr><td>Grain, vignette, grading, bloom, TAA</td><td>On</td><td>On</td><td>On</td></tr>
   </tbody>
 </table>
 <ul>
   <li>Post-processing through <code>DefaultRenderingPipeline</code>; per-episode colour grading lookup tables.</li>
   <li>Static architecture uses baked lightmaps; meshes in each area are merged by material where possible.</li>
-  <li>The first launch runs a 3-second benchmark scene and chooses a preset; the player can change it.</li>
+  <li>The first launch runs a 3-second benchmark scene and chooses a preset; the player can change it. Below the minimum, the game warns but still lets the player try.</li>
+  <li>WebGPU-only features are allowed (compute shaders for volumetrics and particles, snapshot rendering for draw-call reduction), as long as they work in all supported browsers.</li>
   <li>Diegetic pages use <code>DynamicTexture</code> or <code>AdvancedDynamicTexture.CreateForMesh</code> on the sketchbook mesh.</li>
 </ul>
 
@@ -361,7 +366,7 @@ export async function A3_07_ritual(s: SequenceContext) {
 <table class="dense">
   <thead><tr><th style="width:30%">Rule</th><th>Detail</th></tr></thead>
   <tbody>
-    <tr><td>Budgets</td><td>As in the Development Plan: 120 draw calls, 150k triangles, ~256 MB textures per area, 85 MB initial download.</td></tr>
+    <tr><td>Budgets</td><td>As in the Development Plan: about 1,000 draw calls, about 3 million triangles, about 2–3 GB GPU memory per area, first playable area under 150 MB.</td></tr>
     <tr><td>Area unload</td><td>Dispose the asset container (meshes, materials, textures), stop and dispose area sounds, clear entity references; verify counts in the Inspector return to baseline.</td></tr>
     <tr><td>Allocation</td><td>No new objects in per-frame code paths (reuse vectors); pool frequently spawned objects.</td></tr>
     <tr><td>Profiling routine</td><td>Weekly on both reference machines: FPS, draw calls, triangles, JS heap, GPU memory; record results in a simple log.</td></tr>

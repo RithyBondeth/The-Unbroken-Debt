@@ -4,7 +4,7 @@
 > *Set in 1932 French-Colonial Cambodia*
 
 ![Platform](https://img.shields.io/badge/Platform-Web_Browser-blue)
-![Graphics API](https://img.shields.io/badge/Graphics-WebGPU%2FWebGL2-green)
+![Graphics API](https://img.shields.io/badge/Graphics-WebGPU-green)
 ![Engine](https://img.shields.io/badge/Engine-Babylon.js-orange)
 ![Genre](https://img.shields.io/badge/Genre-Survival_Horror-red)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
@@ -16,11 +16,22 @@
 **Boon Sop: The Unbroken Debt** is an episodic 3D first-person survival horror game running directly in modern web browsers without installation. Step into the shoes of **Sora**, a 24-year-old illustrator from Phnom Penh, as she returns to rural Cambodia to break an ancient ancestral debt tied to a land guardian spirit (*Neak Ta*).
 
 ### 🎮 Core Features
-* **Zero Installation:** Play seamlessly inside Chrome, Safari, Firefox, or Edge via **WebGPU / WebGL2**.
+* **Zero Installation:** Play in Chrome, Edge, Safari or Firefox via **WebGPU**, with high-end visuals aimed at gaming PCs and Apple Silicon Macs.
 * **Diegetic 3D UI:** No screen HUD. Manage maps, notes, and inventory through Sora's physical 3D satchel and sketchbook.
 * **Stealth & Cultural Taboos:** Dodge supernatural entities using spatial audio, visual cones, and traditional cultural rules.
 * **Resource Management:** Balance kerosene oil levels, match supplies, and lamp shutter controls to survive the dark.
 * **Cross-Episode Persistence:** Save game states locally using native browser `IndexedDB` and portable save codes.
+
+## 🖥️ System Requirements
+
+| | Minimum | Recommended |
+|---|---|---|
+| GPU | NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro | NVIDIA RTX 3070 / AMD RX 6800 / Apple M2 Pro |
+| Memory | 16 GB | 16–32 GB |
+| Resolution | 1080p at 60 fps | 1440p at 60 fps |
+| Browser | WebGPU required: current Chrome or Edge; Safari on macOS 26+; Firefox on Windows or Apple Silicon | |
+
+Laptops with integrated graphics and mobile devices are not supported.
 
 ## 📚 Documentation
 

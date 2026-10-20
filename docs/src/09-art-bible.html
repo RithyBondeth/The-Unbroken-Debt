@@ -122,13 +122,13 @@
 <table>
   <thead><tr><th style="width:24%">Light</th><th style="width:18%">Colour</th><th>Rules</th></tr></thead>
   <tbody>
-    <tr><td><strong>Player lamp (open)</strong></td><td><code>#FF9A3C</code> ~1900 K</td><td>The only dynamic shadow caster in most scenes. Useful light 6–8 m; falls off fast beyond. Flicker: intensity ±12% with smooth noise at 6–10 Hz; stronger flicker when oil is low or Sora is cold.</td></tr>
+    <tr><td><strong>Player lamp (open)</strong></td><td><code>#FF9A3C</code> ~1900 K</td><td>The hero light: high-resolution soft shadows. Useful light 6–8 m; falls off fast beyond. Flicker: intensity ±12% with smooth noise at 6–10 Hz; stronger flicker when oil is low or Sora is cold.</td></tr>
     <tr><td><strong>Player lamp (shuttered)</strong></td><td>Same</td><td>Leaks a thin line of light (0.5 m) through the shutter slits; the player can still see their hands.</td></tr>
-    <tr><td><strong>Candles, oil lamps, incense</strong></td><td><code>#FFB15E</code></td><td>Unshadowed point lights, radius 2–4 m, with emissive flame cards and a little bloom. Flicker out of phase with each other.</td></tr>
+    <tr><td><strong>Candles, oil lamps, incense</strong></td><td><code>#FFB15E</code></td><td>Clustered point lights, radius 2–4 m, with emissive flame cards and bloom; up to 4 nearby flames may cast shadows in key moments. Flicker out of phase with each other.</td></tr>
     <tr><td><strong>Moonlight</strong></td><td><code>#8FA8D8</code></td><td>Low intensity; one directional light; used for silhouettes, not for seeing detail.</td></tr>
     <tr><td><strong>Lightning</strong></td><td><code>#DFE8FF</code></td><td>Very short (80–150 ms) bursts that briefly reveal the space; schedule them, never use them as a cheap jump scare more than once per area.</td></tr>
     <tr><td><strong>Daylight (Ep 3 market)</strong></td><td>Warm afternoon</td><td>The only daylight scene in the night episodes. Bright, saturated, lively, to make the coming night darker by contrast.</td></tr>
-    <tr><td><strong>Baked lighting</strong></td><td>—</td><td>Static architecture uses lightmaps or baked ambient occlusion from Blender. Bake with the scene's static lights only.</td></tr>
+    <tr><td><strong>Baked lighting</strong></td><td>—</td><td>Static architecture uses lightmaps baked in Blender, layered with real-time SSAO, contact shadows and screen-space reflections on wet surfaces.</td></tr>
   </tbody>
 </table>
 <div class="callout"><span class="label">Darkness rule</span><p>A player standing in the dark with the lamp off should see faint shapes within about 2 m after a few seconds (simulated eye adjustment). Pure, unreadable black is used only for doorways, the space under furniture and the backs of rooms, where the player must imagine what is there.</p></div>
@@ -141,6 +141,10 @@
     <tr><td>Vignette</td><td>Weight 1.5, soft</td><td>Darkens further when Sora is afraid, wet or hurt.</td></tr>
     <tr><td>Chromatic aberration</td><td>Small, edges only</td><td>Toggle in settings; spikes briefly during scares.</td></tr>
     <tr><td>Bloom</td><td>Threshold high, low weight</td><td>Flames, runes, moonbeams only.</td></tr>
+    <tr><td>Ambient occlusion</td><td>SSAO, medium radius</td><td>Grounds props and deepens corners.</td></tr>
+    <tr><td>Reflections</td><td>Screen-space, wet surfaces only</td><td>Mud, puddles, floodwater, polished teak.</td></tr>
+    <tr><td>Volumetrics</td><td>Fog and light shafts</td><td>Lamp halo in rain and fog; moonbeams (Ep 2); dense fog (Ep 4).</td></tr>
+    <tr><td>Anti-aliasing</td><td>Temporal (TAA)</td><td>Keeps thin geometry (thread, floor gaps) stable.</td></tr>
     <tr><td>Colour grading</td><td>One lookup table per episode</td><td>Built from the palettes in section 2.</td></tr>
     <tr><td>Exposure</td><td>Slow auto-exposure, 2–3 s adaptation</td><td>Makes stepping out of the lamplight feel blind for a moment.</td></tr>
     <tr><td>Field of view</td><td>75° default (60–95° in settings)</td><td></td></tr>
@@ -174,23 +178,23 @@
 <table class="dense">
   <thead><tr><th style="width:36%">Asset class</th><th style="width:22%">Triangles (LOD0)</th><th>LODs</th></tr></thead>
   <tbody>
-    <tr><td>Player items (lamp, matchbox, sketchbook, satchel)</td><td>3,000–8,000</td><td>None (always close)</td></tr>
-    <tr><td>First-person hands</td><td>6,000–10,000</td><td>None</td></tr>
-    <tr><td>Characters (Yay Mey, Vuthy)</td><td>15,000–25,000</td><td>2 LODs</td></tr>
-    <tr><td>Hero props (coffin, gramophone, chest)</td><td>2,000–6,000</td><td>1 LOD</td></tr>
-    <tr><td>Small props</td><td>100–1,500</td><td>Instanced</td></tr>
-    <tr><td>Modular architecture piece</td><td>50–800</td><td>Merged per area</td></tr>
+    <tr><td>Player items (lamp, matchbox, sketchbook, satchel)</td><td>20,000–50,000</td><td>None (always close)</td></tr>
+    <tr><td>First-person hands</td><td>25,000–40,000</td><td>None</td></tr>
+    <tr><td>Characters (Yay Mey, Vuthy)</td><td>60,000–100,000</td><td>3 LODs</td></tr>
+    <tr><td>Hero props (coffin, gramophone, chest)</td><td>15,000–40,000</td><td>2 LODs</td></tr>
+    <tr><td>Small props</td><td>500–8,000</td><td>Instanced</td></tr>
+    <tr><td>Modular architecture piece</td><td>500–6,000</td><td>Merged per area</td></tr>
   </tbody>
 </table>
-<p class="small">Keep the whole visible scene within the 150,000-triangle budget from the Development Plan.</p>
+<p class="small">Keep the whole visible scene within the 3-million-triangle budget from the Development Plan.</p>
 
 <h2 id="materials"><span class="num">06</span>Materials and Textures</h2>
 <table class="dense">
   <thead><tr><th style="width:28%">Rule</th><th>Detail</th></tr></thead>
   <tbody>
     <tr><td>Workflow</td><td>PBR metal/roughness (glTF standard): base colour, normal, and a packed occlusion-roughness-metallic map.</td></tr>
-    <tr><td>Texel density</td><td>Environment 512 px/m · hero props 1,024 px/m · player items 2,048 px/m equivalent.</td></tr>
-    <tr><td>Maximum sizes</td><td>2048² for hero assets and trim sheets · 1024² for props · 512² for small props. All shipped as KTX2.</td></tr>
+    <tr><td>Texel density</td><td>Environment 1,024 px/m · hero props 2,048 px/m · player items 4,096 px/m equivalent.</td></tr>
+    <tr><td>Maximum sizes</td><td>4096² for hero assets, player items and trim sheets · 2048² for props · 1024² for small props. All shipped as KTX2.</td></tr>
     <tr><td>Trim sheets</td><td>One teak trim sheet (planks, beams, carved edges) and one plaster/stucco trim sheet cover most architecture.</td></tr>
     <tr><td>Wear</td><td>Every surface shows age: worn edges, grime in corners, water marks at the base of walls and posts.</td></tr>
     <tr><td>Wetness</td><td>A shader parameter darkens base colour and lowers roughness; used for rain, mud and flooded rooms.</td></tr>

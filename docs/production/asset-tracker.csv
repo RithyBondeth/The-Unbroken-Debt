@@ -1,54 +1,54 @@
 ID,Episode,Area,Category,Asset,File name,Source,Priority,Status,Budget,Library / URL,Author,Licence,Credit required,Notes
 V1-001,1,Studio,Environment,Phnom Penh studio room shell,ep1_area_studio.glb,K,High,Not started,800 tris/piece,,,,,"6 x 5 m, window south"
-V1-002,1,Studio,Prop,Drafting table,ep1_studio_drafting_table.glb,L,Medium,Not started,1500 tris,,,,,
-V1-003,1,Studio,Prop,Desk with drawer,ep1_studio_desk.glb,L,High,Not started,1500 tris,,,,,Holds the letters
-V1-004,1,Studio,Prop,Brass wall telephone,ep1_studio_telephone.glb,L,High,Not started,3000 tris,,,,,Hero prop for P06
-V1-005,1,Studio,Prop,Wall clock (stops at 8:12),ep1_studio_clock.glb,L,High,Not started,1500 tris,,,,,Animated hands
-V1-006,1,Studio,Prop,Green glass desk lamp,ep1_studio_desklamp.glb,L,Medium,Not started,1000 tris,,,,,
-V1-007,1,Studio,Prop,"Ink bottles, pens, prints",ep1_studio_smallprops.glb,L,Low,Not started,500 tris each,,,,,
-V1-008,1,Studio,Prop,Yay Mey's letters bundle,shared_letters.glb,C,High,Not started,300 tris,,,,,Carried all game
+V1-002,1,Studio,Prop,Drafting table,ep1_studio_drafting_table.glb,L,Medium,Not started,500-8000 tris,,,,,
+V1-003,1,Studio,Prop,Desk with drawer,ep1_studio_desk.glb,L,High,Not started,500-8000 tris,,,,,Holds the letters
+V1-004,1,Studio,Prop,Brass wall telephone,ep1_studio_telephone.glb,L,High,Not started,15000-40000 tris,,,,,Hero prop for P06
+V1-005,1,Studio,Prop,Wall clock (stops at 8:12),ep1_studio_clock.glb,L,High,Not started,500-8000 tris,,,,,Animated hands
+V1-006,1,Studio,Prop,Green glass desk lamp,ep1_studio_desklamp.glb,L,Medium,Not started,500-8000 tris,,,,,
+V1-007,1,Studio,Prop,"Ink bottles, pens, prints",ep1_studio_smallprops.glb,L,Low,Not started,500-8000 tris,,,,,
+V1-008,1,Studio,Prop,Yay Mey's letters bundle,shared_letters.glb,C,High,Not started,500-8000 tris,,,,,Carried all game
 V1-009,1,Path,Environment,Village path and banana grove,ep1_area_path.glb,K,Medium,Not started,Instanced,,,,,60 m path; banana cards
 V1-010,1,Courtyard,Environment,"Courtyard ground, mud, puddles",ep1_area_courtyard.glb,C,High,Not started,Merged,,,,,24 x 18 m; wet mud material
-V1-011,1,Courtyard,Environment,White funeral tent (frame + cloth),ep1_tent.glb,C,Critical,Not started,4000 tris,,,,,Wind vertex animation; tears in A3-08
-V1-012,1,Courtyard,Prop,Teak coffin and stage,ep1_coffin.glb,C,Critical,Not started,5000 tris,,,,,Reused in bad ending
-V1-013,1,Courtyard,Prop,Portrait altar with frame and candle holders,ep1_portrait_altar.glb,C,High,Not started,3000 tris,,,,,Eyes-open texture swap
-V1-014,1,Courtyard,Prop,Brass incense burners x4,ep1_incense_burner.glb,C,High,Not started,1500 tris,,,,,Main burner variant for ritual
-V1-015,1,Courtyard,Prop,Incense sticks with burn-down shader,shared_incense.glb,C,High,Not started,100 tris,,,,,
+V1-011,1,Courtyard,Environment,White funeral tent (frame + cloth),ep1_tent.glb,C,Critical,Not started,15000-40000 tris,,,,,Wind vertex animation; tears in A3-08
+V1-012,1,Courtyard,Prop,Teak coffin and stage,ep1_coffin.glb,C,Critical,Not started,15000-40000 tris,,,,,Reused in bad ending
+V1-013,1,Courtyard,Prop,Portrait altar with frame and candle holders,ep1_portrait_altar.glb,C,High,Not started,15000-40000 tris,,,,,Eyes-open texture swap
+V1-014,1,Courtyard,Prop,Brass incense burners x4,ep1_incense_burner.glb,C,High,Not started,500-8000 tris,,,,,Main burner variant for ritual
+V1-015,1,Courtyard,Prop,Incense sticks with burn-down shader,shared_incense.glb,C,High,Not started,500-8000 tris,,,,,
 V1-016,1,Courtyard,Prop,Protective thread (whole and snapped),ep1_thread.glb,C,High,Not started,Spline,,,,,Snap animation
-V1-017,1,Courtyard,Prop,Bamboo benches,ep1_bench.glb,C,Medium,Not started,800 tris,,,,,Instanced
-V1-018,1,Courtyard,Prop,Hanging glass oil lamps,shared_hanging_lamp.glb,C,High,Not started,1200 tris,,,,,Flame card + light
-V1-019,1,Courtyard,Prop,Storage shed,ep1_shed.glb,C,Medium,Not started,2000 tris,,,,,Optional area
-V1-020,1,House,Environment,"Stilt house modular kit (posts, planks, walls, roof, stairs, railings)",ep1_house_kit_*.glb,C,Critical,Not started,50-800 tris/piece,,,,,See Art Bible 5.2
-V1-021,1,House,Prop,Ancestral altar with bronze statues and betel trays,ep1_ancestral_altar.glb,C,Critical,Not started,4000 tris,,,,,Key in base; reviewed by advisor
-V1-022,1,House,Prop,"Betel tray set (leaves, areca, lime pot, tray)",ep1_betel_set.glb,C,High,Not started,1500 tris,,,,,Puzzle props
+V1-017,1,Courtyard,Prop,Bamboo benches,ep1_bench.glb,C,Medium,Not started,500-8000 tris,,,,,Instanced
+V1-018,1,Courtyard,Prop,Hanging glass oil lamps,shared_hanging_lamp.glb,C,High,Not started,500-8000 tris,,,,,Flame card + light
+V1-019,1,Courtyard,Prop,Storage shed,ep1_shed.glb,C,Medium,Not started,500-8000 tris,,,,,Optional area
+V1-020,1,House,Environment,"Stilt house modular kit (posts, planks, walls, roof, stairs, railings)",ep1_house_kit_*.glb,C,Critical,Not started,500-6000 tris/piece,,,,,See Art Bible 5.2
+V1-021,1,House,Prop,Ancestral altar with bronze statues and betel trays,ep1_ancestral_altar.glb,C,Critical,Not started,15000-40000 tris,,,,,Key in base; reviewed by advisor
+V1-022,1,House,Prop,"Betel tray set (leaves, areca, lime pot, tray)",ep1_betel_set.glb,C,High,Not started,500-8000 tris,,,,,Puzzle props
 V1-023,1,House,Prop,Kanha's drawing of the tray,ep1_kanha_drawing.glb,C,High,Not started,Plane,,,,,Texture drawn in Kanha's style
-V1-024,1,House,Prop,Sewing box,ep1_sewing_box.glb,L,Low,Not started,800 tris,,,,,Shed key
-V1-025,1,House,Prop,Woven mats,ep1_mat.glb,C,Low,Not started,200 tris,,,,,
-V1-026,1,House,Prop,"Wardrobes (hiding H1, H2)",ep1_wardrobe.glb,L,High,Not started,1500 tris,,,,,Doors open
-V1-027,1,House,Prop,Sok's desk and drawer,ep1_sok_desk.glb,L,High,Not started,2000 tris,,,,,
-V1-028,1,House,Prop,Brass-horn gramophone with speed dial,ep1_gramophone.glb,L,Critical,Not started,5000 tris,,,,,Interactive dial
-V1-029,1,House,Prop,Palm-leaf manuscripts,ep1_manuscripts.glb,C,Medium,Not started,300 tris,,,,,Instanced stacks
-V1-030,1,House,Prop,Iron-bound chest and loose planks,ep1_chest.glb,C,Critical,Not started,3000 tris,,,,,Lid and lock animation
+V1-024,1,House,Prop,Sewing box,ep1_sewing_box.glb,L,Low,Not started,500-8000 tris,,,,,Shed key
+V1-025,1,House,Prop,Woven mats,ep1_mat.glb,C,Low,Not started,500-8000 tris,,,,,
+V1-026,1,House,Prop,"Wardrobes (hiding H1, H2)",ep1_wardrobe.glb,L,High,Not started,500-8000 tris,,,,,Doors open
+V1-027,1,House,Prop,Sok's desk and drawer,ep1_sok_desk.glb,L,High,Not started,500-8000 tris,,,,,
+V1-028,1,House,Prop,Brass-horn gramophone with speed dial,ep1_gramophone.glb,L,Critical,Not started,15000-40000 tris,,,,,Interactive dial
+V1-029,1,House,Prop,Palm-leaf manuscripts,ep1_manuscripts.glb,C,Medium,Not started,500-8000 tris,,,,,Instanced stacks
+V1-030,1,House,Prop,Iron-bound chest and loose planks,ep1_chest.glb,C,Critical,Not started,15000-40000 tris,,,,,Lid and lock animation
 V1-031,1,House,Prop,"Kitchen props (pots, shelves, stove)",ep1_kitchen_props.glb,L,Low,Not started,Varies,,,,,
 V1-032,1,Under-house,Environment,Under-house ground and pillars,ep1_area_underhouse.glb,C,High,Not started,Merged,,,,,12 x 8 m; 15 pillars
-V1-033,1,Under-house,Prop,Clay water jars x6 with lids,ep1_clay_jar.glb,C,High,Not started,1200 tris,,,,,Lid open animation
+V1-033,1,Under-house,Prop,Clay water jars x6 with lids,ep1_clay_jar.glb,C,High,Not started,500-8000 tris,,,,,Lid open animation
 V1-034,1,Under-house,Prop,"Firewood stack, cart wheels, boards",ep1_underhouse_props.glb,L,Low,Not started,Varies,,,,,
-V1-035,1,Shared,Player item,Hurricane lamp with oil gauge and shutter,shared_lamp.glb,C,Critical,Not started,8000 tris,,,,,Seen all game
-V1-036,1,Shared,Player item,Brass matchbox and matches,shared_matchbox.glb,C,Critical,Not started,3000 tris,,,,,
-V1-037,1,Shared,Player item,Leather satchel (open/closed),shared_satchel.glb,C,Critical,Not started,8000 tris,,,,,
-V1-038,1,Shared,Player item,Sketchbook with pages,shared_sketchbook.glb,C,Critical,Not started,5000 tris,,,,,Dynamic page textures
-V1-039,1,Shared,Player item,Fountain pen,shared_pen.glb,C,Medium,Not started,800 tris,,,,,Used in Ep5
-V1-040,1,Shared,Player item,Oil bottle,shared_oil_bottle.glb,C,High,Not started,600 tris,,,,,
-V1-041,1,Shared,Character,First-person hands (Sora),shared_hands.glb,C,Critical,Not started,10000 tris,,,,,"Ink stains, silver bangle"
-V1-042,1,House,Key item,Brass key fragments x3 and assembled key,ep1_key.glb,C,High,Not started,800 tris,,,,,
-V1-043,1,House,Key item,Bronze Token,ep1_bronze_token.glb,C,Critical,Not started,2000 tris,,,,,Seal #1
+V1-035,1,Shared,Player item,Hurricane lamp with oil gauge and shutter,shared_lamp.glb,C,Critical,Not started,20000-50000 tris,,,,,Seen all game
+V1-036,1,Shared,Player item,Brass matchbox and matches,shared_matchbox.glb,C,Critical,Not started,20000-50000 tris,,,,,
+V1-037,1,Shared,Player item,Leather satchel (open/closed),shared_satchel.glb,C,Critical,Not started,20000-50000 tris,,,,,
+V1-038,1,Shared,Player item,Sketchbook with pages,shared_sketchbook.glb,C,Critical,Not started,20000-50000 tris,,,,,Dynamic page textures
+V1-039,1,Shared,Player item,Fountain pen,shared_pen.glb,C,Medium,Not started,20000-50000 tris,,,,,Used in Ep5
+V1-040,1,Shared,Player item,Oil bottle,shared_oil_bottle.glb,C,High,Not started,20000-50000 tris,,,,,
+V1-041,1,Shared,Character,First-person hands (Sora),shared_hands.glb,C,Critical,Not started,60000-100000 tris,,,,,"Ink stains, silver bangle"
+V1-042,1,House,Key item,Brass key fragments x3 and assembled key,ep1_key.glb,C,High,Not started,500-8000 tris,,,,,
+V1-043,1,House,Key item,Bronze Token,ep1_bronze_token.glb,C,Critical,Not started,500-8000 tris,,,,,Seal #1
 V1-044,1,House,Story item,Map with four faint marks,shared_map.glb,C,High,Not started,Plane,,,,,Blood-spread shader
 V1-045,1,House,Story item,Sok's slip of names,ep1_slip.glb,C,High,Not started,Plane,,,,,
-V1-046,1,Courtyard,Character,Yay Mey,ch_yay_mey.glb,L+C,High,Not started,25000 tris,,,,,White mourning dress; few animations
-V1-047,1,Courtyard,Character,Vuthy,ch_vuthy.glb,L+C,High,Not started,25000 tris,,,,,Linen suit
-V1-048,1,Courtyard,Character,Uncle Sok's corpse (5 poses),ch_sok_corpse.glb,C,High,Not started,15000 tris,,,,,Wrapped in white cloth
-V1-049,1,Shared,Creature,Neak Ta shadow and brass mask,cr_neak_ta.glb,C,Critical,Not started,10000 tris,,,,,Mostly shader; mask detailed
-V1-050,1,House,Creature,"Neak Ta shadow forms (house walker, under-house patrol)",cr_shadow_figure.glb,C,High,Not started,8000 tris,,,,,Same entity reused in Ep 4 (manor) with different settings
+V1-046,1,Courtyard,Character,Yay Mey,ch_yay_mey.glb,L+C,High,Not started,60000-100000 tris,,,,,White mourning dress; few animations
+V1-047,1,Courtyard,Character,Vuthy,ch_vuthy.glb,L+C,High,Not started,60000-100000 tris,,,,,Linen suit
+V1-048,1,Courtyard,Character,Uncle Sok's corpse (5 poses),ch_sok_corpse.glb,C,High,Not started,60000-100000 tris,,,,,Wrapped in white cloth
+V1-049,1,Shared,Creature,Neak Ta shadow and brass mask,cr_neak_ta.glb,C,Critical,Not started,30000-60000 tris,,,,,Mostly shader; mask detailed
+V1-050,1,House,Creature,"Neak Ta shadow forms (house walker, under-house patrol)",cr_shadow_figure.glb,C,High,Not started,30000-60000 tris,,,,,Same entity reused in Ep 4 (manor) with different settings
 S1-001,1,Audio,Sound (Ambience loop),"Rain layers: on glass, leaves, cloth, roof tiles, ground edges",,L + R,High,Not started,,,,,,Priority A in Audio Design Document
 S1-002,1,Audio,Sound (One-shot),"Thunder (near, far) ×8",,L,High,Not started,,,,,,Priority A in Audio Design Document
 S1-003,1,Audio,Sound (Ambience loop),"Cicadas, bullfrogs, night insects",,L,High,Not started,,,,,,Priority A in Audio Design Document
@@ -94,5 +94,5 @@ M1-04,1,Audio,Music,Ritual drone,,M,High,Not started,,,,,Yes,Commission or licen
 M1-05,1,Audio,Music,Dawn,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
 M1-06,1,Audio,Music,The name,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
 M1-07,1,Audio,Music,Credits theme,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
-V1-051,3,Clinic,Creature,"Pich (Mrenh Kongveal) glimpses: silhouette, handprint decal, wooden toy",cr_pich.glb,C,Medium,Not started,3000 tris,,,,,Episode 3 asset; listed early for planning
+V1-051,3,Clinic,Creature,"Pich (Mrenh Kongveal) glimpses: silhouette, handprint decal, wooden toy",cr_pich.glb,C,Medium,Not started,30000-60000 tris,,,,,Episode 3 asset; listed early for planning
 S1-039,3,Audio,Sound (One-shot set),"Pich: light footsteps, giggle, rolling wooden toy",,R,Medium,Not started,,,,,,Record a child only with a parent's consent and presence
