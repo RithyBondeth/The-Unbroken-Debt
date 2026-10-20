@@ -14,8 +14,13 @@ All design documents for the game. **Read the PDFs** in [`pdf/`](pdf/). Edit the
 | 05 | [Episode 5 · The Sunken Sanctuary](pdf/05-Episode-5-The-Sunken-Sanctuary.pdf) | Phnom Kulen: elemental trials, severance ritual, endings |
 | 06 | [Development Plan](pdf/06-Development-Plan.pdf) | Roadmap, architecture, game systems, assets, resources, open questions |
 | 07 | [Story Bible](pdf/07-Story-Bible.pdf) | Theme, rules of the debt, character arcs, structure, timeline |
+| 08 | [Episode 1 Beat Sheet and Level Layout](pdf/08-Episode-1-Beat-Sheet-and-Level-Layout.pdf) | Every beat, trigger, item and patrol, with scaled maps |
+| 09 | [Art Bible](pdf/09-Art-Bible.pdf) | Palettes, lighting, post-processing, scale, materials, costume, creatures, sensitivity rules |
+| 10 | [Episode 1 Script and Text](pdf/10-Episode-1-Script.pdf) | All dialogue, Sok's recording, journal pages, lore notes, sketchbook text |
+| 11 | [Technical Design Document](pdf/11-Technical-Design-Document.pdf) | Modules, events, data formats, Blender conventions, saves, AI, rendering, audio, deployment |
+| 12 | [Controls and Interface](pdf/12-Controls-and-Interface.pdf) | Bindings, satchel and sketchbook UX, feedback without a HUD, menus, settings, accessibility |
 
-Every episode document follows the same structure: overview, characters, locations, acts, mechanics, puzzles, entities, items, audio/visual, glossary, and revision notes with open issues.
+Documents 08–12 are the **Phase 0 production documents** used to build Episode 1. Every episode document follows the same structure: overview, characters, locations, acts, mechanics, puzzles, entities, items, audio/visual, glossary, and revision notes with open issues.
 
 ## Folder layout
 

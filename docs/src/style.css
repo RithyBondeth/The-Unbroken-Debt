@@ -175,3 +175,22 @@ pre { font-family: "Ubuntu Mono", monospace; font-size: 9pt; background: var(--t
 
 .avoid { break-inside: avoid; }
 .page-break { break-before: page; }
+
+/* ---------- Figures (maps, charts) ---------- */
+figure.map { margin: 10px 0 16px; padding: 10px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; break-inside: avoid; }
+figure.map svg { display: block; width: 100%; height: auto; }
+figure.map figcaption { font-size: 8pt; color: var(--muted); margin-top: 6px; }
+figure.map text { font-family: "Ubuntu", sans-serif; }
+
+/* ---------- Colour swatches ---------- */
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 6px 0 14px; break-inside: avoid; }
+.swatch { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; font-size: 7.5pt; }
+.swatch .chip { height: 34px; }
+.swatch .lbl { padding: 4px 6px; color: var(--ink); line-height: 1.3; }
+.swatch .lbl span { display: block; color: var(--muted); font-family: "Ubuntu Mono", monospace; }
+
+/* ---------- Dense tables ---------- */
+table.dense { font-size: 8.3pt; }
+table.dense td, table.dense th { padding: 4px 6px; }
+td.id, th.id { width: 7%; font-family: "Ubuntu Mono", monospace; color: var(--accent); white-space: nowrap; }
+kbd { font-family: "Ubuntu Mono", monospace; font-size: 8.5pt; border: 1px solid #cfc6ba; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; color: var(--ink); white-space: nowrap; }

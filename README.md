@@ -34,5 +34,10 @@
 | 05 | [Episode 5 · The Sunken Sanctuary](docs/pdf/05-Episode-5-The-Sunken-Sanctuary.pdf) |
 | 06 | [Development Plan](docs/pdf/06-Development-Plan.pdf) |
 | 07 | [Story Bible](docs/pdf/07-Story-Bible.pdf) |
+| 08 | [Episode 1 Beat Sheet and Level Layout](docs/pdf/08-Episode-1-Beat-Sheet-and-Level-Layout.pdf) |
+| 09 | [Art Bible](docs/pdf/09-Art-Bible.pdf) |
+| 10 | [Episode 1 Script and Text](docs/pdf/10-Episode-1-Script.pdf) |
+| 11 | [Technical Design Document](docs/pdf/11-Technical-Design-Document.pdf) |
+| 12 | [Controls and Interface](docs/pdf/12-Controls-and-Interface.pdf) |
 
 See [docs/README.md](docs/README.md) for the folder layout and how to rebuild the PDFs.
