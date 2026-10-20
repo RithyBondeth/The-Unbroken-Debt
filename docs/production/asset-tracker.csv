@@ -48,7 +48,7 @@ V1-046,1,Courtyard,Character,Yay Mey,ch_yay_mey.glb,L+C,High,Not started,25000 t
 V1-047,1,Courtyard,Character,Vuthy,ch_vuthy.glb,L+C,High,Not started,25000 tris,,,,,Linen suit
 V1-048,1,Courtyard,Character,Uncle Sok's corpse (5 poses),ch_sok_corpse.glb,C,High,Not started,15000 tris,,,,,Wrapped in white cloth
 V1-049,1,Shared,Creature,Neak Ta shadow and brass mask,cr_neak_ta.glb,C,Critical,Not started,10000 tris,,,,,Mostly shader; mask detailed
-V1-050,1,House,Creature,Walker / roamer shadow figure,cr_shadow_figure.glb,C,High,Not started,8000 tris,,,,,Shared shader
+V1-050,1,House,Creature,"Neak Ta shadow forms (house walker, under-house patrol)",cr_shadow_figure.glb,C,High,Not started,8000 tris,,,,,Same entity reused in Ep 4 (manor) with different settings
 S1-001,1,Audio,Sound (Ambience loop),"Rain layers: on glass, leaves, cloth, roof tiles, ground edges",,L + R,High,Not started,,,,,,Priority A in Audio Design Document
 S1-002,1,Audio,Sound (One-shot),"Thunder (near, far) ×8",,L,High,Not started,,,,,,Priority A in Audio Design Document
 S1-003,1,Audio,Sound (Ambience loop),"Cicadas, bullfrogs, night insects",,L,High,Not started,,,,,,Priority A in Audio Design Document
@@ -94,3 +94,5 @@ M1-04,1,Audio,Music,Ritual drone,,M,High,Not started,,,,,Yes,Commission or licen
 M1-05,1,Audio,Music,Dawn,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
 M1-06,1,Audio,Music,The name,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
 M1-07,1,Audio,Music,Credits theme,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+V1-051,3,Clinic,Creature,"Pich (Mrenh Kongveal) glimpses: silhouette, handprint decal, wooden toy",cr_pich.glb,C,Medium,Not started,3000 tris,,,,,Episode 3 asset; listed early for planning
+S1-039,3,Audio,Sound (One-shot set),"Pich: light footsteps, giggle, rolling wooden toy",,R,Medium,Not started,,,,,,Record a child only with a parent's consent and presence

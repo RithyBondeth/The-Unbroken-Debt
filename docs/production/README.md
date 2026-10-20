@@ -4,7 +4,7 @@ Working files used day to day during production. Open the CSV in Excel, Numbers 
 
 ## asset-tracker.csv
 
-Every asset needed for Episode 1: 50 visual assets, 38 sounds and 7 music cues, pre-filled from the Art Bible, the Beat Sheet and the Audio Design Document.
+Every asset needed for Episode 1: 50 visual assets, 38 sounds and 7 music cues, pre-filled from the Art Bible, the Beat Sheet and the Audio Design Document. Two early Episode 3 rows (Pich) are included for planning.
 
 | Column | How to use it |
 |---|---|
