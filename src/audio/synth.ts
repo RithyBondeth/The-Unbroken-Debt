@@ -7,7 +7,7 @@
  */
 
 /** Two-pole resonant filter (RBJ biquad), band-pass or high-pass, applied in place. */
-function biquad(
+export function biquad(
   samples: Float32Array,
   sampleRate: number,
   type: "bandpass" | "highpass" | "lowpass",
@@ -40,14 +40,14 @@ function biquad(
   return samples;
 }
 
-function noise(length: number, rand: () => number): Float32Array {
+export function noise(length: number, rand: () => number): Float32Array {
   const out = new Float32Array(length);
   for (let i = 0; i < length; i++) out[i] = rand() * 2 - 1;
   return out;
 }
 
 /** Adds `part` into `out` at `start` (seconds), shaped by an envelope. */
-function mix(
+export function mix(
   out: Float32Array,
   part: Float32Array,
   sampleRate: number,
@@ -61,14 +61,14 @@ function mix(
   }
 }
 
-function normalise(samples: Float32Array, peak = 0.9): Float32Array {
+export function normalise(samples: Float32Array, peak = 0.9): Float32Array {
   let max = 0;
   for (const s of samples) max = Math.max(max, Math.abs(s));
   if (max > 0) for (let i = 0; i < samples.length; i++) samples[i] *= peak / max;
   return samples;
 }
 
-const decay = (seconds: number) => (t: number) => Math.exp(-t / seconds);
+export const decay = (seconds: number) => (t: number) => Math.exp(-t / seconds);
 
 /**
  * A wet, heavy footstep on old teak with a short drag: the Neak Ta shadow

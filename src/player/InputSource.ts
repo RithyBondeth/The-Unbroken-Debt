@@ -36,7 +36,7 @@ export class KeyboardMouseInput implements InputSource {
     window.addEventListener("keydown", (e) => this.onKey(e, true), { signal });
     window.addEventListener("keyup", (e) => this.onKey(e, false), { signal });
     window.addEventListener("blur", () => this.held.clear(), { signal });
-    canvas.addEventListener("click", () => void this.requestPointerLock(), { signal });
+    canvas.addEventListener("click", () => void this.lockPointer(), { signal });
     document.addEventListener(
       "mousemove",
       (e) => {
@@ -84,13 +84,52 @@ export class KeyboardMouseInput implements InputSource {
     if (this.pointerLocked && e.code !== "Escape") e.preventDefault();
   }
 
-  private async requestPointerLock(): Promise<void> {
+  /** Mouse look needs pointer lock; browsers allow it only from a click. */
+  async lockPointer(): Promise<void> {
     if (this.pointerLocked) return;
     try {
       await this.canvas.requestPointerLock({ unadjustedMovement: true });
     } catch {
       // Some platforms reject raw input; fall back to accelerated movement.
-      await this.canvas.requestPointerLock();
+      await this.canvas.requestPointerLock().catch((error: unknown) => {
+        console.warn("[Input] pointer lock refused", error);
+      });
     }
+  }
+}
+
+/**
+ * Movement and look as the story allows: while the sketchbook is open its page
+ * keys (A/D) take over strafing (S5), and a scripted moment (a phone call, a
+ * fade) can hold Sora still or stop the camera too.
+ */
+export class GatedInput implements InputSource {
+  reading = false;
+  holdStill = false;
+  holdLook = false;
+
+  constructor(private readonly inner: InputSource) {}
+
+  readMove(out: MoveIntent): MoveIntent {
+    this.inner.readMove(out);
+    if (this.reading) out.x = 0;
+    if (this.holdStill) {
+      out.x = 0;
+      out.z = 0;
+      out.hurry = false;
+    }
+    return out;
+  }
+
+  consumeLook(out: { yaw: number; pitch: number }): void {
+    this.inner.consumeLook(out);
+    if (this.holdLook) {
+      out.yaw = 0;
+      out.pitch = 0;
+    }
+  }
+
+  dispose(): void {
+    this.inner.dispose();
   }
 }
