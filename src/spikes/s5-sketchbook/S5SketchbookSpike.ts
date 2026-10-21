@@ -16,6 +16,8 @@ import { loadSketchbookFonts } from "../../ui/diegetic/fonts";
 import { SECTIONS } from "../../ui/diegetic/sketchbookContent";
 import { PAGE_MM } from "../../ui/diegetic/PagePainter";
 import { EP1_SKETCHBOOK } from "../../episodes/ep1/data/sketchbook";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S5Result {
@@ -274,7 +276,7 @@ export async function runS5(
   window.addEventListener("keydown", (e) => press(e.code));
 
   if (params.get("auto") === "1") void autoRun(press, () => sketchbook.isBusy, step);
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }
 
 /** Scripted run for automated checks: open, turn, jump, write, large text, close. */

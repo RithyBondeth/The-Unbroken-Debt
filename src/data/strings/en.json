@@ -8,5 +8,7 @@
   "requirements.recommended": "Recommended",
   "requirements.recommended.value": "NVIDIA RTX 2060 / AMD RX 5700 / Apple M1 Pro or better · 16 GB RAM · Medium quality at 1080p",
   "requirements.browser": "Browser",
-  "requirements.browser.value": "Current Chrome or Edge · Safari on macOS 26+ · Firefox on Windows or Apple Silicon"
+  "requirements.browser.value": "Current Chrome or Edge · Safari on macOS 26+ · Firefox on Windows or Apple Silicon",
+  "render.stall.title": "The picture has stopped updating",
+  "render.stall.body": "The game is still trying to draw it. If this message doesn't go away, reload the page."
 }

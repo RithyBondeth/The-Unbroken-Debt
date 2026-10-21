@@ -12,6 +12,8 @@ import { targetExposure } from "../../render/look";
 import { EP1_GRADE } from "../../episodes/ep1/data/grade";
 import { SpikeHud } from "../SpikeHud";
 import { createHallEnvironment, lockRenderSize } from "../hallEnvironment";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S7Result {
@@ -336,5 +338,5 @@ export async function runS7(
     })();
   } else if (params.get("bench") === "1") void wait(4000).then(bench);
 
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }
