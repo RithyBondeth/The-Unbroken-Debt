@@ -2,7 +2,7 @@ import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { Camera } from "@babylonjs/core/Cameras/camera";
-import type { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { EventBus } from "./EventBus";
@@ -16,10 +16,28 @@ import { DynamicResolution } from "../render/DynamicResolution";
 import { runRenderLoop } from "../render/renderLoop";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
-import { KeyboardMouseInput } from "../player/InputSource";
+import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
 import { PerfOverlay } from "../debug/PerfOverlay";
+import { AudioSystem } from "../audio/AudioSystem";
+import { FLAME_COLOR } from "../render/RenderSetup";
+import { Inventory } from "../systems/inventory/Inventory";
+import { Interaction } from "../systems/interaction/Interaction";
+import { SaveStore } from "../systems/saves/SaveStore";
+import { Sketchbook } from "../ui/diegetic/Sketchbook";
+import { loadSketchbookFonts } from "../ui/diegetic/fonts";
+import { SECTIONS } from "../ui/diegetic/sketchbookContent";
+import {
+  Hints,
+  SatchelPanel,
+  SaveIndicator,
+  ScreenFade,
+  Subtitles,
+  type SatchelEntry,
+} from "../ui/html/StoryUi";
 import { EP1_GRADE } from "../episodes/ep1/data/grade";
+import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
+import { ITEMS } from "../episodes/ep1/data/prologue";
 import { Prologue } from "../episodes/ep1/prologue/Prologue";
 
 /**
@@ -34,6 +52,22 @@ export class Game {
   readonly camera: UniversalCamera;
   readonly preset: QualityPreset;
   readonly input: KeyboardMouseInput;
+  /** What the player controller reads: the keyboard and mouse, as the story allows. */
+  readonly gated: GatedInput;
+  readonly inventory = new Inventory(this.bus);
+  readonly interaction: Interaction;
+  readonly hints = new Hints();
+  readonly subtitles = new Subtitles();
+  readonly fade = new ScreenFade();
+  readonly satchel = new SatchelPanel();
+  private readonly saveIndicator = new SaveIndicator();
+  readonly saves = new SaveStore((saving) => this.saveIndicator.set(saving));
+  /** Null if the browser refused to create audio. */
+  audio: AudioSystem | null = null;
+  /** Exists once the game has started. */
+  sketchbook: Sketchbook | null = null;
+  /** A scripted moment has Sora's hands: nothing can be used, opened or read. */
+  cutscene = false;
   pipeline!: PostPipeline;
   atmosphere!: Atmosphere;
   player!: PlayerController;
@@ -55,6 +89,12 @@ export class Game {
     this.camera.maxZ = 60;
     this.scene.activeCamera = this.camera;
     this.input = new KeyboardMouseInput(engine.getRenderingCanvas() as HTMLCanvasElement, 0.0022);
+    this.gated = new GatedInput(this.input);
+    this.interaction = new Interaction(this.scene, this.camera, this.bus);
+    window.addEventListener("keydown", (e) => this.press(e));
+    this.bus.on("inventory:changed", () => {
+      if (this.satchel.isOpen) this.satchel.open(this.satchelEntries());
+    });
   }
 
   /** Seconds since the last frame, capped so a stall never jumps the world. */
@@ -63,22 +103,97 @@ export class Game {
   }
 
   async start(): Promise<void> {
-    await enablePhysics(this.scene);
+    await Promise.all([enablePhysics(this.scene), loadSketchbookFonts()]);
+    this.audio = await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch(
+      (error: unknown) => {
+        console.warn("[Game] no audio", error);
+        return null;
+      },
+    );
+    this.audio?.attachListener(this.camera);
     this.resolution = new DynamicResolution(this.engine, this.preset);
     const prologue = new Prologue(this);
     await prologue.load();
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
     this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
+    this.createSketchbook();
     if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
-    prologue.begin();
+    this.scene.onBeforeRenderObservable.add(() => this.update());
+    void prologue.begin();
     if (import.meta.env.DEV) (window as unknown as { prologue: Prologue }).prologue = prologue;
     runRenderLoop(this.engine, () => this.scene.render(), renderStallNotice);
   }
 
   /** Puts Sora at `feet`, facing `yaw`. */
   spawnPlayer(feet = Vector3.Zero(), yaw = 0): void {
-    this.player = new PlayerController(this.scene, this.camera, this.input, feet, this.bus);
+    this.player = new PlayerController(this.scene, this.camera, this.gated, feet, this.bus);
     this.player.yaw = yaw;
+  }
+
+  /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
+  private createSketchbook(): void {
+    const height = this.preset.name === "low" ? 1024 : 1536;
+    const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera);
+    this.sketchbook = sketchbook;
+    // Drawn after the room with its own depth, so the book never sinks into a wall.
+    sketchbook.book.setRenderingGroup(1);
+    this.scene.setRenderingAutoClearDepthStencil(1, true, true, true);
+    // The room's lights would blow the paper out at 30 cm (S5): one soft light of its own.
+    const reading = new PointLight("reading_light", new Vector3(-0.3, -0.12, 0.12), this.scene);
+    reading.parent = this.camera;
+    reading.diffuse = FLAME_COLOR.clone();
+    reading.intensity = 0.22;
+    reading.includedOnlyMeshes = sketchbook.book.meshes;
+    for (const light of this.scene.lights)
+      if (light !== reading) light.excludedMeshes.push(...sketchbook.book.meshes);
+  }
+
+  private update(): void {
+    const book = this.sketchbook;
+    book?.update(this.deltaSeconds);
+    this.gated.reading = book?.isOpen ?? false;
+    this.interaction.active = !this.cutscene && !this.gated.reading && !this.satchel.isOpen;
+    this.interaction.update();
+  }
+
+  /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */
+  private press(e: KeyboardEvent): void {
+    if (e.code === "Tab") e.preventDefault();
+    if (e.repeat) return;
+    const book = this.sketchbook;
+    if (e.code === "KeyE" && this.interaction.use()) this.hints.performed("hint.use");
+    if (e.code === "Tab") this.toggleSatchel();
+    if (e.code === "KeyQ") this.toggleSketchbook();
+    if (!book?.isOpen) return;
+    if (e.code === "KeyA" || e.code === "KeyD") book.turn(e.code === "KeyD" ? 1 : -1);
+    const digit = Number(e.code.replace("Digit", ""));
+    if (e.code.startsWith("Digit") && digit >= 1 && digit <= SECTIONS.length)
+      book.goToSection(SECTIONS[digit - 1].id);
+  }
+
+  toggleSatchel(): void {
+    if (this.cutscene || !this.inventory.has("satchel")) return;
+    this.hints.performed("hint.satchel");
+    if (this.satchel.isOpen) return this.satchel.close();
+    if (this.sketchbook?.isOpen) this.sketchbook.toggle();
+    this.satchel.open(this.satchelEntries());
+  }
+
+  toggleSketchbook(): void {
+    if (this.cutscene || !this.sketchbook || !this.inventory.has("sketchbook")) return;
+    this.hints.performed("hint.sketchbook");
+    this.satchel.close();
+    this.sketchbook.toggle();
+  }
+
+  private satchelEntries(): SatchelEntry[] {
+    return this.inventory
+      .list()
+      .filter(([id]) => ITEMS[id])
+      .map(([id, n]) => ({
+        name: ITEMS[id].name,
+        note: ITEMS[id].note?.replace("{n}", String(n)),
+      }));
   }
 
   /** Lights the volumetric fog should glow around. */

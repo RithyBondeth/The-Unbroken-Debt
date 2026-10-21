@@ -1,8 +1,7 @@
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { KeyboardMouseInput, type InputSource } from "../../player/InputSource";
-import type { MoveIntent } from "../../player/movement";
+import { GatedInput, KeyboardMouseInput } from "../../player/InputSource";
 import { PlayerController } from "../../player/PlayerController";
 import { PerfOverlay } from "../../debug/PerfOverlay";
 import { saveShot } from "../../debug/saveShot";
@@ -44,23 +43,6 @@ const TEXTURE_HEIGHT: Record<QualityName, number> = {
   ultra: 2048,
 };
 
-/** Movement with the strafe keys taken over by page turning while the book is open. */
-class ReadingInput implements InputSource {
-  reading = false;
-  constructor(private readonly inner: InputSource) {}
-  readMove(out: MoveIntent): MoveIntent {
-    this.inner.readMove(out);
-    if (this.reading) out.x = 0;
-    return out;
-  }
-  consumeLook(out: { yaw: number; pitch: number }): void {
-    this.inner.consumeLook(out);
-  }
-  dispose(): void {
-    this.inner.dispose();
-  }
-}
-
 /**
  * Spike S5 (Development Plan, section 2.2): can a 3D book show readable,
  * updatable pages? Sora's sketchbook in the dark S2 hall, lit by her lamp,
@@ -87,7 +69,7 @@ export async function runS5(
   const { scene, camera, hall, lamp } = await createHallEnvironment(engine, preset);
 
   const keyboard = new KeyboardMouseInput(canvas, 0.0022);
-  const input = new ReadingInput(keyboard);
+  const input = new GatedInput(keyboard);
   const player = new PlayerController(scene, camera, input, hall.spawn);
 
   const sketchbook = new Sketchbook(scene, EP1_SKETCHBOOK, textureHeight, camera);

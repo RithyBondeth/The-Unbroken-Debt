@@ -48,10 +48,15 @@ export class AudioSystem {
    * @param audioContext an `OfflineAudioContext` renders silently to a buffer
    * (S4 uses it to check panning without anyone listening)
    */
-  static async create(audioContext?: BaseAudioContext): Promise<AudioSystem> {
+  static async create(
+    audioContext?: BaseAudioContext,
+    { hideUnmuteButton = false } = {},
+  ): Promise<AudioSystem> {
     const engine = await CreateAudioEngineAsync({
       ...(audioContext ? { audioContext: audioContext as AudioContext } : {}),
       listenerEnabled: true,
+      // The game unlocks sound with its own "Click to begin".
+      disableDefaultUI: hideUnmuteButton,
     });
     const names: BusName[] = ["ambience", "sfx", "threat", "voice", "music", "ui"];
     const buses = Object.fromEntries(

@@ -86,6 +86,11 @@ export class StudioLights {
     return this.candleLit;
   }
 
+  /** A flash now, for a scripted scare; the 20–40 s rhythm carries on after it. */
+  strike(): void {
+    this.nextFlash = this.time;
+  }
+
   /** P05: the shelf candle goes out. */
   snuffCandle(): void {
     this.candleLit = false;

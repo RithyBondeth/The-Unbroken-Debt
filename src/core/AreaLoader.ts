@@ -23,8 +23,8 @@ export interface Area {
  * Blender names (Technical Design Document, sections 3 and 7).
  */
 export interface AreaOptions {
-  /** Meshes a script finds by name (e.g. "window_glass"), kept out of batching. */
-  keep?: string[];
+  /** Nodes a script finds or moves (e.g. "window_glass", /^letter_/), kept out of batching. */
+  keep?: (string | RegExp)[];
 }
 
 export async function loadArea(
@@ -43,7 +43,7 @@ export async function loadArea(
   realiseInstances(container);
   const level = buildLevel(scene, [...container.transformNodes, ...container.meshes]);
   for (const warning of level.warnings) console.warn(`[area ${id}] ${warning}`);
-  batchStatics(container, new Set(options.keep ?? []));
+  batchStatics(container, options.keep ?? []);
   return {
     id,
     container,
@@ -79,10 +79,11 @@ function realiseInstances(container: AssetContainer): void {
 }
 
 /** Is this node, or one of its parents, something the game moves or uses? */
-function isDynamic(node: Node, keep: Set<string>): boolean {
+function isDynamic(node: Node, keep: readonly (string | RegExp)[]): boolean {
   for (let n: Node | null = node; n; n = n.parent) {
-    if (keep.has(n.name) || /^(interact|col|ladder|trigger|hide|spawn|marker)_/.test(n.name))
-      return true;
+    const name = n.name;
+    if (keep.some((k) => (typeof k === "string" ? k === name : k.test(name)))) return true;
+    if (/^(interact|col|ladder|trigger|hide|spawn|marker)_/.test(name)) return true;
   }
   return false;
 }
@@ -92,7 +93,7 @@ function isDynamic(node: Node, keep: Set<string>): boolean {
  * per batch instead of one per object). The Phase 2 studio had 1,810 draw calls
  * from hundreds of small props and trim pieces.
  */
-function batchStatics(container: AssetContainer, keep: Set<string>): void {
+function batchStatics(container: AssetContainer, keep: readonly (string | RegExp)[]): void {
   const statics = container.meshes.filter(
     (m): m is Mesh =>
       m instanceof Mesh && m.isVisible && m.getTotalVertices() > 0 && !isDynamic(m, keep),
