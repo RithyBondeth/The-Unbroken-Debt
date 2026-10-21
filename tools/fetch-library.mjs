@@ -33,7 +33,8 @@ for (const [id, { resolution }] of Object.entries(manifest.models)) {
   const gltf = files.gltf[resolution].gltf;
   const dir = join(ROOT, "models", id);
   total += await download(gltf.url, join(dir, `${id}.gltf`));
-  for (const [rel, file] of Object.entries(gltf.include ?? {})) total += await download(file.url, join(dir, rel));
+  for (const [rel, file] of Object.entries(gltf.include ?? {}))
+    total += await download(file.url, join(dir, rel));
   console.log(`model ${id}`);
 }
 for (const [id, { resolution, maps }] of Object.entries(manifest.materials)) {
