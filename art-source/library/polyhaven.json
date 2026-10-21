@@ -1,0 +1,169 @@
+{
+  "_about": "Third-party library assets for Episode 1, re-downloaded by `npm run fetch-library` into art-source/library/ (git-ignored). Every entry is also a row in docs/production/asset-tracker.csv.",
+  "source": "Poly Haven (https://polyhaven.com)",
+  "licence": "CC0 1.0",
+  "models": {
+    "Lantern_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "chinese_armchair": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "chinese_cabinet": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "chinese_console_table": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "chinese_stool": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "mantel_clock_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "old_bed_frame": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "vintage_oil_lamp": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "vintage_suitcase": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "WoodenTable_02": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "book_encyclopedia_set_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "brass_candleholders": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "brass_vase_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "ceramic_vase_02": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "jug_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "pot_enamel_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "fancy_picture_frame_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "hanging_picture_frame_02": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "standing_picture_frame_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "wicker_basket_01": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "potted_plant_02": {
+      "resolution": "1k",
+      "format": "gltf"
+    },
+    "wooden_candlestick": {
+      "resolution": "1k",
+      "format": "gltf"
+    }
+  },
+  "materials": {
+    "floor_tiles_06": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "yellow_plaster": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "dark_wooden_planks": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "dark_wood": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "teak_veneer": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "wood_table_worn": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "rough_linen": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "fabric_pattern_07": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "col_1",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    },
+    "quatrefoil_jacquard_fabric": {
+      "resolution": "2k",
+      "maps": {
+        "BC": "Diffuse",
+        "N": "nor_gl",
+        "ORM": "arm"
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@ import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsShapeBox, PhysicsShapeMesh } from "@babylonjs/core/Physics/v2/physicsShape";
@@ -22,6 +22,8 @@ export interface LevelMarker {
   /** Direction the node's forward axis (Blender +Y) points, as a yaw in radians. */
   yaw: number;
   extras: Extras;
+  /** The node itself, e.g. to highlight an interactable or animate it. */
+  node: TransformNode;
 }
 
 export interface Level {
@@ -30,6 +32,9 @@ export interface Level {
   /** Patrol routes by id, nodes in order. */
   patrols: Map<string, LevelMarker[]>;
   interactables: LevelMarker[];
+  /** `marker_` anchors for scripts (a lamp, a clock) and `light_flame_` positions, by id. */
+  markers: Map<string, LevelMarker>;
+  flames: Map<string, LevelMarker>;
   colliders: { name: string; shape: "box" | "mesh"; surface: Surface }[];
   /** Problems found while building, for the spike panel and the console. */
   warnings: string[];
@@ -46,7 +51,8 @@ export function extrasOf(node: Node): Extras {
 /**
  * Turns named nodes from a loaded area into game objects (TDD section 7.1).
  * This first version, from Spike S3, handles `col_`, `ladder_`, `spawn_`,
- * `patrol_` and `interact_`; the other prefixes are reported and left for Phase 3.
+ * `patrol_`, `interact_`, `marker_` and `light_flame_` (positions only; the area
+ * makes the lights); the other prefixes are reported and left for Phase 3.
  *
  * Colliders are rebuilt in world space rather than attached to the imported
  * meshes: the glTF loader mirrors the scene into Babylon's left-handed space
@@ -58,6 +64,8 @@ export function buildLevel(scene: Scene, nodes: readonly Node[]): Level {
     ladders: [],
     patrols: new Map(),
     interactables: [],
+    markers: new Map(),
+    flames: new Map(),
     colliders: [],
     warnings: [],
   };
@@ -71,7 +79,8 @@ export function buildLevel(scene: Scene, nodes: readonly Node[]): Level {
 
     switch (parsed.kind) {
       case "col": {
-        if (!(node instanceof Mesh)) {
+        // Identical boxes share one mesh after optimising, so some arrive as instances.
+        if (!(node instanceof AbstractMesh)) {
           level.warnings.push(`${node.name}: col_ node has no mesh`);
           break;
         }
@@ -102,6 +111,12 @@ export function buildLevel(scene: Scene, nodes: readonly Node[]): Level {
       case "interact":
         level.interactables.push(marker(node as TransformNode, extras));
         break;
+      case "marker":
+        level.markers.set(parsed.id, marker(node as TransformNode, extras));
+        break;
+      case "light_flame":
+        level.flames.set(parsed.id, marker(node as TransformNode, extras));
+        break;
       default:
         unsupported.add(parsed.kind);
     }
@@ -127,6 +142,7 @@ function marker(node: TransformNode, extras: Extras): LevelMarker {
     position: node.getAbsolutePosition().clone(),
     yaw: Math.atan2(forward.x, forward.z),
     extras,
+    node,
   };
 }
 
@@ -145,7 +161,7 @@ function ladderFrom(mesh: Mesh, extras: Extras): Ladder | null {
 }
 
 /** Static collider in world space; box shapes for boxes, triangle meshes otherwise. */
-function addCollider(scene: Scene, mesh: Mesh, surface: Surface): "box" | "mesh" {
+function addCollider(scene: Scene, mesh: AbstractMesh, surface: Surface): "box" | "mesh" {
   const positions = mesh.getVerticesData(VertexBuffer.PositionKind) ?? [];
   const world = mesh.getWorldMatrix();
   const anchor = new TransformNode(`${mesh.name}_body`, scene);

@@ -12,6 +12,10 @@ art-export/*
 art-source/blender/spikes/
 art-source/textures/s3/
 
+# Library assets: re-downloaded by `npm run fetch-library` from the committed manifest
+art-source/library/*
+!art-source/library/polyhaven.json
+
 # Reference images are for study only and may be copyrighted
 art-source/reference/*
 !art-source/reference/README.md
