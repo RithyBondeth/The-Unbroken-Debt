@@ -222,6 +222,773 @@ function portrait() {
   return canvasPage(768, 1024, paintPortrait, { src, crop: [1474, 668, 292, 392] });
 }
 
+/**
+ * The family's photographs on the hall wall, three prints side by side in one
+ * map (the group on the left half, a quarter each for the others): the whole
+ * family before their house, the mother,
+ * and the eldest daughter, from the same 1921 Busy autochrome as Sok's portrait.
+ * Cheaper prints than his and older, faded to the colour of weak tea, the
+ * group one water-stained where the roof leaked onto the wall.
+ */
+function paintFamilyPrints(ctx, W, H, data) {
+  const imgs = data.srcs.map((src) => {
+    const img = new Image();
+    img.src = src;
+    return img;
+  });
+  Promise.all(
+    imgs.map((img) => new Promise((done) => (img.complete ? done() : (img.onload = done)))),
+  ).then(() => {
+    data.tiles.forEach(({ crop, x: x0, w: tw, src = 0, fade, oval }, k) => {
+      const img = imgs[src];
+      const r = rng(1930 + k);
+      // The mount: cheap grey-brown card.
+      ctx.fillStyle = "#c9bc9f";
+      ctx.fillRect(x0, 0, tw, H);
+      // The print, fitted to the crop's shape inside a margin.
+      const [, , cw, ch] = crop;
+      const room = [tw * 0.84, H * 0.84];
+      const s = Math.min(room[0] / cw, room[1] / ch);
+      const pw = Math.round(cw * s),
+        ph = Math.round(ch * s);
+      const px = Math.round(x0 + (tw - pw) / 2),
+        py = Math.round(H * 0.06 + (room[1] - ph) / 2);
+      const print = silverPrint(
+        img,
+        crop,
+        pw,
+        ph,
+        fade ?? 0.4 + 0.1 * k,
+        oval ?? (k === 0 ? 0 : 1),
+        77 + k,
+      );
+      ctx.drawImage(print, px, py);
+      // Foxing, a water stain on the group, scratches.
+      for (let j = 0; j < 18; j++) {
+        const fx = x0 + r(0, tw),
+          fy = r(0, H),
+          fs = r(1.5, 6);
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fs * 2);
+        g.addColorStop(0, "rgba(120,80,40,0.5)");
+        g.addColorStop(1, "rgba(120,80,40,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(fx - fs * 2, fy - fs * 2, fs * 4, fs * 4);
+      }
+      if (k === 0) {
+        ctx.filter = "blur(3px)";
+        ctx.strokeStyle = "rgba(110,72,35,0.3)";
+        ctx.lineWidth = 4;
+        ctx.fillStyle = "rgba(150,105,55,0.2)";
+        ctx.beginPath();
+        ctx.moveTo(x0 + tw * 0.55, 0);
+        for (let a = 0; a <= 20; a++)
+          ctx.lineTo(
+            x0 + tw * (0.55 + 0.4 * (a / 20)) + r(-6, 6),
+            H * (0.18 + 0.25 * Math.sin((a / 20) * Math.PI)) + r(-6, 6),
+          );
+        ctx.lineTo(x0 + tw, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.filter = "none";
+      }
+      ctx.strokeStyle = "rgba(245,236,214,0.3)";
+      for (let j = 0; j < 6; j++) {
+        ctx.lineWidth = r(0.5, 1.2);
+        ctx.beginPath();
+        const sx = x0 + r(0, tw),
+          sy = r(0, H),
+          a = r(-0.5, 0.5) + Math.PI / 2;
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + Math.cos(a) * r(20, 120), sy + Math.sin(a) * r(20, 120));
+        ctx.stroke();
+      }
+      // The card darkens towards its edges.
+      const edge = ctx.createRadialGradient(
+        x0 + tw / 2,
+        H / 2,
+        tw * 0.3,
+        x0 + tw / 2,
+        H / 2,
+        tw * 0.9,
+      );
+      edge.addColorStop(0, "rgba(0,0,0,0)");
+      edge.addColorStop(1, "rgba(80,52,22,0.4)");
+      ctx.fillStyle = edge;
+      ctx.fillRect(x0, 0, tw, H);
+    });
+  });
+}
+
+/**
+ * A toned silver print of `crop` from `img`, `pw` x `ph`: orthochromatic (reds
+ * print dark), soft, grainy, faded towards the paper by `fade` (0..1); `oval` 1
+ * vignettes it like a studio portrait, 0 fades only its edges.
+ */
+function silverPrint(img, crop, pw, ph, fade, oval, seed) {
+  const off = document.createElement("canvas");
+  off.width = pw;
+  off.height = ph;
+  const o = off.getContext("2d", { willReadFrequently: true });
+  o.filter = "blur(1.3px)";
+  o.drawImage(img, crop[0], crop[1], crop[2], crop[3], 0, 0, pw, ph);
+  o.filter = "none";
+  const photo = o.getImageData(0, 0, pw, ph),
+    p = photo.data;
+  const grain = noise(pw, ph, 1.5, seed, 2);
+  const blotch = noise(pw, ph, 90, seed + 1, 3);
+  const dark = [52, 36, 22],
+    mid = [140, 104, 66],
+    light = [226, 208, 172];
+  for (let y = 0; y < ph; y++) {
+    for (let x = 0; x < pw; x++) {
+      const i = (y * pw + x) * 4;
+      let L = (0.12 * p[i] + 0.52 * p[i + 1] + 0.36 * p[i + 2]) / 255;
+      L = clamp((L - 0.1) / 0.82);
+      L = L < 0.5 ? 2 * L * L : 1 - 2 * (1 - L) * (1 - L);
+      L += (grain[y * pw + x] - 0.5) * 0.18 + (blotch[y * pw + x] - 0.5) * 0.14;
+      L = lerp(L, 0.8, fade);
+      const dx = (x - pw / 2) / (pw * 0.46),
+        dy = (y - ph * 0.48) / (ph * 0.48);
+      const v = oval
+        ? smooth(0.8, 1.05, Math.sqrt(dx * dx + dy * dy))
+        : smooth(0.86, 1.0, Math.max(Math.abs(dx), Math.abs(dy)));
+      L = lerp(L, 0.86, v);
+      const c = L < 0.5 ? mix3(dark, mid, L / 0.5) : mix3(mid, light, (L - 0.5) / 0.5);
+      p[i] = c[0];
+      p[i + 1] = c[1];
+      p[i + 2] = c[2];
+      p[i + 3] = 255;
+    }
+  }
+  o.putImageData(photo, 0, 0);
+  return off;
+}
+
+function familyPrints() {
+  const srcs = [
+    "Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg",
+    "Un_bonze_revenant_de_la_quete_A35898.jpg",
+  ].map((file) => `data:image/jpeg;base64,${readFileSync(join(ARCHIVE, file)).toString("base64")}`);
+  // The group, the mother, the eldest daughter (pixels in the 2560 x 1898 original of
+  // A36130), and a young monk on the steps of Angkor Wat (A35898, 1519 x 2048), kept
+  // high on the wall by the altar; where each goes in the map: u 0-0.4, 0.4-0.6,
+  // 0.6-0.8, 0.8-1.
+  const tiles = [
+    { crop: [845, 691, 1408, 973], x: 0, w: 1024 },
+    { crop: [1140, 745, 340, 450], x: 1024, w: 512 },
+    { crop: [1950, 810, 290, 390], x: 1536, w: 512 },
+    { crop: [91, 91, 1365, 1877], x: 2048, w: 512, src: 1, fade: 0.35, oval: 0 },
+  ];
+  return canvasPage(2560, 716, paintFamilyPrints, { srcs, tiles }, [silverPrint]);
+}
+
+/**
+ * Papers in the hall, one map (pixel rectangles in HOUSE_PAPERS): a Chinese
+ * merchant's give-away calendar for 1932 open at July, a head-tax receipt of the
+ * Protectorate (the impôt personnel every adult man paid, a sore point of the
+ * time) with the payer's thumbprint, and the primary-school certificate of the
+ * Franco-Khmer schools, which Sok kept framed. French in print as the forms were;
+ * the Khmer lines are in the KHMER list (tools/drawings/ep1.mjs) for review.
+ */
+function paintHousePapers(ctx, W, H, data) {
+  const draw = () => {
+    const r = rng(1932);
+    const K = data.khmer;
+    // Unused corners of the map: dark, so nothing pale bleeds into the papers' edges.
+    ctx.fillStyle = "#3a2e22";
+    ctx.fillRect(0, 0, W, H);
+    const toKhmer = (n) => String(n).replace(/[0-9]/g, (d) => "០១២៣៤៥៦៧៨៩"[d]);
+    const text = (t, x, y, size, opts = {}) => {
+      ctx.save();
+      ctx.font = `${opts.weight || ""} ${size}px ${opts.font || "Georgia, serif"}`;
+      ctx.fillStyle = opts.color || "rgba(38,28,20,0.92)";
+      ctx.textAlign = opts.align || "center";
+      ctx.textBaseline = "alphabetic";
+      if (opts.spacing) ctx.letterSpacing = `${opts.spacing}px`;
+      ctx.fillText(t, x, y);
+      ctx.restore();
+    };
+    const paper = ([x, y, w, h], base, seed) => {
+      ctx.fillStyle = base;
+      ctx.fillRect(x, y, w, h);
+      const n = noise(w, h, 60, seed, 4),
+        img = ctx.getImageData(x, y, w, h),
+        p = img.data;
+      for (let i = 0; i < w * h; i++) {
+        const f = 0.9 + 0.2 * n[i];
+        p[i * 4] *= f;
+        p[i * 4 + 1] *= f;
+        p[i * 4 + 2] *= f * 0.97;
+      }
+      ctx.putImageData(img, x, y);
+    };
+    const age = ([x, y, w, h], k) => {
+      // Mildew and fly specks, browned edges, a tide-mark of damp.
+      for (let j = 0; j < 40 * k; j++) {
+        const fx = x + r(0, w),
+          fy = y + r(0, h),
+          fs = r(0.8, 3.5);
+        ctx.fillStyle = `rgba(60,45,30,${r(0.2, 0.6)})`;
+        ctx.beginPath();
+        ctx.arc(fx, fy, fs, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (let j = 0; j < 6 * k; j++) {
+        const fx = x + r(0, w),
+          fy = y + r(0, h),
+          fs = r(10, 40);
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fs);
+        g.addColorStop(0, "rgba(110,95,60,0.22)");
+        g.addColorStop(1, "rgba(110,95,60,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(fx - fs, fy - fs, fs * 2, fs * 2);
+      }
+      const e = ctx.createRadialGradient(
+        x + w / 2,
+        y + h / 2,
+        Math.min(w, h) * 0.35,
+        x + w / 2,
+        y + h / 2,
+        Math.max(w, h) * 0.75,
+      );
+      e.addColorStop(0, "rgba(0,0,0,0)");
+      e.addColorStop(1, "rgba(95,62,25,0.45)");
+      ctx.fillStyle = e;
+      ctx.fillRect(x, y, w, h);
+    };
+
+    // ---- The calendar.
+    const C = data.calendar,
+      [cx, cy, cw, ch] = C;
+    paper(C, "#e6dcc4", 11);
+    ctx.fillStyle = "#8e2a20";
+    ctx.fillRect(cx, cy, cw, ch * 0.09);
+    text("MAISON TAN HONG & Cie", cx + cw / 2, cy + ch * 0.045, cw * 0.05, {
+      color: "#e8c67a",
+      weight: "bold",
+      spacing: 2,
+    });
+    text(
+      "BATTAMBANG  ·  Riz  ·  Tissus  ·  Pétrole  ·  Quincaillerie",
+      cx + cw / 2,
+      cy + ch * 0.075,
+      cw * 0.027,
+      { color: "#e8c67a" },
+    );
+    // A lithograph: rice fields and sugar palms at evening, the colours run.
+    const [px, py, pw, ph] = [cx + cw * 0.07, cy + ch * 0.11, cw * 0.86, ch * 0.36];
+    const sky = ctx.createLinearGradient(0, py, 0, py + ph);
+    sky.addColorStop(0, "#c98a5a");
+    sky.addColorStop(0.55, "#e2b77a");
+    sky.addColorStop(0.56, "#7d8a52");
+    sky.addColorStop(1, "#4f5e36");
+    ctx.fillStyle = sky;
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = "rgba(230,200,140,0.5)";
+    for (let j = 0; j < 9; j++) {
+      ctx.beginPath();
+      ctx.moveTo(px, py + ph * (0.6 + j * 0.045));
+      ctx.lineTo(px + pw, py + ph * (0.58 + j * 0.05));
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#2c2a1c";
+    for (let j = 0; j < 7; j++) {
+      const tx = px + pw * (0.08 + j * 0.14 + r(-0.03, 0.03)),
+        top = py + ph * r(0.12, 0.3);
+      ctx.fillRect(tx - 2, top, 4, py + ph * 0.56 - top);
+      for (let f = 0; f < 18; f++) {
+        const a = (f / 18) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(tx, top);
+        ctx.lineTo(tx + Math.cos(a) * pw * 0.05, top + Math.sin(a) * ph * 0.08);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#2c2a1c";
+        ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = "rgba(40,28,20,0.8)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px, py, pw, ph);
+    text(K.calendar, cx + cw / 2, cy + ch * 0.54, cw * 0.075, {
+      font: "Preahvihear",
+      color: "#8e2a20",
+    });
+    text("CALENDRIER 1932", cx + cw / 2, cy + ch * 0.585, cw * 0.045, {
+      weight: "bold",
+      spacing: 3,
+    });
+    text("JUILLET", cx + cw / 2, cy + ch * 0.65, cw * 0.1, {
+      weight: "bold",
+      color: "#8e2a20",
+      spacing: 4,
+    });
+    const days = ["L", "M", "M", "J", "V", "S", "D"];
+    const gx = cx + cw * 0.08,
+      gw = (cw * 0.84) / 7,
+      gy = cy + ch * 0.7,
+      gh = ch * 0.05;
+    days.forEach((d, i) =>
+      text(d, gx + gw * (i + 0.5), gy, cw * 0.035, {
+        weight: "bold",
+        color: i === 6 ? "#8e2a20" : undefined,
+      }),
+    );
+    for (let day = 1; day <= 31; day++) {
+      const i = day - 1 + 4; // 1 July 1932 was a Friday
+      const col = i % 7,
+        row = Math.floor(i / 7);
+      const x = gx + gw * (col + 0.5),
+        y = gy + gh * (row + 1);
+      text(String(day), x, y, cw * 0.045, { color: col === 6 ? "#8e2a20" : undefined });
+      text(toKhmer(day), x, y + gh * 0.36, cw * 0.022, {
+        font: "Preahvihear",
+        color: "rgba(60,45,30,0.75)",
+      });
+    }
+    // Days crossed off in pencil, up to the 14th.
+    ctx.strokeStyle = "rgba(50,45,45,0.5)";
+    ctx.lineWidth = 2;
+    for (let day = 1; day <= 14; day++) {
+      const i = day - 1 + 4,
+        x = gx + gw * ((i % 7) + 0.5),
+        y = gy + gh * (Math.floor(i / 7) + 1);
+      ctx.beginPath();
+      ctx.moveTo(x - gw * 0.3, y - gh * 0.5);
+      ctx.lineTo(x + gw * 0.3, y + gh * 0.1);
+      ctx.stroke();
+    }
+    age(C, 2);
+
+    // ---- The tax receipt.
+    const T = data.receipt,
+      [tx, ty, tw, th] = T;
+    paper(T, "#cfd3bd", 12);
+    ctx.strokeStyle = "rgba(40,50,40,0.85)";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(tx + 14, ty + 14, tw - 28, th - 28);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(tx + 22, ty + 22, tw - 44, th - 44);
+    const L = tx + 44;
+    text("PROTECTORAT DU CAMBODGE", tx + tw / 2, ty + th * 0.1, tw * 0.044, {
+      weight: "bold",
+      spacing: 1,
+    });
+    text(K.kingdom, tx + tw / 2, ty + th * 0.17, tw * 0.05, { font: "Preahvihear" });
+    text("IMPÔT PERSONNEL", tx + tw / 2, ty + th * 0.26, tw * 0.075, {
+      weight: "bold",
+      spacing: 3,
+    });
+    text("Exercice 1931  —  N° 004517", tx + tw / 2, ty + th * 0.31, tw * 0.04);
+    const field = (label, y, value) => {
+      text(label, L, ty + th * y, tw * 0.042, { align: "left" });
+      ctx.strokeStyle = "rgba(40,50,40,0.5)";
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(L + tw * 0.32, ty + th * y + 4);
+      ctx.lineTo(tx + tw - 44, ty + th * y + 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if (value)
+        text(value, L + tw * 0.36, ty + th * y - 2, tw * 0.06, {
+          align: "left",
+          font: "PatrickHand",
+          color: "rgba(30,35,80,0.85)",
+        });
+    };
+    field("Khêt :", 0.4, "Battambang");
+    field("Srok :", 0.47, "Sangkè");
+    field("Nom :", 0.54, "Sok");
+    field("Somme :", 0.61, "2 $ 50");
+    field("Reçu le :", 0.68, "12 mars 1931");
+    // The payer's thumbprint, and the Résidence's stamp half over the signature.
+    const fx = tx + tw * 0.27,
+      fy = ty + th * 0.84;
+    ctx.strokeStyle = "rgba(40,30,60,0.55)";
+    ctx.lineWidth = 1.6;
+    for (let j = 1; j < 14; j++) {
+      ctx.beginPath();
+      ctx.ellipse(
+        fx,
+        fy,
+        j * 2.6,
+        j * 3.4,
+        0.2,
+        Math.PI * 0.05 * r(0, 3),
+        Math.PI * (1.6 + r(0, 0.35)),
+      );
+      ctx.stroke();
+    }
+    const sx = tx + tw * 0.68,
+      sy = ty + th * 0.84;
+    ctx.strokeStyle = "rgba(150,40,40,0.75)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(sx, sy, tw * 0.13, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, tw * 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    text("RÉSIDENCE", sx, sy - 4, tw * 0.03, { color: "rgba(150,40,40,0.8)", weight: "bold" });
+    text("BATTAMBANG", sx, sy + tw * 0.04, tw * 0.03, {
+      color: "rgba(150,40,40,0.8)",
+      weight: "bold",
+    });
+    ctx.strokeStyle = "rgba(30,35,80,0.7)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sx - tw * 0.18, sy + 10);
+    for (let j = 0; j < 12; j++) ctx.lineTo(sx - tw * 0.18 + j * tw * 0.03, sy + 10 + r(-14, 14));
+    ctx.stroke();
+    age(T, 1);
+
+    // ---- The certificate.
+    const S = data.certificate,
+      [ex, ey, ew, eh] = S;
+    paper(S, "#ece2c8", 13);
+    ctx.strokeStyle = "rgba(90,60,30,0.85)";
+    for (const [inset, wdt] of [
+      [18, 6],
+      [32, 1.5],
+      [40, 1],
+    ]) {
+      ctx.lineWidth = wdt;
+      ctx.strokeRect(ex + inset, ey + inset, ew - inset * 2, eh - inset * 2);
+    }
+    // A plain geometric band of lozenges inside the border.
+    ctx.fillStyle = "rgba(90,60,30,0.6)";
+    for (let j = 0; j < 30; j++) {
+      for (const [bx, by] of [
+        [ex + 50 + ((ew - 100) * j) / 29, ey + 25],
+        [ex + 50 + ((ew - 100) * j) / 29, ey + eh - 25],
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 5);
+        ctx.lineTo(bx + 5, by);
+        ctx.lineTo(bx, by + 5);
+        ctx.lineTo(bx - 5, by);
+        ctx.fill();
+      }
+    }
+    const mid = ex + ew / 2;
+    text("GOUVERNEMENT GÉNÉRAL DE L'INDOCHINE", mid, ey + eh * 0.1, ew * 0.035, { spacing: 1 });
+    text("PROTECTORAT DU CAMBODGE", mid, ey + eh * 0.14, ew * 0.035, { spacing: 1 });
+    text("Enseignement franco-cambodgien", mid, ey + eh * 0.19, ew * 0.04, {
+      font: "Georgia, serif",
+    });
+    text("CERTIFICAT", mid, ey + eh * 0.3, ew * 0.1, {
+      weight: "bold",
+      spacing: 6,
+      color: "rgba(60,35,20,0.95)",
+    });
+    text("D'ÉTUDES PRIMAIRES ÉLÉMENTAIRES", mid, ey + eh * 0.355, ew * 0.035, {
+      weight: "bold",
+      spacing: 1,
+    });
+    text(K.certificate, mid, ey + eh * 0.42, ew * 0.055, {
+      font: "Preahvihear",
+      color: "rgba(60,35,20,0.9)",
+    });
+    const lines = [
+      ["Le Résident de France à Battambang certifie que", null],
+      ["l'élève", "Sok"],
+      ["de l'école de", "Battambang"],
+      ["a subi avec succès les épreuves", null],
+      ["de la session de", "juin 1907"],
+    ];
+    lines.forEach(([label, value], j) => {
+      const y = ey + eh * (0.52 + j * 0.065);
+      if (value) {
+        text(label, ex + ew * 0.44, y, ew * 0.036, { align: "right" });
+        text(value, ex + ew * 0.48, y, ew * 0.058, {
+          align: "left",
+          font: "PatrickHand",
+          color: "rgba(30,30,70,0.85)",
+        });
+      } else text(label, mid, y, ew * 0.038, { font: "Georgia, serif" });
+    });
+    text("Battambang, le 30 juin 1907", ex + ew * 0.62, ey + eh * 0.86, ew * 0.032);
+    ctx.strokeStyle = "rgba(30,30,70,0.7)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ex + ew * 0.52, ey + eh * 0.9);
+    for (let j = 0; j < 14; j++)
+      ctx.lineTo(ex + ew * 0.52 + j * ew * 0.018, ey + eh * 0.9 + r(-10, 10));
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(120,50,40,0.6)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(ex + ew * 0.22, ey + eh * 0.88, ew * 0.08, 0, Math.PI * 2);
+    ctx.stroke();
+    // Water got behind the glass once: a tide-mark across the lower corner.
+    ctx.save();
+    ctx.filter = "blur(4px)";
+    ctx.fillStyle = "rgba(140,105,60,0.22)";
+    ctx.beginPath();
+    ctx.moveTo(ex, ey + eh * 0.7);
+    for (let j = 0; j <= 20; j++)
+      ctx.lineTo(
+        ex + ew * 0.45 * (j / 20),
+        ey + eh * (0.7 + 0.3 * Math.sin((j / 20) * Math.PI * 0.5)) + r(-8, 8),
+      );
+    ctx.lineTo(ex, ey + eh);
+    ctx.fill();
+    ctx.restore();
+    age(S, 1);
+  };
+  Promise.all(["40px Preahvihear", "40px PatrickHand"].map((f) => document.fonts.load(f))).then(
+    draw,
+  );
+}
+
+/**
+ * A candle or wick flame for every flame card (khmer.flame, the held lamp): a
+ * teardrop drawn soft, orange at the rim, yellow, a pale core over the wick and a
+ * little blue where it meets the wick; alpha fades it into the air. The colour is
+ * the light (emission); the game flickers the cards' size.
+ */
+function paintFlame(ctx, W, H) {
+  const drop = (cx, base, w, h) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, base - h);
+    ctx.bezierCurveTo(
+      cx + w * 0.12,
+      base - h * 0.62,
+      cx + w * 0.55,
+      base - h * 0.32,
+      cx + w * 0.48,
+      base - h * 0.1,
+    );
+    ctx.bezierCurveTo(
+      cx + w * 0.42,
+      base + h * 0.02,
+      cx - w * 0.42,
+      base + h * 0.02,
+      cx - w * 0.48,
+      base - h * 0.1,
+    );
+    ctx.bezierCurveTo(cx - w * 0.55, base - h * 0.32, cx - w * 0.12, base - h * 0.62, cx, base - h);
+    ctx.fill();
+  };
+  ctx.clearRect(0, 0, W, H);
+  const cx = W / 2,
+    base = H * 0.95;
+  for (const [w, h, colour, blur] of [
+    [W * 0.95, H * 0.92, "rgba(255,110,25,0.45)", W * 0.08],
+    [W * 0.78, H * 0.85, "rgba(255,150,40,0.85)", W * 0.05],
+    [W * 0.6, H * 0.72, "rgba(255,200,90,0.95)", W * 0.04],
+    [W * 0.4, H * 0.5, "rgba(255,240,190,1)", W * 0.03],
+  ]) {
+    ctx.filter = `blur(${blur}px)`;
+    ctx.fillStyle = colour;
+    drop(cx, base, w, h);
+  }
+  // Blue at the root, and the dark wick showing through it.
+  ctx.filter = `blur(${W * 0.03}px)`;
+  ctx.fillStyle = "rgba(90,120,255,0.35)";
+  drop(cx, base, W * 0.42, H * 0.16);
+  ctx.filter = "none";
+  ctx.fillStyle = "rgba(40,20,10,0.8)";
+  ctx.fillRect(cx - W * 0.025, base - H * 0.1, W * 0.05, H * 0.1);
+}
+
+/**
+ * A page of Sok's notes, found by the ash circle under the house: cheap lined
+ * paper in his hand, the word for debt at the top, the years of the payments down
+ * the side (1911 the pact, 1920 Kanha, 1932 now) with scratched-out lines after
+ * each, 1932 ringed again and again. One corner burnt away. The Khmer is in the
+ * KHMER list (tools/drawings/ep1.mjs) for review.
+ */
+function paintSokNotes(ctx, W, H, data) {
+  const draw = () => {
+    const r = rng(1932 + 7);
+    ctx.fillStyle = "#d9cfb2";
+    ctx.fillRect(0, 0, W, H);
+    mottle(ctx, W, H, 50, 21, 0.25);
+    ctx.strokeStyle = "rgba(90,110,140,0.35)";
+    ctx.lineWidth = 1.5;
+    for (let y = H * 0.16; y < H; y += H * 0.065) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    const ink = "rgba(25,22,40,0.88)";
+    ctx.fillStyle = ink;
+    ctx.textBaseline = "alphabetic";
+    ctx.font = `${Math.round(W * 0.16)}px Freehand`;
+    ctx.fillText(data.debt, W * 0.1, H * 0.13);
+    const scribble = (x, y, w) => {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let t = 0; t < w; t += 6) ctx.lineTo(x + t, y + r(-7, 5) - (t % 18 < 9 ? 4 : 0));
+      ctx.stroke();
+    };
+    data.years.forEach((year, i) => {
+      const y = H * (0.3 + i * 0.22);
+      ctx.font = `${Math.round(W * 0.1)}px Freehand`;
+      ctx.fillStyle = ink;
+      ctx.fillText(year, W * 0.08, y);
+      for (let line = 0; line < 2; line++)
+        scribble(W * 0.42, y - 6 + line * H * 0.06, W * r(0.3, 0.45));
+      // Each line struck through, harder each time.
+      ctx.strokeStyle = "rgba(25,22,40,0.7)";
+      ctx.lineWidth = 2 + i;
+      ctx.beginPath();
+      ctx.moveTo(W * 0.4, y + H * 0.02);
+      ctx.lineTo(W * 0.92, y - H * 0.03);
+      ctx.stroke();
+    });
+    // 1932, ringed over and over in brown-red ink that has run.
+    const y = H * (0.3 + 2 * 0.22) - H * 0.03;
+    ctx.strokeStyle = "rgba(110,30,20,0.75)";
+    for (let k = 0; k < 6; k++) {
+      ctx.lineWidth = r(1.5, 3);
+      ctx.beginPath();
+      ctx.ellipse(
+        W * 0.27 + r(-3, 3),
+        y + r(-3, 3),
+        W * r(0.23, 0.26),
+        H * r(0.05, 0.065),
+        r(-0.15, 0.15),
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(110,30,20,0.6)";
+    for (let k = 0; k < 3; k++)
+      ctx.fillRect(W * r(0.1, 0.35), y + H * 0.06, 2.5, H * r(0.04, 0.12));
+    // The corner burnt off: char, a brown scorch, then nothing.
+    const g = ctx.createRadialGradient(W, H, W * 0.2, W, H, W * 0.55);
+    g.addColorStop(0, "rgba(10,8,6,1)");
+    g.addColorStop(0.55, "rgba(20,12,6,1)");
+    g.addColorStop(0.75, "rgba(90,50,20,0.7)");
+    g.addColorStop(1, "rgba(120,80,40,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.moveTo(W, H * 0.7);
+    for (let t = 0; t <= 1; t += 0.05)
+      ctx.lineTo(
+        W - W * 0.38 * Math.sin((t * Math.PI) / 2) + r(-8, 8),
+        H * 0.7 + H * 0.3 * t + r(-8, 8),
+      );
+    ctx.lineTo(W, H);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    hardAlpha(ctx, W, H, 110);
+  };
+  document.fonts.load("40px Freehand").then(draw);
+}
+
+/**
+ * A shadow form of the Neak Ta (story bible, rule 16: all shadows are its
+ * forms), for the glimpses in Act I: taller than a man, thin, arms hanging past
+ * the knees, the head tilted; black, its edges soft and the feet coming apart
+ * into smoke. Alpha only matters: the game draws it unlit, black.
+ */
+function paintShadowFigure(ctx, W, H) {
+  const r = rng(16);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#000";
+  ctx.strokeStyle = "#000";
+  ctx.lineCap = "round";
+  const stroke = (pts, w0, w1) => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      ctx.lineWidth = w0 + ((w1 - w0) * i) / Math.max(1, pts.length - 2);
+      ctx.beginPath();
+      ctx.moveTo(...pts[i]);
+      ctx.lineTo(...pts[i + 1]);
+      ctx.stroke();
+    }
+  };
+  const cx = W / 2;
+  ctx.filter = `blur(${W * 0.01}px)`;
+  // A hunched back and shoulders, the head hung forward and to one side.
+  ctx.beginPath();
+  ctx.moveTo(cx - W * 0.24, H * 0.3);
+  ctx.bezierCurveTo(cx - W * 0.2, H * 0.19, cx + W * 0.05, H * 0.15, cx + W * 0.22, H * 0.27);
+  ctx.lineTo(cx + W * 0.17, H * 0.42);
+  ctx.lineTo(cx - W * 0.18, H * 0.42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + W * 0.06, H * 0.155, W * 0.075, H * 0.05, 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  // Long hair hanging from the head over the shoulders and chest.
+  for (let k = 0; k < 36; k++) {
+    const x0 = cx + W * (0.0 + r(-0.06, 0.12)),
+      y0 = H * r(0.13, 0.18);
+    const len = H * r(0.2, 0.34),
+      sway = W * r(-0.05, 0.05);
+    stroke(
+      [
+        [x0, y0],
+        [x0 + sway * 0.5, y0 + len * 0.5],
+        [x0 + sway, y0 + len],
+      ],
+      W * r(0.012, 0.025),
+      W * 0.004,
+    );
+  }
+  // A robe gone to rags: narrow at the chest, ragged at the hem.
+  ctx.beginPath();
+  ctx.moveTo(cx - W * 0.17, H * 0.4);
+  ctx.lineTo(cx + W * 0.16, H * 0.4);
+  ctx.lineTo(cx + W * 0.2, H * 0.78);
+  const tatters = 9;
+  for (let k = 0; k <= tatters; k++) {
+    const x = cx + W * 0.2 - (W * 0.4 * k) / tatters;
+    ctx.lineTo(x + W * 0.02, H * (0.8 + r(0.02, 0.12)));
+    ctx.lineTo(x - W * 0.02, H * (0.76 + r(0, 0.03)));
+  }
+  ctx.lineTo(cx - W * 0.2, H * 0.78);
+  ctx.closePath();
+  ctx.fill();
+  // Arms hanging past the knees, bent wrong at the elbow, fingers curled.
+  for (const side of [-1, 1]) {
+    const sh = [cx + side * W * 0.2, H * 0.29];
+    const el = [cx + side * W * 0.3, H * 0.48];
+    const wr = [cx + side * W * 0.25, H * 0.7];
+    stroke([sh, el, wr], W * 0.06, W * 0.035);
+    for (let f = 0; f < 4; f++) {
+      const fx = wr[0] + side * W * (f * 0.012 - 0.015);
+      stroke(
+        [
+          [fx, wr[1]],
+          [fx + side * W * 0.01, wr[1] + H * (0.045 + r(0, 0.02))],
+          [fx - side * W * 0.012, wr[1] + H * (0.07 + r(0, 0.02))],
+        ],
+        W * 0.014,
+        W * 0.007,
+      );
+    }
+  }
+  // Below the hem it comes apart into smoke.
+  ctx.filter = `blur(${W * 0.035}px)`;
+  for (let k = 0; k < 50; k++) {
+    ctx.globalAlpha = r(0.15, 0.5);
+    ctx.beginPath();
+    ctx.ellipse(
+      cx + r(-0.18, 0.18) * W,
+      H * r(0.82, 0.98),
+      W * r(0.02, 0.07),
+      H * r(0.01, 0.04),
+      0,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.filter = "none";
+}
+
 // ------------------------------------------------------------------ leaves
 
 /**
@@ -920,9 +1687,11 @@ function paintPalmTrunk(ctx, W, H) {
 }
 
 /**
- * The storm sky, an equirectangular map (wraps left to right): low, heavy cloud
- * lit from within where the moon is hidden, paler towards the horizon, and the
- * village's far treeline of sugar palms, coconut palms and bamboo along it.
+ * The storm sky, an equirectangular map (wraps left to right): one low, heavy
+ * overcast of rain cloud at night, dark slate, its folds showing only as small
+ * changes of tone; a little lighter where the moon is hidden behind it and in the
+ * rain haze low down, so the village's far treeline of sugar palms, coconut palms
+ * and bamboo stands black against it. No stars and no moon: it is raining.
  */
 function paintSky(ctx, W, H) {
   const r = rng(77);
@@ -968,7 +1737,7 @@ function paintSky(ctx, W, H) {
   const img = ctx.createImageData(W, H),
     p = img.data;
   const moonU = 0.62,
-    moonV = 0.3;
+    moonV = 0.24;
   for (let y = 0; y < H; y++) {
     const v = y / H; // 0 at the zenith, 0.5 at the horizon
     for (let x = 0; x < W; x++) {
@@ -976,16 +1745,14 @@ function paintSky(ctx, W, H) {
       const wx = Math.floor((x + (warp[i] - 0.5) * 260 + W) % W);
       const wy = Math.min(H - 1, Math.max(0, Math.floor(y + (rolls[i] - 0.5) * 60)));
       const n = base[wy * W + wx];
-      // Dark cloud bellies, paler rims where the hidden moon catches the edges.
+      // The cloud's folds: faint rims where one layer rolls over another.
       const rim = smooth(0.48, 0.55, n) - smooth(0.6, 0.72, n);
-      const c = smooth(0.32, 0.78, n) * 0.85 + rim * 0.35;
-      // Lit from behind by the hidden moon, and by the distant lamps of the world near the horizon.
       let du = Math.abs(x / W - moonU);
       du = Math.min(du, 1 - du);
-      const moon = Math.exp(-((du * 3.2) ** 2 + ((v - moonV) * 5) ** 2));
+      const moon = Math.exp(-((du * 2.2) ** 2 + ((v - moonV) * 3.2) ** 2));
       const horizon = smooth(0.25, 0.5, v) * (1 - smooth(0.5, 0.56, v));
-      const light = 0.25 + 0.55 * c + 0.9 * moon * (0.4 + 0.6 * c) + 0.5 * horizon;
-      const col = mix3([22, 26, 34], [72, 80, 94], clamp(light * 0.55));
+      const light = clamp(0.2 * n + 0.15 * rim + moon * (0.25 + 0.3 * n) + 0.4 * horizon);
+      const col = mix3([7, 9, 14], [36, 41, 54], light);
       const below = smooth(0.5, 0.53, v);
       const out = mix3(col, [12, 13, 15], below);
       p[i * 4] = out[0];
@@ -1478,8 +2245,77 @@ function paintMilestone(ctx, W, H) {
   ctx.fillRect(0, 0, W, H);
 }
 
+/** Red betel-juice spat and spilled on stone: splashes and drips, dried dark at the edges. */
+function paintStains(ctx, W, H) {
+  const r = rng(151);
+  for (let k = 0; k < 14; k++) {
+    const x = r(W * 0.1, W * 0.9),
+      y = r(H * 0.1, H * 0.9),
+      s = r(10, 40);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, s);
+    g.addColorStop(0, "rgba(110,14,10,0.95)");
+    g.addColorStop(0.7, "rgba(80,12,8,0.9)");
+    g.addColorStop(1, "rgba(60,10,6,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for (let a = 0; a <= 24; a++) {
+      const t = (a / 24) * Math.PI * 2,
+        rr = s * (0.7 + 0.4 * r());
+      ctx.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr * 0.8);
+    }
+    ctx.fill();
+    for (let j = 0; j < 8; j++) {
+      ctx.fillStyle = `rgba(90,12,8,${r(0.6, 1)})`;
+      ctx.beginPath();
+      ctx.arc(x + r(-2.5, 2.5) * s, y + r(-2.5, 2.5) * s, r(1, 5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  hardAlpha(ctx, W, H, 100);
+}
+
 export const villageTextures = [
   { name: "photo_sok", file: "T_ep1_photo_sok_BC", size: [768, 1024], draw: portrait },
+  {
+    name: "flame",
+    file: "T_ep1_flame_BC",
+    size: [128, 256],
+    alpha: true,
+    draw: () => canvasPage(128, 256, paintFlame),
+  },
+  {
+    name: "sok_notes",
+    file: "T_ep1_sok_notes_BC",
+    size: [512, 720],
+    alpha: true,
+    draw: () =>
+      canvasPage(512, 720, paintSokNotes, { debt: "បំណុល", years: ["១៩១១", "១៩២០", "១៩៣២"] }),
+  },
+  {
+    name: "shadow_figure",
+    file: "T_ep1_shadow_figure_BC",
+    size: [256, 512],
+    alpha: true,
+    draw: () => canvasPage(256, 512, paintShadowFigure),
+  },
+  { name: "family_prints", file: "T_ep1_family_prints_BC", size: [2560, 716], draw: familyPrints },
+  {
+    name: "house_papers",
+    file: "T_ep1_house_papers_BC",
+    size: [2048, 1024],
+    // Rectangles (x, y, w, h) in pixels; ep1_area_village.py maps the same ones.
+    draw: () =>
+      canvasPage(2048, 1024, paintHousePapers, {
+        calendar: [0, 0, 640, 1024],
+        receipt: [640, 0, 512, 720],
+        certificate: [1152, 0, 716, 1024],
+        khmer: {
+          calendar: "ប្រតិទិន ១៩៣២",
+          kingdom: "ព្រះរាជាណាចក្រកម្ពុជា",
+          certificate: "សញ្ញាបត្របឋមសិក្សា",
+        },
+      }),
+  },
   {
     name: "leaf_banana",
     file: "T_ep1_leaf_banana_BC",
@@ -1614,5 +2450,12 @@ export const villageTextures = [
     file: "T_ep1_milestone_BC",
     size: [512, 256],
     draw: () => canvasPage(512, 256, paintMilestone),
+  },
+  {
+    name: "stains",
+    file: "T_ep1_stains_BC",
+    size: [512, 512],
+    alpha: true,
+    draw: () => canvasPage(512, 512, paintStains),
   },
 ];

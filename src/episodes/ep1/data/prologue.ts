@@ -15,7 +15,9 @@ export const ITEMS: Record<string, ItemInfo> = {
   letters: { name: "Yay Mey's letters", note: "Tied with red string. Unopened." },
   matches: { name: "Matchbox", note: "{n} matches" },
   sketchbook: { name: "Sketchbook" },
-  lamp: { name: "Hurricane lamp", note: "Full of kerosene." },
+  lamp: { name: "Hurricane lamp", note: "Raise it to read the gauge." },
+  oil: { name: "Lamp oil", note: "{n} bottles of kerosene" },
+  incense: { name: "Incense", note: "A bundle of four sticks" },
 };
 
 /** The starting kit (P04): the door stays shut until Sora has all four. */

@@ -1,4 +1,4 @@
-import { biquad, decay, mix, noise, normalise } from "./synth";
+import { biquad, decay, mix, noise, normalise } from "../../../audio/synth";
 
 /**
  * Synthesised stand-ins for the prologue's sounds (Audio Design Document,

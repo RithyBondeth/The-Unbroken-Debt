@@ -7,7 +7,7 @@ import { loadArea, type Area } from "../../../core/AreaLoader";
 import { meshesOf } from "../../../systems/interaction/Interaction";
 import type { BusName, SpatialOptions } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
-import * as sounds from "../../../audio/prologueSounds";
+import * as sounds from "../audio/prologueSounds";
 import { newGameSave } from "../../../systems/saves/SaveData";
 import {
   INK_BLOT_ENTRY,
@@ -347,7 +347,7 @@ export class Prologue {
     game.hints.performed("hint.move");
   }
 
-  /** Placeholder sounds (src/audio/prologueSounds.ts), placed where they happen. */
+  /** Placeholder sounds (src/episodes/ep1/audio/prologueSounds.ts), placed where they happen. */
   private async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;

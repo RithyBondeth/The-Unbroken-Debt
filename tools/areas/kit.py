@@ -35,6 +35,12 @@ TILE = {
     "old_planks_02": 2.0,
     "waffle_pique_cotton": 0.28,
     "forest_leaves_02": 3.0,
+    "bark_brown_02": 1.0,
+    "forest_ground_04": 3.0,
+    "brown_mud_leaves_01": 2.0,
+    "mud_forest": 2.0,
+    "moss_wood": 1.0,
+    "clay_plaster": 2.0,
 }
 
 # --------------------------------------------------------------- materials
@@ -141,6 +147,25 @@ def image_material(name, path, rough=0.9, cutout=False, tint=None, tile=0.0, met
     bsdf.inputs["Roughness"].default_value = rough
     bsdf.inputs["Metallic"].default_value = metal
     mat["tile"] = tile  # 0: stretch the image over each face once
+    return mat
+
+
+def glow_material(name, path, strength=3.0):
+    """A self-lit card from one image with alpha (flames): the image is both colour
+    and emission, its alpha blends it into the air (glTF alphaMode BLEND); both sides."""
+    mat = bpy.data.materials.new(name)
+    mat.use_backface_culling = False
+    mat.blend_method = "BLEND"
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.image = image(path, False)
+    links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+    links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    bsdf.inputs["Emission Strength"].default_value = strength
+    bsdf.inputs["Roughness"].default_value = 1.0
+    mat["tile"] = 0.0
     return mat
 
 
