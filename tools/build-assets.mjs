@@ -21,6 +21,12 @@ function findGlbs(dir) {
   });
 }
 
+/** Texture names of normal and ORM maps: ours (T_x_N, T_x_ORM) and Poly Haven's (x_nor_gl_1k, x_arm_1k). */
+const DETAIL_MAPS = "@(*_N|*_nor_gl*|*_ORM|*_arm*)";
+
+/** Ink on paper: Sora's drawings and the printed charts (rendered by `npm run drawings`). */
+const LINE_ART = "@(T_*_illustration_*|T_*_print_*|T_*_study_*)";
+
 // Hero assets and player items get 4K textures; everything else 2K (Art Bible, section 6).
 function maxTextureSize(file) {
   return /(^|\/)(shared_|hero_)/.test(file) ? 4096 : 2048;
@@ -61,15 +67,22 @@ for (const input of files) {
   gltf("prune", output, output, "--keep-leaves", "true");
   gltf("weld", output, output);
   gltf("resize", output, output, "--width", size, "--height", size);
+  // Normal and packed occlusion-roughness-metal maps at 1K: detail the eye barely sees at
+  // furniture scale, and the biggest share of download size (Phase 2 studio: 122 MB → see TDD 8).
+  gltf("resize", output, output, "--width", "1024", "--height", "1024", "--pattern", DETAIL_MAPS);
   // Slot globs use @(a|b): the CLI's argument parser splits {a,b} into separate arguments.
-  gltf("etc1s", output, output, "--slots", "@(baseColorTexture|emissiveTexture)");
+  // UASTC for line art first (ETC1S blocks smear thin pen lines and small Khmer letters),
+  // then ETC1S (small) for the remaining colour and ORM; UASTC (no block artefacts in
+  // lighting) for normals. Each step skips textures that are already KTX2.
+  gltf("uastc", output, output, "--pattern", LINE_ART, "--slots", "baseColorTexture");
   gltf(
-    "uastc",
+    "etc1s",
     output,
     output,
     "--slots",
-    "@(normalTexture|occlusionTexture|metallicRoughnessTexture)",
+    "@(baseColorTexture|emissiveTexture|occlusionTexture|metallicRoughnessTexture)",
   );
+  gltf("uastc", output, output, "--slots", "normalTexture");
   gltf("meshopt", output, output);
 
   const before = statSync(input).size;

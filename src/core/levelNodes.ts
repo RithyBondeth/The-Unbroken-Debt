@@ -13,7 +13,8 @@ export type NodeKind =
   | "light_flame"
   | "col"
   | "ladder"
-  | "nav";
+  | "nav"
+  | "marker";
 
 export interface ParsedNode {
   kind: NodeKind;
@@ -35,6 +36,7 @@ const PREFIXES: NodeKind[] = [
   "hide",
   "col",
   "nav",
+  "marker",
 ];
 
 /** Reads a node name; returns null for plain render meshes. */

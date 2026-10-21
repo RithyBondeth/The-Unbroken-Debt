@@ -22,7 +22,9 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "export": "node tools/export-blends.mjs",
     "postinstall": "node tools/vendor-decoders.mjs",
-    "vendor": "node tools/vendor-decoders.mjs"
+    "vendor": "node tools/vendor-decoders.mjs",
+    "fetch-library": "node tools/fetch-library.mjs",
+    "drawings": "node tools/drawings/render.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",

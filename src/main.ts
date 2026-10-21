@@ -34,8 +34,8 @@ async function boot(): Promise<void> {
     return;
   }
 
-  const game = new Game(engine);
-  game.start();
+  const game = new Game(engine, device);
+  await game.start();
 
   // Development builds only: inspect the game from the browser console.
   if (import.meta.env.DEV) {
