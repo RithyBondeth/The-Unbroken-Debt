@@ -213,11 +213,18 @@ export function createPostPipeline(
     taa.samples = 8;
     taa.reprojectHistory = true;
     taa.clampHistory = true;
-    taa.disableOnCameraMove = false;
+    // Off while the view moves: without motion vectors for everything (the lamp in
+    // Sora's hand is drawn apart) the history smeared ghost trails behind each turn.
+    taa.disableOnCameraMove = true;
   }
 
   const main = new DefaultRenderingPipeline("main", true, scene, [camera]);
-  main.fxaaEnabled = !preset.taa;
+  // FXAA always: it is what smooths edges while TAA stands aside on camera moves.
+  main.fxaaEnabled = true;
+  // TAA softens the image: a light sharpen gives back the grain of wood and thatch.
+  main.sharpenEnabled = preset.taa;
+  main.sharpen.edgeAmount = 0.22;
+  main.sharpen.colorAmount = 1;
   main.bloomEnabled = true;
   main.bloomThreshold = 0.9;
   main.bloomWeight = 0.35;

@@ -28,6 +28,8 @@ export interface AreaOptions {
   keep?: (string | RegExp)[];
   /** Batching cell size in metres (default 3): larger for open areas with scattered props. */
   cellSize?: number;
+  /** A larger cell size for meshes whose material name matches (scattered plants). */
+  coarse?: { pattern: RegExp; cellSize: number };
 }
 
 export async function loadArea(
@@ -47,7 +49,7 @@ export async function loadArea(
   realiseInstances(container);
   const level = buildLevel(scene, [...container.transformNodes, ...container.meshes]);
   for (const warning of level.warnings) console.warn(`[area ${id}] ${warning}`);
-  batchStatics(container, options.keep ?? [], options.cellSize ?? 3);
+  batchStatics(container, options.keep ?? [], options.cellSize ?? 3, options.coarse);
   return {
     id,
     container,
@@ -124,12 +126,17 @@ function batchStatics(
   container: AssetContainer,
   keep: readonly (string | RegExp)[],
   cellSize: number,
+  coarse?: { pattern: RegExp; cellSize: number },
 ): void {
   const statics = container.meshes.filter(
     (m): m is Mesh =>
       m instanceof Mesh && m.isVisible && m.getTotalVertices() > 0 && !isDynamic(m, keep),
   );
-  const batches = mergeStaticMeshes(statics, { cellSize });
+  const batches = mergeStaticMeshes(statics, {
+    cellSize,
+    cellSizeFor: (mesh) =>
+      coarse && coarse.pattern.test(mesh.material?.name ?? "") ? coarse.cellSize : undefined,
+  });
   const merged = new Set(statics.filter((m) => m.isDisposed()));
   container.meshes = [
     ...container.meshes.filter((m) => !merged.has(m as Mesh)),

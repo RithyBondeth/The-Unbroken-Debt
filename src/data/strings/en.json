@@ -23,5 +23,18 @@
   "satchel.title": "Satchel",
   "satchel.empty": "Nothing yet.",
   "satchel.placeholder": "(Greybox: the 3D satchel comes in Phase 3)",
-  "save.saving": "Saving"
+  "save.saving": "Saving",
+  "hint.lamp": "F to light the lamp (it costs a match)",
+  "hint.refill": "Left mouse to pour oil into the lamp",
+  "hint.raise": "Hold right mouse to raise the lamp and read its gauge",
+  "hint.incense": "E at a burner to put in fresh incense",
+  "note.lampDry": "The lamp is dry. I need oil.",
+  "note.noMatches": "No matches left.",
+  "note.needIncense": "Fresh incense is kept at the house altar.",
+  "note.stillBurning": "The incense is still burning.",
+  "note.haveIncense": "I've taken a bundle already.",
+  "note.lampFull": "The lamp is still full.",
+  "note.oil": "A bottle of kerosene.",
+  "note.matches": "A second box of matches.",
+  "note.incense": "A bundle of incense, four sticks."
 }

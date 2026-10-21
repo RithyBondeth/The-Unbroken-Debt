@@ -6,11 +6,15 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 
 /**
- * How bright the clouds are by themselves, and with a lightning flash behind them.
- * The painted colours are used as linear light, so a night sky needs a small factor.
+ * How bright the clouds are by themselves, and with a lightning flash behind them,
+ * at the base exposure. The painted colours are used as linear light, so a night
+ * sky needs a small factor; the moonlit night is a little blue.
  */
-const GLOW = 0.16;
+const GLOW = 0.1;
 const FLASH = 1.2;
+const NIGHT_TINT = new Color3(0.62, 0.78, 1.15);
+/** Exposure the sky is painted for: as Sora's eyes adapt, the sky stays night. */
+const BASE_EXPOSURE = 1.5;
 
 /**
  * The storm over the village (Art Bible 3): low cloud lit from behind by a
@@ -38,7 +42,7 @@ export class StormSky {
     // The sphere's V runs the other way from the painted map's rows.
     texture.vScale = -1;
     material.emissiveTexture = texture;
-    material.emissiveColor = new Color3(GLOW, GLOW, GLOW);
+    material.emissiveColor = NIGHT_TINT.scale(GLOW);
     material.diffuseColor = Color3.Black();
     material.specularColor = Color3.Black();
     material.disableLighting = true;
@@ -48,8 +52,12 @@ export class StormSky {
     this.material = material;
   }
 
-  /** `flash` is the lightning's brightness, 0 to 1. */
-  update(flash: number): void {
-    this.material.emissiveColor.setAll(GLOW + flash * FLASH);
+  /**
+   * `flash` is the lightning's brightness, 0 to 1; `exposure` the camera's, which
+   * the sky cancels out so it doesn't fade up to a dusk as her eyes adjust.
+   */
+  update(flash: number, exposure = BASE_EXPOSURE): void {
+    const k = ((GLOW + flash * FLASH) * BASE_EXPOSURE) / Math.max(BASE_EXPOSURE, exposure);
+    NIGHT_TINT.scaleToRef(k, this.material.emissiveColor);
   }
 }

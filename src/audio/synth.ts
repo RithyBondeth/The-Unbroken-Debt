@@ -93,6 +93,49 @@ export function wetStep(sampleRate: number, rand: () => number): Float32Array {
   return normalise(out);
 }
 
+/**
+ * The suck and release of a foot lifting out of wet mud, about 0.32 s: laid
+ * over a damped step on the mud surface (Audio Design Document 4.1, "suction").
+ * A squelch whose resonance falls as the mud closes, then small bubbles popping.
+ */
+export function mudSuction(sampleRate: number, rand: () => number): Float32Array {
+  const length = Math.round(0.32 * sampleRate);
+  const out = new Float32Array(length);
+  const source = noise(length, rand);
+  const start = 0.02 + rand() * 0.03;
+  // State-variable band-pass, its centre falling from about 1.2 kHz to 300 Hz.
+  let low = 0,
+    band = 0;
+  for (let i = 0; i < length; i++) {
+    const u = i / sampleRate - start;
+    if (u < 0) continue;
+    const f = 300 + 900 * Math.exp(-u / 0.05);
+    const fc = 2 * Math.sin((Math.PI * f) / sampleRate);
+    low += fc * band;
+    const high = source[i] - low - 0.25 * band;
+    band += fc * high;
+    out[i] = band * (1 - Math.exp(-u / 0.008)) * Math.exp(-u / 0.07);
+  }
+  // The release: two or three bubbles, each a short tone rising as it bursts.
+  const pops = 2 + Math.floor(rand() * 2);
+  for (let k = 0; k < pops; k++) {
+    const at = Math.round((0.12 + rand() * 0.13) * sampleRate);
+    const f0 = 450 + rand() * 500;
+    const gain = 0.2 + rand() * 0.2;
+    const n = Math.round(0.03 * sampleRate);
+    let phase = 0;
+    for (let j = 0; j < n && at + j < length; j++) {
+      const t = j / sampleRate;
+      phase += (f0 * (1 + (t / 0.03) * 0.8)) / sampleRate;
+      // A soft onset: a hard one clicks.
+      const envelope = (1 - Math.exp(-t / 0.002)) * Math.exp(-t / 0.008);
+      out[at + j] += Math.sin(2 * Math.PI * phase) * gain * envelope;
+    }
+  }
+  biquad(out, sampleRate, "lowpass", 2800, 0.7);
+  return normalise(out, 0.8);
+}
+
 /** A slow, wet breath with a rattle on the exhale, about 1.6 s. */
 export function rattlingBreath(sampleRate: number, rand: () => number): Float32Array {
   const length = Math.round(1.6 * sampleRate);

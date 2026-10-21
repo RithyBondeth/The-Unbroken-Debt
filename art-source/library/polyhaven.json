@@ -170,6 +170,46 @@
   "machete": {
    "resolution": "1k",
    "format": "gltf"
+  },
+  "shrub_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "shrub_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "shrub_03": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "shrub_04": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "grass_medium_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "grass_medium_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "moss_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "rock_moss_set_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "tree_stump_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "island_tree_02": {
+   "resolution": "1k",
+   "format": "gltf"
   }
  },
  "materials": {
@@ -340,6 +380,46 @@
     "N": "nor_gl",
     "ORM": "arm"
    }
+  },
+  "forest_ground_04": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "brown_mud_leaves_01": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "mud_forest": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "moss_wood": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "clay_plaster": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
   }
  },
  "archive": {
@@ -352,6 +432,16 @@
    "date": "1921",
    "licence": "CC0 1.0",
    "use": "Uncle Sok's portrait (T_ep1_photo_sok)"
+  },
+  "A35898": {
+   "file": "Un_bonze_revenant_de_la_quete_A35898.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Un_bonze_revenant_de_la_qu%C3%AAte_-_A35898.jpg",
+   "page": "https://commons.wikimedia.org/wiki/File:Un_bonze_revenant_de_la_qu%C3%AAte_-_A35898.jpg",
+   "author": "Léon Busy, Archives de la Planète, Musée départemental Albert-Kahn",
+   "date": "1921",
+   "licence": "CC0 1.0",
+   "use": "Framed devotional photograph in the hall (T_ep1_house_photos)",
+   "title": "Un bonze revenant de la quête"
   }
  }
 }
