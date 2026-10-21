@@ -1,0 +1,185 @@
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Regular.ttf");
+  font-weight: 400;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Medium.ttf");
+  font-weight: 500;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Bold.ttf");
+  font-weight: 700;
+}
+@font-face {
+  font-family: "Preah Vihear";
+  src: url("/fonts/Preahvihear-Regular.ttf");
+  unicode-range: U+1780-17FF, U+19E0-19FF;
+}
+
+:root {
+  --paper: #efe4cf;
+  --ink: #1f1b18;
+  --night: #17120f;
+  --flame: #ff9a3c;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--night);
+  font-family: "Ubuntu", "Preah Vihear", sans-serif;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+#overlay[hidden] {
+  display: none;
+}
+
+.requirements {
+  box-sizing: border-box;
+  max-width: min(34rem, calc(100vw - 32px));
+  padding: 2rem 2.4rem;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  line-height: 1.6;
+}
+
+.requirements h1 {
+  margin-top: 0;
+}
+
+.requirements dt {
+  font-weight: 500;
+  margin-top: 0.6rem;
+}
+
+.requirements dd {
+  margin: 0;
+}
+
+/* Shown while frames keep failing (src/ui/html/RenderStallNotice.ts). */
+.render-stall {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  max-width: min(30rem, calc(100vw - 32px));
+  padding: 1.2rem 1.6rem;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+.render-stall[hidden] {
+  display: none;
+}
+
+.render-stall h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.render-stall p {
+  margin: 0;
+}
+
+.render-stall pre {
+  margin: 0.6rem 0 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  opacity: 0.7;
+}
+
+/* Development overlays: spike panel and performance readout. Not game UI. */
+.spike-hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  max-width: 26rem;
+  padding: 0.8rem 1rem;
+  background: rgb(23 18 15 / 0.82);
+  color: var(--paper);
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.spike-hud h1 {
+  margin: 0 0 0.3rem;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--flame);
+}
+
+.spike-hud p {
+  margin: 0 0 0.4rem;
+}
+
+.spike-hud .spike-controls {
+  opacity: 0.75;
+}
+
+.spike-hud ul {
+  margin: 0.4rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spike-hud li.done {
+  color: #9fd38a;
+}
+
+.spike-hud pre,
+.perf-overlay {
+  margin: 0.4rem 0 0;
+  font-family: "Ubuntu Mono", ui-monospace, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.spike-report {
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.spike-report.pass {
+  background: rgb(80 140 60 / 0.35);
+}
+
+.spike-report.fail {
+  background: rgb(170 50 40 / 0.4);
+}
+
+.perf-overlay {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  padding: 0.5rem 0.7rem;
+  background: rgb(23 18 15 / 0.82);
+  color: var(--paper);
+  border-radius: 6px;
+  pointer-events: none;
+}

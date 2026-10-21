@@ -1,0 +1,196 @@
+/* Boon Sop: The Unbroken Debt — shared document style
+   English: Ubuntu · Khmer: Preah Vihear · Diagrams: Ubuntu Mono */
+
+@font-face { font-family: "Ubuntu"; src: url("fonts/Ubuntu-Light.ttf"); font-weight: 300; }
+@font-face { font-family: "Ubuntu"; src: url("fonts/Ubuntu-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Ubuntu"; src: url("fonts/Ubuntu-Italic.ttf"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Ubuntu"; src: url("fonts/Ubuntu-Medium.ttf"); font-weight: 500; }
+@font-face { font-family: "Ubuntu"; src: url("fonts/Ubuntu-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Ubuntu Mono"; src: url("fonts/UbuntuMono-Regular.ttf"); }
+@font-face { font-family: "Preah Vihear"; src: url("fonts/Preahvihear-Regular.ttf"); unicode-range: U+1780-17FF, U+19E0-19FF, U+200B-200D, U+25CC; }
+
+:root {
+  --ink: #1f1b18;
+  --body: #3a332d;
+  --muted: #7a7068;
+  --rule: #e6dfd5;
+  --paper: #ffffff;
+  --tint: #f8f4ee;
+  --accent: #8a3b22;        /* overridden per document */
+  --accent-soft: #f6ebe4;
+  --warn: #9a5b00;
+  --warn-soft: #fff6e5;
+}
+
+body.ep1 { --accent: #8a3b22; --accent-soft: #f7ece5; --glow: rgba(176,84,40,.55); }   /* mahogany / amber flame */
+body.ep2 { --accent: #2f4f7a; --accent-soft: #eaf0f8; --glow: rgba(70,110,170,.55); }  /* moonlight blue */
+body.ep3 { --accent: #1f6266; --accent-soft: #e6f2f2; --glow: rgba(40,120,125,.55); }  /* dark teal */
+body.ep4 { --accent: #5b6328; --accent-soft: #f0f2e4; --glow: rgba(120,130,70,.5); }   /* olive / fog */
+body.ep5 { --accent: #8c6a12; --accent-soft: #f8f1dd; --glow: rgba(190,145,40,.55); }  /* rune gold */
+body.plan { --accent: #3d3a6b; --accent-soft: #eeedf6; --glow: rgba(90,85,160,.55); }  /* indigo */
+
+/* ---------- Page ---------- */
+@page {
+  size: A4;
+  margin: 22mm 20mm 22mm 20mm;
+  @bottom-left  { content: var(--doc-footer, ""); font: 400 8pt "Ubuntu"; color: #9a9088; }
+  @bottom-right { content: counter(page) " / " counter(pages); font: 400 8pt "Ubuntu"; color: #9a9088; }
+}
+@page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  margin: 0;
+  font-family: "Ubuntu", "Preah Vihear", sans-serif;
+  font-size: 10pt;
+  line-height: 1.6;
+  color: var(--body);
+  background: var(--paper);
+}
+.km, :lang(km) { font-family: "Preah Vihear", "Ubuntu", sans-serif; line-height: 1.9; }
+
+/* ---------- Cover ---------- */
+.cover {
+  page: cover;
+  height: 297mm;
+  padding: 34mm 24mm 22mm;
+  display: flex;
+  flex-direction: column;
+  background-color: #17120f;
+  background-image: radial-gradient(ellipse 120% 70% at 85% 15%, var(--glow) 0%, rgba(23,18,15,0) 65%);
+  color: #efe6da;
+  break-after: page;
+}
+.cover .series { font-size: 9pt; letter-spacing: .28em; text-transform: uppercase; color: #c9b9a6; }
+.cover .series .km { letter-spacing: 0; text-transform: none; }
+.cover .rule { width: 48px; height: 3px; background: var(--accent); margin: 18px 0 26px; filter: brightness(1.6); }
+.cover .eyebrow { font-size: 11pt; font-weight: 500; color: #d9c7b1; margin-bottom: 6px; }
+.cover h1 { font-size: 34pt; line-height: 1.12; font-weight: 700; color: #fff; margin: 0 0 10px; }
+.cover .title-km { font-family: "Preah Vihear"; font-size: 22pt; line-height: 1.6; color: #e9d9c4; margin: 0 0 18px; }
+.cover .subtitle { font-size: 12pt; font-weight: 300; color: #d8ccbd; max-width: 130mm; }
+.cover .spacer { flex: 1; }
+.cover .meta { display: grid; grid-template-columns: 34mm 1fr; gap: 5px 10px; font-size: 9pt; border-top: 1px solid #3b322b; padding-top: 14px; }
+.cover .meta dt { color: #9d8f80; }
+.cover .meta dd { margin: 0; color: #efe6da; }
+
+/* ---------- Headings ---------- */
+h1, h2, h3, h4 { color: var(--ink); font-weight: 700; line-height: 1.3; break-after: avoid; }
+h2 {
+  font-size: 17pt; margin: 0 0 14px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+  break-before: page;
+}
+h2 .num { color: var(--accent); margin-right: 10px; }
+h2.no-break { break-before: auto; margin-top: 28px; }
+h3 { font-size: 12.5pt; margin: 22px 0 8px; }
+h3 .num { color: var(--accent); margin-right: 8px; font-weight: 500; }
+h4 { font-size: 10.5pt; margin: 16px 0 6px; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+p { margin: 0 0 9px; }
+strong { color: var(--ink); font-weight: 500; }
+em { font-style: italic; }
+ul, ol { margin: 0 0 10px; padding-left: 18px; }
+li { margin: 2px 0; }
+li::marker { color: var(--accent); }
+a { color: var(--accent); text-decoration: none; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 18px 0; }
+.lead { font-size: 11pt; color: var(--ink); font-weight: 300; line-height: 1.65; }
+.small { font-size: 8.5pt; color: var(--muted); }
+
+/* ---------- Table of contents ---------- */
+.toc { break-after: page; }
+.toc h2 { break-before: auto; }
+.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: none; }
+.toc > ol > li { padding: 7px 0; border-bottom: 1px solid var(--rule); font-weight: 500; color: var(--ink); }
+.toc > ol > li > .n { display: inline-block; width: 28px; color: var(--accent); }
+.toc ol ol { margin: 4px 0 0 28px; font-weight: 400; color: var(--body); font-size: 9pt; }
+.toc ol ol li { padding: 1px 0; }
+.toc a { color: inherit; }
+
+/* ---------- Tables ---------- */
+table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 9pt; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { text-align: left; font-weight: 500; color: var(--ink); background: var(--accent-soft); padding: 7px 9px; border-bottom: 1.5px solid var(--accent); }
+td { padding: 6px 9px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tbody tr:nth-child(even) td { background: #fcfaf7; }
+td.k, th.k { width: 30%; font-weight: 500; color: var(--ink); }
+table.kv td:first-child { width: 32%; font-weight: 500; color: var(--ink); background: var(--tint); }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 500; padding: 1px 7px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.crit { background: #fbe3df; color: #9b2a1a; }
+.tag.high { background: #fff0d9; color: #94590a; }
+.tag.med  { background: #eef1e2; color: #5b6328; }
+.tag.low  { background: #eef0f3; color: #59606b; }
+
+/* ---------- Callouts ---------- */
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; margin: 10px 0 14px; border-radius: 0 6px 6px 0; break-inside: avoid; }
+.callout .label { display: block; font-size: 7.5pt; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 3px; }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout.issue { border-color: var(--warn); background: var(--warn-soft); }
+.callout.issue .label { color: var(--warn); }
+
+blockquote.line {
+  margin: 12px 0 14px; padding: 12px 16px 12px 20px;
+  border-left: 3px solid var(--accent); background: var(--tint);
+  font-style: italic; color: var(--ink); font-size: 10.5pt; break-inside: avoid;
+}
+blockquote.line cite { display: block; margin-top: 6px; font-style: normal; font-size: 8.5pt; color: var(--muted); }
+
+/* ---------- At-a-glance cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 16px; }
+.cards.two { grid-template-columns: repeat(2, 1fr); }
+.cards.four { grid-template-columns: repeat(4, 1fr); }
+.card { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; background: #fff; break-inside: avoid; }
+.card .k { font-size: 7.5pt; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.card .v { font-size: 11pt; font-weight: 500; color: var(--ink); line-height: 1.35; margin-top: 2px; }
+.card .d { font-size: 8.5pt; color: var(--muted); margin-top: 3px; }
+
+/* ---------- Flow diagram ---------- */
+.flow { display: flex; flex-direction: column; align-items: center; margin: 12px 0 18px; break-inside: avoid; }
+.flow .node { width: 78%; border: 1.5px solid var(--accent); border-radius: 6px; padding: 7px 12px; text-align: center; background: #fff; }
+.flow .node b { display: block; color: var(--ink); font-weight: 500; font-size: 9.5pt; }
+.flow .node span { font-size: 8pt; color: var(--muted); }
+.flow .node.start { background: var(--accent-soft); border-style: dashed; }
+.flow .node.goal { background: var(--accent); }
+.flow .node.goal b, .flow .node.goal span { color: #fff; }
+.flow .arrow { height: 16px; width: 2px; background: var(--accent); position: relative; margin: 0 0 6px; }
+.flow .arrow::after { content: ""; position: absolute; left: -4px; bottom: -6px; border: 5px solid transparent; border-top: 6px solid var(--accent); }
+.flow .split { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; width: 100%; }
+.flow .split .node { width: 100%; }
+
+/* ---------- Act blocks ---------- */
+.act { border: 1px solid var(--rule); border-radius: 8px; margin: 12px 0 18px; overflow: hidden; }
+.act-head { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--rule); break-after: avoid; }
+.act-head h3 { margin: 0; font-size: 12pt; }
+.act-head .time { font-size: 8.5pt; font-weight: 500; color: var(--accent); white-space: nowrap; }
+.act-body { padding: 10px 14px 4px; }
+
+/* ---------- Two columns ---------- */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cols > div { break-inside: avoid; }
+
+/* ---------- Mono ---------- */
+code, .mono { font-family: "Ubuntu Mono", monospace; font-size: 9.5pt; background: var(--tint); padding: 0 4px; border-radius: 3px; color: var(--ink); }
+pre { font-family: "Ubuntu Mono", monospace; font-size: 9pt; background: var(--tint); padding: 10px 12px; border-radius: 6px; line-height: 1.45; white-space: pre-wrap; break-inside: avoid; }
+
+.avoid { break-inside: avoid; }
+.page-break { break-before: page; }
+
+/* ---------- Figures (maps, charts) ---------- */
+figure.map { margin: 10px 0 16px; padding: 10px; border: 1px solid var(--rule); border-radius: 8px; background: #fff; break-inside: avoid; }
+figure.map svg { display: block; width: 100%; height: auto; }
+figure.map figcaption { font-size: 8pt; color: var(--muted); margin-top: 6px; }
+figure.map text { font-family: "Ubuntu", sans-serif; }
+
+/* ---------- Colour swatches ---------- */
+.swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 6px 0 14px; break-inside: avoid; }
+.swatch { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; font-size: 7.5pt; }
+.swatch .chip { height: 34px; }
+.swatch .lbl { padding: 4px 6px; color: var(--ink); line-height: 1.3; }
+.swatch .lbl span { display: block; color: var(--muted); font-family: "Ubuntu Mono", monospace; }
+
+/* ---------- Dense tables ---------- */
+table.dense { font-size: 8.3pt; }
+table.dense td, table.dense th { padding: 4px 6px; }
+td.id, th.id { width: 7%; font-family: "Ubuntu Mono", monospace; color: var(--accent); white-space: nowrap; }
+kbd { font-family: "Ubuntu Mono", monospace; font-size: 8.5pt; border: 1px solid #cfc6ba; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: #fff; color: var(--ink); white-space: nowrap; }

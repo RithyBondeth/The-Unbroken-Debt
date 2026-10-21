@@ -1,0 +1,184 @@
+/* In-game text that is allowed on screen (Controls and Interface, section 6.3):
+   pencil control hints, subtitles, the save indicator, fades and title cards. */
+
+.story-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%) rotate(-1deg);
+  font:
+    1.7rem "Patrick Hand",
+    "Freehand",
+    sans-serif;
+  color: rgba(232, 222, 200, 0.82);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  white-space: nowrap;
+}
+
+.story-hint.shown {
+  opacity: 1;
+}
+
+.story-subtitles {
+  position: fixed;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%);
+  max-width: min(46rem, calc(100vw - 32px));
+  padding: 0.35rem 0.9rem;
+  border-radius: 4px;
+  background: rgba(10, 8, 6, 0.55);
+  color: #f2eadb;
+  font:
+    1.35rem/1.45 "Ubuntu",
+    "Preah Vihear",
+    sans-serif;
+  text-align: center;
+  pointer-events: none;
+  /* At most two lines (section 6.3). */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.story-subtitles[hidden] {
+  display: none;
+}
+
+.story-subtitles b {
+  font-weight: 500;
+  color: var(--flame);
+}
+
+.story-fade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transition-property: opacity;
+  transition-timing-function: ease-in-out;
+}
+
+.story-fade.waiting {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.story-card {
+  text-align: center;
+  color: #efe4cf;
+  font-family: "Patrick Hand", "Freehand", sans-serif;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+
+.story-card.shown {
+  opacity: 1;
+}
+
+.story-card h1 {
+  margin: 0;
+  font-size: 3.4rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.story-card p {
+  margin: 0.4rem 0 0;
+  font-size: 1.5rem;
+  opacity: 0.75;
+}
+
+.story-card .khmer {
+  font-family: "Freehand", sans-serif;
+  font-size: 2.2rem;
+  opacity: 0.8;
+}
+
+.story-card button {
+  margin-top: 1.6rem;
+  font: inherit;
+  font-size: 1.3rem;
+  padding: 0.3rem 1.2rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.story-satchel {
+  position: fixed;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%) rotate(0.6deg);
+  min-width: 19rem;
+  max-width: min(26rem, calc(100vw - 32px));
+  padding: 1rem 1.4rem 1.1rem;
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 3px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font:
+    1.25rem/1.35 "Patrick Hand",
+    "Freehand",
+    sans-serif;
+  pointer-events: none;
+}
+
+.story-satchel[hidden] {
+  display: none;
+}
+
+.story-satchel h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 400;
+  border-bottom: 1px solid rgba(31, 27, 24, 0.35);
+}
+
+.story-satchel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.story-satchel li span {
+  display: block;
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.story-satchel small {
+  display: block;
+  margin-top: 0.6rem;
+  font:
+    0.75rem "Ubuntu",
+    sans-serif;
+  opacity: 0.55;
+}
+
+.story-saving {
+  position: fixed;
+  right: 1.4rem;
+  bottom: 1.2rem;
+  font:
+    1.1rem "Patrick Hand",
+    sans-serif;
+  color: var(--flame);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.story-saving.shown {
+  opacity: 0.85;
+}

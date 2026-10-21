@@ -1,0 +1,171 @@
+ID,Episode,Area,Category,Asset,File name,Source,Priority,Status,Budget,Library / URL,Author,Licence,Credit required,Notes
+V1-001,1,Studio,Environment,Phnom Penh studio room shell,ep1_area_studio.glb,K,High,Not started,800 tris/piece,,,,,"6 x 5 m, window south"
+V1-002,1,Studio,Prop,Drafting table,ep1_studio_drafting_table.glb,L,Medium,Not started,500-8000 tris,,,,,
+V1-003,1,Studio,Prop,Desk with drawer,ep1_studio_desk.glb,L,High,Not started,500-8000 tris,,,,,Holds the letters
+V1-004,1,Studio,Prop,Brass wall telephone,ep1_studio_telephone.glb,L,High,Not started,15000-40000 tris,,,,,Hero prop for P06
+V1-005,1,Studio,Prop,Wall clock (stops at 8:12),ep1_studio_clock.glb,L,High,Not started,500-8000 tris,,,,,Animated hands
+V1-006,1,Studio,Prop,Green glass desk lamp,ep1_studio_desklamp.glb,L,Medium,Not started,500-8000 tris,,,,,
+V1-007,1,Studio,Prop,"Ink bottles, pens, prints",ep1_studio_smallprops.glb,L,Low,Not started,500-8000 tris,,,,,
+V1-008,1,Studio,Prop,Yay Mey's letters bundle,shared_letters.glb,C,High,Not started,500-8000 tris,,,,,Carried all game
+V1-009,1,Path,Environment,Village path and banana grove,ep1_area_path.glb,K,Medium,Not started,Instanced,,,,,60 m path; banana cards
+V1-010,1,Courtyard,Environment,"Courtyard ground, mud, puddles",ep1_area_courtyard.glb,C,High,Not started,Merged,,,,,24 x 18 m; wet mud material
+V1-011,1,Courtyard,Environment,White funeral tent (frame + cloth),ep1_tent.glb,C,Critical,Not started,15000-40000 tris,,,,,Wind vertex animation; tears in A3-08
+V1-012,1,Courtyard,Prop,Teak coffin and stage,ep1_coffin.glb,C,Critical,Not started,15000-40000 tris,,,,,Reused in bad ending
+V1-013,1,Courtyard,Prop,Portrait altar with frame and candle holders,ep1_portrait_altar.glb,C,High,Not started,15000-40000 tris,,,,,Eyes-open texture swap
+V1-014,1,Courtyard,Prop,Brass incense burners x4,ep1_incense_burner.glb,C,High,Not started,500-8000 tris,,,,,Main burner variant for ritual
+V1-015,1,Courtyard,Prop,Incense sticks with burn-down shader,shared_incense.glb,C,High,Not started,500-8000 tris,,,,,
+V1-016,1,Courtyard,Prop,Protective thread (whole and snapped),ep1_thread.glb,C,High,Not started,Spline,,,,,Snap animation
+V1-017,1,Courtyard,Prop,Bamboo benches,ep1_bench.glb,C,Medium,Not started,500-8000 tris,,,,,Instanced
+V1-018,1,Courtyard,Prop,Hanging glass oil lamps,shared_hanging_lamp.glb,C,High,Not started,500-8000 tris,,,,,Flame card + light
+V1-019,1,Courtyard,Prop,Storage shed,ep1_shed.glb,C,Medium,Not started,500-8000 tris,,,,,Optional area
+V1-020,1,House,Environment,"Stilt house modular kit (posts, planks, walls, roof, stairs, railings)",ep1_house_kit_*.glb,C,Critical,Not started,500-6000 tris/piece,,,,,See Art Bible 5.2
+V1-021,1,House,Prop,Ancestral altar with bronze statues and betel trays,ep1_ancestral_altar.glb,C,Critical,Not started,15000-40000 tris,,,,,Key in base; reviewed by advisor
+V1-022,1,House,Prop,"Betel tray set (leaves, areca, lime pot, tray)",ep1_betel_set.glb,C,High,Not started,500-8000 tris,,,,,Puzzle props
+V1-023,1,House,Prop,Kanha's drawing of the tray,ep1_kanha_drawing.glb,C,High,Not started,Plane,,,,,Texture drawn in Kanha's style
+V1-024,1,House,Prop,Sewing box,ep1_sewing_box.glb,L,Low,Not started,500-8000 tris,,,,,Shed key
+V1-025,1,House,Prop,Woven mats,ep1_mat.glb,C,Low,Not started,500-8000 tris,,,,,
+V1-026,1,House,Prop,"Wardrobes (hiding H1, H2)",ep1_wardrobe.glb,L,High,Not started,500-8000 tris,,,,,Doors open
+V1-027,1,House,Prop,Sok's desk and drawer,ep1_sok_desk.glb,L,High,Not started,500-8000 tris,,,,,
+V1-028,1,House,Prop,Brass-horn gramophone with speed dial,ep1_gramophone.glb,L,Critical,Not started,15000-40000 tris,,,,,Interactive dial
+V1-029,1,House,Prop,Palm-leaf manuscripts,ep1_manuscripts.glb,C,Medium,Not started,500-8000 tris,,,,,Instanced stacks
+V1-030,1,House,Prop,Iron-bound chest and loose planks,ep1_chest.glb,C,Critical,Not started,15000-40000 tris,,,,,Lid and lock animation
+V1-031,1,House,Prop,"Kitchen props (pots, shelves, stove)",ep1_kitchen_props.glb,L,Low,Not started,Varies,,,,,
+V1-032,1,Under-house,Environment,Under-house ground and pillars,ep1_area_underhouse.glb,C,High,Not started,Merged,,,,,12 x 8 m; 15 pillars
+V1-033,1,Under-house,Prop,Clay water jars x6 with lids,ep1_clay_jar.glb,C,High,Not started,500-8000 tris,,,,,Lid open animation
+V1-034,1,Under-house,Prop,"Firewood stack, cart wheels, boards",ep1_underhouse_props.glb,L,Low,Not started,Varies,,,,,
+V1-035,1,Shared,Player item,Hurricane lamp with oil gauge and shutter,shared_lamp.glb,C,Critical,Not started,20000-50000 tris,,,,,Seen all game
+V1-036,1,Shared,Player item,Brass matchbox and matches,shared_matchbox.glb,C,Critical,Not started,20000-50000 tris,,,,,
+V1-037,1,Shared,Player item,Leather satchel (open/closed),shared_satchel.glb,C,Critical,Not started,20000-50000 tris,,,,,
+V1-038,1,Shared,Player item,Sketchbook with pages,shared_sketchbook.glb,C,Critical,Not started,20000-50000 tris,,,,,Dynamic page textures
+V1-039,1,Shared,Player item,Fountain pen,shared_pen.glb,C,Medium,Not started,20000-50000 tris,,,,,Used in Ep5
+V1-040,1,Shared,Player item,Oil bottle,shared_oil_bottle.glb,C,High,Not started,20000-50000 tris,,,,,
+V1-041,1,Shared,Character,First-person hands (Sora),shared_hands.glb,C,Critical,Not started,60000-100000 tris,,,,,"Ink stains, silver bangle"
+V1-042,1,House,Key item,Brass key fragments x3 and assembled key,ep1_key.glb,C,High,Not started,500-8000 tris,,,,,
+V1-043,1,House,Key item,Bronze Token,ep1_bronze_token.glb,C,Critical,Not started,500-8000 tris,,,,,Seal #1
+V1-044,1,House,Story item,Map with four faint marks,shared_map.glb,C,High,Not started,Plane,,,,,Blood-spread shader
+V1-045,1,House,Story item,Sok's slip of names,ep1_slip.glb,C,High,Not started,Plane,,,,,
+V1-046,1,Courtyard,Character,Yay Mey,ch_yay_mey.glb,L+C,High,Not started,60000-100000 tris,,,,,White mourning dress; few animations
+V1-047,1,Courtyard,Character,Vuthy,ch_vuthy.glb,L+C,High,Not started,60000-100000 tris,,,,,Linen suit
+V1-048,1,Courtyard,Character,Uncle Sok's corpse (5 poses),ch_sok_corpse.glb,C,High,Not started,60000-100000 tris,,,,,Wrapped in white cloth
+V1-049,1,Shared,Creature,Neak Ta shadow and brass mask,cr_neak_ta.glb,C,Critical,Not started,30000-60000 tris,,,,,Mostly shader; mask detailed
+V1-050,1,House,Creature,"Neak Ta shadow forms (house walker, under-house patrol)",cr_shadow_figure.glb,C,High,Not started,30000-60000 tris,,,,,Same entity reused in Ep 4 (manor) with different settings
+V1-052,1,Shared,Font,"Sora's English handwriting (sketchbook, hints)",PatrickHand-Regular.ttf,L,Critical,In progress,,https://fonts.google.com/specimen/Patrick+Hand,Patrick Wagesreiter,SIL OFL 1.1,Yes,Licence in public/fonts/PatrickHand-OFL.txt; chosen in Spike S5
+V1-053,1,Shared,Font,"Sora's Khmer handwriting (sketchbook)",Freehand-Regular.ttf,L,Critical,In progress,,https://fonts.google.com/specimen/Freehand,Danh Hong,SIL OFL 1.1,Yes,Licence in public/fonts/Freehand-OFL.txt; chosen in Spike S5; Khmer text needs native-speaker review
+S1-001,1,Audio,Sound (Ambience loop),"Rain layers: on glass, leaves, cloth, roof tiles, ground edges",,L + R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-002,1,Audio,Sound (One-shot),"Thunder (near, far) ×8",,L,High,Not started,,,,,,Priority A in Audio Design Document
+S1-003,1,Audio,Sound (Ambience loop),"Cicadas, bullfrogs, night insects",,L,High,Not started,,,,,,Priority A in Audio Design Document
+S1-004,1,Audio,Sound (Ambience loop),"Phnom Penh street at night 1932 (traffic, tram bell)",,L + D,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-005,1,Audio,Sound (Loop / one-shot),Wall clock tick and stop; clock chime (quarter hour),,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-006,1,Audio,Sound (One-shot / loop),Brass telephone ring; lifting the earpiece; static; dead line,,L + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-007,1,Audio,Sound (One-shot),"Phone scream, glass shatter, thuds (through the line)",,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-008,1,Audio,Sound (One-shot),"Ink spill, pen scratch, candle blown out",,R,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-009,1,Audio,Sound (One-shot),Train and horse-carriage montage under the fade,,L,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-010,1,Audio,Sound (One-shot),"Carriage stop, horse snort, wheels in mud",,L,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-011,1,Audio,Sound (One-shot sets),"Footsteps: teak, dirt, mud (walk, crouch, hurry)",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-012,1,Audio,Sound (One-shot set),"Teak creaks and groans (random, under weight)",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-013,1,Audio,Sound (One-shot / loop),"Lamp set (wick, chimney, catch, flicker, sputter, oil pour)",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-014,1,Audio,Sound (One-shot),"Match set (box, strike, fail, flare, burn)",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-015,1,Audio,Sound (One-shot),Satchel and sketchbook set,,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-016,1,Audio,Sound (Loop),Hanging oil lamps hiss; wax candle flicker,,R,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-017,1,Audio,Sound (Loop / one-shot),Incense crackle; burn-out puff,,R,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-018,1,Audio,Sound (Loop),"Whispers (incense neglected); layered, unintelligible",,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-019,1,Audio,Sound (One-shot),Cold gust; lamps going out in a ripple (A2-01),,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-020,1,Audio,Sound (One-shot),Wet footsteps above (A2-01),,R + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-021,1,Audio,Sound (One-shot set),"Doors: wooden door open, creak, ajar swing; drawer open; lid slides",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-022,1,Audio,Sound (One-shot),Loose wall planks pulled away,,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-023,1,Audio,Sound (Interactive),"Gramophone: crank, needle drop, crackle, speed dial, warped and corrected playback",,R + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-024,1,Audio,Sound (Loop),Backward funeral chant on the gramophone,,M + D,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-025,1,Audio,Sound (Spatial set),"Hallway walker: dragging steps, breathing, pause at door",,R + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-026,1,Audio,Sound (One-shot / loop),"Wardrobe hide: door close, muffled filter, heartbeat",,R + L,High,Not started,,,,,,Priority A in Audio Design Document
+S1-027,1,Audio,Sound (One-shot),"Portrait reveal sound cue (subtle frame creak, intake of breath)",,D,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-028,1,Audio,Sound (One-shot),"Thread snap (sharp, echoing)",,R + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-029,1,Audio,Sound (One-shot),"Corpse shift (cloth, wood creak), five variations",,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-030,1,Audio,Sound (One-shot),Clay jar lid lift; hand in water; fragment found,,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-031,1,Audio,Sound (Spatial set),"Roamer: patrol drag, wet breath, investigate sniff, chase rush",,R + D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-032,1,Audio,Sound (One-shot),Key fragments click together; chest lock and heavy lid,,R,High,Not started,,,,,,Priority A in Audio Design Document
+S1-033,1,Audio,"Sound (Spatial, close)","Presence behind Sora: breath at the ear, stone grind, the whispered name",,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-034,1,Audio,Sound (One-shot),Token burning; wind blast tearing the tent; fading screech,,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-035,1,Audio,Sound (Ambience),"Dawn: birdsong, dripping, distant rooster",,L,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-036,1,Audio,Sound (One-shot),"Blood spreading on paper (wet, slow)",,R + D,Medium,Not started,,,,,,Priority B in Audio Design Document
+S1-037,1,Audio,Sound (One-shot),"Caught: scare hit, page tear, fade",,D,High,Not started,,,,,,Priority A in Audio Design Document
+S1-038,1,Audio,Sound (Loop),Funeral chanting for the ritual,,M (with permission),Medium,Not started,,,,,,Priority B in Audio Design Document
+M1-01,1,Audio,Music,Main menu theme (roneat),,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-02,1,Audio,Music,Arrival,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-03,1,Audio,Music,Portrait sting,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-04,1,Audio,Music,Ritual drone,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-05,1,Audio,Music,Dawn,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-06,1,Audio,Music,The name,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+M1-07,1,Audio,Music,Credits theme,,M,High,Not started,,,,,Yes,Commission or licence from Cambodian musicians
+V1-051,3,Clinic,Creature,"Pich (Mrenh Kongveal) glimpses: silhouette, handprint decal, wooden toy",cr_pich.glb,C,Medium,Not started,30000-60000 tris,,,,,Episode 3 asset; listed early for planning
+S1-039,3,Audio,Sound (One-shot set),"Pich: light footsteps, giggle, rolling wooden toy",,R,Medium,Not started,,,,,,Record a child only with a parent's consent and presence
+V1-054,1,Studio,Texture,"Sora's half-finished Wat Phnom illustration (P02), Khmer title",T_studio_illustration_BC.png,C,High,In progress,"1024-2048 px, UASTC",tools/drawings/ep1.mjs,Project,Project,No,"Pen, pencil and ink wash; inked to the middle, the right half still pencil; rendered by npm run drawings; Khmer text pending native-speaker review (KHMER list in tools/drawings/ep1.mjs)"
+V1-055,1,Studio,Texture,"Sora's pinned studies: palms, stilt house, ornament, lettering, boats",T_studio_study_*_BC.png,C,Medium,In progress,"1024-2048 px, UASTC",tools/drawings/ep1.mjs,Project,Project,No,Five sketchbook sheets with Khmer handwritten captions; rendered by npm run drawings; Khmer text pending native-speaker review (KHMER list in tools/drawings/ep1.mjs)
+V1-056,1,Studio,Texture,Framed print over the bed: Tonle Sap village (signed 1931),T_studio_print_tonle_sap_BC.png,C,Medium,In progress,"1024-2048 px, UASTC",tools/drawings/ep1.mjs,Project,Project,No,rendered by npm run drawings; Khmer text pending native-speaker review (KHMER list in tools/drawings/ep1.mjs)
+V1-057,1,Studio,Texture,Framed print of Angkor Wat (in the gilt frame),T_studio_print_angkor_BC.png,C,Medium,In progress,"1024-2048 px, UASTC",tools/drawings/ep1.mjs,Project,Project,No,Replaces the Poly Haven frame's European landscape canvas; rendered by npm run drawings; Khmer text pending native-speaker review (KHMER list in tools/drawings/ep1.mjs)
+V1-058,1,Studio,Texture,Two-colour Khmer alphabet wall chart (typography print),T_studio_print_alphabet_BC.png,C,Medium,In progress,"1024-2048 px, UASTC",tools/drawings/ep1.mjs,Project,Project,No,"33 consonants and numerals, letterpress look; rendered by npm run drawings; Khmer text pending native-speaker review (KHMER list in tools/drawings/ep1.mjs)"
+V1-059,1,Studio,Prop,Lantern 01,Lantern_01,L,Medium,In progress,,https://polyhaven.com/a/Lantern_01,Rajil Jose Macatangay,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-060,1,Studio,Prop,Chinese Armchair,chinese_armchair,L,Medium,In progress,,https://polyhaven.com/a/chinese_armchair,Kirill Sannikov,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-061,1,Studio,Prop,Chinese Cabinet,chinese_cabinet,L,Medium,In progress,,https://polyhaven.com/a/chinese_cabinet,Kirill Sannikov,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-062,1,Studio,Prop,Chinese Console Table,chinese_console_table,L,Medium,In progress,,https://polyhaven.com/a/chinese_console_table,Kirill Sannikov,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-063,1,Studio,Prop,Chinese Stool,chinese_stool,L,Medium,In progress,,https://polyhaven.com/a/chinese_stool,Kirill Sannikov,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-064,1,Studio,Prop,Mantel Clock 01,mantel_clock_01,L,Medium,In progress,,https://polyhaven.com/a/mantel_clock_01,Yann Kervran & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-065,1,Studio,Prop,Old Bed Frame,old_bed_frame,L,Medium,In progress,,https://polyhaven.com/a/old_bed_frame,Luca B,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-066,1,Studio,Prop,Vintage Oil Lamp,vintage_oil_lamp,L,Medium,In progress,,https://polyhaven.com/a/vintage_oil_lamp,Monsta3D,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-067,1,Studio,Prop,Vintage Suitcase,vintage_suitcase,L,Medium,In progress,,https://polyhaven.com/a/vintage_suitcase,Maximilian Schuster,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-068,1,Studio,Prop,Wooden Table 02,WoodenTable_02,L,Medium,In progress,,https://polyhaven.com/a/WoodenTable_02,Fran Calvente,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-069,1,Studio,Prop,Book Encyclopedia Set 01,book_encyclopedia_set_01,L,Medium,In progress,,https://polyhaven.com/a/book_encyclopedia_set_01,John Malcolm,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-070,1,Studio,Prop,Brass Candleholders,brass_candleholders,L,Medium,In progress,,https://polyhaven.com/a/brass_candleholders,Tina,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-071,1,Studio,Prop,Brass Vase 01,brass_vase_01,L,Medium,In progress,,https://polyhaven.com/a/brass_vase_01,Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-072,1,Studio,Prop,Ceramic Vase 02,ceramic_vase_02,L,Medium,In progress,,https://polyhaven.com/a/ceramic_vase_02,James Ray Cock,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-073,1,Studio,Prop,Jug 01,jug_01,L,Medium,In progress,,https://polyhaven.com/a/jug_01,Kuutti Siitonen,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-074,1,Studio,Prop,Pot Enamel 01,pot_enamel_01,L,Medium,In progress,,https://polyhaven.com/a/pot_enamel_01,Kuutti Siitonen,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-075,1,Studio,Prop,Fancy Picture Frame 01,fancy_picture_frame_01,L,Medium,In progress,,https://polyhaven.com/a/fancy_picture_frame_01,Rob Tuytel & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-076,1,Studio,Prop,Hanging Picture Frame 02,hanging_picture_frame_02,L,Medium,In progress,,https://polyhaven.com/a/hanging_picture_frame_02,James Ray Cock,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-077,1,Studio,Prop,Standing Picture Frame 01,standing_picture_frame_01,L,Medium,In progress,,https://polyhaven.com/a/standing_picture_frame_01,James Ray Cock,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-078,1,Studio,Prop,Wicker Basket 01,wicker_basket_01,L,Medium,In progress,,https://polyhaven.com/a/wicker_basket_01,Kuutti Siitonen,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-079,1,Studio,Prop,Potted Plant 02,potted_plant_02,L,Medium,In progress,,https://polyhaven.com/a/potted_plant_02,Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-080,1,Studio,Prop,Wooden Candlestick,wooden_candlestick,L,Medium,In progress,,https://polyhaven.com/a/wooden_candlestick,Josh Dean,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-081,1,Studio,Material,Floor Tiles 06,floor_tiles_06,L,Medium,In progress,,https://polyhaven.com/a/floor_tiles_06,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-082,1,Studio,Material,Yellow Plaster,yellow_plaster,L,Medium,In progress,,https://polyhaven.com/a/yellow_plaster,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-083,1,Studio,Material,Dark Wooden Planks,dark_wooden_planks,L,Medium,In progress,,https://polyhaven.com/a/dark_wooden_planks,Amal Kumar,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-084,1,Studio,Material,Dark Wood,dark_wood,L,Medium,In progress,,https://polyhaven.com/a/dark_wood,Dario Barresi & Dimitrios Savva & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-085,1,Studio,Material,Teak Veneer,teak_veneer,L,Medium,In progress,,https://polyhaven.com/a/teak_veneer,Jenelle van Heerden,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-086,1,Studio,Material,Wood Table Worn,wood_table_worn,L,Medium,In progress,,https://polyhaven.com/a/wood_table_worn,Dimitrios Savva & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-087,1,Studio,Material,Rough Linen,rough_linen,L,Medium,In progress,,https://polyhaven.com/a/rough_linen,colormass & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-088,1,Studio,Material,Fabric Pattern 07,fabric_pattern_07,L,Medium,In progress,,https://polyhaven.com/a/fabric_pattern_07,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-089,1,Studio,Material,Quatrefoil Jacquard Fabric,quatrefoil_jacquard_fabric,L,Medium,In progress,,https://polyhaven.com/a/quatrefoil_jacquard_fabric,colormass & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_studio
+V1-090,1,Village,Prop,Bananas,bananas,L,Medium,In progress,,https://polyhaven.com/a/bananas,Alexander Shulha,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-091,1,Village,Prop,Brass Pot 01,brass_pot_01,L,Medium,In progress,,https://polyhaven.com/a/brass_pot_01,Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-092,1,Village,Prop,Brass Vase 03,brass_vase_03,L,Medium,In progress,,https://polyhaven.com/a/brass_vase_03,Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-093,1,Village,Prop,Wooden Bowl 01,wooden_bowl_01,L,Medium,In progress,,https://polyhaven.com/a/wooden_bowl_01,Oliver Harries,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-094,1,Village,Prop,Ceramic Pot,ceramic_pot,L,Medium,In progress,,https://polyhaven.com/a/ceramic_pot,Aron Łyczek,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-095,1,Village,Prop,Planter Pot Clay,planter_pot_clay,L,Low,Not started,,https://polyhaven.com/a/planter_pot_clay,Amal Kumar,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; downloaded for the village, not placed yet
+V1-096,1,Village,Prop,Wicker Basket 02,wicker_basket_02,L,Medium,In progress,,https://polyhaven.com/a/wicker_basket_02,Kuutti Siitonen,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-097,1,Village,Prop,Wooden Ladder 02,wooden_ladder_02,L,Medium,In progress,,https://polyhaven.com/a/wooden_ladder_02,JN_3DPRINTINGNERD,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-098,1,Village,Prop,Wooden Bucket 01,wooden_bucket_01,L,Medium,In progress,,https://polyhaven.com/a/wooden_bucket_01,James Ray Cock,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-099,1,Village,Prop,Fern 02,fern_02,L,Medium,In progress,,https://polyhaven.com/a/fern_02,Rob Tuytel & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-100,1,Village,Prop,Wooden Lantern 01,wooden_lantern_01,L,Low,Not started,,https://polyhaven.com/a/wooden_lantern_01,James Ray Cock,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; downloaded for the village, not placed yet
+V1-101,1,Village,Prop,Folding Wooden Stool,folding_wooden_stool,L,Low,Not started,,https://polyhaven.com/a/folding_wooden_stool,Ulan Cabanilla,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; downloaded for the village, not placed yet
+V1-102,1,Village,Material,Thatch Roof Angled,thatch_roof_angled,L,Medium,In progress,,https://polyhaven.com/a/thatch_roof_angled,Rob Tuytel & Dimitrios Savva,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-103,1,Village,Material,Reed Roof 04,reed_roof_04,L,Low,Not started,,https://polyhaven.com/a/reed_roof_04,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; downloaded for the village, not placed yet
+V1-104,1,Village,Material,Bamboo Wall,bamboo_wall,L,Medium,In progress,,https://polyhaven.com/a/bamboo_wall,Amal Kumar,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-105,1,Village,Material,Clay Roof Tiles 02,clay_roof_tiles_02,L,Medium,In progress,,https://polyhaven.com/a/clay_roof_tiles_02,Amal Kumar,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-106,1,Village,Material,Red Dirt Mud 01,red_dirt_mud_01,L,Medium,In progress,,https://polyhaven.com/a/red_dirt_mud_01,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-107,1,Village,Material,Muddy Tracks,muddy_tracks,L,Medium,In progress,,https://polyhaven.com/a/muddy_tracks,Amal Kumar,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-108,1,Village,Material,Weathered Planks,weathered_planks,L,Medium,In progress,,https://polyhaven.com/a/weathered_planks,Dario Barresi & Dimitrios Savva,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-109,1,Village,Material,Weathered Brown Planks,weathered_brown_planks,L,Medium,In progress,,https://polyhaven.com/a/weathered_brown_planks,Dimitrios Savva & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-110,1,Village,Material,Old Planks 02,old_planks_02,L,Medium,In progress,,https://polyhaven.com/a/old_planks_02,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-111,1,Village,Material,Waffle Pique Cotton,waffle_pique_cotton,L,Low,Not started,,https://polyhaven.com/a/waffle_pique_cotton,colormass & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; downloaded for the village, not placed yet
+V1-112,1,Village,Material,Forest Leaves 02,forest_leaves_02,L,Medium,In progress,,https://polyhaven.com/a/forest_leaves_02,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-113,1,Village,Texture,Uncle Sok's funeral portrait (source photograph),Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg,L,High,In progress,,https://commons.wikimedia.org/wiki/File:Un_fonctionnaire_cambodgien_et_sa_famille_m%C3%AAlant_les_styles_de_v%C3%AAtements_traditionnels_(sampot)_et_occidentaux_-_A36130.jpg,"Léon Busy (Archives de la Planète, Musée départemental Albert-Kahn)",CC0 1.0,No (credit appreciated),"1921 autochrome; cropped and printed as a 1920s portrait by tools/drawings/village.mjs (T_ep1_photo_sok_BC). A real, unnamed man: on the cultural advisor's review list"
+V1-114,1,Village,Texture,"Painted village textures: banana, sugar palm and coconut leaves, crocodile flag, coffin gilt panel, reed mat, valance, banana stem, bamboo, palm trunk",T_ep1_*_BC.png,K,Medium,In progress,,tools/drawings/village.mjs,Project,Project,No,Rendered by npm run drawings -- ep1
+V1-115,1,Village,Prop,Dead Tree Trunk,dead_tree_trunk,L,Medium,In progress,,https://polyhaven.com/a/dead_tree_trunk,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-116,1,Village,Prop,Dead Tree Trunk 02,dead_tree_trunk_02,L,Medium,In progress,,https://polyhaven.com/a/dead_tree_trunk_02,Jenelle van Heerden & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-117,1,Village,Prop,Tree Stump 01,tree_stump_01,L,Medium,In progress,,https://polyhaven.com/a/tree_stump_01,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-118,1,Village,Prop,Root Cluster 01,root_cluster_01,L,Medium,In progress,,https://polyhaven.com/a/root_cluster_01,Jenelle van Heerden & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-119,1,Village,Prop,Dry Branches Medium 01,dry_branches_medium_01,L,Medium,In progress,,https://polyhaven.com/a/dry_branches_medium_01,Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-120,1,Village,Prop,Pachira Aquatica 01,pachira_aquatica_01,L,Medium,In progress,,https://polyhaven.com/a/pachira_aquatica_01,Rob Tuytel & Rico Cilliers,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-121,1,Village,Prop,Rusted Spade 01,rusted_spade_01,L,Medium,In progress,,https://polyhaven.com/a/rusted_spade_01,Blemonade,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-122,1,Village,Prop,Machete,machete,L,Medium,In progress,,https://polyhaven.com/a/machete,Ulan Cabanilla,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village (decimated)
+V1-123,1,Village,Material,Bark Brown 02,bark_brown_02,L,Medium,In progress,,https://polyhaven.com/a/bark_brown_02,Rob Tuytel,CC0 1.0,No (credit appreciated),Poly Haven; npm run fetch-library; used in ep1_area_village
+V1-124,1,Village,Texture,"Painted village textures, second set: storm sky with treeline, tree and bamboo leaves, grass, old crocodile flag, cobweb, footprints, yantra cloth, Ting Mong face, road marker",T_ep1_*_BC.png,K,Medium,In progress,,tools/drawings/village.mjs,Project,Project,No,Rendered by npm run drawings -- ep1; Khmer on the yantra in the KHMER list

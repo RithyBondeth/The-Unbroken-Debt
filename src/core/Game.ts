@@ -1,0 +1,245 @@
+import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
+import { Scene } from "@babylonjs/core/scene";
+import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
+import { Camera } from "@babylonjs/core/Cameras/camera";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { Color4 } from "@babylonjs/core/Maths/math.color";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { EventBus } from "./EventBus";
+import { Flags } from "./Flags";
+import type { GameEvents } from "./events";
+import { enablePhysics } from "./Physics";
+import type { DeviceProfile } from "../render/DeviceProfile";
+import { getPreset, type QualityPreset } from "../render/QualityPresets";
+import { createPostPipeline, type PostPipeline } from "../render/RenderSetup";
+import { DynamicResolution } from "../render/DynamicResolution";
+import { runRenderLoop } from "../render/renderLoop";
+import { renderStallNotice } from "../ui/html/RenderStallNotice";
+import { Atmosphere } from "../render/Atmosphere";
+import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
+import { PlayerController } from "../player/PlayerController";
+import { PerfOverlay } from "../debug/PerfOverlay";
+import { AudioSystem } from "../audio/AudioSystem";
+import { FLAME_COLOR } from "../render/RenderSetup";
+import { Inventory } from "../systems/inventory/Inventory";
+import { Interaction } from "../systems/interaction/Interaction";
+import { SaveStore } from "../systems/saves/SaveStore";
+import { Sketchbook } from "../ui/diegetic/Sketchbook";
+import { loadSketchbookFonts } from "../ui/diegetic/fonts";
+import { SECTIONS } from "../ui/diegetic/sketchbookContent";
+import {
+  Hints,
+  SatchelPanel,
+  SaveIndicator,
+  ScreenFade,
+  Subtitles,
+  type SatchelEntry,
+} from "../ui/html/StoryUi";
+import { EP1_GRADE } from "../episodes/ep1/data/grade";
+import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
+import { ITEMS } from "../episodes/ep1/data/prologue";
+import { Prologue } from "../episodes/ep1/prologue/Prologue";
+import { ActOne } from "../episodes/ep1/act1/ActOne";
+import type { SaveData } from "../systems/saves/SaveData";
+
+/** A part of an episode with its own area and script (the prologue, an act). */
+interface Section {
+  load(): Promise<void>;
+  begin(): Promise<void>;
+}
+
+/**
+ * Owns the engine, the scene, the shared event bus and flags, the camera and
+ * player, the post-processing and the render loop, then hands over to the
+ * current episode section. Phase 2: boots straight into the Episode 1 prologue.
+ */
+export class Game {
+  readonly bus = new EventBus<GameEvents>();
+  readonly flags = new Flags(this.bus);
+  readonly scene: Scene;
+  readonly camera: UniversalCamera;
+  readonly preset: QualityPreset;
+  readonly input: KeyboardMouseInput;
+  /** What the player controller reads: the keyboard and mouse, as the story allows. */
+  readonly gated: GatedInput;
+  readonly inventory = new Inventory(this.bus);
+  readonly interaction: Interaction;
+  readonly hints = new Hints();
+  readonly subtitles = new Subtitles();
+  readonly fade = new ScreenFade();
+  readonly satchel = new SatchelPanel();
+  private readonly saveIndicator = new SaveIndicator();
+  readonly saves = new SaveStore((saving) => this.saveIndicator.set(saving));
+  /** Null if the browser refused to create audio. */
+  audio: AudioSystem | null = null;
+  /** Exists once the game has started. */
+  sketchbook: Sketchbook | null = null;
+  /** A scripted moment has Sora's hands: nothing can be used, opened or read. */
+  cutscene = false;
+  pipeline!: PostPipeline;
+  atmosphere!: Atmosphere;
+  player!: PlayerController;
+  private resolution!: DynamicResolution;
+
+  constructor(
+    private readonly engine: WebGPUEngine,
+    device: DeviceProfile,
+  ) {
+    this.preset = getPreset(device.quality);
+    this.scene = new Scene(engine);
+    this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
+    this.scene.skipPointerMovePicking = true;
+    this.camera = new UniversalCamera("eye", new Vector3(0, 1.6, 0), this.scene);
+    this.camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED;
+    // Art Bible section 4: 75° by default.
+    this.camera.fov = (75 * Math.PI) / 180;
+    this.camera.minZ = 0.05;
+    this.camera.maxZ = 60;
+    this.scene.activeCamera = this.camera;
+    this.input = new KeyboardMouseInput(engine.getRenderingCanvas() as HTMLCanvasElement, 0.0022);
+    this.gated = new GatedInput(this.input);
+    this.interaction = new Interaction(this.scene, this.camera, this.bus);
+    window.addEventListener("keydown", (e) => this.press(e));
+    this.bus.on("inventory:changed", () => {
+      if (this.satchel.isOpen) this.satchel.open(this.satchelEntries());
+    });
+  }
+
+  /** Seconds since the last frame, capped so a stall never jumps the world. */
+  get deltaSeconds(): number {
+    return Math.min(this.engine.getDeltaTime() / 1000, 0.1);
+  }
+
+  async start(): Promise<void> {
+    await Promise.all([enablePhysics(this.scene), loadSketchbookFonts()]);
+    this.audio = await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch(
+      (error: unknown) => {
+        console.warn("[Game] no audio", error);
+        return null;
+      },
+    );
+    this.audio?.attachListener(this.camera);
+    this.resolution = new DynamicResolution(this.engine, this.preset);
+    const section = await this.chooseSection();
+    await section.load();
+    this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
+    this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
+    this.createSketchbook();
+    if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
+    this.scene.onBeforeRenderObservable.add(() => this.update());
+    void section.begin();
+    runRenderLoop(this.engine, () => this.scene.render(), renderStallNotice);
+  }
+
+  /**
+   * Where to start: `?continue` resumes the autosave (the prologue reloads into
+   * it at CP1), `?start=act1` jumps there with the starting kit for testing.
+   */
+  private async chooseSection(): Promise<Section> {
+    const params = new URLSearchParams(location.search);
+    const resumed = params.has("continue") ? (await this.saves.load("autosave")).save : null;
+    if (resumed) this.restore(resumed);
+    else if (params.get("start") === "act1") {
+      for (const [item, n] of Object.entries({
+        satchel: 1,
+        sketchbook: 1,
+        matches: 10,
+        lamp: 1,
+        letters: 1,
+      }))
+        this.inventory.add(item, n);
+      this.flags.set("sketchbook.written", "SB-01");
+    } else return new Prologue(this);
+    return new ActOne(this);
+  }
+
+  /** Puts a save's story state back (the area and position come from its checkpoint). */
+  private restore(save: SaveData): void {
+    this.flags.load(save.flags);
+    this.inventory.load(save.inventory);
+  }
+
+  /** Puts Sora at `feet`, facing `yaw`. */
+  spawnPlayer(feet = Vector3.Zero(), yaw = 0): void {
+    this.player = new PlayerController(this.scene, this.camera, this.gated, feet, this.bus);
+    this.player.yaw = yaw;
+  }
+
+  /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
+  private createSketchbook(): void {
+    const height = this.preset.name === "low" ? 1024 : 1536;
+    const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera);
+    this.sketchbook = sketchbook;
+    const written = this.flags.get<string>("sketchbook.written", "");
+    if (written) sketchbook.restore(written.split(","));
+    // Drawn after the room with its own depth, so the book never sinks into a wall.
+    sketchbook.book.setRenderingGroup(1);
+    this.scene.setRenderingAutoClearDepthStencil(1, true, true, true);
+    // The room's lights would blow the paper out at 30 cm (S5): one soft light of its own.
+    const reading = new PointLight("reading_light", new Vector3(-0.3, -0.12, 0.12), this.scene);
+    reading.parent = this.camera;
+    reading.diffuse = FLAME_COLOR.clone();
+    reading.intensity = 0.22;
+    reading.includedOnlyMeshes = sketchbook.book.meshes;
+    for (const light of this.scene.lights)
+      if (light !== reading) light.excludedMeshes.push(...sketchbook.book.meshes);
+  }
+
+  private update(): void {
+    const book = this.sketchbook;
+    book?.update(this.deltaSeconds);
+    this.gated.reading = book?.isOpen ?? false;
+    this.interaction.active = !this.cutscene && !this.gated.reading && !this.satchel.isOpen;
+    this.interaction.update();
+  }
+
+  /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */
+  private press(e: KeyboardEvent): void {
+    if (e.code === "Tab") e.preventDefault();
+    if (e.repeat) return;
+    const book = this.sketchbook;
+    if (e.code === "KeyE" && this.interaction.use()) this.hints.performed("hint.use");
+    if (e.code === "Tab") this.toggleSatchel();
+    if (e.code === "KeyQ") this.toggleSketchbook();
+    if (!book?.isOpen) return;
+    if (e.code === "KeyA" || e.code === "KeyD") book.turn(e.code === "KeyD" ? 1 : -1);
+    const digit = Number(e.code.replace("Digit", ""));
+    if (e.code.startsWith("Digit") && digit >= 1 && digit <= SECTIONS.length)
+      book.goToSection(SECTIONS[digit - 1].id);
+  }
+
+  toggleSatchel(): void {
+    if (this.cutscene || !this.inventory.has("satchel")) return;
+    this.hints.performed("hint.satchel");
+    if (this.satchel.isOpen) return this.satchel.close();
+    if (this.sketchbook?.isOpen) this.sketchbook.toggle();
+    this.satchel.open(this.satchelEntries());
+  }
+
+  toggleSketchbook(): void {
+    if (this.cutscene || !this.sketchbook || !this.inventory.has("sketchbook")) return;
+    this.hints.performed("hint.sketchbook");
+    this.satchel.close();
+    this.sketchbook.toggle();
+  }
+
+  private satchelEntries(): SatchelEntry[] {
+    return this.inventory
+      .list()
+      .filter(([id]) => ITEMS[id])
+      .map(([id, n]) => ({
+        name: ITEMS[id].name,
+        note: ITEMS[id].note?.replace("{n}", String(n)),
+      }));
+  }
+
+  /** Lights the volumetric fog should glow around. */
+  addFlameLights(...lights: PointLight[]): void {
+    this.pipeline.fog?.lights.push(...lights);
+  }
+
+  /** While text must stay sharp (the sketchbook), hold the render scale up (S5). */
+  holdResolution(scale: number | null): void {
+    this.resolution.holdAtLeast(scale);
+  }
+}

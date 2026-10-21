@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Episode 1: The House of Mourning — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="01-Episode-1-The-House-of-Mourning">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop · Episode 1: The House of Mourning"; } }</style>
+</head>
+<body class="ep1">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Episode 1</div>
+  <h1>The House of Mourning</h1>
+  <div class="title-km">ផ្ទះបុណ្យ</div>
+  <div class="subtitle">Game Design and Narrative Specification</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Setting</dt><dd>Family stilt house, rural Battambang Province</dd>
+    <dt>Nights</dt><dd>Night 1 (prologue) · Night 3, 11:30 PM – dawn</dd>
+    <dt>Playtime</dt><dd>1.5 – 2 hours</dd>
+    <dt>Seal</dt><dd>#1 · The Bronze Token</dd>
+    <dt>Version</dt><dd>3.1 · October 2026 · Draft for review</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#overview">Episode Overview</a></li>
+    <li><span class="n">02</span><a href="#characters">Characters</a></li>
+    <li><span class="n">03</span><a href="#locations">Locations and Layout</a></li>
+    <li><span class="n">04</span><a href="#story">Story and Gameplay by Act</a>
+      <ol><li>Prologue · The Call</li><li>Act I · Arrival and the Vigil</li><li>Act II · The Unbroken Taboo</li><li>Act III · The First Seal</li><li>Resolution · The Fourth Name</li></ol></li>
+    <li><span class="n">05</span><a href="#escalation">Threat Escalation</a></li>
+    <li><span class="n">06</span><a href="#puzzles">Puzzles</a></li>
+    <li><span class="n">07</span><a href="#choice">Key Choice and Tracking</a></li>
+    <li><span class="n">08</span><a href="#mechanics">Mechanics Reference</a></li>
+    <li><span class="n">09</span><a href="#items">Items and Lore Notes</a></li>
+    <li><span class="n">10</span><a href="#av">Audio and Visual Specification</a></li>
+    <li><span class="n">11</span><a href="#glossary">Glossary</a></li>
+    <li><span class="n">12</span><a href="#notes">Revision Notes and Open Issues</a></li>
+  </ol>
+</nav>
+
+<h2 id="overview"><span class="num">01</span>Episode Overview</h2>
+<p class="lead">A broken phone call pulls Sora home to Battambang for her uncle's funeral. Left alone to keep the night vigil, she learns that the family owes a debt to a land spirit, that it collects on the seventh night after Sok's death, and, in the last minutes before dawn, that the name written for the final payment is hers.</p>
+
+<div class="cards">
+  <div class="card"><div class="k">Location</div><div class="v">Battambang</div><div class="d">Family stilt house and funeral tent</div></div>
+  <div class="card"><div class="k">Night</div><div class="v">Night 3 of 7</div><div class="d">Four nights remain at the end</div></div>
+  <div class="card"><div class="k">Playtime</div><div class="v">1.5 – 2 hours</div><div class="d">Prologue + 3 acts</div></div>
+  <div class="card"><div class="k">Core mechanic</div><div class="v">Resource management</div><div class="d">Kerosene, incense, matches</div></div>
+  <div class="card"><div class="k">Threats</div><div class="v">Neak Ta shadow</div><div class="d">Its shadow walks the house and the ground below</div></div>
+  <div class="card"><div class="k">Seal</div><div class="v">#1 Bronze Token</div><div class="d">Burned in a counter-ritual</div></div>
+</div>
+
+<h3><span class="num">1.1</span>Episode goal</h3>
+<p>Keep the three vigil duties, discover why Uncle Sok died, and burn the <strong>Bronze Token</strong>, the first seal, before 3:00 AM.</p>
+
+<h3><span class="num">1.2</span>Content at a glance</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>Puzzles (6)</td><td>Betel offering tray · gramophone speed dial · desk drawer · three key fragments · iron-bound chest · counter-ritual</td></tr>
+    <tr><td>Threat encounters (4)</td><td>Incense darkness · the Neak Ta's shadow in the house · its shadow under the house · its presence behind Sora during the ritual</td></tr>
+    <tr><td>Optional area</td><td>The locked storage shed (oil and two lore notes)</td></tr>
+    <tr><td>Key choice</td><td>Share Sok's journal with Vuthy at dawn, or keep it</td></tr>
+    <tr><td>Revelation</td><td>Sora's name on Sok's slip of paper, beside the words "the fourth"</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">1.3</span>Role in the series</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>Introduces</td><td>Movement and interaction, satchel and sketchbook, the kerosene lamp, timed upkeep, hiding, "moves when unwatched", the first counter-ritual, the night count.</td></tr>
+    <tr><td>Reveals</td><td>The 1910 pact, the four payments, the seven-night deadline, and that Sok died trying to break the first seal himself.</td></tr>
+    <tr><td>Leads to</td><td>A line of blood on the map points to the village pagoda (Episode 2).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="characters"><span class="num">02</span>Characters</h2>
+<table>
+  <thead><tr><th style="width:22%">Character</th><th style="width:15%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span><br><span class="small">24</span></td><td>Protagonist</td><td>An illustrator who left the village at 12, after her mother's death, and has lived alone in Phnom Penh since her father died in 1929. Practical and sceptical of the old beliefs. Since 1929 she has stopped answering Yay Mey's letters and has missed every memorial for her mother.</td><td>Player character; seen only as hands.</td></tr>
+    <tr><td><strong>Yay Mey</strong><br><span class="km">យាយម៉ី</span><br><span class="small">66</span></td><td>Grandmother</td><td>Traditional, strict, deeply superstitious. Married into the family, so the debt cannot take her, but she has buried a husband and a daughter to it. She knows more than she says. Dressed in white mourning: chong kben (<span class="km">សំពត់ចងក្បិន</span>) and sash (<span class="km">ស្បៃ</span>).</td><td>Sets the vigil duties; teaches the betel offering.</td></tr>
+    <tr><td><strong>Vuthy</strong><br><span class="km">វុទ្ធី</span><br><span class="small">26</span></td><td>Cousin</td><td>Sok's son, raised by his late mother's family in Battambang town. A clerk for a French trading house who manages the family's rice land and money. Polite, modern, dismissive of "village superstition", and uneasy around his father's coffin.</td><td>Introduced; leaves for town before midnight; returns at dawn for the key choice.</td></tr>
+    <tr><td><strong>Uncle Sok</strong><br><span class="km">ពូសុខ</span><br><span class="small">deceased</span></td><td>Sora's uncle</td><td>Former medic turned recluse collector of manuscripts and relics. Died on Night 1 at 8:12 PM.</td><td>His journal drives the story; his corpse and portrait are dread devices.</td></tr>
+    <tr><td><strong>The Neak Ta</strong><br><span class="km">អ្នកតា</span></td><td>Antagonist</td><td>A towering shadow in a distorted ancient brass mask.</td><td>Its shadow walks the upper house (Act II) and hunts beneath it (Act III); it stands behind Sora in the finale.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="locations"><span class="num">03</span>Locations and Layout</h2>
+<div class="flow">
+  <div class="node start"><b>Prologue · Phnom Penh Studio</b><span>Drafting desk, brass wall telephone, stopped clock</span></div><div class="arrow"></div>
+  <div class="node"><b>Village Path</b><span>Rain, mud road, banana grove (short walk)</span></div><div class="arrow"></div>
+  <div class="node"><b>Courtyard and Funeral Tent</b><span>Coffin, altar, incense burners, protective thread</span></div><div class="arrow"></div>
+  <div class="split">
+    <div class="node"><b>Upper House</b><span>Ancestral altar · Sok's room</span></div>
+    <div class="node"><b>Under the House</b><span>Pillars, clay jars</span></div>
+    <div class="node"><b>Storage Shed</b><span>Optional · locked</span></div>
+  </div>
+</div>
+<table>
+  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:24%">Gameplay use</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Phnom Penh Studio</strong></td><td>A cosy third-floor apartment: drafting table, ink bottles, typography prints, green glass desk lamp, brass hand-crank telephone, wall clock that stops at 8:12 PM.</td><td>Tutorial; starting kit</td></tr>
+    <tr><td><strong>Courtyard and Funeral Tent</strong><br><span class="km small">រោងបុណ្យ</span></td><td>Bamboo frame draped in wet white cotton. Raised stage with the teak coffin; Sok's portrait on a small altar with brass candle holders; four tall brass incense burners; bamboo benches, clay water jars; protective white thread tied along the frame. Hanging oil lamps and yellow wax candles.</td><td>Vigil hub; incense loop; finale</td></tr>
+    <tr><td><strong>Upper House</strong><br><span class="km small">ផ្ទះរោងដឿង</span></td><td>Dark teak with 1 cm gaps between floorboards and a high-gabled tiled roof. <strong>Hall:</strong> woven mat (<span class="km">កន្ទេល</span>), ancestral altar with bronze statues and betel trays. <strong>Sok's room:</strong> desk, palm-leaf manuscripts (<span class="km">ស្លឹករឹត</span>), brass-horn gramophone, iron-bound chest behind loose planks, wardrobes.</td><td>Betel tray; gramophone; hiding; chest</td></tr>
+    <tr><td><strong>Under the House</strong><br><span class="km small">ក្រោមផ្ទះ</span></td><td>Dirt floor among thick pillars; firewood, ox-cart wheels, clay water jars. Pitch black.</td><td>Stealth search for key fragments</td></tr>
+    <tr><td><strong>Storage Shed</strong><br><span class="small">optional</span></td><td>Locked shed at the back of the yard. Key in Yay Mey's sewing box in the hall. Holds oil bottles, Chea's 1911 land deed and a photograph of Sora's mother.</td><td>Resources; two lore notes</td></tr>
+  </tbody>
+</table>
+
+<h2 id="story"><span class="num">04</span>Story and Gameplay by Act</h2>
+<p class="small">Each act shows <strong>playtime</strong> (minutes into the episode) and <strong>story time</strong> (the clock in the game world).</p>
+
+<div class="act">
+  <div class="act-head"><h3>Prologue · The Call</h3><span class="time">Playtime 0:00 – 0:10 · Night 1, 8:00 – 8:15 PM</span></div>
+  <div class="act-body">
+    <p>Sora works late on an illustration during a storm. Dread grips her; ink spills across her sketchbook; a candle goes out; the clock stops at <strong>8:12 PM</strong>. The brass telephone rings. Through static, Yay Mey:</p>
+    <blockquote class="line">"Sora… you must come home right now… Uncle Sok… he broke it… it's inside the house—"<cite>Yay Mey, over the telephone</cite></blockquote>
+    <p>A screech, shattering glass, the line goes dead. In her desk drawer lies a bundle of Yay Mey's letters, unopened, the oldest three years old; Sora shoves them into the satchel without reading them. The player learns to move, pick up and inspect, then packs the satchel, sketchbook, matchbox and hurricane lamp. A fade covers the two-day journey by train and carriage.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Act I · Arrival and the Vigil</h3><span class="time">Playtime 0:10 – 0:40 · Night 3, 11:30 PM – 1:00 AM</span></div>
+  <div class="act-body">
+    <h4>Narrative</h4>
+    <p>The carriage driver refuses the flooded road, so Sora walks the last stretch by lamplight. In the courtyard, under the white funeral tent, Yay Mey greets her in tears, then, quietly: "You did not come for your mother's memorial. Three years, Sora." <strong>Vuthy</strong> is there too, in a town suit, stiff and polite. He calls the rituals "superstition", tells Sora their grandmother is not well, and leaves for town before midnight, promising to return at dawn.</p>
+    <p>Exhausted after two days of mourning, Yay Mey gives Sora the three vigil duties: keep the lamp burning, keep the four corner incense sticks alight, and keep the protective thread around the tent unbroken. Before resting, she asks Sora to prepare a proper <strong>betel offering</strong> for the ancestral altar, "as your mother used to".</p>
+    <h4>Gameplay</h4>
+    <table>
+      <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Vigil duties</td><td>Lamp oil drains; incense burns down every 10–12 minutes; the thread can be inspected.</td></tr>
+        <tr><td><strong>Betel offering tray</strong> <span class="tag">new</span></td><td>Arrange the offering correctly (section 6.1). Reward: matches blessed at the altar, the <strong>sanctified matches</strong> needed for the final ritual.</td></tr>
+        <tr><td>Optional: storage shed</td><td>Find the key in Yay Mey's sewing box. Spare oil and two lore notes.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Act II · The Unbroken Taboo</h3><span class="time">Playtime 0:40 – 1:15 · Night 3, 1:00 – 2:00 AM</span></div>
+  <div class="act-body">
+    <h4>Narrative</h4>
+    <p>At <strong>1:00 AM</strong> a cold gust blows out the tent's lamps. Wet footsteps cross the floorboards above. In Sok's room, behind a loose plank, Sora finds pages of his journal addressed <em>"to whoever keeps my vigil"</em>. They describe Great-grandfather Chea's pact of 1910, the four payments and the five seals. Then the gramophone beside the desk begins to turn by itself, and once its speed is corrected, Sok's own recorded voice fills the room:</p>
+    <blockquote class="line">"On the seventh night after my death it will come to collect what is owed. Break the seals before then. I tried to begin. If you are hearing this, I failed."<cite>Uncle Sok, on a gramophone record</cite></blockquote>
+    <h4>Gameplay</h4>
+    <table>
+      <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Gramophone</td><td>Plays a funeral chant backwards on its own; fix the speed to hear Sok's recorded warning and where the desk-drawer key is hidden (section 6.2).</td></tr>
+        <tr><td>The shadow in the hallway</td><td>The Neak Ta's shadow walks the house; dragging footsteps approach. Put out the lamp and hide behind a wardrobe until the shadow passes.</td></tr>
+        <tr><td>The portrait</td><td>Downstairs, all four incense sticks are ash, and in the portrait Sok's eyes are open, staring at Sora.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Act III · The First Seal</h3><span class="time">Playtime 1:15 – 1:50 · Night 3, 2:00 – 3:00 AM</span></div>
+  <div class="act-body">
+    <h4>Narrative</h4>
+    <p>The protective thread snaps. Lamps die one by one. In the coffin, Sok's body shifts whenever Sora looks away. The journal says the first seal, the Bronze Token, is in the iron-bound chest, and its key was broken into three pieces and hidden under the house.</p>
+    <h4>Gameplay</h4>
+    <table>
+      <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Under-house search</td><td>Collect three brass key fragments from clay jars while the Neak Ta's shadow hunts beneath the house by sound and light.</td></tr>
+        <tr><td>The chest</td><td>Assemble the key; open the chest: the Bronze Token, a map with four faint marks, and a folded slip of paper Sora pockets without reading.</td></tr>
+        <tr><td>Counter-ritual</td><td>Place the token in the main incense burner and light it with the sanctified matches while the mantra is recited. The presence stands behind Sora, its shadow huge on the tent cloth. She must not turn around.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Resolution · The Fourth Name</h3><span class="time">Night 3, 3:00 AM – dawn</span></div>
+  <div class="act-body">
+    <p>The token burns; wind tears through the tent; the screech fades. In the grey light before dawn, Sok's body lies still. Vuthy returns from town and asks what happened and what his father left. <strong>Key choice:</strong> show him the journal, or keep it (section 7).</p>
+    <p>Alone again, Sora unfolds the slip from the chest. In Sok's hand: a list of four names, three crossed out: <em>Chea, Chhun, Kanha</em>. The fourth line has been scraped and rewritten. It reads <strong>Sora</strong>.</p>
+    <p>Blood seeps across her map, darkening the first faint mark: the village pagoda. In the sketchbook, she draws seven circles and fills in three. <strong>Four nights remain.</strong></p>
+  </div>
+</div>
+
+<h2 id="escalation"><span class="num">05</span>Threat Escalation</h2>
+<table>
+  <thead><tr><th style="width:14%">Act</th><th>Threat</th><th style="width:36%">What changes</th></tr></thead>
+  <tbody>
+    <tr><td>I</td><td>Darkness and whispers</td><td>No direct danger. Letting the incense die darkens the tent and brings louder whispers: a warning, not a punishment.</td></tr>
+    <tr><td>II</td><td>The Neak Ta's shadow, in the house</td><td>Hunts by sound only. Hiding with the lamp off is always safe.</td></tr>
+    <tr><td>III</td><td>The Neak Ta's shadow, beneath the house</td><td>Hunts by sound <em>and</em> is drawn to lamplight; the lamps around the yard are dying, so darkness is now both safety and danger. The corpse moves when unwatched.</td></tr>
+    <tr><td>Finale</td><td>The presence behind Sora</td><td>Turning around fails the ritual and restarts it from its checkpoint.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="puzzles"><span class="num">06</span>Puzzles</h2>
+
+<h3><span class="num">6.1</span>The betel offering tray <span class="tag">new</span></h3>
+<p>A short cultural puzzle that teaches the player to look carefully, and that the household's rituals matter.</p>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Listen to Yay Mey's instruction and look at the old drawing of the tray pinned near the altar. It is Kanha's, and Sora recognises her own hand in her mother's lines.</td><td>Sketch of the correct layout added to the sketchbook.</td></tr>
+    <tr><td>2</td><td>Gather betel leaves, areca nut, lime paste, a candle and incense from around the house.</td><td>Items in the satchel.</td></tr>
+    <tr><td>3</td><td>Arrange them on the tray as in the drawing and place it on the altar.</td><td>Yay Mey blesses a set of matches: the sanctified matches.</td></tr>
+  </tbody>
+</table>
+<p class="small">A wrong arrangement can be corrected freely, but each wrong placement records a small respect penalty. The exact layout must be confirmed with the cultural advisor.</p>
+
+<h3><span class="num">6.2</span>The gramophone and desk</h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>The gramophone starts a reversed chant by itself.</td><td>Draws the player in.</td></tr>
+    <tr><td>2</td><td>Turn the governor speed dial until the audio becomes clear speech.</td><td>Sok's recorded voice delivers his warning and names the hiding place of the drawer key.</td></tr>
+    <tr><td>3</td><td>Retrieve the key; open the desk drawer.</td><td>The rest of the journal, including the chest's location.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">6.3</span>The key and the chest</h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Search the clay jars under the house while avoiding the shadow.</td><td>Three brass fragments.</td></tr>
+    <tr><td>2</td><td>Combine the fragments in the satchel.</td><td>Complete key.</td></tr>
+    <tr><td>3</td><td>Remove the loose planks in Sok's room; unlock the chest.</td><td>Bronze Token, map, folded slip.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">6.4</span>The counter-ritual</h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Bring the token to the coffin altar before 3:00 AM.</td><td>Checkpoint saved.</td></tr>
+    <tr><td>2</td><td>Place it in the main incense burner.</td><td>The presence appears behind Sora.</td></tr>
+    <tr><td>3</td><td>Light it with the sanctified matches without turning around.</td><td>Seal #1 breaks.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="choice"><span class="num">07</span>Key Choice and Tracking</h2>
+<div class="cols">
+  <div class="callout"><span class="label">Share the journal</span><p>Sora shows Vuthy his father's journal. He reads it in silence, then says he has to think. <strong>Vuthy +1.</strong> In Episode 3 he already knows what the seals are, which makes his later actions a deliberate choice rather than ignorance.</p></div>
+  <div class="callout"><span class="label">Keep the journal</span><p>Sora says only that his father left old papers. Vuthy nods and doesn't push. <strong>No change.</strong> He learns the truth on his own later, and resents being kept out.</p></div>
+</div>
+<table>
+  <thead><tr><th style="width:30%">Tracked in this episode</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr><td>Respect</td><td>Betel tray correct on the first try (+1); incense never allowed to burn out through neglect (+1; the scripted ash in Act II does not count)</td></tr>
+    <tr><td>Knowledge (lore notes)</td><td>5 notes: three journal pages beyond the required ones, the 1911 land deed and Kanha's photograph (shed)</td></tr>
+    <tr><td>Vuthy</td><td>Journal shared at dawn</td></tr>
+  </tbody>
+</table>
+
+<h2 id="mechanics"><span class="num">08</span>Mechanics Reference</h2>
+<p>Values marked <em>target</em> are starting points for playtesting.</p>
+<table>
+  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Kerosene lamp</strong></td><td>Burns continuously while lit; a full tank lasts about 12 minutes (<em>target</em>). Turn it off to save oil or to hide.</td><td>Glass gauge on the lamp; sputtering flame.</td></tr>
+    <tr><td><strong>Matches</strong></td><td>Limited. Ordinary matches relight lamps and incense; the sanctified matches are reserved for the ritual.</td><td>Count shown when the matchbox is opened.</td></tr>
+    <tr><td><strong>Incense loop</strong></td><td>Corner sticks burn down every 10–12 minutes; fresh sticks come from the house altar.</td><td>Stick length, thinning smoke, whispers.</td></tr>
+    <tr><td><strong>Hiding</strong></td><td>In a hiding spot with the lamp off, Sora is undetectable unless touched.</td><td>Muffled sound, heartbeat.</td></tr>
+    <tr><td><strong>Watched / unwatched</strong></td><td>The corpse moves only when out of view.</td><td>Changed position when the player looks back.</td></tr>
+    <tr><td><strong>Being caught</strong></td><td>Short scare, fade, restart at the last checkpoint; no health bar.</td><td>A page torn from the sketchbook.</td></tr>
+    <tr><td><strong>Night count</strong></td><td>The sketchbook shows seven circles; one fills at the end of each episode.</td><td>Sketchbook page.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="items"><span class="num">09</span>Items and Lore Notes</h2>
+<table>
+  <thead><tr><th style="width:28%">Item</th><th style="width:14%">Type</th><th>Found / use</th></tr></thead>
+  <tbody>
+    <tr><td>Satchel, sketchbook, hurricane lamp, matchbox</td><td>Equipment</td><td>Studio</td></tr>
+    <tr><td>Oil bottles, incense sticks</td><td>Consumable</td><td>House, grounds, shed</td></tr>
+    <tr><td>Betel leaves, areca nut, lime, candle</td><td>Puzzle items</td><td>Kitchen and hall</td></tr>
+    <tr><td>Sanctified matches</td><td>Key item</td><td>Reward for the betel tray</td></tr>
+    <tr><td>Desk-drawer key, brass key fragments ×3</td><td>Key items</td><td>Gramophone clue; clay jars</td></tr>
+    <tr><td><strong>Bronze Token</strong></td><td>Seal #1</td><td>Chest; burned in the ritual. A fragment survives as the Episode 5 remnant.</td></tr>
+    <tr><td>Map with four faint marks</td><td>Story item</td><td>Chest; each mark is revealed by a blood trail</td></tr>
+    <tr><td>Sok's slip of names</td><td>Story item</td><td>Chest; read at dawn</td></tr>
+    <tr><td>Lore notes ×5</td><td>Optional</td><td>Journal pages, land deed (1911), Kanha's photograph</td></tr>
+  </tbody>
+</table>
+
+<h2 id="av"><span class="num">10</span>Audio and Visual Specification</h2>
+<table class="kv">
+  <tbody>
+    <tr><td>Colour palette</td><td>Sepia, dark mahogany, amber flame, cold off-white linen, wet mud grey.</td></tr>
+    <tr><td>Post-processing</td><td>1930s film grain, chromatic aberration, vignette, dynamic shadows.</td></tr>
+    <tr><td>Light sources</td><td>Hurricane lamp, hanging oil lamps, wax candles, moonlight, lightning.</td></tr>
+    <tr><td>Ambience</td><td>Heavy rain, thunder, cicadas, bullfrogs, creaking teak.</td></tr>
+    <tr><td>Horror cues</td><td>Backward gramophone chant, clock chimes, snapping thread, dragging footsteps, telephone static, whispers.</td></tr>
+    <tr><td>Music</td><td>Sparse, Pinpeat-inspired (<span class="km">ពិណពាទ្យ</span>); mostly silence.</td></tr>
+    <tr><td>Interface</td><td>100% diegetic: oil gauge on the lamp; inventory, map and night count in the sketchbook.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="glossary"><span class="num">11</span>Glossary</h2>
+<table>
+  <thead><tr><th style="width:20%">Term</th><th style="width:20%">Khmer</th><th>Meaning</th><th style="width:26%">Note</th></tr></thead>
+  <tbody>
+    <tr><td>Boon Sop</td><td class="km">បុណ្យសព</td><td>Funeral ceremony</td><td>Series title</td></tr>
+    <tr><td>Neak Ta</td><td class="km">អ្នកតា</td><td>Guardian spirit of the land</td><td></td></tr>
+    <tr><td>Funeral tent</td><td class="km">រោងបុណ្យ</td><td>Ceremonial pavilion</td><td>Confirm preferred term</td></tr>
+    <tr><td>Phteah Rong Doeung</td><td class="km">ផ្ទះរោងដឿង</td><td>Traditional gabled house</td><td></td></tr>
+    <tr><td>Krom Phteah</td><td class="km">ក្រោមផ្ទះ</td><td>Space under a stilt house</td><td></td></tr>
+    <tr><td>Kanteal</td><td class="km">កន្ទេល</td><td>Woven mat</td><td></td></tr>
+    <tr><td>Sleok Rith</td><td class="km">ស្លឹករឹត</td><td>Palm-leaf manuscript</td><td></td></tr>
+    <tr><td>Chong Kben / Sbai</td><td class="km">សំពត់ចងក្បិន / ស្បៃ</td><td>Wrapped trousers / sash</td><td></td></tr>
+    <tr><td>Coffin</td><td class="km">មឈូស</td><td>Coffin</td><td>Replaces v1 "Mneang Sop"</td></tr>
+    <tr><td>Clay jar</td><td class="km">ពាង</td><td>Large water jar</td><td>Replaces v1 "Pheon"</td></tr>
+    <tr><td>Oil lamp</td><td class="km">ចង្កៀង</td><td>Lamp</td><td>Replaces v1 "Chhenglang"</td></tr>
+    <tr><td>Betel</td><td class="km">ស្លា / ម្លូ</td><td>Areca nut / betel leaf</td><td>Confirm</td></tr>
+    <tr><td>Protective thread</td><td>—</td><td>White cotton thread</td><td>Confirm the Khmer term (v1 used the Thai "sai sin")</td></tr>
+  </tbody>
+</table>
+<p class="small">All Khmer spellings, including the names Chea, Chhun, Kanha and Vuthy, must be confirmed by a native speaker.</p>
+
+<h2 id="notes"><span class="num">12</span>Revision Notes and Open Issues</h2>
+<h3>Changes in v3.0</h3>
+<ul>
+  <li>Playtime reduced to 1.5–2 hours; the journey is a fade; the act structure is tighter.</li>
+  <li>New: Vuthy, the betel offering puzzle (which supplies the sanctified matches), the seven-night deadline, threat escalation, the optional storage shed, the dawn key choice and the "fourth name" revelation.</li>
+  <li>Sok now dies trying to burn the first seal himself, which explains Yay Mey's "he broke it".</li>
+  <li>The Bronze Token is in the chest (the shed is now an optional area); the map shows faint marks revealed one by one.</li>
+  <li><strong>v3.1</strong> (Story Bible): Sora's flaw (the unopened letters, Yay Mey's reproach); Kanha as the artist of the betel drawing; Sok's warning now heard on the gramophone rather than read.</li>
+  <li><strong>v3.2</strong>: the hallway walker and under-house roamer are now explicitly the Neak Ta's shadow (Story Bible rule 16).</li>
+</ul>
+<h3>Open issues</h3>
+<div class="callout issue"><span class="label">Confirm with the cultural advisor</span>
+<ul>
+  <li>The correct contents and layout of a household betel offering, and who would bless the matches.</li>
+  <li>Customs for the night vigil and for the seventh-day funeral rites.</li>
+  <li>Khmer spellings of all names and terms in the glossary.</li>
+</ul></div>
+
+</body>
+</html>

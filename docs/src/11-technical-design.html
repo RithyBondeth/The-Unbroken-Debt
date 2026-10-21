@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Technical Design Document — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="11-Technical-Design-Document">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Technical Design Document"; } }</style>
+</head>
+<body class="plan">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Phase 0 · Production document</div>
+  <h1>Technical Design Document</h1>
+  <div class="subtitle">How the game is built: project setup, module design, events, data formats, Blender conventions, saves, AI, rendering, audio, performance and deployment.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Stack</dt><dd>TypeScript 6 · Babylon.js 9.31 · Havok 1.3 · Vite 8</dd>
+    <dt>Extends</dt><dd>Development Plan, section 3</dd>
+    <dt>Version</dt><dd>1.1 · October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#principles">Principles</a></li>
+    <li><span class="n">02</span><a href="#setup">Project Setup and Babylon 9 Pitfalls</a></li>
+    <li><span class="n">03</span><a href="#modules">Modules</a></li>
+    <li><span class="n">04</span><a href="#boot">Boot and Game Loop</a></li>
+    <li><span class="n">05</span><a href="#events">Event Catalogue</a></li>
+    <li><span class="n">06</span><a href="#data">Data Formats</a></li>
+    <li><span class="n">07</span><a href="#blender">Blender and glTF Conventions</a></li>
+    <li><span class="n">08</span><a href="#pipeline">Asset Pipeline</a></li>
+    <li><span class="n">09</span><a href="#sequences">Scripted Sequences</a></li>
+    <li><span class="n">10</span><a href="#ai">Perception and AI</a></li>
+    <li><span class="n">11</span><a href="#render">Rendering</a></li>
+    <li><span class="n">12</span><a href="#audio">Audio</a></li>
+    <li><span class="n">13</span><a href="#saves">Saves and Save Codes</a></li>
+    <li><span class="n">14</span><a href="#perf">Performance and Memory</a></li>
+    <li><span class="n">15</span><a href="#quality">Testing, Standards and Deployment</a></li>
+  </ol>
+</nav>
+
+<h2 id="principles"><span class="num">01</span>Principles</h2>
+<table>
+  <thead><tr><th style="width:28%">Principle</th><th>In practice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Systems are generic; episodes are data</strong></td><td>No episode-specific code in <code>systems/</code>. Episodes provide data files, Blender scenes and a small number of sequence scripts.</td></tr>
+    <tr><td><strong>Loose coupling</strong></td><td>Systems communicate through a typed event bus and the flag store, never by importing each other.</td></tr>
+    <tr><td><strong>Blender is the level editor</strong></td><td>Placement of triggers, items, patrols and zones lives in Blender, exported as glTF extras.</td></tr>
+    <tr><td><strong>Use the engine</strong></td><td>Physics, audio, picking, GUI and post-processing come from Babylon.js; we write glue and game logic, not engine features.</td></tr>
+    <tr><td><strong>Testable logic</strong></td><td>Game rules (inventory, flags, saves, AI decisions) are plain TypeScript that can be unit-tested without a renderer.</td></tr>
+  </tbody>
+</table>
+<p class="small">API names below match Babylon.js 9. Check the current documentation when implementing, since minor APIs change between releases.</p>
+
+<h2 id="setup"><span class="num">02</span>Project Setup and Babylon 9 Pitfalls</h2>
+<h3><span class="num">2.1</span>Dependencies (pinned exact versions)</h3>
+<pre>"dependencies": {
+  "@babylonjs/core":    "9.31.0",
+  "@babylonjs/loaders": "9.31.0",
+  "@babylonjs/gui":     "9.31.0",
+  "@babylonjs/havok":   "1.3.14",
+  "idb-keyval":         "(latest at setup)"
+},
+"devDependencies": {
+  "typescript": "6.0.3",            // TypeScript 7 not yet supported by typescript-eslint
+  "vite":       "8.3.4",
+  "vitest":     "5.0.5",
+  "eslint":     "10.13.0",  "typescript-eslint": "8.72.0",
+  "prettier":   "3.9.10",
+  "@gltf-transform/cli": "4.5.1",
+  "@playwright/test":   "(add with the smoke test)"
+}</pre>
+
+<h3><span class="num">2.2</span>Scripts</h3>
+<table class="dense">
+  <thead><tr><th style="width:26%">Command</th><th>Does</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm run dev</code></td><td>Vite dev server with hot reload</td></tr>
+    <tr><td><code>npm run build</code></td><td>Type-check and production build to <code>dist/</code></td></tr>
+    <tr><td><code>npm run test</code></td><td>Vitest unit tests</td></tr>
+    <tr><td><code>npm run lint</code></td><td>ESLint with type-aware TypeScript rules</td></tr>
+    <tr><td><code>npm run check</code></td><td>Everything CI runs; GitHub Actions runs it on every push (<code>.github/workflows/ci.yml</code>)</td></tr>
+    <tr><td><code>npm run e2e</code></td><td>Playwright smoke test: the game boots to the menu with WebGPU, and shows the requirements page without it</td></tr>
+    <tr><td><code>npm run assets</code></td><td>Optimise everything in <code>art-export/</code> into <code>public/assets/</code> (section 8)</td></tr>
+    <tr><td><code>npm run docs</code></td><td>Rebuild the design PDFs (<code>tools/build-docs.sh</code>)</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">2.3</span>Source layout</h3>
+<pre>src/
+├── main.ts                 Boot (section 4)
+├── core/
+│   ├── Game.ts             Owns engine, scene, loop, top-level state
+│   ├── EventBus.ts         Typed publish/subscribe (section 5)
+│   ├── Flags.ts            Story flag store
+│   ├── AreaLoader.ts       Loads/unloads area asset containers
+│   ├── LevelBuilder.ts     Turns glTF extras into game objects (section 7)
+│   ├── Time.ts             Game clock, pause, time scale
+│   └── Localization.ts     String tables (en, km)
+├── player/                 Controller, CameraRig, Interactor, Hands
+├── systems/                Inventory, Sketchbook, Lamp, Matches, Upkeep,
+│                           Hiding, Checkpoints, Saves, Settings, NightCount
+├── ai/                     Perception, NoiseSystem, StateMachine, entities/
+├── sequences/              Sequencer runtime + shared helper actions
+├── audio/                  AudioSystem, Buses, AmbienceZones, Cues
+├── render/                 RenderSetup, QualityPresets, DeviceProfile, DynamicResolution,
+│                           ShadowScheduler, StaticBatcher, VolumetricFog, materials/
+├── debug/                  PerfOverlay (F3), Benchmark
+├── spikes/                 Phase 1 spikes, loaded with ?spike=s1 … (dev builds only)
+├── ui/                     diegetic/ (sketchbook pages, gauges), html/ (menus)
+├── episodes/ep1/           index.ts, sequences.ts, data/*.json
+└── data/                   items.json, notes.json, strings/en.json, strings/km.json</pre>
+
+
+<h3><span class="num">2.4</span>Babylon 9 pitfalls found in Phase 1</h3>
+<table class="dense">
+  <thead><tr><th style="width:30%">Symptom</th><th>Cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td>"No Physics Engine available"</td><td>With tree-shaken imports, <code>scene.enablePhysics</code> also needs <code>Physics/joinedPhysicsEngineComponent</code>, not only <code>Physics/v2/physicsEngineComponent</code>.</td></tr>
+    <tr><td><code>createMultipleRenderTarget is not a function</code></td><td>WebGPU engine features (multiple and cube render targets, timestamp queries) need <code>import "@babylonjs/core/Engines/WebGPU/Extensions"</code>.</td></tr>
+    <tr><td>Classes that fail <code>instanceof</code>; a second load of Babylon</td><td>Vite pre-bundles a second copy for code it finds late (lazy spike modules). List every entry in <code>optimizeDeps.entries</code>.</td></tr>
+    <tr><td>Meshes render with nothing</td><td>There is no default material when importing by path; give every mesh a material.</td></tr>
+    <tr><td>Every material recompiles every frame (about 120 MB/s of garbage)</td><td>When a shadow caster list goes from empty to filled, Babylon marks every mesh's lights dirty. Filling the list in <code>renderListPredicate</code> each frame did exactly that. Keep one caster array per light and update it in place, by index.</td></tr>
+    <tr><td>A half-resolution post-process runs at full resolution</td><td>Setting <code>postProcess</code> on a pre-pass effect configuration forces that post-process to full size. Attach the configuration with <code>_prePassEffectConfiguration</code> only.</td></tr>
+    <tr><td>SSAO costs more than its ratio suggests</td><td>SSAO2's main pass is always full resolution; only the blur uses the ratio.</td></tr>
+    <tr><td>Soft point-light shadows look wrong</td><td>PCF falls back on cube shadow maps; point lights use Poisson sampling.</td></tr>
+    <tr><td><code>scene.deltaTime</code> is undefined</td><td>Read <code>engine.getDeltaTime()</code> instead.</td></tr>
+    <tr><td>Player wedges on stair edges</td><td>The character controller's step-up only moves a few centimetres a frame. Stairs get hidden ramp colliders; <code>maxStepHeight</code> is 0 (section 7.1).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="modules"><span class="num">03</span>Modules</h2>
+<table class="dense">
+  <thead><tr><th style="width:20%">Module</th><th>Responsibility</th><th style="width:28%">Listens / emits</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Game</strong></td><td>Creates the engine and scene, runs the loop, switches between menu, episode and pause states.</td><td>Emits <code>game:*</code></td></tr>
+    <tr><td><strong>AreaLoader</strong></td><td>Loads an area's <code>.glb</code> into an asset container, adds or removes it from the scene, disposes it on unload.</td><td>Emits <code>area:loaded/unloaded</code></td></tr>
+    <tr><td><strong>LevelBuilder</strong></td><td>Reads node names and extras, creates triggers, interactables, spawn points, patrols, hiding spots, audio zones and lights.</td><td>Emits <code>level:built</code></td></tr>
+    <tr><td><strong>Flags</strong></td><td>Key-value store for story state (boolean, number, string). Serialised by Saves.</td><td>Emits <code>flag:changed</code></td></tr>
+    <tr><td><strong>PlayerController</strong></td><td>Havok character controller: walk, crouch, crawl, climb stairs; head-bob; footstep timing.</td><td>Emits <code>player:step</code>, <code>noise:made</code></td></tr>
+    <tr><td><strong>Interactor</strong></td><td>Ray from the screen centre (max 1.8 m); highlights and activates interactables.</td><td>Emits <code>interact:*</code></td></tr>
+    <tr><td><strong>Inventory</strong></td><td>Items, counts, combining (key fragments → key).</td><td>Emits <code>inventory:changed</code></td></tr>
+    <tr><td><strong>Sketchbook</strong></td><td>Pages and entries unlocked by flags; renders pages to dynamic textures; map and night count. Built in S5: <code>ui/diegetic/</code> holds the book model, page painter, layout and drawings; entries are episode data (<code>episodes/ep1/data/sketchbook.ts</code>).</td><td>Listens to <code>flag:changed</code></td></tr>
+    <tr><td><strong>Lamp</strong></td><td>States open / shuttered / out; oil level and drain rate; flicker; light radius.</td><td>Emits <code>lamp:*</code></td></tr>
+    <tr><td><strong>Upkeep</strong></td><td>Generic decaying timers (incense) with warning stages and consequences.</td><td>Emits <code>upkeep:*</code></td></tr>
+    <tr><td><strong>Perception / NoiseSystem</strong></td><td>Sight checks and noise events for all AI.</td><td>Listens to <code>noise:made</code>, <code>lamp:*</code></td></tr>
+    <tr><td><strong>Entities</strong></td><td>Per-entity state machines built from entity data.</td><td>Emits <code>entity:*</code>, <code>player:caught</code></td></tr>
+    <tr><td><strong>Sequencer</strong></td><td>Runs async scripted sequences; can lock input and the camera.</td><td>Emits <code>sequence:*</code></td></tr>
+    <tr><td><strong>Checkpoints / Saves</strong></td><td>Snapshot and restore state; IndexedDB slots; save codes.</td><td>Listens to <code>player:caught</code></td></tr>
+    <tr><td><strong>AudioSystem</strong></td><td>Engine creation and unlock, buses, spatial sounds, ambience zones, reverb.</td><td>Listens to most events</td></tr>
+    <tr><td><strong>RenderSetup / PostFx</strong></td><td>Engine options, pipeline, quality presets, colour grading per episode.</td><td>Listens to <code>settings:changed</code></td></tr>
+  </tbody>
+</table>
+
+<h2 id="boot"><span class="num">04</span>Boot and Game Loop</h2>
+<pre>1. main.ts
+   ├─ detectDevice(): requestAdapter({ powerPreference: "high-performance" }),
+   │    adapter.info (vendor, architecture), userAgentData.mobile, touch points, pointer type
+   ├─ classifyDevice() → blocked (no WebGPU, software/fallback adapter, phone or tablet
+   │    including iPad) → show requirements page; stop
+   │    otherwise → starting preset from the GPU family (Apple → Medium, Intel/AMD
+   │    integrated → Low, NVIDIA by architecture …); the player can change it
+   ├─ new WebGPUEngine(canvas); await initAsync()          // WebGPU only
+   ├─ DynamicResolution: cap render height per preset; lower the scale on sustained
+   │    overload, probe upwards now and then (section 11)
+   ├─ show HTML loading screen
+   ├─ load Havok WASM: await HavokPhysics() → new HavokPlugin(true, havok)
+   ├─ scene.enablePhysics(new Vector3(0, -9.81, 0), plugin)
+   ├─ load settings + save index from IndexedDB
+   ├─ load shared assets (lamp, hands, satchel, sketchbook, UI sounds)
+   └─ main menu (HTML) — "Start" click also unlocks audio
+2. Start episode
+   ├─ AreaLoader.load(first area) → LevelBuilder.build()
+   ├─ restore checkpoint or start at beat P01
+   └─ engine.runRenderLoop(() => { Time.tick(); systems.update(dt); scene.render(); })</pre>
+<table class="dense">
+  <thead><tr><th style="width:28%">Update order each frame</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td>1. Input → PlayerController</td><td>Movement before anything reads the player position</td></tr>
+    <tr><td>2. Interactor, Lamp, Upkeep</td><td>Player-driven state</td></tr>
+    <tr><td>3. NoiseSystem, Perception, Entities</td><td>AI reacts to this frame's player state</td></tr>
+    <tr><td>4. Sequencer</td><td>Scripts can override everything above</td></tr>
+    <tr><td>5. Audio listener, PostFx parameters</td><td>Presentation last</td></tr>
+  </tbody>
+</table>
+
+<h2 id="events"><span class="num">05</span>Event Catalogue</h2>
+<pre>type GameEvents = {
+  "flag:changed":      { key: string; value: FlagValue };
+  "area:loaded":       { areaId: string };
+  "interact:focus":    { id: string } ;  "interact:use": { id: string };
+  "inventory:changed": { itemId: string; count: number };
+  "lamp:state":        { state: "open" | "shuttered" | "out" };
+  "lamp:oil":          { level: number };            // 0..1
+  "upkeep:warning":    { id: string; stage: 1 | 2 };
+  "upkeep:expired":    { id: string };
+  "noise:made":        { pos: Vector3; loudness: number; source: string };
+  "entity:state":      { id: string; state: AiState };
+  "player:caught":     { by: string };
+  "checkpoint:reached":{ id: string };
+  "sequence:start":    { id: string };  "sequence:end": { id: string };
+  "choice:made":       { id: string; option: string };
+  "settings:changed":  { key: string };
+};</pre>
+<p>The bus is a small typed wrapper (<code>on</code>, <code>off</code>, <code>emit</code>). Handlers must not throw; errors are caught and logged with the event name.</p>
+
+<h2 id="data"><span class="num">06</span>Data Formats</h2>
+<h3><span class="num">6.1</span>Items, notes and strings</h3>
+<pre>interface ItemDef {
+  id: string;                    // "oil_bottle", "key_fragment"
+  nameKey: string;               // string-table key
+  model: string;                 // "shared/oil_bottle.glb"
+  stack: number;                 // max carried, 1 for unique items
+  combine?: { with: string; count: number; result: string };
+  onUse?: string;                // action id, e.g. "lamp.refill"
+}
+interface NoteDef {
+  id: string;                    // "lore.ep1.L1"
+  titleKey: string; bodyKey: string;
+  lore: boolean;                 // counts toward Knowledge
+  confirmsChant?: string[];      // Episode 5 verse ids it confirms
+}
+// data/strings/en.json : { "note.ep1.L1.body": "Kanha used to make…", … }
+// data/strings/km.json : same keys, Khmer text</pre>
+
+<h3><span class="num">6.2</span>Entities</h3>
+<pre>interface EntityDef {
+  id: string;                    // "ep1_roamer"
+  model: string;
+  speed: { patrol: number; chase: number };   // m/s
+  hearing: { normal: number; crouched: number }; // radius in m
+  sight?: { lampRange: number; darkRange: number; fovDeg: number };
+  patrol: string;                // Blender patrol path id
+  catchRadius: number;
+}</pre>
+
+<h3><span class="num">6.3</span>Flags</h3>
+<ul>
+  <li>Keys: <code>ep&lt;n&gt;.&lt;topic&gt;.&lt;state&gt;</code> for story, <code>lore.ep&lt;n&gt;.&lt;id&gt;</code> for notes, <code>series.&lt;counter&gt;</code> for cross-episode values.</li>
+  <li>Cross-episode counters: <code>series.respect</code> (0–9), <code>series.vuthy.saved</code>, <code>series.vuthy.forgiven</code>, <code>series.mother.freed</code>, <code>series.chantErrors</code>.</li>
+  <li>Flags are only ever set through <code>Flags.set()</code> so every change emits <code>flag:changed</code>.</li>
+</ul>
+
+<h2 id="blender"><span class="num">07</span>Blender and glTF Conventions</h2>
+<h3><span class="num">7.1</span>Object name prefixes</h3>
+<table class="dense">
+  <thead><tr><th style="width:24%">Prefix</th><th>Becomes</th><th style="width:34%">Custom properties (glTF extras)</th></tr></thead>
+  <tbody>
+    <tr><td><code>trigger_</code></td><td>Invisible trigger volume (box)</td><td><code>beat</code> (e.g. "A2-01"), <code>once</code> (bool), <code>requires</code> (flag)</td></tr>
+    <tr><td><code>interact_</code></td><td>Interactable object</td><td><code>action</code> ("pickup", "open", "use"), <code>item</code>, <code>note</code></td></tr>
+    <tr><td><code>spawn_</code></td><td>Player or NPC spawn point</td><td><code>checkpoint</code> (e.g. "CP3")</td></tr>
+    <tr><td><code>patrol_&lt;id&gt;_NN</code></td><td>Ordered patrol nodes (empties); numbers may skip</td><td><code>wait</code> (seconds); <code>reach</code> (bool, test routes: the node's height must be reached)</td></tr>
+    <tr><td><code>hide_</code></td><td>Hiding spot volume</td><td>—</td></tr>
+    <tr><td><code>audiozone_</code></td><td>Ambience and reverb zone</td><td><code>ambience</code>, <code>reverb</code></td></tr>
+    <tr><td><code>light_flame_</code></td><td>Flickering point light + flame card</td><td><code>radius</code>, <code>intensity</code></td></tr>
+    <tr><td><code>col_</code></td><td>Invisible collision mesh (static physics). Only <code>col_</code> meshes collide; render meshes have no physics, so keep colliders simple. A box (8 corners, any rotation) becomes a box collider; any other shape a triangle-mesh collider. Every staircase needs a <code>col_</code> ramp from the bottom nosing to the top floor: the character controller can't climb steps (S1).</td><td><code>surface</code> ("teak", "dirt", "mud", "leaves", "stone", "water")</td></tr>
+    <tr><td><code>ladder_</code></td><td>Climbable box; its bounds become the ladder volume. W climbs, looking down and pressing W descends, and at the top the player steps onto the floor. Extend the box about 30 cm above the top floor.</td><td><code>facing</code>: direction from the ladder towards the climber in Blender's world axes ("+x", "-x", "+y", "-y")</td></tr>
+    <tr><td><code>nav_</code></td><td>Navigation mesh source (not rendered)</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p class="small">Prefixes are matched at the start of the object name, so visible parts must not use them: name a ladder's mesh <code>granary_ladder</code>, not <code>ladder_granary_mesh</code>. Collections whose name starts with <code>_</code> hold working notes and reference objects and are never exported. Babylon mirrors glTF scenes into its left-handed space (Blender +X becomes −X), so <code>LevelBuilder</code> reads positions in world space and builds colliders there.</p>
+
+<h3><span class="num">7.2</span>Asset naming</h3>
+<ul>
+  <li>Files: <code>&lt;scope&gt;_&lt;area&gt;_&lt;name&gt;_&lt;variant&gt;.glb</code>, e.g. <code>ep1_house_wall_a.glb</code>, <code>shared_lamp.glb</code>.</li>
+  <li>Area scenes: <code>ep1_area_courtyard.glb</code>, <code>ep1_area_house.glb</code>, <code>ep1_area_underhouse.glb</code>, <code>ep1_area_studio.glb</code>.</li>
+  <li>Materials: <code>M_&lt;name&gt;</code>; textures: <code>T_&lt;name&gt;_&lt;map&gt;</code> where map is <code>BC</code>, <code>N</code> or <code>ORM</code>.</li>
+</ul>
+<h3><span class="num">7.3</span>Export settings</h3>
+<p>glTF Binary (<code>.glb</code>), +Y up, apply modifiers, export custom properties, everything except <code>_</code> collections, no cameras or Blender lights (lights are created from <code>light_</code> nodes). <code>npm run export</code> runs <code>tools/export-blend.py</code> in Blender for every <code>.blend</code> in <code>art-source/blender/</code>, writing to the same sub-folder of <code>art-export/</code> (set <code>BLENDER</code> if Blender is not in <code>/Applications</code> or on the <code>PATH</code>).</p>
+<p>Materials: Principled BSDF with image textures for colour (sRGB), normal (Non-Color, through a Normal Map node) and ORM (Non-Color, through Separate Color: green to Roughness, blue to Metallic, red to the Occlusion input of a <code>glTF Material Output</code> node group). Turn on Backface Culling for closed meshes; otherwise the material exports double-sided and is drawn from both sides. <code>tools/s3/make_test_room.py</code> builds an example scene with every convention.</p>
+
+<h2 id="pipeline"><span class="num">08</span>Asset Pipeline</h2>
+<pre># npm run export: art-source/blender/**/*.blend → art-export/**/*.glb (Blender)
+# npm run assets: art-export/**/*.glb → public/assets/**/*.glb (tools/build-assets.mjs)
+gltf-transform dedup   in.glb  out.glb
+gltf-transform prune   out.glb out.glb --keep-leaves true      # keep spawn_ and patrol_ empties
+gltf-transform weld    out.glb out.glb
+gltf-transform resize  out.glb out.glb --width 2048 --height 2048   # 4096 for shared_ and hero_
+gltf-transform etc1s   out.glb out.glb --slots "@(baseColorTexture|emissiveTexture)"
+gltf-transform uastc   out.glb out.glb --slots "@(normalTexture|occlusionTexture|metallicRoughnessTexture)"
+gltf-transform meshopt out.glb out.glb</pre>
+<p class="small">KTX2 encoding needs KTX-Software 4.4+ (the <code>ktx</code> command; gltf-transform 4 no longer uses <code>toktx</code>). Write slot globs as <code>@(a|b)</code>: the CLI splits <code>{a,b}</code> into separate arguments. Without <code>--keep-leaves</code>, <code>prune</code> deletes every empty node. Colour maps use ETC1S (small, lower quality); normal and ORM maps use UASTC with Zstandard (larger, no block artefacts in lighting). Spike S3 measured 2.8 MB → 1.6 MB on disk and about 50 MB → 10 MB of GPU memory. UASTC RDO saves about 8% on ORM maps and nothing on normal maps, so it stays off.</p>
+<p class="small">Decoders: Babylon fetches the meshopt and KTX2 decoders from its CDN by default. <code>tools/vendor-decoders.mjs</code> (run by <code>npm install</code>) copies them from <code>meshoptimizer</code> and <code>@babylonjs/ktx2decoder</code> into <code>public/vendor/</code>, bundling the KTX2 decoder into the classic script its worker needs, and <code>render/decoders.ts</code> points Babylon at them at boot. Keep both packages at the versions Babylon expects.</p>
+
+<h2 id="sequences"><span class="num">09</span>Scripted Sequences</h2>
+<p>Sequences are async functions given a context of helper actions. They read like the beat sheet.</p>
+<pre>// episodes/ep1/sequences.ts
+export async function A2_01_lampsOut(s: SequenceContext) {
+  await s.checkpoint("CP2");
+  s.lights.extinguishGroup("tent_hanging", { stagger: 0.15 });
+  s.audio.play("gust_cold", { at: "tent_center" });
+  await s.wait(1.2);
+  s.audio.play("footsteps_wet_above", { at: "house_hall" });
+  s.flags.set("ep1.act", 2);
+}
+
+export async function A3_07_ritual(s: SequenceContext) {
+  await s.checkpoint("CP6");
+  s.player.lockMovement();
+  await s.waitFor(() => s.inventory.used("bronze_token", "burner_main"));
+  await s.waitFor(() => s.inventory.used("sanctified_match", "burner_main"));
+  const ok = await s.holdWithoutTurning({ seconds: 25, maxAngleDeg: 100,
+                                          during: () => s.presence.approach() });
+  if (!ok) return s.fail("CP6");
+  s.flags.set("ep1.seal1.broken", true);
+}</pre>
+
+<h2 id="ai"><span class="num">10</span>Perception and AI</h2>
+<h3><span class="num">10.1</span>Perception</h3>
+<ul>
+  <li><strong>Hearing:</strong> every <code>noise:made</code> event has a loudness (0–1). An entity hears it if distance ≤ its hearing radius × loudness, with walls reducing loudness by 50% (one raycast).</li>
+  <li><strong>Sight:</strong> inside the field of view and within range, then one line-of-sight raycast to the player's head. The range depends on the lamp: open lamp uses <code>lampRange</code>; shuttered or out uses <code>darkRange</code>.</li>
+  <li>Checks run at 10 Hz, not every frame.</li>
+</ul>
+<h3><span class="num">10.2</span>State machine</h3>
+<table class="dense">
+  <thead><tr><th style="width:16%">State</th><th>Behaviour</th><th style="width:38%">Transitions</th></tr></thead>
+  <tbody>
+    <tr><td>Patrol</td><td>Follow patrol nodes, waiting where set</td><td>Heard noise → Investigate · saw player → Chase</td></tr>
+    <tr><td>Investigate</td><td>Move to the noise position; look around for 4 s</td><td>Saw player → Chase · nothing → Return</td></tr>
+    <tr><td>Chase</td><td>Move to the player at chase speed</td><td>Within catch radius → Catch · lost sight 5 s → Search</td></tr>
+    <tr><td>Search</td><td>Visit the last known position and two nearby nodes</td><td>Saw player → Chase · timeout → Return</td></tr>
+    <tr><td>Return</td><td>Path back to the nearest patrol node</td><td>Arrived → Patrol</td></tr>
+    <tr><td>Catch</td><td>Emit <code>player:caught</code>; play the catch sequence</td><td>Checkpoint restore</td></tr>
+    <tr><td>Scripted</td><td>Controlled entirely by a sequence (walker, presence)</td><td>Sequence ends</td></tr>
+  </tbody>
+</table>
+<p>Pathing uses a navigation mesh baked from <code>nav_</code> geometry with Babylon's Recast-based navigation plugin.</p>
+
+<h2 id="render"><span class="num">11</span>Rendering</h2>
+<table class="dense">
+  <thead><tr><th style="width:22%">Setting</th><th>Low</th><th>Medium</th><th>High</th><th>Ultra</th></tr></thead>
+  <tbody>
+    <tr><td>Target</td><td>Integrated · Iris Xe, M1, Snapdragon X</td><td>1080p · RTX 2060 / M1 Pro</td><td>1440p · RTX 3060 Ti</td><td>1440p–4K · RTX 3070+</td></tr>
+    <tr><td>Max render height</td><td>900p</td><td>1080p</td><td>1440p</td><td>2160p</td></tr>
+    <tr><td>Dynamic resolution floor</td><td>60%</td><td>75%</td><td>75%</td><td>75%</td></tr>
+    <tr><td>Lamp shadow map</td><td>1024</td><td>2048, soft</td><td>4096, soft</td><td>4096, soft</td></tr>
+    <tr><td>Live-shadowed flames</td><td>0 (baked)</td><td>2 at 512</td><td>4 at 1024</td><td>4 at 1024</td></tr>
+    <tr><td>Unshadowed lights (clustered)</td><td>16</td><td>32</td><td>64</td><td>128</td></tr>
+    <tr><td>SSAO</td><td>Off</td><td>Half resolution, 8 samples</td><td>Full, 16 samples</td><td>Full, 32 samples</td></tr>
+    <tr><td>Screen-space reflections</td><td>Off</td><td>Off</td><td>Wet surfaces</td><td>Wet surfaces</td></tr>
+    <tr><td>Fog</td><td>Exponential height fog</td><td>Volumetric, half resolution, 12 steps</td><td>Volumetric, half, 24 steps</td><td>Volumetric, 75%, 32 steps</td></tr>
+    <tr><td>Textures</td><td>1K</td><td>2K</td><td>4K</td><td>4K</td></tr>
+    <tr><td>Anti-aliasing</td><td>FXAA</td><td>TAA</td><td>TAA</td><td>TAA</td></tr>
+    <tr><td>Grain, vignette, grading, bloom</td><td>On</td><td>On</td><td>On</td><td>On</td></tr>
+  </tbody>
+</table>
+<p>Low looks plainer but plays the same: darkness, the lamp's shadow and fog are mechanics, so scares are tested on Low too. The values live in <code>render/QualityPresets.ts</code>.</p>
+<ul>
+  <li><strong>Device check and presets.</strong> The boot picks a starting preset from the GPU family (section 4); the player can change it in Settings. A short benchmark scene may refine the choice later.</li>
+  <li><strong>Reading floor.</strong> While the sketchbook is open, <code>DynamicResolution.holdAtLeast(0.85)</code> keeps the render scale at or above 85% of the preset's height: at Low's 60% floor (540p) page text is unreadable (S5).</li>
+  <li><strong>Dynamic resolution.</strong> The render height is capped per preset and the hardware scaling level set from it. <code>ResolutionGovernor</code> lowers the scale in 5% steps when both the current frame and the quarter-second average are over budget for 0.2 s; it ignores single hitches and frames over 250 ms. With a GPU timer it steps up after a second of light load; without one (GPU timestamps read 0 on the reference Mac) frame times are capped at the display refresh, so it probes upwards every few seconds and backs off for longer after a failed probe.</li>
+  <li><strong>Flame shadows are cached.</strong> <code>ShadowScheduler</code> renders each flame's cube shadow map once and redraws it only when something moves within its range (at most one per frame on Medium). The lamp's shadow is live every frame.</li>
+  <li><strong>Shadow casters.</strong> Small detail props (offerings, ornaments, carvings) don't cast shadows. Each light keeps one caster array, updated in place (section 2.4).</li>
+  <li><strong>Light range culling.</strong> Each flame light lists only the meshes inside its range (<code>includedOnlyMeshes</code>); in S2 this saved about 3 ms a frame.</li>
+  <li><strong>Static batching.</strong> Static meshes are merged by material in 3 m grid cells, so frustum culling still works; S2 started at 11,193 draw calls.</li>
+  <li><strong>Clustered lights.</strong> <code>ClusteredLightContainer</code> with its default 64×64 tiles; coarser tiles were slower.</li>
+  <li><strong>Volumetric fog</strong> is a custom WGSL ray-march at half resolution (12 steps on Medium, jittered with interleaved gradient noise and smoothed by TAA), lit by the lamp and up to four flames, then composited over the scene. It reads depth from the pre-pass.</li>
+  <li>Post-processing through <code>DefaultRenderingPipeline</code> (bloom, ACES tone mapping, grain, chromatic aberration, vignette, colour curves); per-episode colour grading lookup tables.</li>
+  <li>Static architecture uses baked lightmaps.</li>
+  <li>WebGPU-only features are allowed (compute shaders for volumetrics and particles, snapshot rendering for draw-call reduction), as long as they work in all supported browsers.</li>
+  <li>Diegetic pages use <code>DynamicTexture</code> or <code>AdvancedDynamicTexture.CreateForMesh</code> on the sketchbook mesh.</li>
+</ul>
+<p class="small">S2 result on the reference MacBook Pro M1 Pro: Medium at 1080p averages 62.5 fps; Low about 100 fps at 900p. The 1% low (about 30 fps, one slow frame roughly every 1.1 s) is still open; see Development Plan, Phase 1.</p>
+
+<h3>Atmosphere (S7)</h3>
+<ul>
+  <li><strong>Colour grade.</strong> Each episode keeps its grade as data (<code>episodes/ep1/data/grade.ts</code>: saturation, shadow, mid-tone and highlight tints from the palette, black point). <code>render/grade.ts</code> bakes it into a 32³ 3D lookup table applied after tone mapping; it replaces the S2 colour curves and costs no more.</li>
+  <li><strong>Eye adaptation.</strong> <code>render/Atmosphere.ts</code> sets exposure from the light reaching Sora (her lamp at arm's length = 1, flames by distance). It moves 90% of the way in 2.5 s towards the dark and 0.8 s towards light, and wins back only a quarter of the lost stops, capped at 3× the base: full compensation made rooms brighter with the lamp out. It runs on real elapsed time, so slow frames don't slow it.</li>
+  <li><strong>Night sight.</strong> A faint, cool, unshadowed point light on the camera (range 2.5 m) grows with adaptation and darkness, so shapes within about 2 m show in a dark room (Art Bible darkness rule) while the rest stays black. It counts towards each material's eight lights.</li>
+  <li><strong>Mood and settings.</strong> Fear (0–1) raises the vignette from 1.5 to 4; a scare jolts the aberration from 8 to 32 and fades in about a second; memories raise grain to 14. The grain and aberration settings switch them off; brightness calibration adds ±1 stop.</li>
+  <li><strong>Cost (M1 Pro, Medium, 1080p).</strong> The look together costs about 1–1.5 ms; bloom is the largest part. Effects are switched on and off only when their setting changes, because toggling rebuilds post-processes.</li>
+</ul>
+
+<h3>Sketchbook pages (S5)</h3>
+<ul>
+  <li><strong>Pages.</strong> A5 pages laid out in millimetres of paper and painted into <code>DynamicTexture</code>s with mipmaps and 8× anisotropic filtering: 1024 px high on Low, 1536 on Medium, 2048 on High and Ultra. Four textures: the two open pages and both sides of the turning leaf. Each section starts on a left-hand page; the ribbon tabs are drawn along the bottom of right-hand pages.</li>
+  <li><strong>Text.</strong> Body 8.4 mm of paper (28.6 px at 1080p with the book raised), Khmer 8.8 mm; the large-text setting scales by 1.3. Lines break with <code>Intl.Segmenter</code>, which finds Khmer word boundaries (Khmer has no spaces) and never splits a consonant cluster. Fonts load through the <code>FontFace</code> API before the first paint.</li>
+  <li><strong>Lighting.</strong> The book is lit by its own reading light from the lamp's side, flickering with the lamp; the room's lamp and flames exclude it. The paper material can also glow faintly (<code>setPaperGlow</code>) if playtests find the pages too dark.</li>
+  <li><strong>Drawing order.</strong> The book renders in rendering group 1 with a depth clear, so it never sinks into a wall. A second camera for held items does not work here: the SSAO, fog and TAA pre-pass captures that camera's output and nothing reaches the screen. If held items ever need to skip post-processing, use a utility layer scene instead.</li>
+  <li><strong>Costs (M1 Pro, Medium, 1080p).</strong> Painting a page about 0.5 ms (canvas 0.3 ms, upload and mipmaps 0.9 ms when measured alone); a page turn paints three pages, at most 7.3 ms; the open book adds about 0.4 ms a frame.</li>
+</ul>
+
+<h2 id="audio"><span class="num">12</span>Audio</h2>
+<table class="dense">
+  <thead><tr><th style="width:20%">Bus</th><th>Contents</th><th style="width:30%">Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Master</td><td>Everything</td><td>Master volume setting</td></tr>
+    <tr><td>Ambience</td><td>Rain, insects, wind, room tones</td><td>Streamed; crossfaded by audio zones</td></tr>
+    <tr><td>SFX</td><td>Footsteps, objects, lamp, matches</td><td>Spatial; surface-dependent footsteps</td></tr>
+    <tr><td>Threat</td><td>Entity sounds, scares</td><td>Spatial; never ducked</td></tr>
+    <tr><td>Voice</td><td>Dialogue, Sok's recording</td><td>Ducks ambience by −6 dB</td></tr>
+    <tr><td>Music</td><td>Stingers and drones</td><td>Streamed</td></tr>
+    <tr><td>UI</td><td>Satchel, pages, menus</td><td>Non-spatial</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>Audio Engine v2 (<code>CreateAudioEngineAsync</code>); the engine is unlocked on the first user click (browser autoplay rules).</li>
+  <li>Spatial sounds use HRTF panning for threat sounds (positional accuracy matters) and equal-power panning for minor sounds to save CPU. <code>audio/AudioSystem.ts</code> creates the buses, attaches the listener to the camera and places sounds by bus (<code>PANNING</code>); distance model inverse, full volume within 1 m.</li>
+  <li>Panning is tested without listening: the engine also runs on an <code>OfflineAudioContext</code>, so S4 renders a footstep from known directions and measures each ear (level, level above 3 kHz, and arrival-time difference). Run this check again after any audio engine update.</li>
+  <li>Reverb per audio zone: small wooden room, open courtyard, under-house, large stone hall.</li>
+  <li>Formats: Ogg Opus as the primary format, with an AAC fallback for browsers that need it.</li>
+</ul>
+
+<h2 id="saves"><span class="num">13</span>Saves and Save Codes</h2>
+<pre>// IndexedDB key "save.slot1"
+{
+  "saveVersion": 1,
+  "episode": 1,
+  "checkpoint": "CP4",
+  "clock": "02:00",
+  "flags": { "ep1.betel.done": true, "ep1.betel.firstTry": true, "lore.ep1.L1": true, … },
+  "inventory": { "oil_bottle": 1, "matches": 7, "sanctified_match": 3, "key_fragment": 1 },
+  "lamp": { "oil": 0.64, "state": "open" },
+  "playTimeSec": 4230,
+  "savedAt": "2026-10-20T14:03:00Z"
+}</pre>
+<ul>
+  <li><strong>Save code</strong> = <code>"BS1." + base64url(deflate(JSON)) + "." + checksum</code>. It carries flags and series counters between devices and into the next episode. It is tamper-evident, not secret.</li>
+  <li><strong>Migrations:</strong> <code>migrations[n]</code> converts version <em>n</em> to <em>n+1</em>; old saves are upgraded on load.</li>
+  <li><strong>Checkpoints</strong> store the same structure in memory; reaching a checkpoint also writes slot autosave.</li>
+  <li><strong>Built in S6</strong> (<code>systems/saves/</code>): <code>SaveData.ts</code> (format and a field-by-field check of untrusted data), <code>migrations.ts</code>, <code>saveCode.ts</code> (deflate-raw through the browser's <code>CompressionStream</code>, base64url, CRC-32 in base 36; spaces and line breaks from copying are ignored) and <code>SaveStore.ts</code> (IndexedDB through <code>idb-keyval</code>; arms the "leave site?" warning and the save indicator while writing). A finished Episode 1 makes a 570-character code; a save takes about 1 ms.</li>
+  <li><strong>Damaged saves</strong> never crash the game: loading reports the problem and the menu offers a new game. Saves from a newer build are refused with a message rather than guessed at.</li>
+</ul>
+
+<h2 id="perf"><span class="num">14</span>Performance and Memory</h2>
+<table class="dense">
+  <thead><tr><th style="width:30%">Rule</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Budgets</td><td>As in the Development Plan: about 1,000 draw calls, about 3 million triangles, about 2–3 GB GPU memory per area, first playable area under 150 MB.</td></tr>
+    <tr><td>Area unload</td><td>Dispose the asset container (meshes, materials, textures), stop and dispose area sounds, clear entity references; verify counts in the Inspector return to baseline.</td></tr>
+    <tr><td>Allocation</td><td>No new objects in per-frame code paths (reuse vectors); pool frequently spawned objects.</td></tr>
+    <tr><td>Profiling routine</td><td>Weekly on the reference MacBook Pro M1 Pro with other apps closed and the machine cool: run the S2 benchmark (<code>?spike=s2&amp;bench=1</code>) and note average fps, 1% low, draw calls, triangles and JS heap. On a 120 Hz display frame times snap to multiples of 8.3 ms, and browser tabs left open in the background skew results.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="quality"><span class="num">15</span>Testing, Standards and Deployment</h2>
+<h3>Testing</h3>
+<ul>
+  <li><strong>Unit tests:</strong> movement maths, head-bob, frame statistics, quality presets, device classification, the resolution governor, the S1 snag detector, level node naming and oriented collider boxes; later Flags, Inventory (including combining), Upkeep timers, Saves (round trip and migrations), save codes, perception maths, AI transitions.</li>
+  <li><strong>Smoke test:</strong> Playwright boots the build in Chrome with WebGPU on and off and checks the menu appears without console errors.</li>
+  <li><strong>Debug tools</strong> (development builds only): jump to any beat or checkpoint, set flags, refill oil, show perception radii, toggle the Babylon Inspector. <code>debug/saveShot.ts</code> posts a full-resolution frame to the dev server, which saves it in <code>debug-shots/</code> (git-ignored) for checking text and detail at native size.</li>
+</ul>
+<h3>Code standards</h3>
+<ul>
+  <li>TypeScript strict mode; no <code>any</code> without a comment explaining why.</li>
+  <li>One class or module per file; file names match the export (<code>Lamp.ts</code>).</li>
+  <li>Beat IDs in comments next to the code that implements them (<code>// A2-06</code>).</li>
+  <li>Small commits with clear messages; a branch per feature.</li>
+</ul>
+<h3>Deployment</h3>
+<ul>
+  <li>Static hosting. Serve <code>.wasm</code> as <code>application/wasm</code>, <code>.ktx2</code> as <code>image/ktx2</code>, and enable Brotli or gzip compression (it helps code and JSON; optimised <code>.glb</code> files are already compressed).</li>
+  <li>No run-time CDN: the Havok, meshopt and KTX2 WebAssembly and scripts are served from the game's own origin (<code>public/vendor/</code>).</li>
+  <li>Hashed file names for long-term caching; <code>index.html</code> never cached.</li>
+  <li>Check each host's per-file size limit against the largest <code>.glb</code>.</li>
+</ul>
+
+</body>
+</html>

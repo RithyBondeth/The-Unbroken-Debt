@@ -1,0 +1,49 @@
+{
+  "name": "boon-sop-the-unbroken-debt",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Boon Sop: The Unbroken Debt — a first-person survival horror game for the web (Babylon.js, WebGPU)",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "assets": "node tools/build-assets.mjs",
+    "docs": "bash tools/build-docs.sh",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "export": "node tools/export-blends.mjs",
+    "postinstall": "node tools/vendor-decoders.mjs",
+    "vendor": "node tools/vendor-decoders.mjs",
+    "fetch-library": "node tools/fetch-library.mjs",
+    "drawings": "node tools/drawings/render.mjs"
+  },
+  "dependencies": {
+    "@babylonjs/core": "9.31.0",
+    "@babylonjs/gui": "9.31.0",
+    "@babylonjs/havok": "1.3.14",
+    "@babylonjs/loaders": "9.31.0",
+    "idb-keyval": "6.3.0"
+  },
+  "devDependencies": {
+    "@babylonjs/ktx2decoder": "9.31.0",
+    "@eslint/js": "10.0.1",
+    "@gltf-transform/cli": "4.5.1",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "meshoptimizer": "1.3.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

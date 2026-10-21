@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Episode 3: The Drowned Village — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="03-Episode-3-The-Drowned-Village">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop · Episode 3: The Drowned Village"; } }</style>
+</head>
+<body class="ep3">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Episode 3</div>
+  <h1>The Drowned Village</h1>
+  <div class="title-km">ភូមិលិចទឹក</div>
+  <div class="subtitle">Game Design and Narrative Specification</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Setting</dt><dd>Floating village and abandoned stilt clinic, Tonle Sap Lake</dd>
+    <dt>Night</dt><dd>Night 5 · 4:30 PM (daylight) – 5:00 AM</dd>
+    <dt>Playtime</dt><dd>1.5 – 2 hours</dd>
+    <dt>Seal</dt><dd>#3 · The Terracotta Water Jar</dd>
+    <dt>Version</dt><dd>3.1 · October 2026 · Draft for review</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#overview">Episode Overview</a></li>
+    <li><span class="n">02</span><a href="#characters">Characters</a></li>
+    <li><span class="n">03</span><a href="#locations">Locations and Layout</a></li>
+    <li><span class="n">04</span><a href="#story">Story and Gameplay by Act</a>
+      <ol><li>Act I · The Floating Market</li><li>Act II · Whispers Under the Floorboards</li><li>Act III · The Letter in the Safe</li><li>Resolution · Pa Lok's Raft</li></ol></li>
+    <li><span class="n">05</span><a href="#twist">The Mid-Season Twist</a></li>
+    <li><span class="n">06</span><a href="#escalation">Threat Escalation</a></li>
+    <li><span class="n">07</span><a href="#puzzles">Puzzles</a></li>
+    <li><span class="n">08</span><a href="#choice">Key Choice and Tracking</a></li>
+    <li><span class="n">09</span><a href="#mechanics">Mechanics Reference</a></li>
+    <li><span class="n">10</span><a href="#items">Items and Lore Notes</a></li>
+    <li><span class="n">11</span><a href="#av">Audio and Visual Specification</a></li>
+    <li><span class="n">12</span><a href="#notes">Glossary, Revision Notes and Open Issues</a></li>
+  </ol>
+</nav>
+
+<h2 id="overview"><span class="num">01</span>Episode Overview</h2>
+<p class="lead">The photograph leads Sora to the Tonle Sap and the clinic where her mother died. The episode opens in afternoon light among the living, then the monsoon arrives. Inside the drowned clinic, Sora learns why her name is on the list, and who the spirit in the water really is.</p>
+
+<div class="cards">
+  <div class="card"><div class="k">Location</div><div class="v">Tonle Sap Lake</div><div class="d">Floating village and stilt clinic</div></div>
+  <div class="card"><div class="k">Night</div><div class="v">Night 5 of 7</div><div class="d">Daylight, then monsoon</div></div>
+  <div class="card"><div class="k">Playtime</div><div class="v">1.5 – 2 hours</div><div class="d">3 acts</div></div>
+  <div class="card"><div class="k">Core mechanic</div><div class="v">Water and warmth</div><div class="d">Rowboat, wetness, safe lights</div></div>
+  <div class="card"><div class="k">Threats</div><div class="v">Chhlong Tonle</div><div class="d">The drowned spirit · storm surge</div></div>
+  <div class="card"><div class="k">Seal</div><div class="v">#3 Terracotta Water Jar</div><div class="d">Purified on the deck</div></div>
+</div>
+
+<h3><span class="num">1.1</span>Episode goal</h3>
+<p>Find Sok's hidden vault in the flooded clinic, restore power to the drainage pump, recover the <strong>Terracotta Water Jar</strong> from the iron safe and purify it before the clinic collapses.</p>
+
+<h3><span class="num">1.2</span>Content at a glance</h3>
+<table class="kv">
+  <tbody>
+    <tr><td>Puzzles (6)</td><td>Finding Pa Lok · sealing windows · three fuses · Khmer lunar-date safe · purification · rooftop escape route</td></tr>
+    <tr><td>Threat encounters (4)</td><td>Flooded wards · rising water · tilting basement · the spirit on the deck</td></tr>
+    <tr><td>Optional area</td><td>The doctor's quarters in the clinic's attic (two lore notes, a drying stove)</td></tr>
+    <tr><td>Formula break</td><td>The episode opens in daylight at a busy floating market</td></tr>
+    <tr><td>Key choice</td><td>Free the spirit fully, or only purify the seal</td></tr>
+    <tr><td>Revelation</td><td>The mid-season twist: Sok renamed the debt, and the spirit is Sora's mother</td></tr>
+  </tbody>
+</table>
+
+<h2 id="characters"><span class="num">02</span>Characters</h2>
+<table>
+  <thead><tr><th style="width:22%">Character</th><th style="width:15%">Role</th><th>Description</th><th style="width:24%">Gameplay function</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Sora</strong><br><span class="km">សូរ៉ា</span></td><td>Protagonist</td><td>Exhausted, soaked and now afraid for her own life. At the clinic, her memories of her mother start to surface.</td><td>Player character.</td></tr>
+    <tr><td><strong>Grandfather Pa Lok</strong><br><span class="small">70</span></td><td>Fisherman</td><td>A reclusive fisherman on a floating raft. In 1920 he rowed Kanha to the clinic on the night she died. He recognises her daughter at once.</td><td>Rents the boat; rescues Sora at dawn.</td></tr>
+    <tr><td><strong>Vuthy</strong><br><span class="km">វុទ្ធី</span></td><td>Cousin</td><td>Turns up at the market claiming he came to take Sora home. Yay Mey has told him that his was the first name written, and he is terrified that if Sora tries and fails, the guardian will come for him. Later, he cuts her boat loose.</td><td>Daylight scene; sabotage.</td></tr>
+    <tr><td><strong>Pich</strong><br><span class="km">ពេជ្រ</span><br><span class="small">Mrenh Kongveal</span></td><td>Helper spirit</td><td>Kanha's baby son, who died with her in 1920. Now a small, child-like guardian spirit (<span class="km">ម្រេញគង្វាល</span>): heard as light footsteps and a soft giggle, glimpsed at the edge of the lamplight. He stays close to his mother.</td><td>Leads Sora along dry routes and to one fuse. Never a threat.</td></tr>
+    <tr><td><strong>Chhlong Tonle</strong><br><span class="small">water spirit</span></td><td>Enemy</td><td>The spirit of a woman who drowned in the clinic during childbirth in 1920, long hair trailing through black water. She is <strong>Kanha</strong>, Sora's mother: the third payment, trapped where she died.</td><td>Hunts anyone in the water.</td></tr>
+    <tr><td><strong>The Neak Ta shadow</strong></td><td>Antagonist</td><td>Drives the storm surge and smashes the clinic's stilts.</td><td>Act III collapse.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="locations"><span class="num">03</span>Locations and Layout</h2>
+<div class="flow">
+  <div class="node start"><b>Floating Market (daylight)</b><span>Boats, stalls, families, Vuthy</span></div><div class="arrow"></div>
+  <div class="node"><b>Pa Lok's Raft and the Lake</b><span>Rowboat across storm waves at night</span></div><div class="arrow"></div>
+  <div class="node"><b>Clinic Exterior and Decks</b><span>Stilts, rope bridges, tin roofs, wall lamps</span></div><div class="arrow"></div>
+  <div class="split">
+    <div class="node"><b>Reception and Wards</b><span>Knee-deep water</span></div>
+    <div class="node"><b>Doctor's Quarters</b><span>Optional · attic</span></div>
+  </div><div class="arrow"></div>
+  <div class="node goal"><b>Flooded Basement and Safe Vault</b><span>Generator, drainage pump, iron safe</span></div>
+</div>
+<table>
+  <thead><tr><th style="width:22%">Area</th><th>Description and key props</th><th style="width:24%">Gameplay use</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Floating Market</strong></td><td>Late-afternoon light on a cluster of floating houses and boats: fish, vegetables, sampans (<span class="km">សំប៉ាន</span>), children, a noodle seller, storm clouds building in the west.</td><td>Daylight exploration; finding Pa Lok; meeting Vuthy</td></tr>
+    <tr><td><strong>Lake at Night</strong></td><td>Black water, storm waves, bamboo poles, bobbing storm lanterns.</td><td>Rowboat crossing</td></tr>
+    <tr><td><strong>Clinic Exterior</strong></td><td>A two-storey French-Khmer clinic on thick stilts; faded teal walls, corrugated iron roofs drumming in the rain; slick plank bridges; large fixed wall lamps.</td><td>Entry; dry routes; safe zones</td></tr>
+    <tr><td><strong>Reception and Wards</strong></td><td>Knee-deep murky water; floating patient files, vials, iron beds, upturned rocking chairs; rain pouring through ceiling cracks.</td><td>Aquatic stealth; sealing; fuses</td></tr>
+    <tr><td><strong>Doctor's Quarters</strong> · optional</td><td>Sok's old attic room: a narrow bed, medical books, a charcoal stove, a Khmer lunar calendar.</td><td>Drying stove; two lore notes; calendar clue</td></tr>
+    <tr><td><strong>Basement Vault</strong></td><td>Low concrete-and-timber cellar flooded to chest height; diesel generator; iron safe.</td><td>Generator; safe; tilting escape</td></tr>
+  </tbody>
+</table>
+
+<h2 id="story"><span class="num">04</span>Story and Gameplay by Act</h2>
+
+<div class="act">
+  <div class="act-head"><h3>Act I · The Floating Market <span class="tag">formula break</span></h3><span class="time">Playtime 0:00 – 0:25 · 4:30 PM – 11:00 PM</span></div>
+  <div class="act-body">
+    <p>For the first time, the player is somewhere full of life and daylight. Sora moves between boats asking about the old clinic. Most people go quiet; a noodle seller points her to an old fisherman who "rowed a woman there once".</p>
+    <p><strong>Vuthy</strong> is waiting at the market. He is pale and jumpy. "Grandmother told me something. Please, Sora, leave it alone. Let it end the way it was written." If Sora shared the journal in Episode 1, he knows exactly what the seals are and begs her to stop; if not, he won't say why. She refuses to leave.</p>
+    <p><strong>Pa Lok</strong> knows her face: she has her mother's eyes. He tells her he rowed Kanha to the clinic in 1920 and never forgave himself. As the storm rolls in at dusk, he lends her a boat:</p>
+    <blockquote class="line">"The water remembers everything, girl. The spirit in that clinic drags down anyone who steps into her dark water. Keep yourself dry, and keep your light bright."<cite>Grandfather Pa Lok</cite></blockquote>
+    <p>At 11:00 PM, Sora rows into the storm.</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Act II · Whispers Under the Floorboards</h3><span class="time">Playtime 0:25 – 1:05 · 11:30 PM – 2:30 AM</span></div>
+  <div class="act-body">
+    <p>Water-damaged ledgers show that Sok worked here as the clinic's medic until 1920 and returned in secret in 1931. As Sora wades into the wards, the water ripples with no wind. The Chhlong Tonle rises from an opening in the floor, a long-haired shape made of water, and sinks again.</p>
+    <table>
+      <thead><tr><th style="width:28%">Element</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Aquatic stealth</td><td>Watch for ripples; climb onto furniture, crates and upper walkways; use the wall lamps' safe zones.</td></tr>
+        <tr><td>Sealing</td><td>Board windows and cover roof leaks with planks and tarps to stop key rooms flooding.</td></tr>
+        <tr><td>Fuses</td><td>Three dry brass fuses in sealed medical tins restore power to the drainage pump.</td></tr>
+        <tr><td>Pich <span class="tag">new</span></td><td>Small footsteps on dry boards and a child's giggle lead Sora along safe routes above the water and to the hardest-to-find fuse. Following him is optional but helpful.</td></tr>
+        <tr><td>Optional: doctor's quarters</td><td>A charcoal stove to dry and warm Sora, two lore notes and the Khmer lunar calendar used in Act III.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Act III · The Letter in the Safe</h3><span class="time">Playtime 1:05 – 1:45 · 2:30 – 4:30 AM</span></div>
+  <div class="act-body">
+    <p>The generator roars; the pump drains the basement. The iron safe's dial uses Khmer numerals. Sok's logs give one date in the Khmer lunar calendar, the night of Kanha's death, which Sora must convert (section 7.2).</p>
+    <p>Inside: the <strong>Terracotta Water Jar</strong>, sealed with earth from the 1910 shrine, and a bundle of unsent letters from Sok to his son. As Sora lifts the jar, the vault dissolves into a <strong>playable memory as Sok</strong>, kneeling in this same room in 1931 (section 5). When it ends, the water around her has gone still, and the spirit rises in front of her, close enough now for Sora to see her mother's face.</p>
+    <p>Then the Neak Ta strikes: stilts crack and the clinic tilts toward the lake. Sora climbs out of the flooding basement on shifting boards to the upper deck, where she must perform the purification while the spirit circles in the water below (section 8).</p>
+  </div>
+</div>
+
+<div class="act">
+  <div class="act-head"><h3>Resolution · Pa Lok's Raft</h3><span class="time">4:30 – 5:00 AM</span></div>
+  <div class="act-body">
+    <p>Sora runs for her boat. It is gone; the rope has been cut. With the clinic collapsing, she escapes across the roofs to the last standing stilt (section 7.4). Pa Lok, who couldn't sleep, finds her there at first light.</p>
+    <p>On the raft he admits that a young man in a town suit paid him that afternoon to "keep the girl away from the clinic" and asked where her boat was tied. Sora knows who it was. Before she leaves, Pa Lok presses his old brass compass into her hand: "Where you're going, you'll need to know which way is home."</p>
+    <p>Inside the jar's seal, wrapped in oilcloth, is a burnt piece of rubber stamped <em>Compagnie des Caoutchoucs de Kampong Cham, 1928</em>, the year Sok visited the estate. Blood seeps from the stamp, east across the map. Sora fills in the fifth circle. <strong>Two nights remain.</strong></p>
+  </div>
+</div>
+
+<h2 id="twist"><span class="num">05</span>The Mid-Season Twist</h2>
+<div class="callout"><span class="label">Playable memory · Sok, 1931</span>
+<p>The player becomes Sok, kneeling in the dry vault in 1931 with a rubbing of the slab's fourth line before him. He cuts his palm and mixes his blood with earth from the jar. The player must scrape away the name <em>Vuthy</em> and write <em>Sora</em>; the action cannot be refused, only slowed. Sok's hand shakes. He whispers: "Forgive me, Kanha. She's yours. Let her be yours, and let my boy live." The memory ends with Sora holding the jar.</p></div>
+<div class="callout"><span class="label">Sok's letters (optional reading)</span>
+<p>Sok writes to Vuthy that he failed to save Kanha in this clinic, and that the fourth payment would take Vuthy, the eldest of the fourth generation. He could not bear it. In 1931, using earth from the 1910 shrine sealed in the terracotta jar, he performed a ritual that <strong>scraped Vuthy's name from the debt and wrote Sora's in its place</strong>. She had no one left, he reasons, and she had left the family behind.</p>
+<p>Then guilt: he learned that the named debtor alone can break the seals and sever the pact. He decided to begin the work himself and spare her, knowing it would probably kill him. If he failed, his journal would guide whoever kept his vigil. "She will have the way out I am giving her. It is more than I gave Kanha."</p></div>
+<table class="kv">
+  <tbody>
+    <tr><td>What it changes</td><td>Sok is not a tragic hero but a frightened father who chose Sora to die. The journal that guided her was an apology and a trap at once.</td></tr>
+    <tr><td>Recontextualises</td><td>The scraped name on the Episode 1 slip; Yay Mey's silence; the photograph of Sok and Kanha; why Sok knew so much about the clinic.</td></tr>
+    <tr><td>Sets up</td><td>Vuthy's motive in Episode 4 (once he knows, he has every reason to make sure the debt is paid by Sora) and the final choice in Episode 5.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="escalation"><span class="num">06</span>Threat Escalation</h2>
+<table>
+  <thead><tr><th style="width:14%">Stage</th><th>Threat</th><th style="width:44%">What changes</th></tr></thead>
+  <tbody>
+    <tr><td>Act I</td><td>The storm</td><td>No spirit. Waves push the boat; wetness begins.</td></tr>
+    <tr><td>Act II</td><td>Chhlong Tonle</td><td>Surfaces only through openings in flooded floors. Leaks slowly raise the water unless rooms are sealed.</td></tr>
+    <tr><td>Act III</td><td>Rising water</td><td>The water rises across the whole ground floor; she can now reach along any wet surface, and sealed leaks start to burst again.</td></tr>
+    <tr><td>Collapse</td><td>Neak Ta</td><td>The building tilts; debris falls; the boat is gone.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="puzzles"><span class="num">07</span>Puzzles</h2>
+<h3><span class="num">7.1</span>Sealing and fuses</h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Find planks and tarps; board windows and cover roof leaks in key rooms.</td><td>Water stops rising there; dry routes open.</td></tr>
+    <tr><td>2</td><td>Locate three dry fuses in sealed medical tins.</td><td>Fuses collected.</td></tr>
+    <tr><td>3</td><td>Install them and crank the diesel generator.</td><td>Pump drains the basement.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">7.2</span>The Khmer lunar-date safe <span class="tag">new</span></h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>In Sok's logs, find the night Kanha died, written as a Khmer lunar date in Khmer numerals.</td><td>Date copied into the sketchbook.</td></tr>
+    <tr><td>2</td><td>Use the Khmer lunar calendar (doctor's quarters, or a torn page in the wards) to work out the dial numbers.</td><td>Combination.</td></tr>
+    <tr><td>3</td><td>Set the dial, which is marked in Khmer numerals (<span class="km">០–៩</span>).</td><td>The safe opens: the jar and Sok's letters.</td></tr>
+  </tbody>
+</table>
+<p class="small">The calendar system and the date must be checked with the cultural advisor. The puzzle should teach Khmer numerals gently, with the sketchbook showing a numeral key.</p>
+
+<h3><span class="num">7.3</span>The purification</h3>
+<table>
+  <thead><tr><th style="width:8%">Step</th><th>Action</th><th style="width:34%">Result</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>On the tilting upper deck, pour sanctified water over the jar.</td><td>Ritual begins; checkpoint.</td></tr>
+    <tr><td>2</td><td>Light three yellow candles in a triangle around it, sheltering them from wind and rain.</td><td>Seal #3 breaks. The choice in section 8 decides what happens to the spirit.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">7.4</span>The rooftop escape</h3>
+<p>With no boat, Sora must find a route across the clinic's roofs, rope bridges and broken stilts to the one stilt that still stands. The route uses planks and ropes the player may have moved during the sealing puzzle.</p>
+
+<h2 id="choice"><span class="num">08</span>Key Choice and Tracking</h2>
+<div class="cols">
+  <div class="callout"><span class="label">Free her</span><p>Sora stays at the rail and calls her mother by name, with the full verse from the doctor's quarters notes (or Pa Lok's words) and one more candle. The water rises around her while she does it. The spirit becomes Kanha for a moment, touches her daughter's face, takes the small hand of the child spirit beside her, and dissolves with him into light. <strong>Respect +2.</strong> Kanha's voice will help Sora in the Episode 5 Water trial.</p></div>
+  <div class="callout"><span class="label">Break the seal and run</span><p>Sora completes only the seal ritual. The flash disperses the spirit into painful mist, not freed, and Sora runs. Pich's footsteps fade into the water after his mother. <strong>No change.</strong> In Episode 5, Kanha's sorrow distorts the Water trial, making it harder.</p></div>
+</div>
+<table>
+  <thead><tr><th style="width:30%">Tracked in this episode</th><th>Source</th></tr></thead>
+  <tbody>
+    <tr><td>Respect</td><td>Mother freed (+2)</td></tr>
+    <tr><td>Knowledge (lore notes)</td><td>5 notes: two in the doctor's quarters, the 1920 admission record (a mother and her infant son; Kanha's note names him Pich), two more of Sok's letters</td></tr>
+    <tr><td>Vuthy</td><td>No change; his sabotage is fixed story</td></tr>
+  </tbody>
+</table>
+
+<h2 id="mechanics"><span class="num">09</span>Mechanics Reference</h2>
+<table>
+  <thead><tr><th style="width:22%">Mechanic</th><th>Rules</th><th style="width:26%">Feedback</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Rowboat</strong></td><td>Left and right oar strokes; waves and wind push the boat; docking points. A guided path with limited steering is the fallback if full physics is too costly.</td><td>Oar sounds, rocking, spray.</td></tr>
+    <tr><td><strong>Wetness</strong></td><td>Rises in water and rain; at high wetness Sora slows and loses warmth.</td><td>Wet vignette at screen edges.</td></tr>
+    <tr><td><strong>Body temperature</strong></td><td>Drops while wet; when low, shivering adds noise and the lamp flickers; at the lowest level Sora collapses (checkpoint).</td><td>Shivering breath; unsteady view.</td></tr>
+    <tr><td><strong>Safe zones</strong></td><td>Fixed wall lamps and the attic stove dry and warm Sora; the spirit won't enter lit zones. Some lamps need oil first.</td><td>Warm glow; steam from clothing.</td></tr>
+    <tr><td><strong>Water level</strong></td><td>Rooms flood unless sealed; the pump lowers the basement; Act III raises everything.</td><td>Visible water line.</td></tr>
+    <tr><td><strong>Playable memory</strong></td><td>Reuses the Episode 2 flashback system with Sok's hands and a short, scripted interaction.</td><td>Sepia shift; Sok's breathing.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="items"><span class="num">10</span>Items and Lore Notes</h2>
+<table>
+  <thead><tr><th style="width:30%">Item</th><th style="width:14%">Type</th><th>Found / use</th></tr></thead>
+  <tbody>
+    <tr><td>Rowboat and oars</td><td>Equipment</td><td>Lent by Pa Lok; cut loose by Vuthy</td></tr>
+    <tr><td>Planks and tarps</td><td>Puzzle items</td><td>Decks and wards</td></tr>
+    <tr><td>Brass fuses ×3</td><td>Key items</td><td>Sealed medical tins</td></tr>
+    <tr><td>Sok's logs, Khmer lunar calendar</td><td>Clues</td><td>Wards; doctor's quarters</td></tr>
+    <tr><td>Sanctified water, yellow candles</td><td>Ritual items</td><td>Given by Pa Lok, who keeps them for the lake spirits</td></tr>
+    <tr><td><strong>Terracotta Water Jar</strong></td><td>Seal #3</td><td>Iron safe; its shrine soil is the Episode 5 remnant</td></tr>
+    <tr><td>Sok's letters to Vuthy</td><td>Story item</td><td>Iron safe; the twist</td></tr>
+    <tr><td>Burnt rubber with 1928 stamp</td><td>Story item</td><td>Inside the jar's seal</td></tr>
+    <tr><td>Brass compass</td><td>Equipment</td><td>Gift from Pa Lok at dawn; used in Episode 4</td></tr>
+  </tbody>
+</table>
+
+<h2 id="av"><span class="num">11</span>Audio and Visual Specification</h2>
+<table class="kv">
+  <tbody>
+    <tr><td>Colour palette</td><td>Act I: warm afternoon gold, green water, colourful boats. Then dark teal, murky brown, gunmetal grey, wet wood and amber lamplight.</td></tr>
+    <tr><td>Post-processing</td><td>Rain on the view, water reflections, lightning flashes, lens distortion, film grain.</td></tr>
+    <tr><td>Ambience</td><td>Market chatter, boat engines and paddles; then heavy rain on tin roofs, thunder, water against stilts, creaking timber.</td></tr>
+    <tr><td>Horror cues</td><td>Sloshing water, wet dragging steps, muffled crying under the water, a lullaby fragment (Kanha), diesel chugs, snapping stilts.</td></tr>
+    <tr><td>Interface</td><td>100% diegetic: wetness as a screen-edge vignette; oil gauge on the lamp; maps in the sketchbook.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="notes"><span class="num">12</span>Glossary, Revision Notes and Open Issues</h2>
+<table>
+  <thead><tr><th style="width:20%">Term</th><th style="width:20%">Khmer</th><th>Meaning</th><th style="width:26%">Note</th></tr></thead>
+  <tbody>
+    <tr><td>Tonle Sap</td><td class="km">ទន្លេសាប</td><td>The great lake</td><td></td></tr>
+    <tr><td>Sampan</td><td class="km">សំប៉ាន</td><td>Small wooden boat</td><td></td></tr>
+    <tr><td>Khmer numerals</td><td class="km">០ ១ ២ ៣ ៤ ៥ ៦ ៧ ៨ ៩</td><td>Digits 0–9</td><td>Used on the safe dial</td></tr>
+    <tr><td>Chhlong Tonle</td><td>—</td><td>Drowned water spirit</td><td>Confirm the folk term and spelling</td></tr>
+    <tr><td>Pa Lok</td><td>—</td><td>The fisherman</td><td>"Grandfather" is usually <span class="km">តា</span>; confirm the name</td></tr>
+  </tbody>
+</table>
+<h3>Changes in v3.0</h3>
+<ul>
+  <li>Playtime reduced to 1.5–2 hours. Opens in daylight at a floating market.</li>
+  <li>New: Pa Lok's link to Kanha; Vuthy's appearance and sabotage; the Khmer lunar-date safe; the optional doctor's quarters; escalation; the mid-season twist; the spirit revealed as Sora's mother; the free-her choice; the rooftop escape.</li>
+  <li>Clinic timeline resolved: Kanha drowned in 1920; the clinic was abandoned afterwards; Sok returned in secret in 1931.</li>
+  <li><strong>v3.1</strong> (Story Bible): the twist is now a playable memory as Sok (letters become optional reading); Vuthy's motive is fear of rule 12, told to him by Yay Mey.</li>
+  <li><strong>v3.2</strong>: Kanha's baby son Pich added as a gentle helper spirit (Mrenh Kongveal), resolving what happened to the baby.</li>
+</ul>
+<div class="callout issue"><span class="label">Open issues</span>
+<ul>
+  <li>The spirit died in childbirth and is Sora's mother. Handle with great care and review with the cultural advisor.</li>
+  <li>Confirm the Khmer lunar-calendar conversion used by the safe puzzle.</li>
+  <li>Confirm with the advisor that showing Kanha's baby as a Mrenh Kongveal (a child-like guardian spirit) is appropriate.</li>
+</ul></div>
+
+</body>
+</html>

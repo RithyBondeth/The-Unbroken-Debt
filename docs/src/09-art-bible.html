@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Art Bible — Boon Sop: The Unbroken Debt</title>
+<meta name="pdf-name" content="09-Art-Bible">
+<link rel="stylesheet" href="style.css">
+<style>@page { @bottom-left { content: "Boon Sop: The Unbroken Debt · Art Bible"; } }</style>
+</head>
+<body class="ep1">
+
+<section class="cover">
+  <div class="series">Boon Sop: The Unbroken Debt · <span class="km">បុណ្យសព៖ បំណុលមិនដាច់</span></div>
+  <div class="rule"></div>
+  <div class="eyebrow">Phase 0 · Production document</div>
+  <h1>Art Bible</h1>
+  <div class="subtitle">The visual rules for every model, texture, light, creature and page in the game, so that library assets and custom work look like one world.</div>
+  <div class="spacer"></div>
+  <dl class="meta">
+    <dt>Applies to</dt><dd>All five episodes · Episode 1 in detail</dd>
+    <dt>Version</dt><dd>1.0 · October 2026</dd>
+    <dt>Author</dt><dd>Rithy Bondeth</dd>
+  </dl>
+</section>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><span class="n">01</span><a href="#pillars">Visual Pillars</a></li>
+    <li><span class="n">02</span><a href="#colour">Colour</a></li>
+    <li><span class="n">03</span><a href="#light">Lighting</a></li>
+    <li><span class="n">04</span><a href="#post">Post-Processing and Camera</a></li>
+    <li><span class="n">05</span><a href="#geometry">Scale, Geometry and Modular Kits</a></li>
+    <li><span class="n">06</span><a href="#materials">Materials and Textures</a></li>
+    <li><span class="n">07</span><a href="#architecture">Architecture References</a></li>
+    <li><span class="n">08</span><a href="#characters">Characters and Costume</a></li>
+    <li><span class="n">09</span><a href="#creatures">Spirits and Creatures</a></li>
+    <li><span class="n">10</span><a href="#sketchbook">The Sketchbook and Interface Art</a></li>
+    <li><span class="n">11</span><a href="#respect">Sensitivity Rules</a></li>
+    <li><span class="n">12</span><a href="#checklist">Asset Approval Checklist</a></li>
+  </ol>
+</nav>
+
+<h2 id="pillars"><span class="num">01</span>Visual Pillars</h2>
+<table>
+  <thead><tr><th style="width:28%">Pillar</th><th>What it means in practice</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A 1930s photograph come to life</strong></td><td>Warm sepia mid-tones, soft grain, gentle vignetting, slightly lifted blacks in daylight and deep blacks at night. Nothing looks digitally clean.</td></tr>
+    <tr><td><strong>Warm flame against cold dark</strong></td><td>Every night scene is built from two temperatures: amber light from flames and blue-grey from the moon or the dark. The player's lamp is always the warmest thing on screen.</td></tr>
+    <tr><td><strong>Darkness is a material</strong></td><td>Darkness is designed, not just absent light. Silhouettes must still read at the edge of the lamp; true black is reserved for places where something may be hiding.</td></tr>
+    <tr><td><strong>Grounded and lived-in</strong></td><td>Realistic proportions, worn surfaces, objects that have been used for decades. Exaggeration is reserved for the spirits.</td></tr>
+    <tr><td><strong>Respect for the real</strong></td><td>Khmer architecture, clothing and sacred objects are depicted accurately and with dignity (section 11).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="colour"><span class="num">02</span>Colour</h2>
+<h3><span class="num">2.1</span>Series base palette</h3>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#17120f"></div><div class="lbl">Night ink<span>#17120F</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#3b2a1e"></div><div class="lbl">Old teak<span>#3B2A1E</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#8a5a3a"></div><div class="lbl">Polished teak<span>#8A5A3A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#c9a46a"></div><div class="lbl">Sepia mid<span>#C9A46A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#efe4cf"></div><div class="lbl">Paper / linen<span>#EFE4CF</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#ff9a3c"></div><div class="lbl">Kerosene flame<span>#FF9A3C</span></div></div>
+</div>
+
+<h3><span class="num">2.2</span>Episode palettes</h3>
+<p class="small">Episode 1 · The House of Mourning</p>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#5c3a26"></div><div class="lbl">Mahogany<span>#5C3A26</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#d98a3d"></div><div class="lbl">Amber<span>#D98A3D</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#f2ede3"></div><div class="lbl">Mourning white<span>#F2EDE3</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#6e6559"></div><div class="lbl">Wet mud<span>#6E6559</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#2e3540"></div><div class="lbl">Storm night<span>#2E3540</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#c9a227"></div><div class="lbl">Brass<span>#C9A227</span></div></div>
+</div>
+<p class="small">Episode 2 · The Whispering Pagoda</p>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#8fa8d8"></div><div class="lbl">Moonlight<span>#8FA8D8</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#5f6b5a"></div><div class="lbl">Moss stone<span>#5F6B5A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#1d2a44"></div><div class="lbl">Deep navy<span>#1D2A44</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#c7ccd4"></div><div class="lbl">Cold silver<span>#C7CCD4</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#e3b65a"></div><div class="lbl">Lotus gold<span>#E3B65A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#9c3b2e"></div><div class="lbl">Temple red<span>#9C3B2E</span></div></div>
+</div>
+<p class="small">Episode 3 · The Drowned Village</p>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#e9c27a"></div><div class="lbl">Afternoon gold<span>#E9C27A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#1f4d50"></div><div class="lbl">Dark teal<span>#1F4D50</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#5a4a33"></div><div class="lbl">Flood brown<span>#5A4A33</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#5d6670"></div><div class="lbl">Gunmetal<span>#5D6670</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#7fa8a1"></div><div class="lbl">Clinic teal paint<span>#7FA8A1</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#ffb15e"></div><div class="lbl">Lamp amber<span>#FFB15E</span></div></div>
+</div>
+<p class="small">Episode 4 · The Rubber Plantation</p>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#9a9c94"></div><div class="lbl">Fog grey<span>#9A9C94</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#5b6328"></div><div class="lbl">Olive<span>#5B6328</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#a04e24"></div><div class="lbl">Rust<span>#A04E24</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#d8c27a"></div><div class="lbl">Stucco yellow<span>#D8C27A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#4a3a2a"></div><div class="lbl">Earth<span>#4A3A2A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#ff7a2a"></div><div class="lbl">Furnace<span>#FF7A2A</span></div></div>
+</div>
+<p class="small">Episode 5 · The Sunken Sanctuary</p>
+<div class="swatches">
+  <div class="swatch"><div class="chip" style="background:#8b8273"></div><div class="lbl">Sandstone<span>#8B8273</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#3f5a3a"></div><div class="lbl">Jungle<span>#3F5A3A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#f0c24b"></div><div class="lbl">Rune gold<span>#F0C24B</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#18223a"></div><div class="lbl">Night navy<span>#18223A</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#d9a05b"></div><div class="lbl">Spirit amber<span>#D9A05B</span></div></div>
+  <div class="swatch"><div class="chip" style="background:#ffd9a0"></div><div class="lbl">Dawn<span>#FFD9A0</span></div></div>
+</div>
+
+<h3><span class="num">2.3</span>Colour rules</h3>
+<ul>
+  <li><strong>Saturation is earned.</strong> Most surfaces stay below about 40% saturation. Strong colour is reserved for flame, blood, brass, sacred red and gold, and the daylight market.</li>
+  <li><strong>Blood</strong> is dark and brownish (<code>#5E1A14</code>), never bright red, and it looks like ink on paper.</li>
+  <li><strong>Memories and flashbacks</strong> shift to warm sepia with lower contrast so the player always knows they are in the past.</li>
+</ul>
+
+<h2 id="light"><span class="num">03</span>Lighting</h2>
+<table>
+  <thead><tr><th style="width:24%">Light</th><th style="width:18%">Colour</th><th>Rules</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Player lamp (open)</strong></td><td><code>#FF9A3C</code> ~1900 K</td><td>The hero light: high-resolution soft shadows. Useful light 6–8 m; falls off fast beyond. Flicker: intensity ±12% with smooth noise at 6–10 Hz; stronger flicker when oil is low or Sora is cold.</td></tr>
+    <tr><td><strong>Player lamp (shuttered)</strong></td><td>Same</td><td>Leaks a thin line of light (0.5 m) through the shutter slits; the player can still see their hands.</td></tr>
+    <tr><td><strong>Candles, oil lamps, incense</strong></td><td><code>#FFB15E</code></td><td>Clustered point lights, radius 2–4 m, with emissive flame cards and bloom; up to 4 nearby flames may cast shadows in key moments. Flicker out of phase with each other.</td></tr>
+    <tr><td><strong>Moonlight</strong></td><td><code>#8FA8D8</code></td><td>Low intensity; one directional light; used for silhouettes, not for seeing detail.</td></tr>
+    <tr><td><strong>Lightning</strong></td><td><code>#DFE8FF</code></td><td>Very short (80–150 ms) bursts that briefly reveal the space; schedule them, never use them as a cheap jump scare more than once per area.</td></tr>
+    <tr><td><strong>Daylight (Ep 3 market)</strong></td><td>Warm afternoon</td><td>The only daylight scene in the night episodes. Bright, saturated, lively, to make the coming night darker by contrast.</td></tr>
+    <tr><td><strong>Baked lighting</strong></td><td>—</td><td>Static architecture uses lightmaps baked in Blender, layered with real-time SSAO, contact shadows and screen-space reflections on wet surfaces.</td></tr>
+  </tbody>
+</table>
+<div class="callout"><span class="label">Darkness rule</span><p>A player standing in the dark with the lamp off should see faint shapes within about 2 m after a few seconds (simulated eye adjustment). Pure, unreadable black is used only for doorways, the space under furniture and the backs of rooms, where the player must imagine what is there.</p></div>
+
+<h2 id="post"><span class="num">04</span>Post-Processing and Camera</h2>
+<table class="dense">
+  <thead><tr><th style="width:26%">Effect</th><th style="width:24%">Default (target)</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Film grain</td><td>Intensity 8–12, animated</td><td>Toggle in settings. Stronger in memories.</td></tr>
+    <tr><td>Vignette</td><td>Weight 1.5, soft</td><td>Darkens further when Sora is afraid, wet or hurt.</td></tr>
+    <tr><td>Chromatic aberration</td><td>Small, edges only</td><td>Toggle in settings; spikes briefly during scares.</td></tr>
+    <tr><td>Bloom</td><td>Threshold high, low weight</td><td>Flames, runes, moonbeams only.</td></tr>
+    <tr><td>Ambient occlusion</td><td>SSAO, medium radius</td><td>Grounds props and deepens corners.</td></tr>
+    <tr><td>Reflections</td><td>Screen-space, wet surfaces only</td><td>Mud, puddles, floodwater, polished teak.</td></tr>
+    <tr><td>Volumetrics</td><td>Fog and light shafts</td><td>Lamp halo in rain and fog; moonbeams (Ep 2); dense fog (Ep 4).</td></tr>
+    <tr><td>Anti-aliasing</td><td>Temporal (TAA)</td><td>Keeps thin geometry (thread, floor gaps) stable.</td></tr>
+    <tr><td>Colour grading</td><td>One lookup table per episode</td><td>Built from the palettes in section 2. Kept as a few grade settings per episode and baked into the table at load (S7).</td></tr>
+    <tr><td>Exposure</td><td>Slow auto-exposure, 2–3 s adaptation</td><td>Makes stepping out of the lamplight feel blind for a moment. The eye wins back only a quarter of the lost light, so putting the lamp out always makes the room darker; a faint night-sight glow within about 2 m provides the darkness rule's faint shapes (S7).</td></tr>
+    <tr><td>Field of view</td><td>75° default (60–95° in settings)</td><td></td></tr>
+    <tr><td>Head-bob</td><td>Subtle; stronger when running</td><td>Toggle in settings.</td></tr>
+    <tr><td>Camera height</td><td>1.58 m standing · 0.95 m crouched · 0.45 m crawling</td><td>Sora is about 1.62 m tall.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="geometry"><span class="num">05</span>Scale, Geometry and Modular Kits</h2>
+<h3><span class="num">5.1</span>Units and grid</h3>
+<ul>
+  <li><strong>1 Blender unit = 1 metre.</strong> Z is up in Blender; the glTF exporter converts to Y-up.</li>
+  <li>Modular pieces snap to a <strong>0.5 m grid</strong>; pivots at the bottom-left corner of each piece.</li>
+  <li>Door openings 0.9 × 2.0 m (low, to fit traditional houses); ceiling 2.7 m; stair step 0.2 m rise, 0.25 m tread.</li>
+</ul>
+
+<h3><span class="num">5.2</span>Stilt house kit (Episode 1)</h3>
+<table class="dense">
+  <thead><tr><th style="width:30%">Piece</th><th style="width:28%">Dimensions</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Stilt post</td><td>0.25 m diameter, 2.5 m + floor</td><td>Slight taper; weathered base with mud stains.</td></tr>
+    <tr><td>Floor plank strip</td><td>0.20 m wide, 1 cm gaps, 3 m long</td><td>Gaps are real geometry so light and shadow pass through.</td></tr>
+    <tr><td>Wall panel</td><td>1.0 × 2.7 m, vertical boards</td><td>Variants: plain, window shutter, door, loose plank.</td></tr>
+    <tr><td>Roof section</td><td>Pitch 40–45°, tiled</td><td>Gable end variants with carved bargeboard.</td></tr>
+    <tr><td>Stairs</td><td>1.0 m wide, 13 steps</td><td>Front and rear.</td></tr>
+    <tr><td>Veranda railing</td><td>1.0 m sections, 0.9 m high</td><td></td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">5.3</span>Polygon budgets</h3>
+<table class="dense">
+  <thead><tr><th style="width:36%">Asset class</th><th style="width:22%">Triangles (LOD0)</th><th>LODs</th></tr></thead>
+  <tbody>
+    <tr><td>Player items (lamp, matchbox, sketchbook, satchel)</td><td>20,000–50,000</td><td>None (always close)</td></tr>
+    <tr><td>First-person hands</td><td>25,000–40,000</td><td>None</td></tr>
+    <tr><td>Characters (Yay Mey, Vuthy)</td><td>60,000–100,000</td><td>3 LODs</td></tr>
+    <tr><td>Hero props (coffin, gramophone, chest)</td><td>15,000–40,000</td><td>2 LODs</td></tr>
+    <tr><td>Small props</td><td>500–8,000</td><td>Instanced</td></tr>
+    <tr><td>Modular architecture piece</td><td>500–6,000</td><td>Merged per area</td></tr>
+  </tbody>
+</table>
+<p class="small">Keep the whole visible scene within the 3-million-triangle budget from the Development Plan.</p>
+
+<h2 id="materials"><span class="num">06</span>Materials and Textures</h2>
+<table class="dense">
+  <thead><tr><th style="width:28%">Rule</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Workflow</td><td>PBR metal/roughness (glTF standard): base colour, normal, and a packed occlusion-roughness-metallic map.</td></tr>
+    <tr><td>Texel density</td><td>Environment 1,024 px/m · hero props 2,048 px/m · player items 4,096 px/m equivalent.</td></tr>
+    <tr><td>Maximum sizes</td><td>4096² for hero assets, player items and trim sheets · 2048² for props · 1024² for small props. All shipped as KTX2.</td></tr>
+    <tr><td>Trim sheets</td><td>One teak trim sheet (planks, beams, carved edges) and one plaster/stucco trim sheet cover most architecture.</td></tr>
+    <tr><td>Wear</td><td>Every surface shows age: worn edges, grime in corners, water marks at the base of walls and posts.</td></tr>
+    <tr><td>Wetness</td><td>A shader parameter darkens base colour and lowers roughness; used for rain, mud and flooded rooms.</td></tr>
+    <tr><td>Library assets</td><td>Always retexture or tint library assets to the episode palette and add wear before use.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="architecture"><span class="num">07</span>Architecture References</h2>
+<table>
+  <thead><tr><th style="width:24%">Place</th><th>Key features to capture</th><th style="width:28%">Where to look</th></tr></thead>
+  <tbody>
+    <tr><td>Battambang stilt house</td><td>Raised teak frame, gabled tiled roof, wide front stairs, open space beneath used for storage, carts and animals; shutters rather than glass.</td><td>Historic photos (EFEO, Gallica, ANOM); surviving old houses around Battambang</td></tr>
+    <tr><td>Funeral pavilion</td><td>Bamboo frame, white cloth, decorations, flags, coffin on a raised stand, portrait and offerings.</td><td>Interviews and photos from Cambodian families (with permission)</td></tr>
+    <tr><td>Village pagoda</td><td>Vihear with stacked roofs and naga finials, stupas of many sizes, kuti huts, library on stilts in a pond.</td><td>Battambang pagodas; ethnographic photo archives</td></tr>
+    <tr><td>Tonle Sap floating village</td><td>Houses on floats and stilts, boats as streets, colonial-era clinic in French-Khmer style.</td><td>Historic photos of the lake communities</td></tr>
+    <tr><td>Colonial estate</td><td>Yellow stucco, arched verandas, shutters, tiled roofs, industrial sheds of brick and iron.</td><td>Archive photos of 1920s–30s plantations</td></tr>
+    <tr><td>Phnom Kulen</td><td>Angkorian sandstone, naga balustrades, riverbed carvings, banyan roots through stone.</td><td>Published surveys and photography (keep the in-game site fictional)</td></tr>
+  </tbody>
+</table>
+<p class="small">Keep a reference folder per location with the source of every image. Reference images are for study only; never copy a photograph into a texture without a licence.</p>
+
+<h2 id="characters"><span class="num">08</span>Characters and Costume</h2>
+<table>
+  <thead><tr><th style="width:18%">Character</th><th>Look</th><th style="width:30%">Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Sora</strong> (hands only)</td><td>Slim hands with ink stains on the right index and middle fingers; a thin silver bangle (her mother's); sleeves of a long-sleeved cotton blouse. Her full appearance is seen only in her own self-portrait in the sketchbook.</td><td>The ink stains show her art; the bangle links her to Kanha.</td></tr>
+    <tr><td><strong>Yay Mey</strong></td><td>Small, upright, white mourning clothes: chong kben and sash; short grey hair; betel-stained lips; prayer beads.</td><td>Confirm mourning customs for elderly women with the advisor (for example, head-shaving).</td></tr>
+    <tr><td><strong>Vuthy</strong></td><td>Late twenties; white or cream linen suit of a 1930s clerk, slightly too big; neat hair; a cheap wristwatch he keeps checking.</td><td>Looks out of place in the village; muddier each episode.</td></tr>
+    <tr><td><strong>Uncle Sok</strong></td><td>Gaunt, grey stubble, wrapped in white cloth in the coffin; in memories, a medic's white coat (1920) and worn civilian clothes (1931).</td><td></td></tr>
+    <tr><td><strong>Kanha</strong></td><td>In the photograph and memories: warm, smiling, with Sora's eyes. As the spirit: long black hair, pale skin seen through water, never fully clear until the moment of release.</td><td>Handle with care (section 11).</td></tr>
+    <tr><td><strong>Venerable Sophal</strong></td><td>Elderly, saffron robes, clouded eyes.</td><td>Monks are always depicted respectfully.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="creatures"><span class="num">09</span>Spirits and Creatures</h2>
+<table>
+  <thead><tr><th style="width:18%">Spirit</th><th>Design language</th><th style="width:30%">Rules</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Neak Ta</strong></td><td>Silhouette first: a towering shape of layered shadow, like smoke and stone. The <strong>brass mask</strong> is the only detailed element: hammered, ancient, slightly asymmetrical, with deep eye sockets that catch the lamp. In Episode 5: multiple arms, stone texture showing through the shadow.</td><td>Never fully lit before Episode 5. Never copy a real deity's iconography. Dignified, not grotesque: a judge.</td></tr>
+    <tr><td><strong>Neak Ta shadow forms</strong></td><td>The guardian's lesser forms: tall, stooped, wet shadows in the house (Ep 1) and the manor (Ep 4); weathered statues in the Earth trial (Ep 5). They share the mask's brass glint in the eyes so players recognise one spirit.</td><td>Mostly shown through shadows and sound.</td></tr>
+    <tr><td><strong>Pich</strong> (Mrenh Kongveal)</td><td>Never fully seen: a small silhouette at the edge of the light, a child's wet handprint on a dry board, a little wooden toy that rolls. Warm-toned, never pale or distorted.</td><td>Gentle; never used for a scare.</td></tr>
+    <tr><td><strong>Apsara dance</strong> (Ep 5)</td><td>Carved dancers that move gracefully for a few seconds, with stone texture and soft golden light.</td><td>Gestures based on real classical dance, checked with a dancer or the advisor. Beautiful, never grotesque.</td></tr>
+    <tr><td><strong>Pret</strong></td><td>Based on traditional depictions: 3–4 m tall, extremely thin limbs, needle-thin neck, tiny mouth, swollen belly, hollow glowing eyes.</td><td>Pitiful as well as frightening; they are suffering.</td></tr>
+    <tr><td><strong>Chhlong Tonle (Kanha)</strong></td><td>A shape made of water and long hair; a face that resolves only near the end of Episode 3.</td><td>Never sexualised or gory.</td></tr>
+    <tr><td><strong>Khmaoch Prey</strong></td><td>Tall, slender, disfigured; elongated limbs that look like rubber trees in the fog until they move.</td><td>Mostly heard, rarely seen.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="sketchbook"><span class="num">10</span>The Sketchbook and Interface Art</h2>
+<table class="kv">
+  <tbody>
+    <tr><td>Paper</td><td>Cream (<code>#EFE4CF</code>) with faint texture, foxing at the edges, slight wrinkling after Episode 3 (it got wet).</td></tr>
+    <tr><td>Drawing style</td><td>Sora's own: confident fountain-pen line, ink wash shading, quick gesture sketches of people and places, neat architectural plans for maps.</td></tr>
+    <tr><td>Handwriting</td><td>English notes in a hand-lettered style; Khmer notes in Sora's handwriting. Chosen in S5: <strong>Patrick Hand</strong> (English) and <strong>Freehand</strong> (Khmer), both SIL Open Font Licence, credited in the game. For menus and settings, use <strong>Ubuntu</strong> (English) and <strong>Preah Vihear</strong> (Khmer), matching the documents.</td></tr>
+    <tr><td>Blood on the map</td><td>Dark brown-red ink that spreads with a slow, organic bleed animation.</td></tr>
+    <tr><td>Night count</td><td>Seven hand-drawn circles across the top of the map page, filled with ink wash one by one.</td></tr>
+    <tr><td>Kanha's drawings</td><td>Softer pencil style; Sora's style clearly descends from it.</td></tr>
+    <tr><td>Title logo</td><td>English title in Ubuntu Bold; Khmer title in a decorative Khmer display face (for example, Moul) to be chosen with the advisor.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="respect"><span class="num">11</span>Sensitivity Rules</h2>
+<div class="cols">
+  <div class="callout"><span class="label">Always</span>
+  <ul>
+    <li>Show Buddha images, monks, stupas and altars with respect: well lit, intact, never as monsters or jump scares.</li>
+    <li>Base clothing, architecture and ritual objects on research and advisor review.</li>
+    <li>Show the plantation labourers as people with names and dignity.</li>
+    <li>Let the spirits be frightening <em>and</em> sympathetic.</li>
+    <li>Show classical and village dance as beauty, joy and offering, never as ghosts or monsters.</li>
+  </ul></div>
+  <div class="callout issue"><span class="label">Never</span>
+  <ul>
+    <li>Damage, desecrate or mock sacred images or objects.</li>
+    <li>Copy the iconography of a specific real deity or a real Neak Ta shrine.</li>
+    <li>Use gore for shock; blood stays small and symbolic.</li>
+    <li>Sexualise any character, living or dead.</li>
+  </ul></div>
+</div>
+
+<h2 id="checklist"><span class="num">12</span>Asset Approval Checklist</h2>
+<table class="dense">
+  <thead><tr><th style="width:6%">✓</th><th>Before an asset goes into the game</th></tr></thead>
+  <tbody>
+    <tr><td>☐</td><td>Correct real-world scale; snaps to the 0.5 m grid if modular; pivot placed correctly</td></tr>
+    <tr><td>☐</td><td>Within its triangle budget; LODs where required</td></tr>
+    <tr><td>☐</td><td>Textures at the right texel density and maximum size; exported as KTX2</td></tr>
+    <tr><td>☐</td><td>Colours within the episode palette; wear and age added</td></tr>
+    <tr><td>☐</td><td>Reads clearly at the edge of the lamplight and in silhouette</td></tr>
+    <tr><td>☐</td><td>Named per the Technical Design Document; licence recorded in the asset tracker</td></tr>
+    <tr><td>☐</td><td>Culturally specific assets reviewed against references (and by the advisor where needed)</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
