@@ -18,6 +18,8 @@ import { SpikeHud } from "../SpikeHud";
 import { buildCourse, type Zone } from "./course";
 import { SnagDetector } from "./SnagDetector";
 import { WaypointBot, type BotReport } from "./WaypointBot";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S1Result {
@@ -196,5 +198,5 @@ export async function runS1(engine: WebGPUEngine, params: URLSearchParams): Prom
   });
 
   if (params.get("auto") === "1") startBot();
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }

@@ -11,6 +11,8 @@ import { SaveStore } from "../../systems/saves/SaveStore";
 import { endOfEpisodeOne } from "../../systems/saves/sampleSaves";
 import { SpikeHud } from "../SpikeHud";
 import { createHallEnvironment } from "../hallEnvironment";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S6Result {
@@ -315,5 +317,5 @@ export async function runS6(
     })();
   }
 
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }
