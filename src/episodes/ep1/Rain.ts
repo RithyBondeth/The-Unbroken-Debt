@@ -192,10 +192,25 @@ export class RainStreaks {
     this.system = ps;
   }
 
-  light(flash: number): void {
-    const a = 0.2 + flash * 0.6;
-    this.system.color1.set(0.55 + flash * 0.4, 0.6 + flash * 0.4, 0.68 + flash * 0.3, a);
-    this.system.color2.set(0.5 + flash * 0.4, 0.55 + flash * 0.4, 0.62 + flash * 0.3, a * 0.7);
+  /**
+   * The streaks are unlit, so their colour stands for the light on them: `flash`
+   * (lightning, 0 to 1) and `warm` (a flame close by, 0 to 1) over a `base` level
+   * (1 behind a lit window; lower out in a dark night).
+   */
+  light(flash: number, warm = 0, base = 1): void {
+    const a = 0.2 * Math.min(1, base * 1.2) + flash * 0.6 + warm * 0.3;
+    this.system.color1.set(
+      0.55 * base + flash * 0.4 + warm * 0.75,
+      0.6 * base + flash * 0.4 + warm * 0.48,
+      0.68 * base + flash * 0.3 + warm * 0.2,
+      a,
+    );
+    this.system.color2.set(
+      0.5 * base + flash * 0.4 + warm * 0.65,
+      0.55 * base + flash * 0.4 + warm * 0.4,
+      0.62 * base + flash * 0.3 + warm * 0.16,
+      a * 0.7,
+    );
   }
 
   dispose(): void {

@@ -2,6 +2,7 @@ import { CreateAudioEngineAsync } from "@babylonjs/core/AudioV2/webAudio/webAudi
 import type { AudioEngineV2 } from "@babylonjs/core/AudioV2/abstractAudio/audioEngineV2";
 import type { AudioBus } from "@babylonjs/core/AudioV2/abstractAudio/audioBus";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
+import type { StreamingSound } from "@babylonjs/core/AudioV2/abstractAudio/streamingSound";
 import type { Node } from "@babylonjs/core/node";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
@@ -82,6 +83,28 @@ export class AudioSystem {
     return buffer;
   }
 
+  /**
+   * Fetches and decodes the first of `urls` this browser can play (Opus first,
+   * AAC as the fallback). Null if none loads.
+   */
+  async load(urls: string[]): Promise<AudioBuffer | null> {
+    for (const url of urls) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        return await this.context.decodeAudioData(await response.arrayBuffer());
+      } catch {
+        // Not playable here: try the next format.
+      }
+    }
+    return null;
+  }
+
+  /** A sound heard from the listener's own position (Sora's feet, her hands). */
+  async sound(name: string, buffer: AudioBuffer, bus: BusName, volume = 1): Promise<StaticSound> {
+    return this.engine.createSoundAsync(name, buffer, { outBus: this.buses[bus], volume });
+  }
+
   /** A sound placed in the world on `bus`, panned the way that bus requires. */
   async spatialSound(
     name: string,
@@ -90,19 +113,40 @@ export class AudioSystem {
     position: Vector3,
     options: SpatialOptions = {},
   ): Promise<StaticSound> {
-    const panning = options.panning ?? PANNING[bus] ?? "equalpower";
-    const sound = await this.engine.createSoundAsync(name, buffer, {
+    return this.engine.createSoundAsync(name, buffer, this.spatialOptions(bus, position, options));
+  }
+
+  /**
+   * Like `spatialSound`, but streamed from a file as it plays (long ambience and
+   * music, Audio Design Document 10). `urls` lists the formats in order of
+   * preference; the browser plays the first it supports.
+   */
+  async spatialStream(
+    name: string,
+    urls: string[],
+    bus: BusName,
+    position: Vector3,
+    options: SpatialOptions = {},
+  ): Promise<StreamingSound> {
+    return this.engine.createStreamingSoundAsync(
+      name,
+      urls,
+      this.spatialOptions(bus, position, options),
+    );
+  }
+
+  private spatialOptions(bus: BusName, position: Vector3, options: SpatialOptions) {
+    return {
       outBus: this.buses[bus],
       spatialEnabled: true,
-      spatialPanningModel: panning,
+      spatialPanningModel: options.panning ?? PANNING[bus] ?? "equalpower",
       spatialPosition: position.clone(),
-      spatialDistanceModel: "inverse",
+      spatialDistanceModel: "inverse" as const,
       spatialMinDistance: options.minDistance ?? 1,
       spatialMaxDistance: options.maxDistance ?? 40,
       spatialRolloffFactor: 1,
       loop: options.loop ?? false,
       volume: options.volume ?? 1,
-    });
-    return sound;
+    };
   }
 }

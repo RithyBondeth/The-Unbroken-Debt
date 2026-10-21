@@ -36,6 +36,26 @@ export const KHMER = {
     "ន មោ ពុ ទ្ធា យ",
     "na mo bu ddha ya, the five syllables on the protective yantra cloth over the doors (village.mjs)",
   ],
+  calendar1932: [
+    "ប្រតិទិន ១៩៣២",
+    "calendar 1932, on the merchant's calendar in the hall (village.mjs, house_papers)",
+  ],
+  kingdom: [
+    "ព្រះរាជាណាចក្រកម្ពុជា",
+    "Kingdom of Cambodia, heading of the 1931 head-tax receipt (village.mjs, house_papers); check the wording forms used then",
+  ],
+  debt: [
+    "បំណុល",
+    "debt, heading of Sok's half-burnt page of notes under the house (village.mjs, sok_notes)",
+  ],
+  payments: [
+    "១៩១១ ១៩២០ ១៩៣២",
+    "1911, 1920, 1932: the years of the payments down the side of Sok's notes (village.mjs, sok_notes)",
+  ],
+  primaryCertificate: [
+    "សញ្ញាបត្របឋមសិក្សា",
+    "primary-school certificate, on Sok's 1907 certificate (village.mjs, house_papers); check the term of the time",
+  ],
 };
 
 const RED = "#9b2a1f";

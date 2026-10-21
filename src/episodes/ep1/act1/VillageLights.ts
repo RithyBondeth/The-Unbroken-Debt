@@ -7,47 +7,46 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Area } from "../../../core/AreaLoader";
-import type { QualityPreset } from "../../../render/QualityPresets";
-import {
-  createShadowedPointLight,
-  FLAME_COLOR,
-  limitLightToRange,
-} from "../../../render/RenderSetup";
+import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
 import { Lightning } from "../Lightning";
-
-/** Materials whose meshes never cast the lamp's shadow. */
-const NO_SHADOW =
-  /^M_(flame|ember|puddle|flood_water|cobweb|jasmine|rice|incense|white_thread|rope|muddy_footprints|lotus_bud|stem_green|hearth_embers|lamp_window)/;
 
 /**
  * The village at night (Art Bible, section 3): a dark, rain-heavy sky; the
  * funeral tent glowing from its hanging oil lamps and altar candles; lightning;
  * and Sora's hurricane lamp, the hero light, carried at her side.
  */
+/** Sora's lamp at full flame (physical falloff, so about this much at 1 m). */
+const LAMP_INTENSITY = 10;
+
 export class VillageLights {
   readonly flames: PointLight[] = [];
   readonly lamp: PointLight;
   readonly storm = new Lightning();
+  /** Sora's lamp flame, 0 (out) to 1 (full), from the vigil's Lamp. */
+  lampFlame = 0;
+  /** The pavilion's lamps and candles, dimmed as the incense dies (A1-10). */
+  tentLevel = 1;
   private readonly sky: HemisphericLight;
   private readonly moon: DirectionalLight;
   private readonly flash: DirectionalLight;
   private time = 0;
   private readonly phases: number[] = [];
 
-  constructor(scene: Scene, area: Area, preset: QualityPreset, camera: Camera) {
+  constructor(scene: Scene, area: Area, camera: Camera) {
     // Rain-heavy sky with the moon somewhere behind the clouds: dark slate, light
     // enough that roofs, palms and the flag read as silhouettes (Art Bible 1, 3).
     scene.clearColor = new Color4(0.02, 0.024, 0.032, 1);
     this.sky = new HemisphericLight("night_sky", new Vector3(0.2, 1, -0.3), scene);
-    this.sky.diffuse = new Color3(0.36, 0.42, 0.56);
-    this.sky.groundColor = new Color3(0.03, 0.03, 0.025);
-    this.sky.specular = new Color3(0.05, 0.06, 0.08);
-    this.sky.intensity = 0.09;
+    this.sky.diffuse = new Color3(0.32, 0.42, 0.6);
+    this.sky.groundColor = new Color3(0.035, 0.04, 0.04);
+    this.sky.specular = new Color3(0.03, 0.04, 0.06);
+    this.sky.intensity = 0.11;
     // The moon hides low in the south, over the flooded fields: their water catches it.
     this.moon = new DirectionalLight("moonlight", new Vector3(-0.25, -0.45, -0.85), scene);
-    this.moon.diffuse = Color3.FromHexString("#8FA8D8");
-    this.moon.specular = new Color3(0.25, 0.3, 0.4);
-    this.moon.intensity = 0.1;
+    // Cool and weak through the cloud: enough for the forest to read as shapes in blue.
+    this.moon.diffuse = Color3.FromHexString("#7F9FD6");
+    this.moon.specular = new Color3(0.1, 0.13, 0.18);
+    this.moon.intensity = 0.22;
 
     this.flash = new DirectionalLight("lightning", new Vector3(0.4, -1, 0.5), scene);
     this.flash.diffuse = new Color3(0.75, 0.82, 1);
@@ -66,24 +65,11 @@ export class VillageLights {
       this.phases.push(Math.random() * 10);
     }
 
-    // Sora's hurricane lamp, lit (Phase 2 stand-in: the oil and matches come next).
-    const lamp = createShadowedPointLight(
-      scene,
-      "hurricane_lamp",
-      new Vector3(0.28, -0.35, 0.25),
-      9,
-      preset.lampShadowMapSize,
-      // Not the sky, the ground or the flood (they only receive the lamp's shadows),
-      // nor flames, threads, petals and decals too fine to cast one worth drawing.
-      (m) =>
-        m.isVisible &&
-        m.renderingGroupId === 0 &&
-        !m.infiniteDistance &&
-        !NO_SHADOW.test(m.material?.name ?? "") &&
-        m.getBoundingInfo().boundingSphere.radiusWorld > 0.12 &&
-        m.getBoundingInfo().boundingSphere.radiusWorld < 30,
-    );
-    this.lamp = lamp.light;
+    // Sora's hurricane lamp; the vigil places it just below her eyes. It casts no
+    // shadows: from (nearly) the eye, what she can see the lamp lights, and a shadow
+    // map turning with her head only made shadows swim over bark and leaves.
+    this.lamp = new PointLight("hurricane_lamp", new Vector3(-0.06, -0.14, 0.1), scene);
+    this.lamp.range = 9;
     this.lamp.parent = camera;
     this.lamp.diffuse = FLAME_COLOR.clone();
     this.lamp.intensity = 6;
@@ -94,15 +80,21 @@ export class VillageLights {
     this.lamp.renderPriority = 10;
     this.flash.renderPriority = 5;
     this.moon.renderPriority = 4;
+    // Babylon sorts lights that may cast shadows ahead of the others whatever their
+    // priority; none of these has a shadow map, so none claims to.
+    for (const light of [this.lamp, this.flash, this.moon, this.sky, ...this.flames])
+      light.shadowEnabled = false;
     scene.requireLightSorting = true;
     for (const material of scene.materials)
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
-        // Rain-soaked outdoor surfaces (named M_wet_ in Blender): darker and glossier
-        // (Art Bible 6, wetness), so lamp light glints on mud, thatch and tiles.
+        // Rain-soaked outdoor surfaces (named M_wet_ in Blender): darker and a little
+        // glossier (Art Bible 6, wetness). The factor scales each texture's own
+        // roughness: much lower and the moon, low behind the clouds, turns mud and
+        // bark to crumpled foil.
         if (material.name.startsWith("M_wet_")) {
           material.albedoColor.scaleInPlace(0.72);
-          material.roughness = 0.55;
+          material.roughness = 0.92;
         }
       }
   }
@@ -118,16 +110,22 @@ export class VillageLights {
     this.flames.forEach((light, i) => {
       const p = this.phases[i];
       const base = (light.metadata as { base: number }).base;
+      const tent = /^(tent|altar|coffin)/.test(light.name) ? this.tentLevel : 1;
       light.intensity =
-        base * (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
+        base * tent * (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
     });
-    this.lamp.intensity = 6 * (0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1));
+    // Strong enough for a warm pool round Sora that the dark eats a few metres out.
+    this.lamp.intensity =
+      LAMP_INTENSITY *
+      this.lampFlame *
+      (0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1));
     this.flash.intensity = this.storm.update(dt) * 3;
   }
 
   /** Light reaching Sora's eyes, for eye adaptation (1 = her lamp at arm's length). */
   lightAtEye(eye: Vector3): number {
-    let light = this.lamp.intensity / 14;
+    // Calibrated when the lamp was 6: the eye's response to it stays the same.
+    let light = (this.lamp.intensity / LAMP_INTENSITY) * (6 / 14);
     for (const l of this.flames) {
       const d = Math.max(0.5, Vector3.Distance(eye, l.position));
       light += l.intensity / (d * d) / 14;

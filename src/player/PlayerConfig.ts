@@ -37,6 +37,10 @@ export interface PlayerConfig {
   /** Seconds to lower or raise the eye when crouching. */
   crouchTransition: number;
 
+  /**
+   * Metres per stride, which is two footsteps (headBob.ts). At 1.6 m/s a 1.5 m
+   * stride gives about two steps a second, an unhurried walk.
+   */
   strideWalk: number;
   strideHurry: number;
   strideCrouch: number;
@@ -74,9 +78,9 @@ export const DEFAULT_PLAYER_CONFIG: PlayerConfig = {
   eyeSmoothing: 0.08,
   crouchTransition: 0.18,
 
-  strideWalk: 0.72,
-  strideHurry: 1.1,
-  strideCrouch: 0.5,
+  strideWalk: 1.5,
+  strideHurry: 2.3,
+  strideCrouch: 1.0,
   bobWalk: 0.022,
   bobHurry: 0.04,
   bobCrouch: 0.012,

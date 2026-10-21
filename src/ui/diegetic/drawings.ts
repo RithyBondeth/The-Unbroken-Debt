@@ -5,7 +5,6 @@
  */
 
 export const INK = "#17120f";
-export const BLOOD_INK = "#5e1a14";
 
 export interface Pen {
   ctx: CanvasRenderingContext2D;

@@ -20,6 +20,7 @@ import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
 import { PerfOverlay } from "../debug/PerfOverlay";
 import { AudioSystem } from "../audio/AudioSystem";
+import { Footsteps } from "../audio/Footsteps";
 import { FLAME_COLOR } from "../render/RenderSetup";
 import { Inventory } from "../systems/inventory/Inventory";
 import { Interaction } from "../systems/interaction/Interaction";
@@ -72,8 +73,12 @@ export class Game {
   readonly saves = new SaveStore((saving) => this.saveIndicator.set(saving));
   /** Null if the browser refused to create audio. */
   audio: AudioSystem | null = null;
+  /** Sora's footsteps; null without audio. */
+  footsteps: Footsteps | null = null;
   /** Exists once the game has started. */
   sketchbook: Sketchbook | null = null;
+  /** The lamp from the save being resumed, if any (the act restores it). */
+  savedLamp: SaveData["lamp"] | null = null;
   /** A scripted moment has Sora's hands: nothing can be used, opened or read. */
   cutscene = false;
   pipeline!: PostPipeline;
@@ -119,6 +124,7 @@ export class Game {
       },
     );
     this.audio?.attachListener(this.camera);
+    if (this.audio) this.footsteps = await Footsteps.load(this.audio, this.bus);
     this.resolution = new DynamicResolution(this.engine, this.preset);
     const section = await this.chooseSection();
     await section.load();
@@ -157,6 +163,7 @@ export class Game {
   private restore(save: SaveData): void {
     this.flags.load(save.flags);
     this.inventory.load(save.inventory);
+    this.savedLamp = save.lamp;
   }
 
   /** Puts Sora at `feet`, facing `yaw`. */

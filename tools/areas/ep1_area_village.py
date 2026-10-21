@@ -40,7 +40,14 @@ TENT = {"x0": -4.0, "x1": 4.0, "y0": 1.0, "y1": 7.0, "eave": 2.6, "ridge": 4.6}
 YARD = {"x0": -13.0, "x1": 13.0, "y0": -3.0, "y1": 22.0}
 # The 60 m path from the road (A1-01): a gentle S through the grove, south to north.
 PATH = [(1.5, -60.0), (2.5, -50.0), (0.5, -40.0), (-2.5, -30.0), (-2.0, -20.0), (0.5, -10.0), (0.0, -3.0)]
-HUTS = [(-23.0, 8.0, 1.4, False), (22.0, -2.0, -1.7, True), (-18.0, -30.0, 0.5, False), (19.0, -38.0, 2.4, False)]
+# The compound stands alone in the forest: no neighbours in sight, only old wells
+# (the open one just outside the west fence, one half covered in the grove).
+WELLS = [(-17.0, 7.5, False), (9.5, -33.0, True)]
+POND = (-20.0, 19.0, 4.0, 3.0)
+# Dead trees hung with rags and offerings, deeper in the forest (two seen from the path).
+RAG_TREES = [(-6.0, -24.5), (6.5, -45.0), (-16.0, 1.0), (14.0, -8.0), (-15.0, -40.0), (20.0, 5.0)]
+HERO_TREES = [(-32.0, 18.0), (30.0, -18.0), (-30.0, -50.0), (33.0, 30.0), (-23.0, 9.0), (22.0, -2.0), (-19.0, -29.0),
+              (19.0, -40.0), (-30.0, -3.0), (31.0, 12.0), (-26.0, 30.0), (26.0, -25.0)]
 ROAD_Y = -63.5  # centre of the road along the paddies (A1-01)
 BANYAN = (-7.0, -35.5)
 BAMBOO = [(-9, -7), (8.5, -9), (-16, 18), (16, 6), (-7, -52), (8, -42), (-12, -24), (11, -30), (14.5, 24.5), (-15, 27)]
@@ -246,7 +253,7 @@ def materials():
         "mud_red": lib("red_dirt_mud_01", "M_wet_mud_red", tint=(0.55, 0.45, 0.4)),
         "water": plain("M_puddle", (0.018, 0.02, 0.022), rough=0.03),
         "flood": plain("M_flood_water", (0.02, 0.022, 0.022), rough=0.05),
-        "forest_floor": lib("forest_leaves_02", "M_wet_forest_floor", tint=(0.42, 0.38, 0.33)),
+        "forest_floor": lib("brown_mud_leaves_01", "M_wet_forest_floor", tint=(0.5, 0.45, 0.38)),
         "termite": lib("red_dirt_mud_01", "M_wet_termite_earth", tint=(0.7, 0.5, 0.42), tile=1.0),
         "bark": lib("bark_brown_02", "M_wet_bark", tint=(0.5, 0.45, 0.4), tile=1.2),
         "bark_dead": lib("bark_brown_02", "M_wet_bark_dead", tint=(0.5, 0.5, 0.5), tile=1.2),
@@ -259,7 +266,7 @@ def materials():
         "footprints": img("M_muddy_footprints", texture("T_ep1_footprints_BC"), rough=0.4, cutout=True),
         "yantra": img("M_yantra_cloth", texture("T_ep1_yantra_BC"), rough=0.9),
         "bamboo_dead": img("M_bamboo_dead", texture("T_ep1_bamboo_BC"), rough=0.7, tint=(0.6, 0.58, 0.55)),
-        "cloth_red": plain("M_cloth_red", (0.32, 0.04, 0.03), rough=0.8),
+        "cloth_red": lib("rough_linen", "M_wet_cloth_red", tint=(0.34, 0.05, 0.035)),
         "cloth_yellow": plain("M_cloth_yellow", (0.55, 0.38, 0.08), rough=0.8),
         "cotton_dirty": plain("M_cotton_dirty", (0.5, 0.48, 0.42), rough=0.9),
         "gold_dull": plain("M_gilt_dull", (0.45, 0.33, 0.15), rough=0.5, metal=0.8),
@@ -269,6 +276,18 @@ def materials():
         "insulator": plain("M_glass_insulator", (0.12, 0.25, 0.22), rough=0.1),
         "umbrella": plain("M_oiled_paper", (0.3, 0.13, 0.06), rough=0.55),
         "krama": plain("M_krama", (0.36, 0.08, 0.06), rough=0.85),
+        "brick": lib("clay_plaster", "M_wet_old_brick", tint=(0.55, 0.38, 0.3), tile=1.5),
+        "stone_wet": lib("mud_forest", "M_wet_shrine_stone", tint=(0.42, 0.4, 0.36), tile=0.6),
+        "sandstone": plain("M_sandstone", (0.32, 0.27, 0.2), rough=0.9),
+        "cloth_saffron": lib("rough_linen", "M_wet_cloth_saffron", tint=(0.55, 0.24, 0.05)),
+        "rot_meat": plain("M_rotten_meat", (0.12, 0.07, 0.04), rough=0.25),
+        "dead_marigold": plain("M_dead_marigold", (0.36, 0.17, 0.05), rough=0.85),
+        "wax_red": plain("M_wax_red", (0.4, 0.05, 0.03), rough=0.4),
+        "stains": img("M_betel_stains", texture("T_ep1_stains_BC"), rough=0.3, cutout=True),
+        "wax_dirty": plain("M_wax_dirty", (0.55, 0.42, 0.22), rough=0.4),
+        "rot": plain("M_rotten_food", (0.08, 0.07, 0.05), rough=0.6),
+        "dead_flowers": plain("M_dead_flowers", (0.3, 0.22, 0.12), rough=0.9),
+        "lotus_leaf": plain("M_lotus_leaf", (0.06, 0.13, 0.05), rough=0.35),
         "rag": lib("rough_linen", "M_wet_rag", tint=(0.42, 0.38, 0.32)),
         "straw": plain("M_straw", (0.42, 0.34, 0.18), rough=0.9),
         "tea_stain": plain("M_tea_stain", (0.09, 0.06, 0.035), rough=0.12),
@@ -300,6 +319,9 @@ def materials():
         "mat": img("M_reed_mat", texture("T_ep1_mat_BC"), rough=0.8, tile=1.0),
         "coffin_panel": img("M_coffin_gilt", texture("T_ep1_coffin_panel_BC"), rough=0.4),
         "photo": img("M_photo_sok", texture("T_ep1_photo_sok_BC"), rough=0.55),
+        "family_prints": img("M_family_prints", texture("T_ep1_family_prints_BC"), rough=0.6),
+        "house_papers": img("M_house_papers", texture("T_ep1_house_papers_BC"), rough=0.75),
+        "sok_notes": img("M_sok_notes", texture("T_ep1_sok_notes_BC"), rough=0.9, cutout=True),
         "cushion": lib("fabric_pattern_07", "M_cushion"),
         "gold": plain("M_gilt", (0.72, 0.52, 0.22), rough=0.32, metal=1.0),
         "lacquer": plain("M_red_lacquer", (0.26, 0.045, 0.03), rough=0.35),
@@ -312,7 +334,7 @@ def materials():
         "rattan": plain("M_rattan", (0.42, 0.32, 0.18), rough=0.7),
         "thread": plain("M_white_thread", (0.9, 0.9, 0.86), rough=0.8),
         "wax": plain("M_candle_wax", (0.82, 0.62, 0.28), rough=0.45),
-        "flame": plain("M_flame", (1.0, 0.5, 0.15), emission=(1.0, 0.42, 0.1), strength=4.0),
+        "flame": glow_material("M_flame", texture("T_ep1_flame_BC"), strength=3.0),
         "incense": plain("M_incense", (0.2, 0.1, 0.06), rough=0.85),
         "ember": plain("M_ember", (1.0, 0.3, 0.1), emission=(1.0, 0.25, 0.05), strength=4.0),
         "sand": plain("M_incense_sand", (0.5, 0.45, 0.38), rough=1.0),
@@ -333,10 +355,12 @@ def materials():
         "kerosene_tin": plain("M_kerosene_tin", (0.35, 0.33, 0.28), rough=0.5, metal=0.7),
         "iron": plain("M_iron", (0.08, 0.07, 0.065), rough=0.6, metal=0.8),
         "paper": plain("M_old_paper", (0.75, 0.68, 0.52), rough=0.95),
+        # The inside of a well: lightless.
+        "void": plain("M_void", (0.003, 0.003, 0.003), rough=1.0),
         "window_glow": plain("M_lamp_window", (0.2, 0.1, 0.04), emission=(1.0, 0.55, 0.22), strength=1.2),
         "net": plain("M_mosquito_net", (0.78, 0.78, 0.74), rough=0.9),
     }
-    for key in ("cotton", "bamboo_wall_2s", "net", "krama", "cotton_dirty", "hide", "cloth_red", "cloth_yellow"):
+    for key in ("cotton", "bamboo_wall_2s", "net", "krama", "cotton_dirty", "hide", "cloth_red", "cloth_yellow", "cloth_saffron"):
         m[key].use_backface_culling = False
     return m
 
@@ -406,7 +430,31 @@ def terrain(m):
 
 def clear_of(x, y):
     return all(math.hypot(x - p[0], y - p[1]) > r for p, r in CLEAR) and \
-        all(math.hypot(x - hx, y - hy) > 4.0 for hx, hy, _, _ in HUTS)
+        all(math.hypot(x - wx, y - wy) > 2.5 for wx, wy, _ in WELLS) and \
+        all(math.hypot(x - hx, y - hy) > 2.0 for hx, hy in HERO_TREES) and \
+        all(math.hypot(x - rx, y - ry) > 1.5 for rx, ry in RAG_TREES) and \
+        ((x - POND[0]) / (POND[2] + 1.5)) ** 2 + ((y - POND[1]) / (POND[3] + 1.5)) ** 2 > 1
+
+
+def land(x, y, margin=0.0):
+    """Ground the forest may grow on: not the yard, the path, the road or the flooded fields."""
+    if not (-39.5 < x < 39.5 and -91.5 < y < 39.5):
+        return False
+    if -86.5 < y < -60.5 or in_yard(x, y, 1.0 + margin) or path_distance(x, y) < 2.0 + margin:
+        return False
+    return clear_of(x, y)
+
+
+def scatter(n, test, spacing=0.0, tries=40000):
+    """Up to n random spots where test(x, y) holds, at least `spacing` apart."""
+    spots = []
+    for _ in range(tries):
+        if len(spots) >= n:
+            break
+        x, y = rng.uniform(-39.5, 39.5), rng.uniform(-91.5, 39.5)
+        if test(x, y) and all((x - a) ** 2 + (y - b) ** 2 >= spacing ** 2 for a, b in spots):
+            spots.append((x, y))
+    return spots
 
 
 def vegetation(m):
@@ -415,10 +463,10 @@ def vegetation(m):
     the path, dead trees, fallen trunks, termite mounds, ferns and grass."""
     k = 0
     tries = 0
-    while k < 210 and tries < 6000:
+    while k < 430 and tries < 20000:
         tries += 1
-        x, y = rng.uniform(-30, 30), rng.uniform(-60, 34)
-        if in_yard(x, y, 1.2) or path_distance(x, y) < 2.3 or not clear_of(x, y):
+        x, y = rng.uniform(-39, 39), rng.uniform(-60, 39)
+        if not land(x, y, 0.3):
             continue
         banana(AREA, m, x, y, rng.uniform(1.8, 2.8), k, rng)
         k += 1
@@ -438,7 +486,7 @@ def vegetation(m):
     for j, (x, y) in enumerate(BAMBOO):
         bamboo_clump(AREA, m, x, y, j, rng)
     banyan(AREA, m, *BANYAN, rng)
-    spirit_house(AREA, m, -3.6, -34.6, math.pi / 2, rng)
+    neak_ta_shrine(AREA, m, -3.9, -34.9, math.pi / 2, rng)
     for j, (x, y, h) in enumerate([(-6, -20, 1.8), (5, -29, 1.3), (-4.5, -45, 2.2), (7, -55, 1.6), (-11, -6, 1.2), (15.5, -6, 1.9),
                                    (-17, -20, 2.4), (18, -44, 1.5)]):
         termite_mound(AREA, m, x, y, h, j, rng)
@@ -449,21 +497,22 @@ def vegetation(m):
                                ("root_cluster_01", (6.5, -46, 40)), ("root_cluster_01", (-12, -16, 160))]:
         place(AREA, model, (x, y, 0.0), rot_deg=rot, scale=rng.uniform(1.0, 1.3), collide=model != "dry_branches_medium_01", surface="leaves")
     placed = 0
-    while placed < 14:
+    while placed < 30:
         x, y = rng.uniform(-10, 10), rng.uniform(-58, -5)
         if 1.4 < path_distance(x, y) < 4.0 and clear_of(x, y):
             place(AREA, "dry_branches_medium_01", (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(1.0, 1.6))
             placed += 1
     placed = 0
-    while placed < 22:
+    while placed < 50:
         x, y = rng.uniform(-14, 14), rng.uniform(-60, -4)
         if 2.0 < path_distance(x, y) < 4.5 and clear_of(x, y):
             place(AREA, "fern_02", (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(0.7, 1.1))
             placed += 1
     placed = 0
-    while placed < 26:
+    while placed < 40:
         x, y = rng.uniform(-24, 24), rng.uniform(-60, 32)
-        if not in_yard(x, y, 1.5) and 2.5 < path_distance(x, y) < 12 and clear_of(x, y):
+        # Far enough that its crown doesn't hang over the path.
+        if not in_yard(x, y, 1.5) and 3.5 < path_distance(x, y) < 12 and clear_of(x, y):
             place(AREA, "pachira_aquatica_01", (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(1.6, 2.4))
             placed += 1
     spots = []
@@ -481,6 +530,54 @@ def vegetation(m):
     path_threads(AREA, m, (-1.2, -44.0), (3.8, -44.0), 2.25, 1, rng)
     ground_offering(AREA, m, -1.0, -25.5, 0, rng)
     ground_offering(AREA, m, -2.0, -36.0, 1, rng)
+    forest_fill(m)
+
+
+def forest_fill(m):
+    """The forest beyond the path, to the edge of the world: more big trees and
+    palms, bamboo, shrubs and ferns under them, grass over every open patch, moss
+    and rocks, the straw stacks and pond of the neighbours."""
+    taken = TREES + DEAD + BAMBOO + [BANYAN]
+    far = lambda x, y: land(x, y, 1.0) and all(math.hypot(x - a, y - b) > 6 for a, b in taken)  # noqa: E731
+    for j, (x, y) in enumerate(scatter(26, far, spacing=7)):
+        tropical_tree(AREA, m, x, y, rng.uniform(11, 17), 300 + j, rng, crown=rng.uniform(0.9, 1.3))
+        taken.append((x, y))
+    for j, (x, y) in enumerate(HERO_TREES):
+        place(AREA, "island_tree_02", (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(1.6, 2.0), collide=False)
+        collider(f"hero_tree_{j}", AREA, x - 0.5, x + 0.5, y - 0.5, y + 0.5, 0, 3)
+    for j, (x, y) in enumerate(scatter(12, far, spacing=5)):
+        sugar_palm(AREA, m, x, y, rng.uniform(11, 16), 300 + j, rng)
+        taken.append((x, y))
+    for j, (x, y) in enumerate(scatter(12, far, spacing=5)):
+        coconut_palm(AREA, m, x, y, rng.uniform(8, 11), 300 + j, rng)
+        taken.append((x, y))
+    for j, (x, y) in enumerate(scatter(10, far, spacing=8)):
+        bamboo_clump(AREA, m, x, y, 300 + j, rng)
+        taken.append((x, y))
+    for j, (x, y) in enumerate(scatter(7, far, spacing=10)):
+        dead_tree(AREA, m, x, y, rng.uniform(6, 10), 300 + j, rng)
+    # One variant each (khmer.place), so the multi-variant models come in larger numbers.
+    for model, count, size in (("shrub_02", 90, (0.8, 1.2)), ("shrub_03", 100, (1.0, 1.6)), ("shrub_04", 40, (1.2, 2.0)),
+                               ("pachira_aquatica_01", 70, (1.6, 2.4)), ("fern_02", 170, (0.8, 1.3)), ("tree_stump_02", 10, (0.8, 1.1)),
+                               ("moss_01", 12, (1.0, 1.5))):
+        margin = 1.5 if model.startswith(("pachira", "shrub_04")) else 0.2
+        for x, y in scatter(count, lambda x, y: land(x, y, margin), spacing=2.0):
+            place(AREA, model, (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(*size))
+    for x, y in scatter(30, lambda x, y: land(x, y) and 2.3 < path_distance(x, y) < 5.0, spacing=2.5):
+        place(AREA, "grass_medium_02", (x, y, 0.0), rot_deg=rng.uniform(0, 360), scale=rng.uniform(0.8, 1.1))
+    for x, y in scatter(4, lambda x, y: land(x, y, 2.0), spacing=15):
+        place(AREA, "rock_moss_set_01", (x, y, -0.15), rot_deg=rng.uniform(0, 360), scale=rng.uniform(0.6, 0.9), collide=True, surface="stone")
+    # Grass over all the open ground, thinner in the yard along the fences and under the house.
+    spots = [(x, y, 0.0) for x, y in scatter(6500, lambda x, y: land(x, y, -0.6), tries=60000)]
+    for i in range(0, len(spots), 900):
+        grass_patch(f"forest_grass_{i // 900}", AREA, m, spots[i:i + 900], rng, size=(0.45, 1.0))
+    yard_edge = [(x, y, 0.0) for x, y in scatter(400, lambda x, y: in_yard(x, y) and not in_yard(x, y, -1.2), tries=20000)]
+    grass_patch("yard_edge_grass", AREA, m, yard_edge, rng, size=(0.3, 0.6))
+    for j, (x, y) in enumerate(RAG_TREES):
+        rag_tree(AREA, m, x, y, j, rng)
+    for j, (x, y, cover) in enumerate(WELLS):
+        old_well(AREA, m, x, y, rng, j, cover=cover)
+    lotus_pond(AREA, m, *POND, rng)
 
 
 def road(m):
@@ -515,6 +612,9 @@ def road(m):
     ting_mong(AREA, m, -1.4, -61.0, -0.15, 0, rng)
     ting_mong(AREA, m, 4.4, -60.8, 0.25, 1, rng, arms_up=True)
     ting_mong(AREA, m, -7.5, -71.5, math.pi, 2, rng, arms_up=True)
+    # Two more along the path through the grove, watching whoever comes up it.
+    ting_mong(AREA, m, -4.4, -26.0, 0.2, 3, rng)
+    ting_mong(AREA, m, 3.8, -8.5, -0.3, 4, rng, arms_up=True)
     milestone(AREA, m, 5.6, ROAD_Y + 2.1, 0.0)
     field_hut(AREA, m, -18.0, -75.5, rng)
     sampan(AREA, m, 9.5, -69.0, 0.5, 0.25, 0.35)
@@ -852,6 +952,8 @@ def under_house(m):
     for k, (x, y) in enumerate([(-6, 10), (6, 10), (6, 18), (-6, 18), (0, 14)]):
         empty(f"patrol_roamer_{k:02d}", AREA, (x * 0.7, y + (0.6 if y < 14 else -0.6 if y > 14 else 0), 0))
     empty("spawn_under_house", AREA, (0, 9.0, 0), (0, 0, 0), checkpoint="CP5")
+    # Between the pillars, clear of the jars and the roamer's round.
+    ritual_traces(AREA, m, -1.5, 12.0, rng)
 
 
 # ---------------------------------------------------------------- the funeral
@@ -972,6 +1074,39 @@ def funeral_details(m):
     # Rain off the thatch: front and back eaves.
     eave(0, (t["x0"] - 0.65, t["y0"] - 0.55, 2.3), (t["x1"] + 0.65, t["y0"] - 0.55, 2.3))
     eave(1, (t["x0"] - 0.65, t["y1"] + 0.55, 2.3), (t["x1"] + 0.65, t["y1"] + 0.55, 2.3))
+    # White cloth banners on tall bamboo poles at the pavilion's front corners and
+    # the courtyard gate: the white banners every Khmer funeral raises.
+    for k, (bx, by) in enumerate(((t["x0"] - 0.9, t["y0"] - 1.4), (t["x1"] + 0.9, t["y0"] - 1.4), (-2.3, -2.4), (2.3, -2.4))):
+        h = 5.2 if k < 2 else 4.4
+        pole(f"banner_pole_{k}", AREA, (bx, by, -0.2), (bx + 0.05, by, h), 0.04, m["bamboo"], sides=6)
+        pole(f"banner_bar_{k}", AREA, (bx - 0.3, by, h - 0.15), (bx + 0.35, by, h - 0.12), 0.012, m["bamboo"], sides=4)
+        cloth(f"banner_{k}", AREA, bx - 0.25, bx + 0.3, h - 3.0 + 0.4 * (k % 2), h - 0.17, by, m["cotton"], folds=3, depth=0.03, segments=(6, 16))
+        collider(f"banner_pole_{k}", AREA, bx - 0.06, bx + 0.06, by - 0.06, by + 0.06, 0, 2.5)
+    # A pair of baysei (បាយសី): tiered towers of folded banana leaf on bowls, for the dead.
+    for k, bx in enumerate((-1.45, 1.45)):
+        by = 4.55
+        lathe(f"baysei_{k}_bowl", AREA, [(0.0, 0.0), (0.11, 0.0), (0.16, 0.08), (0.17, 0.1), (0.0, 0.09)], bx, by, 0.31, m["brass"], segments=14)
+        z = 0.41
+        for tier, r in enumerate((0.15, 0.13, 0.11, 0.09, 0.07, 0.05, 0.035)):
+            lathe(f"baysei_{k}_tier_{tier}", AREA, [(r, 0.0), (r * 0.82, 0.07), (r * 0.35, 0.1), (0.0, 0.1)], bx, by, z, m["betel_leaf"], segments=12)
+            beads(f"baysei_{k}_flowers_{tier}", AREA, [(bx + math.cos(a) * r * 0.9, by + math.sin(a) * r * 0.9, z + 0.02)
+                                                       for a in (2 * math.pi * i / 10 for i in range(10))], 0.01, m["jasmine"])
+            z += 0.075
+        pole(f"baysei_{k}_spire", AREA, (bx, by, z), (bx, by, z + 0.12), 0.006, m["stem_green"], sides=4)
+        beads(f"baysei_{k}_top", AREA, [(bx, by, z + 0.13)], 0.018, m["jasmine"])
+    # Rows of thin candles and lotus bouquets along the dais step.
+    for k in range(12):
+        cx = -1.25 + 2.5 * k / 11
+        if abs(cx) < 0.5:
+            continue
+        lathe(f"step_candle_{k}", AREA, [(0.008, 0.0), (0.008, 0.13), (0.0, 0.135)], cx, 4.9, 0.31, m["wax"], segments=6)
+        if k % 2:
+            flame(f"step_candle_{k}_flame", AREA, cx, 4.9, 0.445, 0.02, m["flame"])
+    for k, cx in enumerate((-0.95, 0.95)):
+        place(AREA, "brass_vase_03", (cx, 5.0, 0.31), scale=1.2)
+        lotus_buds(f"step_lotus_{k}", AREA, cx, 5.0, 0.49, m, n=5)
+    # Flies over the food left for the mourners.
+    empty("marker_flies_tent", AREA, (-2.2, 2.4, 0.4))
 
 
 def house_details(m):
@@ -1005,6 +1140,61 @@ def house_details(m):
     # Rain off the roof's eaves.
     eave(2, (-6.9, 9.1, 4.35), (6.9, 9.1, 4.35))
     eave(3, (-6.9, 18.9, 4.35), (6.9, 18.9, 4.35))
+    F = FLOOR
+    # The hall's mantel clock on its own shelf (the hands are the model's; stopping them at 8:12 comes with the beats).
+    place(AREA, "mantel_clock_01", (-1.6, 17.8, F + 1.24), rot_deg=180)
+    box("clock_shelf", AREA, -1.9, -1.3, 17.7, 17.94, F + 1.2, F + 1.24, m["teak"])
+    # The family's old photographs (the group, the mother, the eldest daughter), faded.
+    # With them, high by the altar as images of monks are hung, a young monk at Angkor.
+    for k, (fx, fz, hw, hh, u0, u1) in enumerate(((2.15, F + 1.8, 0.2, 0.14, 0.0, 0.4), (-2.3, F + 1.75, 0.1, 0.14, 0.4, 0.6),
+                                                  (-2.0, F + 1.98, 0.1, 0.14, 0.6, 0.8), (1.1, F + 1.95, 0.1, 0.14, 0.8, 1.0))):
+        box(f"family_frame_{k}", AREA, fx - hw - 0.03, fx + hw + 0.03, 17.93, 17.95, fz - hh - 0.03, fz + hh + 0.03, m["frame"])
+        y = 17.925
+        mesh_object(f"family_print_{k}", AREA, [(fx - hw, y, fz - hh), (fx + hw, y, fz - hh), (fx + hw, y, fz + hh), (fx - hw, y, fz + hh)],
+                    [(0, 1, 2, 3)], m["family_prints"], uvs=[(u0, 0.0), (u1, 0.0), (u1, 1.0), (u0, 1.0)])
+    # Papers on the east wall of the hall (T_ep1_house_papers_BC, pixel rectangles as
+    # in tools/drawings/village.mjs): the merchant's calendar for 1932 on a nail, Sok's
+    # school certificate framed over the shelf; the head-tax receipt on the shelf.
+    def papers_uv(px, py, pw, ph):
+        u0, u1, v0, v1 = px / 2048, (px + pw) / 2048, 1 - (py + ph) / 1024, 1 - py / 1024
+        return [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+
+    x = 2.935
+    for name, (yc, z0, w, h, rect) in (("calendar", (14.45, F + 1.32, 0.3, 0.48, (0, 0, 640, 1024))),
+                                       ("certificate", (15.8, F + 1.55, 0.35, 0.5, (1152, 0, 716, 1024)))):
+        y0, y1 = yc - w / 2, yc + w / 2
+        mesh_object(f"hall_{name}", AREA, [(x, y1, z0), (x, y0, z0), (x, y0, z0 + h), (x, y1, z0 + h)], [(0, 1, 2, 3)],
+                    m["house_papers"], uvs=papers_uv(*rect))
+    box("hall_certificate_frame", AREA, 2.938, 2.945, 15.6, 16.0, F + 1.525, F + 2.075, m["frame"])
+    pole("hall_calendar_nail", AREA, (2.94, 14.45, F + 1.86), (2.91, 14.45, F + 1.87), 0.004, m["iron"], sides=4)
+    tube("hall_calendar_string", AREA, [(2.932, 14.33, F + 1.8), (2.915, 14.45, F + 1.86), (2.932, 14.57, F + 1.8)], 0.002, m["thread"], sides=3)
+    rx0, rx1, ry0, ry1, rz = 2.79, 2.88, 15.08, 15.207, F + 1.2425
+    mesh_object("hall_tax_receipt", AREA, [(rx0, ry1, rz), (rx0, ry0, rz), (rx1, ry0, rz), (rx1, ry1, rz)], [(0, 1, 2, 3)],
+                m["house_papers"], uvs=papers_uv(640, 0, 512, 720))
+    # Palm-leaf manuscripts (សាស្ត្រាស្លឹករឹត) between boards, tied with cord, one wrapped in cloth.
+    for j in range(3):
+        z = F + 1.24 + j * 0.045
+        y0 = 15.72 + j * 0.01
+        box(f"hall_satra_{j}", AREA, 2.8, 2.9, y0, y0 + 0.3, z, z + 0.035, m["worn" if j != 1 else "krama"], edge=0.004)
+        for t in (0.25, 0.75):
+            tube(f"hall_satra_cord_{j}_{int(t * 4)}", AREA, [(2.795, y0 + 0.3 * t, z - 0.001), (2.795, y0 + 0.3 * t, z + 0.037),
+                                                            (2.905, y0 + 0.3 * t, z + 0.037), (2.905, y0 + 0.3 * t, z - 0.001)], 0.003, m["thread"], sides=3)
+
+    # Rolled sleeping mats and pillows along the hall wall, clothes hung on pegs.
+    for k in range(3):
+        tube(f"rolled_mat_{k}", AREA, [(-2.75, 12.4 + k * 0.3, F + 0.12), (-1.55, 12.4 + k * 0.3, F + 0.12)], 0.11, m["mat"], sides=10, metres_per_v=1.0)
+    for k in range(3):
+        box(f"hall_pillow_{k}", AREA, -2.7, -2.3, 13.5 + k * 0.42, 13.85 + k * 0.42, F, F + 0.14, m["cotton"], edge=0.04)
+    for k, (cy, mat) in enumerate(((15.0, "krama"), (15.4, "cotton_dirty"), (15.75, "cotton"))):
+        pole(f"peg_{k}", AREA, (-2.93, cy, F + 1.75), (-2.82, cy, F + 1.75), 0.012, m["post"], sides=4)
+        cloth(f"peg_cloth_{k}", AREA, cy - 0.17, cy + 0.17, F + 1.0, F + 1.74, -2.86, m[mat], folds=3, depth=0.03, axis="y", segments=(8, 8))
+    # A hanging lamp in the hall, unlit; rice baskets and a betel set by the altar.
+    tube("hall_lamp_cord", AREA, [(0.0, 14.5, ZW + 1.5), (0.0, 14.5, F + 2.05)], 0.004, m["rope"], sides=4)
+    place(AREA, "Lantern_01", (0.0, 14.5, F + 1.75))
+    for k, (bx, by) in enumerate(((1.6, 17.5), (2.0, 17.3))):
+        place(AREA, "wicker_basket_02", (bx, by, F), rot_deg=50 * k, scale=1.6)
+    lathe("hall_betel_tray", AREA, [(0.0, 0.0), (0.18, 0.0), (0.2, 0.05), (0.0, 0.04)], 1.1, 16.9, F, m["lacquer"], segments=14)
+    lathe("hall_spittoon", AREA, [(0.0, 0.0), (0.07, 0.0), (0.09, 0.08), (0.05, 0.12), (0.1, 0.16), (0.0, 0.15)], 1.45, 16.6, F, m["brass"], segments=12)
 
 
 def cooking_shelter(m):
@@ -1112,8 +1302,6 @@ def build():
     under_house(m)
     cooking_shelter(m)
     shed(m)
-    for k, (x, y, rot, glow) in enumerate(HUTS):
-        hut(AREA, m, f"hut_{k}", x, y, rot, rng, glow=glow)
 
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)

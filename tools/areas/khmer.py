@@ -1,6 +1,6 @@
 """Builders for a 1930s Khmer village (Episode 1): plants, a teak stilt house, the
 funeral pavilion with the coffin and its altar, offerings, the white crocodile
-flag, carts, fences and neighbours' huts. Run inside Blender by the area scripts.
+flag, carts and fences. Run inside Blender by the area scripts.
 
 References: Léon Busy's 1921 autochromes of Cambodia (Musée Albert-Kahn, CC0):
 palm-thatched huts with woven bamboo walls and ladders, a civil servant's teak
@@ -12,6 +12,7 @@ the white flag shaped like a crocodile raised outside the house.
 """
 
 import math
+import re
 
 import bpy
 
@@ -64,7 +65,10 @@ _protos = {}
 DECIMATE = {"bananas": 0.15, "wicker_basket_02": 0.25, "Lantern_01": 0.35, "wooden_bowl_01": 0.3,
             "book_encyclopedia_set_01": 0.2, "vintage_suitcase": 0.4, "fern_02": 0.6,
             "pachira_aquatica_01": 0.06, "dead_tree_trunk": 0.05, "dead_tree_trunk_02": 0.04, "tree_stump_01": 0.12,
-            "root_cluster_01": 0.03, "dry_branches_medium_01": 0.3, "rusted_spade_01": 0.3}
+            "root_cluster_01": 0.03, "dry_branches_medium_01": 0.3, "rusted_spade_01": 0.3,
+            "shrub_01": 0.03, "shrub_02": 0.2, "shrub_03": 0.5, "shrub_04": 0.15, "grass_medium_01": 0.008,
+            "grass_medium_02": 0.012, "moss_01": 0.03, "rock_moss_set_01": 0.15, "tree_stump_02": 0.1,
+            "island_tree_02": 0.025}
 
 
 def proto(model_id):
@@ -87,9 +91,30 @@ def proto(model_id):
     return _protos[model_id]
 
 
+def variants(model_id):
+    """A library model's variants: its top-level parts grouped by their letter
+    suffix (pachira_aquatica_01_bark_a and _leaves_a are variant a), each with the
+    spot it stands on in the model. Poly Haven lays variants out side by side
+    metres apart. Parts close together (a bunch of bananas) or a "set" (rocks meant
+    to lie together) are one piece."""
+    children = list(proto(model_id).children)
+    groups = {}
+    for child in children:
+        found = re.search(r"_([a-z])(\.\d+)?$", child.name)
+        groups.setdefault(found.group(1) if found else "", []).append(child)
+    spots = [parts[0].location for parts in groups.values()]
+    spread = max(((a - b).length for a in spots for b in spots), default=0.0)
+    if "_set_" in model_id or spread < 0.75:
+        return [(children, None)]
+    return [(parts, parts[0].location.copy()) for _, parts in sorted(groups.items())]
+
+
+_turns = {}
+
+
 def place(coll, model_id, location, rot_deg=0.0, scale=1.0, name=None, collide=False, surface="teak", **props):
-    """A linked copy of a library model: the meshes are shared, so the area stores them once."""
-    src = proto(model_id)
+    """A linked copy of a library model: the meshes are shared, so the area stores them
+    once. A model with several variants places one of them, in turn, centred on the spot."""
     parent = empty(name or f"prop_{model_id}", coll, location, (0, 0, math.radians(rot_deg)), **props)
     parent.scale = (scale, scale, scale)
 
@@ -99,9 +124,17 @@ def place(coll, model_id, location, rot_deg=0.0, scale=1.0, name=None, collide=F
         dup.parent = to
         for child in obj.children:
             copy(child, dup)
+        return dup
 
-    for child in src.children:
-        copy(child, parent)
+    choices = variants(model_id)
+    turn = _turns.get(model_id, 0)
+    _turns[model_id] = turn + 1
+    parts, spot = choices[turn % len(choices)]
+    for child in parts:
+        dup = copy(child, parent)
+        if spot is not None:
+            dup.location.x -= spot.x
+            dup.location.y -= spot.y
     if collide:
         bpy.context.view_layer.update()
         pts = [o.matrix_world @ v.co for o in parent.children_recursive if o.type == "MESH" for v in o.data.vertices]
@@ -124,14 +157,15 @@ def beads(name, coll, points, radius, mat):
 
 
 def flame(name, coll, x, y, z, size, mat):
-    """A small flame: two crossed emissive cards (candles, oil lamps)."""
+    """A small flame: two crossed cards of the painted flame (candles, oil lamps),
+    `size` tall with the wick at the bottom."""
     verts, faces, uvs = [], [], []
     for a in (0.0, math.pi / 2):
-        c, s = math.cos(a) * size * 0.35, math.sin(a) * size * 0.35
+        c, s = math.cos(a) * size * 0.25, math.sin(a) * size * 0.25
         b = len(verts)
-        verts += [(x - c, y - s, z), (x + c, y + s, z), (x, y, z + size)]
-        faces.append((b, b + 1, b + 2))
-        uvs += [(0, 0), (1, 0), (0.5, 1)]
+        verts += [(x - c, y - s, z - size * 0.05), (x + c, y + s, z - size * 0.05), (x + c, y + s, z + size), (x - c, y - s, z + size)]
+        faces.append((b, b + 1, b + 2, b + 3))
+        uvs += [(0, 0), (1, 0), (1, 1), (0, 1)]
     return mesh_object(name, coll, verts, faces, mat, uvs=uvs)
 
 
@@ -659,45 +693,6 @@ def sandals(coll, m, pairs):
 
 
 # --------------------------------------------------------------- buildings
-
-
-def hut(coll, m, name, x, y, rot, rng, glow=False):
-    """A neighbour's house as Busy photographed them in 1921: woven bamboo walls on
-    short stilts, a steep palm-thatch roof, a ladder up to the door."""
-    w, d, s = 4.0, 3.0, 1.3
-    ca, sa = math.cos(rot), math.sin(rot)
-
-    def at(lx, ly, z=0.0):
-        return (x + lx * ca - ly * sa, y + lx * sa + ly * ca, z)
-
-    for lx in (-w / 2, 0, w / 2):
-        for ly in (-d / 2, d / 2):
-            pole(f"{name}_post_{lx:.0f}_{ly:.0f}", coll, at(lx, ly, -0.1), at(lx, ly, s + 2.1), 0.08, m["post_rough"],
-                 metres=2.0)
-    parent = empty(name, coll, (x, y, 0), (0, 0, rot))
-    parts = [
-        box(f"{name}_floor", coll, -w / 2, w / 2, -d / 2, d / 2, s - 0.1, s, m["old_planks"]),
-        box(f"{name}_wall_s", coll, -w / 2, w / 2, -d / 2 - 0.03, -d / 2, s, s + 2.0, m["bamboo_wall"]),
-        box(f"{name}_wall_n", coll, -w / 2, w / 2, d / 2, d / 2 + 0.03, s, s + 2.0, m["bamboo_wall"]),
-        box(f"{name}_wall_w", coll, -w / 2 - 0.03, -w / 2, -d / 2, d / 2, s, s + 2.0, m["bamboo_wall"]),
-        box(f"{name}_wall_e", coll, w / 2, w / 2 + 0.03, -d / 2, d / 2, s, s + 2.0, m["bamboo_wall"]),
-    ]
-    zr = s + 2.0
-    ridge = zr + 2.2
-    verts = [(-w / 2 - 0.6, -d / 2 - 0.8, zr - 0.45), (w / 2 + 0.6, -d / 2 - 0.8, zr - 0.45), (w / 2 + 0.6, 0, ridge),
-             (-w / 2 - 0.6, 0, ridge), (-w / 2 - 0.6, d / 2 + 0.8, zr - 0.45), (w / 2 + 0.6, d / 2 + 0.8, zr - 0.45)]
-    roof = mesh_object(f"{name}_roof", coll, verts, [(0, 1, 2, 3), (5, 4, 3, 2), (3, 2, 1, 0), (2, 3, 4, 5)], m["thatch"])
-    gables = mesh_object(f"{name}_gables", coll, [(-w / 2, -d / 2, zr), (-w / 2, d / 2, zr), (-w / 2, 0, ridge - 0.1),
-                                                   (w / 2, -d / 2, zr), (w / 2, d / 2, zr), (w / 2, 0, ridge - 0.1)],
-                         [(0, 1, 2), (3, 5, 4), (0, 2, 1), (3, 4, 5)], m["bamboo_wall"])
-    parts += [roof, gables]
-    if glow:
-        parts.append(box(f"{name}_lamp_window", coll, -0.3, 0.3, -d / 2 - 0.035, -d / 2 - 0.03, s + 0.9, s + 1.4, m["window_glow"]))
-    for p in parts:
-        p.parent = parent
-    ladder = place(coll, "wooden_ladder_02", at(0.6, -d / 2 - 0.55), rot_deg=math.degrees(rot), scale=0.95)
-    ladder.rotation_euler.x = math.radians(-18)
-    collider(f"{name}_hut", coll, x - 2.6, x + 2.6, y - 2.6, y + 2.6, 0, 3.5)
 
 
 def ox_cart(coll, m, name, x, y, rot, hood=False):
