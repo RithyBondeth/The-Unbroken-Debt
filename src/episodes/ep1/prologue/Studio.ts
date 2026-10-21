@@ -10,9 +10,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { QualityPreset } from "../../../render/QualityPresets";
 import { createShadowedPointLight, FLAME_COLOR } from "../../../render/RenderSetup";
 import type { Area } from "../../../core/AreaLoader";
-
-/** Seconds between lightning flashes (Episode 1 Beat Sheet, section 4.1: every 20–40 s). */
-const LIGHTNING_GAP = { min: 20, max: 40 };
+import { Lightning } from "../Lightning";
 
 /**
  * The studio's lights (Beat Sheet 4.1): the green glass desk lamp as the key
@@ -26,8 +24,7 @@ export class StudioLights {
   private readonly candleFlame: Mesh;
   private readonly windowGlass: PBRMaterial | null;
   private candleLit = true;
-  private nextFlash: number;
-  private flash: { start: number; pulses: number[] } | null = null;
+  private readonly storm = new Lightning();
   private time = 0;
 
   constructor(scene: Scene, area: Area, preset: QualityPreset) {
@@ -78,8 +75,6 @@ export class StudioLights {
     this.lightning.range = 12;
     const glass = scene.getMeshByName("window_glass");
     this.windowGlass = glass?.material instanceof PBRMaterial ? glass.material : null;
-
-    this.nextFlash = 6 + Math.random() * 6;
   }
 
   get candleIsLit(): boolean {
@@ -88,7 +83,7 @@ export class StudioLights {
 
   /** A flash now, for a scripted scare; the 20–40 s rhythm carries on after it. */
   strike(): void {
-    this.nextFlash = this.time;
+    this.storm.strike();
   }
 
   /** P05: the shelf candle goes out. */
@@ -116,23 +111,7 @@ export class StudioLights {
       const t = this.time;
       this.candle.intensity = 2 * (0.88 + 0.07 * Math.sin(t * 9.1) + 0.05 * Math.sin(t * 17.3 + 1));
     }
-    // Lightning: one to three quick pulses, then darkness again.
-    if (!this.flash && this.time >= this.nextFlash) {
-      const pulses = [0, 0.09 + Math.random() * 0.08, 0.25 + Math.random() * 0.2].slice(
-        0,
-        1 + Math.floor(Math.random() * 3),
-      );
-      this.flash = { start: this.time, pulses };
-      this.nextFlash =
-        this.time + LIGHTNING_GAP.min + Math.random() * (LIGHTNING_GAP.max - LIGHTNING_GAP.min);
-    }
-    let level = 0;
-    if (this.flash) {
-      const since = this.time - this.flash.start;
-      for (const p of this.flash.pulses)
-        level = Math.max(level, Math.exp(-Math.max(0, since - p) / 0.05) * (since >= p ? 1 : 0));
-      if (since > 1) this.flash = null;
-    }
+    const level = this.storm.update(dt);
     this.lightning.intensity = level * 60;
     if (this.windowGlass)
       this.windowGlass.emissiveColor = new Color3(0.6, 0.68, 0.85).scale(level * 1.5 + 0.03);
@@ -140,6 +119,6 @@ export class StudioLights {
 
   /** True during a lightning flash (thunder follows a few seconds later). */
   get flashing(): boolean {
-    return this.flash !== null;
+    return this.storm.flashing;
   }
 }

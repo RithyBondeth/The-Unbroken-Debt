@@ -28,7 +28,7 @@ interface Drop {
 export class Rain {
   private readonly texture: DynamicTexture;
   private readonly material: PBRMaterial;
-  private readonly streaks: ParticleSystem;
+  private readonly streaks: RainStreaks;
   private readonly drops: Drop[] = [];
   private readonly trails: { x: number; y0: number; y1: number; age: number }[] = [];
   private sinceDraw = 0;
@@ -66,49 +66,17 @@ export class Rain {
     for (let i = 0; i < 70; i++) this.drops.push(this.newDrop(true));
 
     // Rain falling past outside: stretched streaks in a box beyond the glass.
-    const streak = new DynamicTexture("T_rain_streak", { width: 8, height: 64 }, scene, false);
-    const ctx = streak.getContext();
-    const gradient = ctx.createLinearGradient(0, 0, 0, 64);
-    gradient.addColorStop(0, "rgba(255,255,255,0)");
-    gradient.addColorStop(0.5, "rgba(255,255,255,0.9)");
-    gradient.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(3, 0, 2, 64);
-    streak.hasAlpha = true;
-    streak.update();
-    this.streaks = new ParticleSystem("rain_outside", 1400, scene);
-    this.streaks.particleTexture = streak;
-    this.streaks.emitter = new Vector3(centre.x, max.y + 1.5, max.z + 1.6);
-    this.streaks.minEmitBox = new Vector3(-(max.x - min.x) / 2 - 1.2, 0, -1.2);
-    this.streaks.maxEmitBox = new Vector3((max.x - min.x) / 2 + 1.2, 0, 1.6);
-    this.streaks.direction1 = new Vector3(-0.08, -1, 0.04);
-    this.streaks.direction2 = new Vector3(-0.02, -1, 0.1);
-    this.streaks.minEmitPower = 8;
-    this.streaks.maxEmitPower = 10;
-    this.streaks.updateSpeed = 1 / 60;
-    this.streaks.minLifeTime = 0.45;
-    this.streaks.maxLifeTime = 0.6;
-    this.streaks.emitRate = 1600;
-    this.streaks.minSize = 0.012;
-    this.streaks.maxSize = 0.018;
-    this.streaks.minScaleY = 14;
-    this.streaks.maxScaleY = 22;
-    this.streaks.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
-    this.streaks.blendMode = ParticleSystem.BLENDMODE_STANDARD;
-    this.streaks.color1 = new Color4(0.55, 0.6, 0.68, 0.22);
-    this.streaks.color2 = new Color4(0.5, 0.55, 0.62, 0.15);
-    this.streaks.colorDead = new Color4(0.5, 0.55, 0.62, 0);
-    this.streaks.preWarmCycles = 60;
-    this.streaks.start();
+    this.streaks = new RainStreaks(scene, 1400, 1600);
+    this.streaks.system.emitter = new Vector3(centre.x, max.y + 1.5, max.z + 1.6);
+    this.streaks.system.minEmitBox = new Vector3(-(max.x - min.x) / 2 - 1.2, 0, -1.2);
+    this.streaks.system.maxEmitBox = new Vector3((max.x - min.x) / 2 + 1.2, 0, 1.6);
   }
 
   /** `lightning` is the flash level, 0 to about 1. */
   update(dt: number, lightning: number): void {
     const flash = Math.min(1, lightning);
     this.material.emissiveColor.set(0.05 + flash * 0.9, 0.055 + flash * 0.95, 0.07 + flash);
-    const a = 0.2 + flash * 0.6;
-    this.streaks.color1.set(0.55 + flash * 0.4, 0.6 + flash * 0.4, 0.68 + flash * 0.3, a);
-    this.streaks.color2.set(0.5 + flash * 0.4, 0.55 + flash * 0.4, 0.62 + flash * 0.3, a * 0.7);
+    this.streaks.light(flash);
 
     for (const drop of this.drops) {
       if (drop.speed === 0 && this.random() < dt * 0.05 * drop.r) drop.speed = 40 + drop.r * 25;
@@ -179,5 +147,58 @@ export class Rain {
       ctx.fill();
     }
     this.texture.update();
+  }
+}
+
+/**
+ * Falling rain as stretched streaks (S7 look): place the emitter box, and call
+ * `light` with the lightning level so the rain flashes white with the sky.
+ */
+export class RainStreaks {
+  readonly system: ParticleSystem;
+
+  constructor(scene: Scene, capacity: number, perSecond: number) {
+    const streak = new DynamicTexture("T_rain_streak", { width: 8, height: 64 }, scene, false);
+    const ctx = streak.getContext();
+    const gradient = ctx.createLinearGradient(0, 0, 0, 64);
+    gradient.addColorStop(0, "rgba(255,255,255,0)");
+    gradient.addColorStop(0.5, "rgba(255,255,255,0.9)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(3, 0, 2, 64);
+    streak.hasAlpha = true;
+    streak.update();
+    const ps = new ParticleSystem("rain_streaks", capacity, scene);
+    ps.particleTexture = streak;
+    ps.direction1 = new Vector3(-0.08, -1, 0.04);
+    ps.direction2 = new Vector3(-0.02, -1, 0.1);
+    ps.minEmitPower = 8;
+    ps.maxEmitPower = 10;
+    ps.updateSpeed = 1 / 60;
+    ps.minLifeTime = 0.45;
+    ps.maxLifeTime = 0.6;
+    ps.emitRate = perSecond;
+    ps.minSize = 0.012;
+    ps.maxSize = 0.018;
+    ps.minScaleY = 14;
+    ps.maxScaleY = 22;
+    ps.billboardMode = ParticleSystem.BILLBOARDMODE_STRETCHED;
+    ps.blendMode = ParticleSystem.BLENDMODE_STANDARD;
+    ps.color1 = new Color4(0.55, 0.6, 0.68, 0.22);
+    ps.color2 = new Color4(0.5, 0.55, 0.62, 0.15);
+    ps.colorDead = new Color4(0.5, 0.55, 0.62, 0);
+    ps.preWarmCycles = 60;
+    ps.start();
+    this.system = ps;
+  }
+
+  light(flash: number): void {
+    const a = 0.2 + flash * 0.6;
+    this.system.color1.set(0.55 + flash * 0.4, 0.6 + flash * 0.4, 0.68 + flash * 0.3, a);
+    this.system.color2.set(0.5 + flash * 0.4, 0.55 + flash * 0.4, 0.62 + flash * 0.3, a * 0.7);
+  }
+
+  dispose(): void {
+    this.system.dispose();
   }
 }

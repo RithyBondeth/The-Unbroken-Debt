@@ -6,6 +6,7 @@
 // cultural-advisor review (Cultural Guide, section 4). Keep it to that list.
 
 import { ellipse, Sheet } from "./pen.mjs";
+import { villageTextures } from "./village.mjs";
 
 /** Every Khmer string on the studio's paper, with its meaning. Review: pending. */
 export const KHMER = {
@@ -31,6 +32,10 @@ export const KHMER = {
     "the consonants, in order",
   ],
   numerals: ["០ ១ ២ ៣ ៤ ៥ ៦ ៧ ៨ ៩", "numerals 0 to 9"],
+  yantra: [
+    "ន មោ ពុ ទ្ធា យ",
+    "na mo bu ddha ya, the five syllables on the protective yantra cloth over the doors (village.mjs)",
+  ],
 };
 
 const RED = "#9b2a1f";
@@ -2637,4 +2642,5 @@ export const drawings = [
     draw: letteringStudy,
   },
   { name: "study_boats", file: "T_studio_study_boats_BC", size: [1024, 1024], draw: boatStudy },
+  ...villageTextures,
 ];

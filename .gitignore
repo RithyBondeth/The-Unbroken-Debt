@@ -37,3 +37,6 @@ debug-shots/
 
 # Decoders copied from node_modules by tools/vendor-decoders.mjs (npm install)
 public/vendor/
+
+# Python bytecode from the Blender area scripts
+__pycache__/
