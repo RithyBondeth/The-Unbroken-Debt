@@ -23,6 +23,8 @@ import { SnagDetector } from "../s1-movement/SnagDetector";
 import { WaypointBot, type BotReport } from "../s1-movement/WaypointBot";
 import type { Waypoint } from "../s1-movement/course";
 import { readGlbInfo, textureFormatName, type GlbInfo } from "./glbInfo";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S3Result {
@@ -249,5 +251,5 @@ export async function runS3(engine: WebGPUEngine, params: URLSearchParams): Prom
   });
 
   if (params.get("auto") === "1") startBot();
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }

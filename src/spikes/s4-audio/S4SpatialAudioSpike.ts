@@ -25,6 +25,8 @@ import {
 import { SpikeHud } from "../SpikeHud";
 import { createHallEnvironment } from "../hallEnvironment";
 import { renderEars, type EarLevels } from "./offlineCheck";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S4Result {
@@ -351,5 +353,5 @@ export async function runS4(
       // For checking the test itself: the current trial and where the player faced at its start.
       current: () => (trial ? { ...trials[trial.index], startYaw: trial.startYaw } : null),
     };
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }

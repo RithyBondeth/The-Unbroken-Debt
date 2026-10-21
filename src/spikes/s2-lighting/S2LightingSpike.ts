@@ -37,6 +37,8 @@ import { mergeStaticMeshes } from "../../render/StaticBatcher";
 import { ShadowScheduler } from "../../render/ShadowScheduler";
 import { SpikeHud } from "../SpikeHud";
 import { buildHall } from "./hall";
+import { runRenderLoop } from "../../render/renderLoop";
+import { renderStallNotice } from "../../ui/html/RenderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S2Result {
@@ -267,7 +269,7 @@ export async function runS2(
     const path = hall.benchPath;
     hud.setReadout([...describe(), "benchmark running: 5 s warm-up, then 20 s measured…"]);
     await scene.whenReadyAsync();
-    engine.runRenderLoop(() => scene.render());
+    runRenderLoop(engine, () => scene.render(), renderStallNotice);
     const benchmark = await runBenchmark(scene, perf, {
       warmupSec: clampInt(params.get("warmup"), 1, 60, 5),
       durationSec: 20,
@@ -324,7 +326,7 @@ export async function runS2(
   });
   if (import.meta.env.DEV)
     (window as unknown as { spike: Record<string, unknown> }).spike.player = player;
-  engine.runRenderLoop(() => scene.render());
+  runRenderLoop(engine, () => scene.render(), renderStallNotice);
 }
 
 /** Moves the camera smoothly around a closed loop of points, looking towards a target. */
