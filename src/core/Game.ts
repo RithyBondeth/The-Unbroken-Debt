@@ -39,6 +39,14 @@ import { EP1_GRADE } from "../episodes/ep1/data/grade";
 import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
 import { ITEMS } from "../episodes/ep1/data/prologue";
 import { Prologue } from "../episodes/ep1/prologue/Prologue";
+import { ActOne } from "../episodes/ep1/act1/ActOne";
+import type { SaveData } from "../systems/saves/SaveData";
+
+/** A part of an episode with its own area and script (the prologue, an act). */
+interface Section {
+  load(): Promise<void>;
+  begin(): Promise<void>;
+}
 
 /**
  * Owns the engine, the scene, the shared event bus and flags, the camera and
@@ -112,16 +120,43 @@ export class Game {
     );
     this.audio?.attachListener(this.camera);
     this.resolution = new DynamicResolution(this.engine, this.preset);
-    const prologue = new Prologue(this);
-    await prologue.load();
+    const section = await this.chooseSection();
+    await section.load();
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
     this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
     this.createSketchbook();
     if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
     this.scene.onBeforeRenderObservable.add(() => this.update());
-    void prologue.begin();
-    if (import.meta.env.DEV) (window as unknown as { prologue: Prologue }).prologue = prologue;
+    void section.begin();
     runRenderLoop(this.engine, () => this.scene.render(), renderStallNotice);
+  }
+
+  /**
+   * Where to start: `?continue` resumes the autosave (the prologue reloads into
+   * it at CP1), `?start=act1` jumps there with the starting kit for testing.
+   */
+  private async chooseSection(): Promise<Section> {
+    const params = new URLSearchParams(location.search);
+    const resumed = params.has("continue") ? (await this.saves.load("autosave")).save : null;
+    if (resumed) this.restore(resumed);
+    else if (params.get("start") === "act1") {
+      for (const [item, n] of Object.entries({
+        satchel: 1,
+        sketchbook: 1,
+        matches: 10,
+        lamp: 1,
+        letters: 1,
+      }))
+        this.inventory.add(item, n);
+      this.flags.set("sketchbook.written", "SB-01");
+    } else return new Prologue(this);
+    return new ActOne(this);
+  }
+
+  /** Puts a save's story state back (the area and position come from its checkpoint). */
+  private restore(save: SaveData): void {
+    this.flags.load(save.flags);
+    this.inventory.load(save.inventory);
   }
 
   /** Puts Sora at `feet`, facing `yaw`. */
@@ -135,6 +170,8 @@ export class Game {
     const height = this.preset.name === "low" ? 1024 : 1536;
     const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera);
     this.sketchbook = sketchbook;
+    const written = this.flags.get<string>("sketchbook.written", "");
+    if (written) sketchbook.restore(written.split(","));
     // Drawn after the room with its own depth, so the book never sinks into a wall.
     sketchbook.book.setRenderingGroup(1);
     this.scene.setRenderingAutoClearDepthStencil(1, true, true, true);

@@ -23,8 +23,5 @@
   "satchel.title": "Satchel",
   "satchel.empty": "Nothing yet.",
   "satchel.placeholder": "(Greybox: the 3D satchel comes in Phase 3)",
-  "save.saving": "Saving",
-  "prologue.end.title": "End of the prologue",
-  "prologue.end.body": "Act I is next. The checkpoint was saved.",
-  "prologue.end.again": "Play the prologue again"
+  "save.saving": "Saving"
 }

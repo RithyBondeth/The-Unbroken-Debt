@@ -12,6 +12,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { SubMesh } from "@babylonjs/core/Meshes/subMesh";
+import type { Material } from "@babylonjs/core/Materials/material";
 import type { QualityPreset } from "./QualityPresets";
 import { VolumetricFog } from "./VolumetricFog";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
@@ -246,6 +247,7 @@ export function createPostPipeline(
   curves.shadowsDensity = 15;
   ip.colorCurvesEnabled = true;
   ip.colorCurves = curves;
+  detachMaterialsFromGrade(scene);
 
   return {
     ssao,
@@ -259,4 +261,26 @@ export function createPostPipeline(
       ssao?.dispose();
     },
   };
+}
+
+/**
+ * The atmosphere moves exposure, vignette and grain every frame (Art Bible 4),
+ * and materials listen to the scene's image-processing settings: each change
+ * re-checked every material's shader, though the post-process applies the
+ * grade (the village: 2,500 re-checks a second, 27 fps instead of 75). When the
+ * post-process does apply it, materials get a fixed configuration of their own,
+ * now and as they are created.
+ */
+function detachMaterialsFromGrade(scene: Scene): void {
+  if (!scene.imageProcessingConfiguration.applyByPostProcess) return;
+  const fixed = new ImageProcessingConfiguration();
+  fixed.applyByPostProcess = true;
+  const detach = (material: Material) => {
+    const graded = material as Material & {
+      imageProcessingConfiguration?: ImageProcessingConfiguration;
+    };
+    if (graded.imageProcessingConfiguration) graded.imageProcessingConfiguration = fixed;
+  };
+  scene.materials.forEach(detach);
+  scene.onNewMaterialAddedObservable.add(detach);
 }

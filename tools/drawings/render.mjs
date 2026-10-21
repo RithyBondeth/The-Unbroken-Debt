@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Renders the drawings and prints in tools/drawings/<episode>.mjs to PNG textures
+// Renders the drawings, prints and painted textures in tools/drawings/<episode>.mjs to PNG textures
 // in art-source/textures/<episode>/, with headless Chrome: it shapes Khmer
 // script properly (stacked consonants, vowel signs), which Blender cannot.
 // The area scripts in tools/areas/ then put them on paper in the room.
@@ -56,7 +56,7 @@ for (const drawing of drawings.filter((d) => !only || d.name === only)) {
   const page = join(scratch, `${drawing.name}.html`);
   writeFileSync(
     page,
-    `<!doctype html><meta charset="utf-8"><style>${fontFaces}html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden}svg{display:block}</style>${drawing.draw()}`,
+    `<!doctype html><meta charset="utf-8"><style>${fontFaces}html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;background:transparent}svg,canvas{display:block}</style>${drawing.draw()}`,
   );
   const out = join(OUT, `${drawing.file}.png`);
   execFileSync(
@@ -65,6 +65,8 @@ for (const drawing of drawings.filter((d) => !only || d.name === only)) {
       "--headless=new",
       "--disable-gpu",
       "--hide-scrollbars",
+      // Cut-outs (leaves, the flag) keep a transparent background.
+      ...(drawing.alpha ? ["--default-background-color=00000000"] : []),
       "--force-device-scale-factor=1",
       `--window-size=${w},${h}`,
       "--virtual-time-budget=20000",

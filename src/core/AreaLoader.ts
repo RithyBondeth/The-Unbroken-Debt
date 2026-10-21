@@ -1,6 +1,7 @@
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Node } from "@babylonjs/core/node";
 import { mergeStaticMeshes } from "../render/StaticBatcher";
 import type { AssetContainer } from "@babylonjs/core/assetContainer";
@@ -25,6 +26,8 @@ export interface Area {
 export interface AreaOptions {
   /** Nodes a script finds or moves (e.g. "window_glass", /^letter_/), kept out of batching. */
   keep?: (string | RegExp)[];
+  /** Batching cell size in metres (default 3): larger for open areas with scattered props. */
+  cellSize?: number;
 }
 
 export async function loadArea(
@@ -40,10 +43,11 @@ export async function loadArea(
   const url = `${import.meta.env.BASE_URL}assets/${episode}/${id}.glb`;
   const container = await LoadAssetContainerAsync(url, scene);
   container.addAllToScene();
+  dropTransmission(scene, container);
   realiseInstances(container);
   const level = buildLevel(scene, [...container.transformNodes, ...container.meshes]);
   for (const warning of level.warnings) console.warn(`[area ${id}] ${warning}`);
-  batchStatics(container, options.keep ?? []);
+  batchStatics(container, options.keep ?? [], options.cellSize ?? 3);
   return {
     id,
     container,
@@ -78,6 +82,28 @@ function realiseInstances(container: AssetContainer): void {
   }
 }
 
+/**
+ * Some library models arrive with KHR_materials_transmission (Poly Haven's
+ * Lantern_01, even on its brass). Babylon then re-renders every opaque mesh into
+ * a texture each frame for the refraction: in the village 600 extra draws a
+ * frame, 18 ms of CPU instead of 8. By lamplight, glass and brass look the same
+ * without it, so refraction is turned off and the helper that rendered it goes.
+ */
+function dropTransmission(scene: Scene, container: AssetContainer): void {
+  let found = false;
+  for (const material of container.materials) {
+    if (material instanceof PBRMaterial && material.subSurface.isRefractionEnabled) {
+      material.subSurface.isRefractionEnabled = false;
+      found = true;
+    }
+  }
+  const internals = scene as unknown as { _transmissionHelper?: { dispose(): void } };
+  if (found && internals._transmissionHelper) {
+    internals._transmissionHelper.dispose();
+    internals._transmissionHelper = undefined;
+  }
+}
+
 /** Is this node, or one of its parents, something the game moves or uses? */
 function isDynamic(node: Node, keep: readonly (string | RegExp)[]): boolean {
   for (let n: Node | null = node; n; n = n.parent) {
@@ -89,16 +115,21 @@ function isDynamic(node: Node, keep: readonly (string | RegExp)[]): boolean {
 }
 
 /**
- * Merges the area's static meshes by material in 3 m cells (S2: one draw call
+ * Merges the area's static meshes by material in grid cells (S2: one draw call
  * per batch instead of one per object). The Phase 2 studio had 1,810 draw calls
- * from hundreds of small props and trim pieces.
+ * from hundreds of small props and trim pieces; the village's scattered plants
+ * and posts each sat alone in a 3 m cell (2,260 calls), so it uses 8 m cells.
  */
-function batchStatics(container: AssetContainer, keep: readonly (string | RegExp)[]): void {
+function batchStatics(
+  container: AssetContainer,
+  keep: readonly (string | RegExp)[],
+  cellSize: number,
+): void {
   const statics = container.meshes.filter(
     (m): m is Mesh =>
       m instanceof Mesh && m.isVisible && m.getTotalVertices() > 0 && !isDynamic(m, keep),
   );
-  const batches = mergeStaticMeshes(statics, { cellSize: 3 });
+  const batches = mergeStaticMeshes(statics, { cellSize });
   const merged = new Set(statics.filter((m) => m.isDisposed()));
   container.meshes = [
     ...container.meshes.filter((m) => !merged.has(m as Mesh)),

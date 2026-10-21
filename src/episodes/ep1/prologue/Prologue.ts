@@ -9,7 +9,6 @@ import type { BusName, SpatialOptions } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
 import * as sounds from "../../../audio/prologueSounds";
 import { newGameSave } from "../../../systems/saves/SaveData";
-import { t } from "../../../ui/html/StoryUi";
 import {
   INK_BLOT_ENTRY,
   KIT,
@@ -20,7 +19,7 @@ import {
   type Line,
 } from "../data/prologue";
 import { StudioLights } from "./Studio";
-import { Rain } from "./Rain";
+import { Rain } from "../Rain";
 import { InkMarks } from "./InkMarks";
 
 const ILLUSTRATION = "interact_illustration";
@@ -206,6 +205,7 @@ export class Prologue {
     await game.fade.show({ title: TITLE_CARD.title, khmer: TITLE_CARD.khmer });
     // Checkpoint CP1: the carriage at the village, lamp full (Beat Sheet, section 7).
     game.bus.emit("checkpoint:reached", { id: "CP1" });
+    game.flags.set("sketchbook.written", [...(game.sketchbook?.written ?? [])].join(","));
     await game.saves.save("autosave", {
       ...newGameSave(),
       checkpoint: "CP1",
@@ -216,15 +216,8 @@ export class Prologue {
       playTimeSec: Math.round(this.playTime),
     });
     await this.wait(3.5);
-    game.fade.hideCard();
-    await this.wait(1.4);
-    document.exitPointerLock();
-    await game.fade.show({
-      title: t("prologue.end.title"),
-      body: t("prologue.end.body"),
-      button: t("prologue.end.again"),
-    });
-    location.reload();
+    // Act I loads from the checkpoint just saved, as it will after any restart.
+    location.replace(`${location.pathname}?continue`);
   }
 
   // ------------------------------------------------------- using the room

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Downloads the library assets listed in art-source/library/polyhaven.json
-// (CC0, from the Poly Haven API) into art-source/library/ (git-ignored).
+// (CC0, from the Poly Haven API, and archive photographs from Wikimedia
+// Commons) into art-source/library/ (git-ignored).
 // Usage: npm run fetch-library        (skips files already downloaded)
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -45,5 +46,10 @@ for (const [id, { resolution, maps }] of Object.entries(manifest.materials)) {
     total += await download(file.url, join(ROOT, "materials", id, `${id}_${label}.jpg`));
   }
   console.log(`material ${id}`);
+}
+for (const [id, entry] of Object.entries(manifest.archive ?? {})) {
+  if (id.startsWith("_")) continue;
+  total += await download(entry.url, join(ROOT, "archive", entry.file));
+  console.log(`photo ${id}`);
 }
 console.log(`Done: ${(total / 1e6).toFixed(1)} MB downloaded.`);
