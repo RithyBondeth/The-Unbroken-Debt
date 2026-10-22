@@ -29,6 +29,13 @@ export const EP1_SKETCHBOOK: SketchbookData = {
       drawing: { id: "altar", height: 42 },
     },
     {
+      id: "SB-03b",
+      beat: "A1-08",
+      section: "notes",
+      text: "Her tray, as she drew it.",
+      drawing: { id: "betelTray", height: 44 },
+    },
+    {
       id: "SB-04",
       beat: "A2-03",
       section: "notes",

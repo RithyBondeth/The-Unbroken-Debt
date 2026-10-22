@@ -4,22 +4,6 @@
  * scripted beats. English is the master text; Khmer voice and subtitles follow.
  */
 
-export interface ItemInfo {
-  name: string;
-  /** Shown under the name in the satchel; `{n}` is replaced by the count. */
-  note?: string;
-}
-
-/** Items in the satchel. The satchel itself holds the rest, so it is not listed. */
-export const ITEMS: Record<string, ItemInfo> = {
-  letters: { name: "Yay Mey's letters", note: "Tied with red string. Unopened." },
-  matches: { name: "Matchbox", note: "{n} matches" },
-  sketchbook: { name: "Sketchbook" },
-  lamp: { name: "Hurricane lamp", note: "Raise it to read the gauge." },
-  oil: { name: "Lamp oil", note: "{n} bottles of kerosene" },
-  incense: { name: "Incense", note: "A bundle of four sticks" },
-};
-
 /** The starting kit (P04): the door stays shut until Sora has all four. */
 export const KIT = ["satchel", "sketchbook", "matches", "lamp"] as const;
 

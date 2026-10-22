@@ -322,6 +322,7 @@ def materials():
         "family_prints": img("M_family_prints", texture("T_ep1_family_prints_BC"), rough=0.6),
         "house_papers": img("M_house_papers", texture("T_ep1_house_papers_BC"), rough=0.75),
         "sok_notes": img("M_sok_notes", texture("T_ep1_sok_notes_BC"), rough=0.9, cutout=True),
+        "kanha_drawing": img("M_kanha_drawing", texture("T_ep1_kanha_drawing_BC"), rough=0.95),
         "cushion": lib("fabric_pattern_07", "M_cushion"),
         "gold": plain("M_gilt", (0.72, 0.52, 0.22), rough=0.32, metal=1.0),
         "lacquer": plain("M_red_lacquer", (0.26, 0.045, 0.03), rough=0.35),
@@ -804,8 +805,17 @@ def interiors(m):
     empty("light_flame_hall", AREA, (0.3, 17.5, F + 1.2), radius=4.0, intensity=0.9)
     incense_sticks("hall_incense", AREA, 0.0, 17.75, F + 1.58, m, 5, rng, lit=False)
     sla_thor("hall_slathor", AREA, 0.0, 17.6, F + 1.1, m)
-    usable("interact_kanha_drawing", (1.1, 17.9, F + 1.5), lambda: box("kanha_drawing", AREA, 0.9, 1.3, 17.89, 17.9, F + 1.3, F + 1.7, m["paper"]),
-           action="examine")
+    # Kanha's drawing of the betel tray, pinned beside the altar (A1-08).
+    usable("interact_kanha_drawing", (1.1, 17.9, F + 1.5), lambda: mesh_object(
+        "kanha_drawing", AREA, [(0.9, 17.89, F + 1.3), (1.3, 17.89, F + 1.3), (1.3, 17.89, F + 1.7), (0.9, 17.89, F + 1.7)],
+        [(0, 1, 2, 3)], m["kanha_drawing"], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)]), action="examine")
+    # A low offering stand before the altar, where the betel tray is set (A1-09).
+    box("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F + 0.3, F + 0.34, m["teak"], edge=0.008)
+    for lx in (-0.26, 0.26):
+        for ly in (16.79, 17.16):
+            box(f"offering_stand_leg_{lx:+.2f}_{ly:.2f}", AREA, lx - 0.02, lx + 0.02, ly - 0.02, ly + 0.02, F, F + 0.3, m["teak"])
+    collider("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F, F + 0.34)
+    empty("marker_betel_tray", AREA, (0.0, 16.975, F + 0.34))
     usable("interact_incense_bundle", (-0.45, 17.55, F + 1.12), lambda: [
         pole(f"incense_bundle_{k}", AREA, (-0.6, 17.52 + k * 0.006, F + 1.105), (-0.3, 17.55 + k * 0.004, F + 1.11), 0.003, m["incense"], sides=4)
         for k in range(8)], action="pickup", item="incense")
@@ -1193,7 +1203,9 @@ def house_details(m):
     place(AREA, "Lantern_01", (0.0, 14.5, F + 1.75))
     for k, (bx, by) in enumerate(((1.6, 17.5), (2.0, 17.3))):
         place(AREA, "wicker_basket_02", (bx, by, F), rot_deg=50 * k, scale=1.6)
-    lathe("hall_betel_tray", AREA, [(0.0, 0.0), (0.18, 0.0), (0.2, 0.05), (0.0, 0.04)], 1.1, 16.9, F, m["lacquer"], segments=14)
+    usable("interact_betel_tray", (1.1, 16.9, F + 0.05), lambda: lathe(
+        "hall_betel_tray", AREA, [(0.0, 0.0), (0.18, 0.0), (0.2, 0.05), (0.0, 0.04)], 1.1, 16.9, F, m["lacquer"], segments=14),
+        action="pickup", item="betel_tray")
     lathe("hall_spittoon", AREA, [(0.0, 0.0), (0.07, 0.0), (0.09, 0.08), (0.05, 0.12), (0.1, 0.16), (0.0, 0.15)], 1.45, 16.6, F, m["brass"], segments=12)
 
 

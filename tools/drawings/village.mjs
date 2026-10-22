@@ -794,6 +794,159 @@ function paintFlame(ctx, W, H) {
 }
 
 /**
+ * Kanha's drawing of the betel tray, pinned by the ancestral altar (A1-08): the
+ * round tray seen from above as she set it out, the candle at the back, the
+ * incense at the front, betel leaves to the left, areca nuts to the right and the
+ * lime pot in the middle (Episode 1, section 6.1; the layout is to confirm with
+ * the cultural advisor). Ink gone brown on paper gone yellow, a pin hole at the
+ * top; no lettering. Sora knows the hand: it is like her own.
+ */
+function paintKanhaDrawing(ctx, W, H) {
+  const r = rng(1920);
+  ctx.fillStyle = "#cdb98a";
+  ctx.fillRect(0, 0, W, H);
+  mottle(ctx, W, H, 40, 23, 0.3);
+  // Foxing: small rust-brown spots, and a darker edge where the paper has aged.
+  for (let k = 0; k < 40; k++) {
+    ctx.fillStyle = `rgba(120,70,30,${r(0.08, 0.25)})`;
+    ctx.beginPath();
+    ctx.arc(r(0, W), r(0, H), r(1, 5), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const edge = ctx.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.75);
+  edge.addColorStop(0, "rgba(90,60,20,0)");
+  edge.addColorStop(1, "rgba(90,60,20,0.45)");
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(30,20,10,0.8)";
+  ctx.beginPath();
+  ctx.arc(W / 2, H * 0.04, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  const ink = "rgba(60,38,22,0.82)";
+  // A line drawn by hand: slightly wavering, a little thicker where the pen pressed.
+  const line = (pts, width = 3, closed = false) => {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => {
+      const jx = x + r(-1.2, 1.2),
+        jy = y + r(-1.2, 1.2);
+      if (i === 0) ctx.moveTo(jx, jy);
+      else ctx.lineTo(jx, jy);
+    });
+    if (closed) ctx.closePath();
+    ctx.stroke();
+  };
+  const ring = (cx, cy, rx, ry, n = 48) =>
+    Array.from({ length: n }, (_, i) => {
+      const a = (i / n) * Math.PI * 2;
+      return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
+    });
+
+  const cx = W / 2,
+    cy = H * 0.55,
+    R = W * 0.38;
+  // The tray: a lacquered round with a raised rim, a little oval as she saw it.
+  line(ring(cx, cy, R, R * 0.92, 64), 4, true);
+  line(ring(cx, cy, R * 0.9, R * 0.82, 64), 2, true);
+  // Back: a candle with its flame.
+  const bx = cx,
+    by = cy - R * 0.55;
+  line(
+    [
+      [bx - 9, by + 34],
+      [bx - 9, by - 6],
+      [bx + 9, by - 6],
+      [bx + 9, by + 34],
+    ],
+    3,
+  );
+  line(
+    [
+      [bx, by - 10],
+      [bx - 7, by - 22],
+      [bx, by - 38],
+      [bx + 7, by - 22],
+    ],
+    2.5,
+    true,
+  );
+  // Front: three incense sticks laid side by side, smoke curling off one.
+  const fy = cy + R * 0.58;
+  for (let k = -1; k <= 1; k++)
+    line(
+      [
+        [cx - R * 0.35, fy + k * 9],
+        [cx + R * 0.35, fy + k * 9 - 6],
+      ],
+      2.5,
+    );
+  const curve = (draw, width) => {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    draw();
+    ctx.stroke();
+  };
+  curve(() => {
+    const sx = cx + R * 0.37;
+    ctx.moveTo(sx, fy - 10);
+    ctx.bezierCurveTo(sx + 14, fy - 22, sx - 10, fy - 34, sx + 4, fy - 50);
+  }, 1.5);
+  // Left: betel leaves, heart-shaped, overlapping, each with its middle vein.
+  for (let k = 0; k < 3; k++) {
+    ctx.save();
+    ctx.translate(cx - R * 0.6 + k * 10, cy - 22 + k * 20);
+    ctx.rotate((k - 1) * 0.35);
+    curve(() => {
+      ctx.moveTo(0, -18);
+      ctx.bezierCurveTo(-8, -30, -30, -20, -24, 0);
+      ctx.bezierCurveTo(-20, 14, -6, 22, 0, 32);
+      ctx.bezierCurveTo(6, 22, 20, 14, 24, 0);
+      ctx.bezierCurveTo(30, -20, 8, -30, 0, -18);
+    }, 2.5);
+    curve(() => {
+      ctx.moveTo(0, -16);
+      ctx.quadraticCurveTo(2, 8, 0, 28);
+    }, 1.4);
+    ctx.restore();
+  }
+  // Right: areca nuts, round, cross-hatched on their shadowed side.
+  for (const [dx, dy] of [
+    [0, -16],
+    [-14, 10],
+    [14, 12],
+  ]) {
+    const ax = cx + R * 0.58 + dx,
+      ay = cy + dy;
+    line(ring(ax, ay, 12, 12, 20), 2.5, true);
+    for (let h = 0; h < 3; h++)
+      line(
+        [
+          [ax + 2 + h * 3, ay + 9],
+          [ax + 9, ay + 2 + h * 3],
+        ],
+        1.2,
+      );
+  }
+  // Middle: the small lidded lime pot.
+  line(ring(cx, cy + 6, 20, 15, 32), 3, true);
+  line(ring(cx, cy - 6, 14, 6, 24), 2.5, true);
+  line(
+    [
+      [cx - 4, cy - 12],
+      [cx, cy - 18],
+      [cx + 4, cy - 12],
+    ],
+    2,
+  );
+}
+
+/**
  * A page of Sok's notes, found by the ash circle under the house: cheap lined
  * paper in his hand, the word for debt at the top, the years of the payments down
  * the side (1911 the pact, 1920 Kanha, 1932 now) with scratched-out lines after
@@ -2282,6 +2435,12 @@ export const villageTextures = [
     size: [128, 256],
     alpha: true,
     draw: () => canvasPage(128, 256, paintFlame),
+  },
+  {
+    name: "kanha_drawing",
+    file: "T_ep1_kanha_drawing_BC",
+    size: [512, 512],
+    draw: () => canvasPage(512, 512, paintKanhaDrawing),
   },
   {
     name: "sok_notes",

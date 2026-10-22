@@ -12,6 +12,7 @@ import { EaveDrips } from "./EaveDrips";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
+import { BetelOffering } from "./BetelOffering";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
@@ -31,6 +32,7 @@ export class ActOne {
   vigil!: Vigil;
   night!: NightLife;
   apparitions!: Apparitions;
+  betel!: BetelOffering;
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
   private thunderSound: StaticSound | null = null;
@@ -63,6 +65,7 @@ export class ActOne {
     await this.vigil.load();
     this.night = new NightLife(game, this.area);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
+    this.betel = new BetelOffering(game, this.area);
   }
 
   async begin(): Promise<void> {
@@ -106,6 +109,8 @@ export class ActOne {
     this.vigil.update(dt);
     this.night.update(dt);
     this.apparitions.update(dt);
+    this.betel.update(dt);
+    this.lights.lookingAt = game.interaction.distance;
     this.lights.update(dt);
     this.rainAt.set(eye.x, eye.y + 7, eye.z);
     // Unlit streaks: faint in the dark, warmed a little by the lamp, white in lightning.
@@ -153,5 +158,6 @@ export class ActOne {
     );
     await this.night.makeSounds();
     await this.apparitions.makeSounds();
+    await this.betel.makeSounds();
   }
 }

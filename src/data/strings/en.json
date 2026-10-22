@@ -36,5 +36,18 @@
   "note.lampFull": "The lamp is still full.",
   "note.oil": "A bottle of kerosene.",
   "note.matches": "A second box of matches.",
-  "note.incense": "A bundle of incense, four sticks."
+  "note.incense": "A bundle of incense, four sticks.",
+  "hint.tray": "E on a place on the tray to set an offering there; E again to change it",
+  "note.drawing": "Her drawing of the tray. Her lines are like mine.",
+  "note.tray": "Her betel tray.",
+  "note.betel": "Betel leaves.",
+  "note.areca": "Areca nuts.",
+  "note.lime": "The lime pot.",
+  "note.candle": "A candle.",
+  "note.needTray": "The offering goes on her tray.",
+  "note.trayEmpty": "I have nothing for the tray yet.",
+  "note.yayResting": "She's resting. The offering first.",
+  "note.letHerRest": "Let her rest.",
+  "note.blessed": "Three blessed matches.",
+  "note.leavesBlack": "The leaves on the tray have gone black."
 }
