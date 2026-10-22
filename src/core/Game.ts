@@ -38,7 +38,7 @@ import {
 } from "../ui/html/StoryUi";
 import { EP1_GRADE } from "../episodes/ep1/data/grade";
 import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
-import { ITEMS } from "../episodes/ep1/data/prologue";
+import { ITEMS } from "../episodes/ep1/data/items";
 import { Prologue } from "../episodes/ep1/prologue/Prologue";
 import { ActOne } from "../episodes/ep1/act1/ActOne";
 import type { SaveData } from "../systems/saves/SaveData";

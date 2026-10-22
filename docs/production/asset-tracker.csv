@@ -20,8 +20,8 @@ V1-018,1,Courtyard,Prop,Hanging glass oil lamps,shared_hanging_lamp.glb,C,High,N
 V1-019,1,Courtyard,Prop,Storage shed,ep1_shed.glb,C,Medium,Not started,500-8000 tris,,,,,Optional area
 V1-020,1,House,Environment,"Stilt house modular kit (posts, planks, walls, roof, stairs, railings)",ep1_house_kit_*.glb,C,Critical,Not started,500-6000 tris/piece,,,,,See Art Bible 5.2
 V1-021,1,House,Prop,Ancestral altar with bronze statues and betel trays,ep1_ancestral_altar.glb,C,Critical,Not started,15000-40000 tris,,,,,Key in base; reviewed by advisor
-V1-022,1,House,Prop,"Betel tray set (leaves, areca, lime pot, tray)",ep1_betel_set.glb,C,High,Not started,500-8000 tris,,,,,Puzzle props
-V1-023,1,House,Prop,Kanha's drawing of the tray,ep1_kanha_drawing.glb,C,High,Not started,Plane,,,,,Texture drawn in Kanha's style
+V1-022,1,House,Prop,"Betel tray set (leaves, areca, lime pot, tray)","ep1_area_village.glb (interact_betel_tray, betel_leaves, areca_nut, lime_pot, altar_candle, offering_stand)",C,High,In progress,500-8000 tris,tools/areas/ep1_area_village.py,Project,Project,No,"Puzzle props (A1-08): built in the village area, arranged in game by BetelOffering.ts. Contents and layout to confirm with the cultural advisor"
+V1-023,1,House,Prop,Kanha's drawing of the tray,T_ep1_kanha_drawing_BC.png (on interact_kanha_drawing),C,High,Review,512 px,tools/drawings/village.mjs,Project,Project,No,"The tray seen from above: candle back, incense front, betel leaves left, areca right, lime pot middle. No lettering. Layout to confirm with the cultural advisor"
 V1-024,1,House,Prop,Sewing box,ep1_sewing_box.glb,L,Low,Not started,500-8000 tris,,,,,Shed key
 V1-025,1,House,Prop,Woven mats,ep1_mat.glb,C,Low,Not started,500-8000 tris,,,,,
 V1-026,1,House,Prop,"Wardrobes (hiding H1, H2)",ep1_wardrobe.glb,L,High,Not started,500-8000 tris,,,,,Doors open

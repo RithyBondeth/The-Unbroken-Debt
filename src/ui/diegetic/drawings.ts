@@ -231,6 +231,43 @@ export function drawSketch(pen: Pen, id: string, x: number, y: number, w: number
       );
       break;
     }
+    case "betelTray": {
+      // Sora's copy of Kanha's drawing: the round tray, candle at the back, incense
+      // at the front, leaves to the left, nuts to the right, the lime pot between.
+      const cx = x + w * 0.5,
+        cy = y + h * 0.55,
+        r = Math.min(w * 0.45, h * 0.44);
+      stroke(pen, ellipse(cx, cy, r, r * 0.9, 40), 0.35, true);
+      stroke(pen, ellipse(cx, cy, r * 0.88, r * 0.78, 40), 0.2, true);
+      const by = cy - r * 0.55;
+      stroke(pen, [
+        [cx - 1, by + 4],
+        [cx - 1, by - 1],
+        [cx + 1, by - 1],
+        [cx + 1, by + 4],
+      ]);
+      wash(pen, ellipse(cx, by - 2.4, 0.8, 1.4), 0.8);
+      const fy = cy + r * 0.58;
+      for (let k = -1; k <= 1; k++)
+        stroke(
+          pen,
+          [
+            [cx - r * 0.35, fy + k * 1.1],
+            [cx + r * 0.35, fy + k * 1.1 - 0.6],
+          ],
+          0.22,
+        );
+      for (let k = 0; k < 3; k++)
+        stroke(pen, ellipse(cx - r * 0.58 + k * 1.2, cy - 2 + k * 2, 2.4, 3.2), 0.25, true);
+      for (const [dx, dy] of [
+        [0, -1.8],
+        [-1.6, 1.2],
+        [1.6, 1.4],
+      ])
+        stroke(pen, ellipse(cx + r * 0.58 + dx, cy + dy, 1.3, 1.3, 16), 0.25, true);
+      stroke(pen, ellipse(cx, cy + 0.6, 2.2, 1.6, 20), 0.3, true);
+      break;
+    }
     case "names": {
       ctx.font = `${5.5 * pen.mm}px "Patrick Hand"`;
       ctx.fillStyle = INK;

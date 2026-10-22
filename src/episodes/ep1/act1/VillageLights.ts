@@ -17,6 +17,14 @@ import { Lightning } from "../Lightning";
  */
 /** Sora's lamp at full flame (physical falloff, so about this much at 1 m). */
 const LAMP_INTENSITY = 10;
+/**
+ * Close to what she looks at, Sora's lamp is shaded down, as she would lower it:
+ * full beyond this distance (m), and never below the floor. From her eye, at
+ * physical falloff, a page at arm's length would otherwise get ten times the
+ * light of a wall across the room and burn out to white.
+ */
+const SHADE_FROM = 1.8;
+const SHADE_FLOOR = 0.3;
 
 export class VillageLights {
   readonly flames: PointLight[] = [];
@@ -26,6 +34,9 @@ export class VillageLights {
   lampFlame = 0;
   /** The pavilion's lamps and candles, dimmed as the incense dies (A1-10). */
   tentLevel = 1;
+  /** Distance to what Sora is looking at (m), for shading the lamp up close. */
+  lookingAt = Infinity;
+  private shade = 1;
   private readonly sky: HemisphericLight;
   private readonly moon: DirectionalLight;
   private readonly flash: DirectionalLight;
@@ -115,17 +126,21 @@ export class VillageLights {
         base * tent * (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
     });
     // Strong enough for a warm pool round Sora that the dark eats a few metres out.
+    const shade = Math.max(SHADE_FLOOR, Math.min(1, (this.lookingAt / SHADE_FROM) ** 2));
+    this.shade += (shade - this.shade) * Math.min(1, dt * 5);
     this.lamp.intensity =
       LAMP_INTENSITY *
       this.lampFlame *
+      this.shade *
       (0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1));
     this.flash.intensity = this.storm.update(dt) * 3;
   }
 
   /** Light reaching Sora's eyes, for eye adaptation (1 = her lamp at arm's length). */
   lightAtEye(eye: Vector3): number {
-    // Calibrated when the lamp was 6: the eye's response to it stays the same.
-    let light = (this.lamp.intensity / LAMP_INTENSITY) * (6 / 14);
+    // Calibrated when the lamp was 6: the eye's response to it stays the same. The
+    // flame, not the shaded light: shading the lamp must not open the eyes wider.
+    let light = this.lampFlame * (6 / 14);
     for (const l of this.flames) {
       const d = Math.max(0.5, Vector3.Distance(eye, l.position));
       light += l.intensity / (d * d) / 14;
