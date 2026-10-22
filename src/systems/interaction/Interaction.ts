@@ -3,10 +3,8 @@ import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { Node } from "@babylonjs/core/node";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import { Color3 } from "@babylonjs/core/Maths/math.color";
-import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { HighlightLayer } from "@babylonjs/core/Layers/highlightLayer";
-import "@babylonjs/core/Layers/effectLayerSceneComponent";
+import { Color4 } from "@babylonjs/core/Maths/math.color";
+import "@babylonjs/core/Rendering/edgesRenderer";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { EventBus } from "../../core/EventBus";
 import type { GameEvents } from "../../core/events";
@@ -15,7 +13,10 @@ import type { GameEvents } from "../../core/events";
 export const REACH = 1.8;
 
 /** Pale graphite, like a line Sora is sketching around the object (Controls and Interface, 3). */
-const OUTLINE = new Color3(0.42, 0.4, 0.35);
+const OUTLINE = new Color4(0.42, 0.4, 0.35, 1);
+/** Faces meeting at more than this angle's cosine apart draw a line (0.95: about 18°). */
+const EDGE_EPSILON = 0.95;
+const EDGE_WIDTH = 2;
 
 interface Target {
   id: string;
@@ -38,32 +39,18 @@ export class Interaction {
   active = true;
   /** Which targets can be focused right now (P02: only the illustration). */
   allow: (id: string) => boolean = () => true;
+  /** How far the nearest solid thing straight ahead is (m), or Infinity beyond reach. */
+  distance = Infinity;
 
   private readonly targets = new Map<string, Target>();
   private readonly byMesh = new Map<number, Target>();
   private focused: Target | null = null;
   private readonly ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
-  /**
-   * The outline is a stroke-only highlight layer in its own pass: Babylon's
-   * outline renderer draws inside the geometry pre-pass, and on WebGPU its
-   * pipeline lacks the pre-pass's extra colour targets, which blacks out the frame.
-   */
-  private readonly outline: HighlightLayer;
-
   constructor(
     private readonly scene: Scene,
     private readonly camera: Camera,
     private readonly bus: EventBus<GameEvents>,
-  ) {
-    this.outline = new HighlightLayer("focus_outline", scene, {
-      isStroke: true,
-      blurHorizontalSize: 0.5,
-      blurVerticalSize: 0.5,
-      mainTextureRatio: 1,
-      camera,
-    });
-    this.outline.innerGlow = false;
-  }
+  ) {}
 
   get focus(): string | null {
     return this.focused?.id ?? null;
@@ -89,6 +76,7 @@ export class Interaction {
   update(): void {
     if (!this.active) {
       this.setFocus(null);
+      this.distance = Infinity;
       return;
     }
     this.camera.getForwardRayToRef(this.ray, REACH);
@@ -97,6 +85,7 @@ export class Interaction {
       this.ray,
       (m) => m.isEnabled() && m.isVisible && m.isPickable && m.renderingGroupId === 0,
     );
+    this.distance = hit?.pickedMesh ? hit.distance : Infinity;
     const target = hit?.pickedMesh ? this.byMesh.get(hit.pickedMesh.uniqueId) : undefined;
     this.setFocus(target && this.allow(target.id) ? target : null);
   }
@@ -109,11 +98,27 @@ export class Interaction {
     return id;
   }
 
+  /**
+   * The pencil outline is the edges of the focused object, drawn as lines over it:
+   * its silhouette and sharp creases. (A stroke-only highlight layer paints its
+   * colour over the whole object and cuts the object back out with a stencil this
+   * render pipeline doesn't keep, washing it out; Babylon's outline renderer draws
+   * inside the geometry pre-pass, which blacks out the frame on WebGPU.) The lines
+   * are worked out the first time an object is focused, then kept.
+   */
   private setFocus(target: Target | null): void {
     if (target === this.focused) return;
-    this.outline.removeAllMeshes();
+    for (const mesh of this.focused?.meshes ?? [])
+      if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = false;
     this.focused = target;
-    for (const mesh of target?.meshes ?? []) this.outline.addMesh(mesh as Mesh, OUTLINE);
+    for (const mesh of target?.meshes ?? []) {
+      if (!mesh.edgesRenderer) {
+        mesh.enableEdgesRendering(EDGE_EPSILON);
+        mesh.edgesWidth = EDGE_WIDTH;
+        mesh.edgesColor = OUTLINE;
+      }
+      if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = true;
+    }
     if (target) this.bus.emit("interact:focus", { id: target.id });
   }
 }
