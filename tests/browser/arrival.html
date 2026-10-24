@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phone arrival and reload verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Phone arrival and reload verification"></canvas>
+    <div id="overlay"></div>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        left: 8px;
+        top: 8px;
+        z-index: 1000;
+        color: white;
+        background: #17120fee;
+        padding: 12px;
+        pointer-events: none;
+        font: 14px monospace;
+        max-width: 700px;
+        white-space: pre-wrap;
+      "
+      aria-live="polite"
+    >
+Loading browser verification…</pre>
+    <script type="module" src="./arrival.ts"></script>
+  </body>
+</html>

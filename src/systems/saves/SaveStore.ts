@@ -3,7 +3,7 @@ import { SaveError, type SaveData } from "./SaveData";
 import { migrate } from "./migrations";
 
 /** Save slots: the player's slot and the checkpoint autosave (Technical Design Document, section 13). */
-export type SlotName = "slot1" | "autosave";
+export type SlotName = "slot1" | "autosave" | "episode1";
 
 export interface LoadResult {
   save: SaveData | null;

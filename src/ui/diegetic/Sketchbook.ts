@@ -12,7 +12,7 @@ const WRITE_SECONDS = 1.6;
 /** Held pose relative to the camera: lowered at the hip (closed) and raised to read (open). */
 const POSE = {
   closed: { position: new Vector3(0.07, -0.42, 0.34), tilt: 1.1 },
-  open: { position: new Vector3(0, -0.035, 0.33), tilt: 0.38 },
+  open: { position: new Vector3(-0.006, -0.045, 0.33), tilt: 0.29 },
 };
 
 const smooth = (x: number) => {
@@ -91,10 +91,25 @@ export class Sketchbook {
   /** Q: opens at the newest entry, or closes. */
   toggle(): void {
     this.wantOpen = !this.wantOpen;
+    // Closing midway through writing or a page turn must not leave a hidden,
+    // permanently busy book blocking world interaction and object inspection.
+    if (!this.wantOpen && (this.writing || this.flip || this.queue.length)) {
+      this.writing = null;
+      this.flip = null;
+      this.queue.length = 0;
+      this.book.setFlip(null);
+      this.spread = this.painter.spreadOf(this.newest);
+      this.paintSpread();
+    }
     if (this.wantOpen && !this.flip) {
       this.spread = this.painter.spreadOf(this.newest);
       this.paintSpread();
     }
+  }
+
+  /** Close safely even during an opening or a queued writing animation. */
+  close(): void {
+    if (this.wantOpen) this.toggle();
   }
 
   /** A / D: one spread back or forward. */
@@ -221,9 +236,14 @@ export class Sketchbook {
     const hinge = smooth((this.opening - 0.2) / 0.6);
     const root = this.book.root;
     Vector3.LerpToRef(POSE.closed.position, POSE.open.position, raise, root.position);
+    // A narrow game pane needs the book closer; landscape framing keeps the S5 pose.
+    const engine = root.getScene().getEngine();
+    const aspect = engine.getRenderWidth() / engine.getRenderHeight();
+    const readingZ = POSE.open.position.z * Math.max(0.78, Math.min(1, aspect / 1.4));
+    root.position.z = POSE.closed.position.z + (readingZ - POSE.closed.position.z) * raise;
     const tilt = POSE.closed.tilt + (POSE.open.tilt - POSE.closed.tilt) * raise;
     // Page normal (local +y) towards the eye, the top of the page tipped away.
-    root.rotation.set(-Math.PI / 2 + tilt, 0, 0);
+    root.rotation.set(-Math.PI / 2 + tilt, -0.025 * raise, 0.025 * raise);
     this.book.setOpen(hinge);
     root.setEnabled(this.opening > 0);
   }

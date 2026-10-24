@@ -164,15 +164,36 @@ export interface SatchelEntry {
   note?: string;
 }
 
-/**
- * Greybox stand-in for the satchel (Controls and Interface, section 4): a paper
- * list of what Sora carries. The 3D satchel in her hands replaces it in Phase 3.
- */
+export interface SatchelAction {
+  label: string;
+  enabled: boolean;
+  perform: () => void;
+}
+
+/** Carried items and contextual actions beside the held 3D workspace. */
 export class SatchelPanel {
   private readonly node = element("div", "story-satchel");
+  private action: SatchelAction | null = null;
+  private entries: SatchelEntry[] = [];
+
+  setAction(action: SatchelAction | null): void {
+    this.action = action;
+    this.node.classList.toggle("has-action", !!action);
+    if (this.isOpen) this.open(this.entries);
+  }
 
   constructor() {
     this.node.hidden = true;
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (!this.isOpen || !this.action || !["KeyE", "Enter"].includes(event.code)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat && this.action.enabled) this.action.perform();
+      },
+      true,
+    );
   }
 
   get isOpen(): boolean {
@@ -180,6 +201,7 @@ export class SatchelPanel {
   }
 
   open(entries: SatchelEntry[]): void {
+    this.entries = entries;
     this.node.innerHTML = "";
     const title = document.createElement("h2");
     title.textContent = t("satchel.title");
@@ -197,7 +219,14 @@ export class SatchelPanel {
     if (!entries.length) list.textContent = t("satchel.empty");
     const placeholder = document.createElement("small");
     placeholder.textContent = t("satchel.placeholder");
-    this.node.append(title, list, placeholder);
+    this.node.append(title, list);
+    if (this.action) {
+      const button = document.createElement("button");
+      button.textContent = this.action.label;
+      button.disabled = !this.action.enabled;
+      button.onclick = () => this.action?.enabled && this.action.perform();
+      this.node.append(button);
+    } else this.node.append(placeholder);
     this.node.hidden = false;
   }
 

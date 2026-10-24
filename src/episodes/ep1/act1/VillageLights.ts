@@ -27,6 +27,10 @@ const SHADE_FROM = 1.8;
 const SHADE_FLOOR = 0.3;
 
 export class VillageLights {
+  /** A2-01 snuffs the hanging lamps independently of incense dimming. */
+  hangingLevel = 1;
+  /** Story-authored practical lamp levels, independent of wick flicker and incense. */
+  readonly practicalLevels = new Map<string, number>();
   readonly flames: PointLight[] = [];
   readonly lamp: PointLight;
   readonly storm = new Lightning();
@@ -63,6 +67,8 @@ export class VillageLights {
     this.flash.diffuse = new Color3(0.75, 0.82, 1);
     this.flash.intensity = 0;
 
+    // Include authored runtime props at their actual world positions.
+    for (const mesh of scene.meshes) mesh.computeWorldMatrix(true);
     for (const [id, marker] of area.level.flames) {
       const light = new PointLight(id, marker.position.clone(), scene);
       light.diffuse = FLAME_COLOR.clone();
@@ -71,7 +77,7 @@ export class VillageLights {
       light.metadata = { base: light.intensity };
       // Each flame lights only what it reaches, so a mesh's light slots go to the
       // flames near it rather than the first ones in the list.
-      limitLightToRange(light, area.container.meshes);
+      limitLightToRange(light, scene.meshes);
       this.flames.push(light);
       this.phases.push(Math.random() * 10);
     }
@@ -110,6 +116,14 @@ export class VillageLights {
       }
   }
 
+  dawn(): void {
+    this.sky.intensity = 0.65;
+    this.sky.diffuse.set(0.65, 0.72, 0.8);
+    this.moon.intensity = 0.4;
+    this.moon.diffuse.set(0.7, 0.76, 0.84);
+    this.flash.intensity = 0;
+  }
+
   get flashing(): boolean {
     return this.storm.flashing;
   }
@@ -123,7 +137,11 @@ export class VillageLights {
       const base = (light.metadata as { base: number }).base;
       const tent = /^(tent|altar|coffin)/.test(light.name) ? this.tentLevel : 1;
       light.intensity =
-        base * tent * (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
+        base *
+        (this.practicalLevels.get(light.name) ?? 1) *
+        tent *
+        (/^(tent|altar|coffin)/.test(light.name) ? this.hangingLevel : 1) *
+        (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
     });
     // Strong enough for a warm pool round Sora that the dark eats a few metres out.
     const shade = Math.max(SHADE_FLOOR, Math.min(1, (this.lookingAt / SHADE_FROM) ** 2));

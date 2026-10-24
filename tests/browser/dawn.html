@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dawn resolution verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Dawn resolution"></canvas>
+    <div id="overlay"></div>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        top: 44px;
+        left: 12px;
+        right: 12px;
+        max-height: 40vh;
+        overflow: auto;
+        z-index: 2500;
+        white-space: pre-wrap;
+        background: #100c09dc;
+        color: #eee3cb;
+        padding: 12px;
+        pointer-events: none;
+        font-size: 12px;
+      "
+    ></pre>
+    <script type="module" src="./dawn.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Episode 1 full journey verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Episode 1"></canvas>
+    <div id="overlay"></div>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        max-height: 32vh;
+        overflow: auto;
+        z-index: 3000;
+        background: #101010dd;
+        color: #e8dfca;
+        padding: 10px;
+        pointer-events: none;
+        font-size: 11px;
+        white-space: pre-wrap;
+      "
+    ></pre>
+    <script type="module" src="./episode.ts"></script>
+  </body>
+</html>

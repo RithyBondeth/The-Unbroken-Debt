@@ -1,0 +1,50 @@
+.wardrobe-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 47%, transparent 12%, #0004 55%, #000e 96%);
+}
+.wardrobe-vignette[hidden],
+.walker-caught[hidden] {
+  display: none;
+}
+.walker-caught {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: #070706b8;
+  pointer-events: none;
+}
+.walker-caught p {
+  max-width: min(24rem, 80vw);
+  padding: 3rem 2rem;
+  background: #cabc9b;
+  color: #3e3526;
+  font:
+    1.9rem/1.4 "Patrick Hand",
+    cursive;
+  transform: rotate(-4deg);
+  clip-path: polygon(
+    1% 0,
+    96% 2%,
+    100% 17%,
+    95% 21%,
+    100% 34%,
+    97% 40%,
+    100% 52%,
+    95% 60%,
+    99% 76%,
+    96% 84%,
+    100% 100%,
+    2% 97%,
+    5% 88%,
+    0 78%,
+    4% 65%,
+    0 54%,
+    4% 43%,
+    0 29%,
+    4% 19%
+  );
+}

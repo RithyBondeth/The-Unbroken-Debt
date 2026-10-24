@@ -16,7 +16,10 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.9s ease;
-  white-space: nowrap;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  white-space: normal;
+  text-align: center;
 }
 
 .story-hint.shown {
@@ -181,4 +184,37 @@
 
 .story-saving.shown {
   opacity: 0.85;
+}
+
+.story-satchel.has-action {
+  max-height: 74vh;
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+
+.story-satchel button {
+  position: sticky;
+  bottom: 0;
+  pointer-events: auto;
+  font: inherit;
+  color: inherit;
+  border: 1px solid #74654c;
+  background: #d6c5a1;
+  padding: 0.6rem 0.9rem;
+  cursor: pointer;
+}
+.story-satchel button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.story-satchel button:focus-visible {
+  outline: 2px solid #463f30;
+  outline-offset: 3px;
+}
+@media (min-width: 850px) {
+  .story-satchel.has-action {
+    left: 26%;
+    max-width: 22rem;
+  }
 }

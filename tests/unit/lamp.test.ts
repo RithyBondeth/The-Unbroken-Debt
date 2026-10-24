@@ -5,6 +5,17 @@ import { FULL_TANK_SECONDS, Lamp } from "../../src/systems/lamp/Lamp";
 import { Upkeep } from "../../src/systems/upkeep/Upkeep";
 
 describe("Lamp", () => {
+  it("restores checkpoint oil and flame after a failed encounter", () => {
+    const lamp = new Lamp(undefined, 0.8, "open");
+    const snapshot = lamp.toJSON();
+    lamp.update(200);
+    lamp.putOut();
+    lamp.restore(snapshot);
+    expect(lamp.toJSON()).toEqual(snapshot);
+    lamp.restore({ oil: 0.1, state: "out" });
+    lamp.restoreAtLeast(0.5);
+    expect(lamp.toJSON()).toEqual({ oil: 0.5, state: "out" });
+  });
   it("burns a full tank in twelve minutes, then goes out", () => {
     const bus = new EventBus<GameEvents>();
     const states: string[] = [];
