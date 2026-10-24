@@ -1,0 +1,32 @@
+{
+  "voice": "km-KH-PisethNeural",
+  "language": "km-KH",
+  "service": "Microsoft Edge online text-to-speech",
+  "client": "edge-tts 7.3.1",
+  "rate": "-8%",
+  "pitch": "-8Hz",
+  "generatedAt": "2026-10-22T13:19:31.505124+00:00",
+  "scriptSha256": "ee583619b0784d745f91da48390df463e87274da6413aac8f9cf69bcdbca6340",
+  "files": [
+    {
+      "file": "sok_piseth_1.mp3",
+      "seconds": 8.184,
+      "sha256": "a5f2afccf90ce4b5a418702cf13b8a012e074493b7c5197f24174c4ee7a427cd"
+    },
+    {
+      "file": "sok_piseth_2.mp3",
+      "seconds": 19.584,
+      "sha256": "201237a72f5fe3f15059f76f66aa91d6ed11bf6d633ee1585c3e0b08724a2886"
+    },
+    {
+      "file": "sok_piseth_3.mp3",
+      "seconds": 16.992,
+      "sha256": "52c9b6c2b47d7d9bf6e24005c03cbb8a1ea7d4f88192bf7eeddc65e849e9cf5f"
+    },
+    {
+      "file": "sok_piseth_4.mp3",
+      "seconds": 10.8,
+      "sha256": "6a02f9b70fcbf30adaf323486de2c0cf077f984b94c708eb97d29a5bd91437ca"
+    }
+  ]
+}

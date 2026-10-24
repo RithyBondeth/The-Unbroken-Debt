@@ -14,8 +14,8 @@ const BRASS_GLOW = new Color3(1.0, 0.6, 0.25).scale(0.06);
 
 /** Where the lamp hangs in Sora's left hand, and where she lifts it to read the gauge (camera space, m). */
 // Low enough to leave the view clear, high enough that its lit chimney shows.
-const LOWERED = new Vector3(-0.26, -0.27, 0.58);
-const RAISED = new Vector3(-0.07, -0.12, 0.44);
+const LOWERED = new Vector3(-0.26, -0.36, 0.65);
+const RAISED = new Vector3(-0.12, -0.22, 0.5);
 
 /**
  * The hurricane lamp in Sora's left hand (Controls and Interface, section 6):

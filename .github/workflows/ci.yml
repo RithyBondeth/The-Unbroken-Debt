@@ -15,10 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out (without Git LFS files; not needed to build)
+      - name: Check out (fetch test-required LFS assets separately)
         uses: actions/checkout@v4
         with:
           lfs: false
+
+      - name: Fetch character geometry for asset regression tests
+        run: git lfs pull --include="public/assets/ep1/sok_corpse.glb" --exclude=""
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

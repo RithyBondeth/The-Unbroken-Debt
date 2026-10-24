@@ -204,17 +204,32 @@ export class Prologue {
     await this.wait(5);
     await game.fade.show({ title: TITLE_CARD.title, khmer: TITLE_CARD.khmer });
     // Checkpoint CP1: the carriage at the village, lamp full (Beat Sheet, section 7).
-    game.bus.emit("checkpoint:reached", { id: "CP1" });
+    game.flags.set("ep1.checkpoint", "CP1");
+    game.flags.set("ep1.clock", TIMING.cp1Clock);
     game.flags.set("sketchbook.written", [...(game.sketchbook?.written ?? [])].join(","));
-    await game.saves.save("autosave", {
+    const checkpoint = {
       ...newGameSave(),
       checkpoint: "CP1",
       clock: TIMING.cp1Clock,
       flags: game.flags.toJSON(),
       inventory: game.inventory.toJSON(),
-      lamp: { oil: 1, state: "out" },
+      lamp: { oil: 1, state: "out" as const },
       playTimeSec: Math.round(this.playTime),
-    });
+    };
+    while (true) {
+      try {
+        await game.saves.save("autosave", checkpoint);
+        game.bus.emit("checkpoint:reached", { id: "CP1" });
+        break;
+      } catch {
+        await game.fade.show({
+          title: "The journey could not be saved",
+          body: "Your progress is still here. Free some browser storage, then retry.",
+          button: "Retry save",
+        });
+      }
+    }
+    await game.fade.show({ title: TITLE_CARD.title, khmer: TITLE_CARD.khmer });
     await this.wait(3.5);
     // Act I loads from the checkpoint just saved, as it will after any restart.
     location.replace(`${location.pathname}?continue`);

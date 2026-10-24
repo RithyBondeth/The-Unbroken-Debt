@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sok’s room investigation verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Sok’s room investigation"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      "
+    >
+      <button id="journal">View journal</button><button id="gramophone">View gramophone</button>
+      <button id="results-toggle">Toggle results</button>
+      <small id="input-status" style="color: white; background: #100c09cc; padding: 4px"></small>
+    </nav>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        top: 44px;
+        left: 12px;
+        right: 12px;
+        max-height: 40vh;
+        overflow: auto;
+        z-index: 1000;
+        white-space: pre-wrap;
+        background: #100c09dc;
+        color: #eee3cb;
+        padding: 12px;
+        pointer-events: none;
+        font-size: 12px;
+      "
+    ></pre>
+    <script type="module" src="./act2.ts"></script>
+  </body>
+</html>

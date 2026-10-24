@@ -21,6 +21,7 @@ const EDGE_WIDTH = 2;
 interface Target {
   id: string;
   meshes: AbstractMesh[];
+  outline: boolean;
 }
 
 /** Every mesh under `node`, and the node itself if it is one. */
@@ -57,10 +58,10 @@ export class Interaction {
   }
 
   /** Makes `node` (and everything under it) usable as `id`. */
-  add(id: string, node: Node | AbstractMesh[]): void {
+  add(id: string, node: Node | AbstractMesh[], options: { outline?: boolean } = {}): void {
     this.remove(id);
     const meshes = Array.isArray(node) ? node : meshesOf(node);
-    const target = { id, meshes };
+    const target = { id, meshes, outline: options.outline ?? true };
     this.targets.set(id, target);
     for (const mesh of meshes) this.byMesh.set(mesh.uniqueId, target);
   }
@@ -111,7 +112,7 @@ export class Interaction {
     for (const mesh of this.focused?.meshes ?? [])
       if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = false;
     this.focused = target;
-    for (const mesh of target?.meshes ?? []) {
+    for (const mesh of target?.outline ? target.meshes : []) {
       if (!mesh.edgesRenderer) {
         mesh.enableEdgesRendering(EDGE_EPSILON);
         mesh.edgesWidth = EDGE_WIDTH;

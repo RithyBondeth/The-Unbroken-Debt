@@ -48,6 +48,10 @@ export class KeyboardMouseInput implements InputSource {
     );
   }
 
+  isHeld(code: string): boolean {
+    return this.held.has(code);
+  }
+
   get pointerLocked(): boolean {
     return document.pointerLockElement === this.canvas;
   }
@@ -104,6 +108,8 @@ export class KeyboardMouseInput implements InputSource {
  * fade) can hold Sora still or stop the camera too.
  */
 export class GatedInput implements InputSource {
+  hiding = false;
+  inspecting = false;
   reading = false;
   holdStill = false;
   holdLook = false;
@@ -113,10 +119,11 @@ export class GatedInput implements InputSource {
   readMove(out: MoveIntent): MoveIntent {
     this.inner.readMove(out);
     if (this.reading) out.x = 0;
-    if (this.holdStill) {
+    if (this.holdStill || this.inspecting || this.hiding) {
       out.x = 0;
       out.z = 0;
       out.hurry = false;
+      if (this.hiding) out.crouch = false;
     }
     return out;
   }

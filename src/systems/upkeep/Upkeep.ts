@@ -70,6 +70,15 @@ export class Upkeep {
     this._outFor = 0;
   }
 
+  /** Restores a checkpoint without replaying warnings or counting fresh neglect. */
+  restore(fraction: number, outFor = 0): void {
+    const f = Math.max(0, Math.min(1, fraction));
+    this.left = f * this.options.duration;
+    this.expired = f === 0;
+    this._outFor = this.expired ? Math.max(0, outFor) : 0;
+    this.stage = f <= this.options.warnings[1] ? 2 : f <= this.options.warnings[0] ? 1 : 0;
+  }
+
   /** Puts it out at once (a scripted beat, A2-09). */
   extinguish(): void {
     this.left = 0;

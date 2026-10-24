@@ -62,40 +62,40 @@ export function nextOffering(
   return free.slice(start).find((o) => o !== current) ?? null;
 }
 
-/** Matches Yay Mey blesses (Beat Sheet A1-09: "sanctified matches ×3"). */
+/** Matches Yay Mey has left blessed (Beat Sheet A1-09: "sanctified matches ×3"). */
 export const BLESSED_MATCHES = 3;
 
 /**
- * Seconds after the last change before Yay Mey answers a full tray, so trying
+ * Seconds after the last change before Sora checks a full tray, so trying
  * each offering in a slot isn't judged on the way.
  */
 export const JUDGE_DELAY = 2.5;
 
-/** Script lines, by their id in the Episode 1 Script. The blessing is to confirm with the advisor. */
+/** Script lines, by their id in the Episode 1 Script. Phone request and Sora’s responses to the drawing. */
 export const BETEL_LINES = {
   request: {
     id: "E1-A1-06-1",
-    speaker: "Yay Mey",
+    speaker: "Mak Yey · Phone",
     text: "One more thing. Make the betel offering for the ancestors. Do it as your mother used to. Her drawing is still by the altar.",
     seconds: 7.5,
   },
   wrong: {
     id: "E1-A1-09-1",
-    speaker: "Yay Mey",
-    text: "Not like that. Look at her drawing again.",
+    speaker: "Sora",
+    text: "That doesn’t match Mother’s drawing. I should look again.",
     seconds: 3.2,
   },
   right: {
     id: "E1-A1-09-2",
-    speaker: "Yay Mey",
-    text: "Good. That is how she did it.",
+    speaker: "Sora",
+    text: "There. Just as Mother drew it.",
     seconds: 3.4,
   },
-  blessing: {
+  preparedMatches: {
     id: "E1-A1-09-3",
-    speaker: "Yay Mey",
-    text: "May our ancestors see this light and watch over the one who keeps it. The matches by the tray are blessed now. Keep them for when you need them most.",
-    seconds: 9,
+    speaker: "Sora",
+    text: "The offering is ready. Mak Yey’s blessed matches are beside the altar. I should keep them with me.",
+    seconds: 6,
   },
 } satisfies Record<string, Line>;
 

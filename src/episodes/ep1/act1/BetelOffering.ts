@@ -2,11 +2,12 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
+import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateDisc } from "@babylonjs/core/Meshes/Builders/discBuilder";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import type { Game } from "../../../core/Game";
 import type { Area } from "../../../core/AreaLoader";
 import type { LevelMarker } from "../../../core/LevelBuilder";
@@ -16,9 +17,9 @@ import { clockStop, pickUp } from "../audio/prologueSounds";
 import {
   BETEL_ENTRIES,
   BETEL_LINES,
-  BLESSED_MATCHES,
   checkTray,
   JUDGE_DELAY,
+  KANHA_LAYOUT,
   nextOffering,
   OFFERINGS,
   SLOT_OFFSETS,
@@ -28,37 +29,16 @@ import {
   type Tray,
 } from "../data/betel";
 import type { Line } from "../data/prologue";
+import type { OfferingModels } from "./OfferingModels";
 
-/** Within this distance of the tent (m), Yay Mey asks for the offering, or of the altar. */
-const ASK_NEAR_TENT = 8;
-const ASK_NEAR_ALTAR = 6;
-/** How wide each offering may sit on the tray (m): the leaves and sticks are scaled down to fit. */
-const FIT: Record<Exclude<Offering, "incense">, number> = {
-  betel: 0.09,
-  areca: 0.07,
-  lime: 0.09,
-  candle: 0.05,
-};
-/**
- * Height of the tray's top above the stand (m) at `r` from its centre: the
- * lacquered round rises from 4 cm in the middle to 5 cm at its 20 cm rim
- * (tools/areas/ep1_area_village.py, hall_betel_tray).
- */
-const trayTop = (r: number) => 0.04 + 0.01 * Math.min(1, r / 0.2) + 0.002;
-/** The leaves turn black once the tray has been left unwatched this long after the blessing (s). */
+/** Surface of the turned lacquer tray, from OfferingModels.tray. */
+const trayTop = (r: number) => 0.018 + 0.014 * Math.min(1, r / 0.2) ** 5 + 0.001;
+/** The leaves turn black once the tray has been left unwatched this long after completion (s). */
 const BLACKEN_AFTER = 90;
 const BLACKEN_UNSEEN = 20;
 
-/**
- * The betel offering (Beat Sheet A1-06 to A1-09; Episode 1, section 6.1). Yay Mey
- * asks for it as Sora reaches the funeral (standing in for the arrival scenes,
- * A1-03 to A1-06, until Yay Mey is modelled). Kanha's drawing by the ancestral
- * altar shows the layout; Sora gathers the betel leaves and areca nuts (kitchen),
- * the lime pot (hall shelf), a candle and incense (altar) and the empty tray (by
- * the altar), sets the tray on the stand before the altar and arranges it: E on a
- * place on the tray puts an offering there, E again changes it. Yay Mey answers a
- * full tray from behind her door. When it is right she blesses three matches, the
- * ones the ritual in Act III needs. Later, unwatched, the leaves turn black.
+/** Sora follows Kanha’s drawing after Mak Yey’s phone instructions.
+ * The prepared blessed matches are a separate, persistent pickup at the altar.
  */
 export class BetelOffering {
   private readonly tray: Tray = {};
@@ -68,15 +48,14 @@ export class BetelOffering {
   private readonly shown = new Map<Slot, TransformNode>();
   private readonly toWrite: string[] = [];
   private readonly sfx = new Map<string, StaticSound>();
+  private readonly ring: DynamicTexture;
   private readonly trayAt: Vector3 | null;
-  private readonly tentAt: Vector3 | null;
-  private readonly altarAt: Vector3 | null;
   private asked = false;
   private placed = false;
   private done = false;
   private mistakes = 0;
   private judgeAt = -1;
-  private blessedAt = -1;
+  private completedAt = -1;
   private unseen = 0;
   private leavesBlack = false;
   private leavesNoticed = false;
@@ -85,11 +64,20 @@ export class BetelOffering {
   constructor(
     private readonly game: Game,
     private readonly area: Area,
+    private readonly models: OfferingModels,
   ) {
     const level = area.level;
+    this.ring = new DynamicTexture("T_offering_focus_ring", 128, game.scene, true);
+    const ctx = this.ring.getContext();
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.strokeStyle = "#d5bea1";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(64, 64, 59, 0, Math.PI * 2);
+    ctx.stroke();
+    this.ring.hasAlpha = true;
+    this.ring.update();
     this.trayAt = level.markers.get("betel_tray")?.position.clone() ?? null;
-    this.tentAt = level.markers.get("yay_mey")?.position.clone() ?? null;
-    this.altarAt = this.marker("interact_altar")?.position.clone() ?? null;
     for (const m of level.interactables) {
       const item = m.extras.item as Offering | "betel_tray" | undefined;
       if (
@@ -100,6 +88,40 @@ export class BetelOffering {
         if (!this.sources.has(item)) this.sources.set(item, m.node);
     }
     game.bus.on("interact:use", ({ id }) => this.use(id));
+    this.asked = game.flags.get("ep1.betel.asked", false);
+    this.mistakes = game.flags.get("ep1.betel.mistakes", 0);
+    // Restore consumed offerings as well as the empty stand after any Act I autosave.
+    if (game.flags.get("ep1.betel.trayPlaced", false) && !game.flags.get("ep1.betel.done", false)) {
+      this.placeTray(true);
+      for (const slot of SLOTS) {
+        const offering = game.flags.get(`ep1.betel.slot.${slot}`, "");
+        if (OFFERINGS.includes(offering as Offering)) {
+          this.tray[slot] = offering as Offering;
+          this.show(slot, offering as Offering);
+        }
+      }
+      if (checkTray(this.tray).complete) this.judgeAt = JUDGE_DELAY;
+    }
+    // CP2 resumes with a completed offering.
+    if (game.flags.get("ep1.betel.done", false)) {
+      this.placeTray(true);
+      for (const slot of SLOTS) {
+        this.tray[slot] = KANHA_LAYOUT[slot];
+        this.show(slot, KANHA_LAYOUT[slot]);
+      }
+      this.done = true;
+      this.finishTray();
+      this.completedAt = 0;
+      if (game.flags.get("ep1.betel.blackened", false)) this.blackenLeaves();
+    }
+  }
+
+  get pendingEntries(): readonly string[] {
+    return this.toWrite;
+  }
+
+  saveState(): void {
+    for (const slot of SLOTS) this.game.flags.set(`ep1.betel.slot.${slot}`, this.tray[slot] ?? "");
   }
 
   async makeSounds(): Promise<void> {
@@ -121,12 +143,9 @@ export class BetelOffering {
     this.time += dt;
     const game = this.game;
     const eye = game.camera.globalPosition;
-    if (
-      !this.asked &&
-      ((this.tentAt && Vector3.Distance(eye, this.tentAt) < ASK_NEAR_TENT) ||
-        (this.altarAt && Vector3.Distance(eye, this.altarAt) < ASK_NEAR_ALTAR))
-    )
-      this.ask();
+    for (const [slot, disc] of this.slotDiscs) {
+      if (disc.material) disc.material.alpha = game.interaction.focus === slotId(slot) ? 0.5 : 0;
+    }
     // One entry at a time: the book turns to each and Sora's hand writes it in.
     const book = game.sketchbook;
     if (this.toWrite.length && book && !book.isBusy && !game.cutscene) {
@@ -143,11 +162,12 @@ export class BetelOffering {
   // ------------------------------------------------------------ the beats
 
   /** A1-05 and A1-06: the duties and the offering, as Yay Mey gives them. */
-  private ask(): void {
+  async ask(repeat = false): Promise<void> {
+    if (this.asked && !repeat) return;
     this.asked = true;
     this.game.flags.set("ep1.betel.asked", true);
-    void this.say(BETEL_LINES.request);
     this.toWrite.push(BETEL_ENTRIES.duties, BETEL_ENTRIES.request);
+    await this.say(BETEL_LINES.request);
   }
 
   private use(id: string): void {
@@ -164,6 +184,7 @@ export class BetelOffering {
     ) {
       // The altar's incense is the vigil's (it can be taken again); everything else is taken once.
       game.inventory.add(item);
+      game.flags.set(`ep1.pickup.${id}`, true);
       game.interaction.remove(marker.name);
       marker.node.setEnabled(false);
       this.play("pickup");
@@ -173,7 +194,8 @@ export class BetelOffering {
       game.flags.set("ep1.betel.drawingSeen", true);
       this.toWrite.push(BETEL_ENTRIES.drawing);
     } else if (action === "place" && id === "interact_altar") {
-      if (this.placed) return;
+      if (this.placed) return this.inspectTray();
+      if (!this.asked) return game.hints.show("note.yayWaiting", 4);
       if (game.inventory.has("betel_tray")) this.placeTray();
       else if (this.asked && !this.done) game.hints.show("note.needTray", 3);
     } else if (action === "knock" && id === "interact_door_yaymey") {
@@ -184,31 +206,38 @@ export class BetelOffering {
   }
 
   /** The empty tray goes on the stand before the altar; its five places become usable. */
-  private placeTray(): void {
+  private placeTray(restoring = false): void {
     const game = this.game;
     const node = this.sources.get("betel_tray");
     if (!node || !this.trayAt) return;
-    game.inventory.remove("betel_tray");
+    if (!restoring) game.inventory.remove("betel_tray");
     node.setEnabled(true);
     sitOn(node, this.trayAt);
     this.placed = true;
     game.flags.set("ep1.betel.trayPlaced", true);
-    this.play("pickup", this.trayAt);
+    if (!restoring) this.play("pickup", this.trayAt);
     for (const slot of SLOTS) {
       const disc = CreateDisc(slotId(slot), { radius: 0.04, tessellation: 20 }, game.scene);
       disc.rotation.x = Math.PI / 2;
       disc.position.copyFrom(this.slotPosition(slot, 0.002));
       const mat = new StandardMaterial(`M_${slotId(slot)}`, game.scene);
-      // A worn, darker round in the lacquer: something to aim at.
+      // Invisible interaction patches: the lacquer stays a real, unmarked object.
       mat.disableLighting = true;
+      mat.diffuseTexture = this.ring;
+      mat.useAlphaFromDiffuseTexture = true;
       mat.diffuseColor = Color3.Black();
       mat.emissiveColor = new Color3(0.05, 0.035, 0.025);
-      mat.alpha = 0.5;
+      mat.alpha = 0;
       disc.material = mat;
       this.slotDiscs.set(slot, disc);
-      game.interaction.add(slotId(slot), [disc]);
+      game.interaction.add(slotId(slot), [disc], { outline: false });
     }
-    game.hints.show("hint.tray", 8);
+    if (!restoring) game.hints.show("hint.tray", 8);
+    if (!restoring) this.inspectTray();
+  }
+
+  private inspectTray(): void {
+    if (this.trayAt) this.game.inspectObject(this.trayAt.add(new Vector3(0, 0.035, 0)));
   }
 
   /** E on a place: the next offering Sora has goes there; after the last, the place is cleared. */
@@ -237,38 +266,27 @@ export class BetelOffering {
     this.shown.delete(slot);
     const disc = this.slotDiscs.get(slot);
     const meshes: Mesh[] = disc ? [disc] : [];
-    const source = offering ? this.sources.get(offering) : undefined;
-    if (offering === "incense" && source) {
-      // The altar's bundle is long and thin: shrunk to fit, its sticks vanish. Three
-      // sticks of the same incense laid side by side instead.
-      const sticks = new TransformNode(`tray_${slot}_incense`, game.scene);
-      const material = source.getChildMeshes(false)[0]?.material ?? null;
-      for (let k = -1; k <= 1; k++) {
-        const stick = CreateCylinder(
-          `tray_${slot}_incense_${k}`,
-          { height: 0.15, diameter: 0.005, tessellation: 6 },
-          game.scene,
-        );
-        stick.rotation.z = Math.PI / 2;
-        stick.position.set(0, 0.0025, k * 0.008);
-        stick.material = material;
-        stick.parent = sticks;
-        meshes.push(stick);
+    if (offering) {
+      const model = this.models.make(offering);
+      model.position.copyFrom(this.slotPosition(slot));
+      this.shown.set(slot, model);
+      meshes.push(...model.getChildMeshes<Mesh>(false));
+      // Fixed flame lights have mesh whitelists built when the area loads.
+      // New tray contents need to join the nearby lights, too.
+      for (const id of this.area.level.flames.keys()) {
+        const light = game.scene.getLightByName(id);
+        if (!(light instanceof PointLight)) continue;
+        const list = light.includedOnlyMeshes.filter((m) => !m.isDisposed());
+        if (Vector3.Distance(light.getAbsolutePosition(), model.position) < light.range + 0.1)
+          list.push(...model.getChildMeshes<Mesh>(false));
+        light.includedOnlyMeshes = list;
       }
-      sticks.position.copyFrom(this.slotPosition(slot));
-      this.shown.set(slot, sticks);
-    } else if (offering && offering !== "incense" && source) {
-      const copy = source.clone(`tray_${slot}_${offering}`, source.parent) as TransformNode;
-      copy.setEnabled(true);
-      sitOn(copy, this.slotPosition(slot), FIT[offering]);
-      this.shown.set(slot, copy);
-      meshes.push(...copy.getChildMeshes<Mesh>(false));
     }
     // The offering is part of its place, so looking at it still focuses the place.
-    game.interaction.add(slotId(slot), meshes);
+    game.interaction.add(slotId(slot), meshes, { outline: false });
   }
 
-  /** Yay Mey answers a full tray from behind her door. */
+  /** Sora checks a full tray against Kanha’s drawing. */
   private judge(): void {
     const game = this.game;
     const { complete, wrong } = checkTray(this.tray);
@@ -280,45 +298,38 @@ export class BetelOffering {
       void this.say(BETEL_LINES.wrong);
       return;
     }
-    void this.bless();
+    void this.completeOffering();
   }
 
-  /** A1-09: the matches blessed. Flags ep1.betel.done and ep1.betel.firstTry (respect +1). */
-  private async bless(): Promise<void> {
+  /** A1-09: offering completed. Flags ep1.betel.done and ep1.betel.firstTry (respect +1). */
+  private async completeOffering(): Promise<void> {
     const game = this.game;
     this.done = true;
-    for (const slot of SLOTS) game.interaction.remove(slotId(slot));
-    for (const disc of this.slotDiscs.values()) disc.isVisible = false;
+    this.finishTray();
     game.flags.set("ep1.betel.firstTry", this.mistakes === 0);
-    game.flags.set("ep1.betel.done", true);
     await this.say(BETEL_LINES.right);
-    await this.say(BETEL_LINES.blessing);
-    game.inventory.add("blessed_matches", BLESSED_MATCHES);
-    game.hints.show("note.blessed", 4);
-    this.blessedAt = this.time;
+    await this.say(BETEL_LINES.preparedMatches);
+    game.flags.set("ep1.betel.done", true);
+    game.stopInspecting();
+
+    this.completedAt = this.time;
   }
 
   /**
-   * After the blessing, once the tray has gone unwatched a while, the betel leaves
+   * After completion, once the tray has gone unwatched a while, the betel leaves
    * on it are black: the debt does not accept the offering. Sora notices the next
    * time she is close.
    */
   private watchLeaves(dt: number, eye: Vector3): void {
+    if (this.completedAt < 0) return;
     const leaves = this.shown.get("left");
     if (!leaves || !this.trayAt) return;
     const inView = leaves.getChildMeshes(false).some((m) => this.game.camera.isInFrustum(m));
     if (!this.leavesBlack) {
-      if (this.time - this.blessedAt < BLACKEN_AFTER) return;
+      if (this.time - this.completedAt < BLACKEN_AFTER) return;
       this.unseen = inView ? 0 : this.unseen + dt;
       if (this.unseen < BLACKEN_UNSEEN) return;
-      this.leavesBlack = true;
-      for (const mesh of leaves.getChildMeshes(false)) {
-        if (!(mesh.material instanceof PBRMaterial)) continue;
-        const black = mesh.material.clone(`${mesh.material.name}_black`);
-        black.albedoColor = new Color3(0.03, 0.03, 0.025);
-        black.roughness = 0.95;
-        mesh.material = black;
-      }
+      this.blackenLeaves();
       this.game.flags.set("ep1.betel.blackened", true);
     } else if (!this.leavesNoticed && inView && Vector3.Distance(eye, this.trayAt) < 3) {
       this.leavesNoticed = true;
@@ -327,6 +338,29 @@ export class BetelOffering {
   }
 
   // -------------------------------------------------------------- helpers
+
+  private finishTray(): void {
+    for (const slot of SLOTS) this.game.interaction.remove(slotId(slot));
+    for (const disc of this.slotDiscs.values()) disc.isVisible = false;
+    // The completed objects stay inspectable even after their puzzle slots are retired.
+    const altar = this.marker("interact_altar")?.node.getChildMeshes<Mesh>(false) ?? [];
+    const tray = this.sources.get("betel_tray")?.getChildMeshes<Mesh>(false) ?? [];
+    const offerings = [...this.shown.values()].flatMap((node) => node.getChildMeshes<Mesh>(false));
+    this.game.interaction.add("interact_altar", [...altar, ...tray, ...offerings], {
+      outline: false,
+    });
+  }
+
+  private blackenLeaves(): void {
+    this.leavesBlack = true;
+    for (const mesh of this.shown.get("left")?.getChildMeshes(false) ?? []) {
+      if (!(mesh.material instanceof PBRMaterial)) continue;
+      const black = mesh.material.clone(`${mesh.material.name}_black`);
+      black.albedoColor = new Color3(0.03, 0.03, 0.025);
+      black.roughness = 0.95;
+      mesh.material = black;
+    }
+  }
 
   private marker(name: string): LevelMarker | undefined {
     return this.area.level.interactables.find((m) => m.name === name);
