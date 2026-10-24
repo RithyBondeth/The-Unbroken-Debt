@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Book and offering visual review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Book and offering visual review"></canvas>
+    <div id="overlay"></div>
+    <nav
+      id="review"
+      style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px"
+    >
+      <button id="book">Inspect book</button><button id="tray">Inspect offering</button
+      ><button id="turn">Turn page</button>
+    </nav>
+    <script type="module" src="./visual-review.ts"></script>
+  </body>
+</html>

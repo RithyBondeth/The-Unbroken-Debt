@@ -18,7 +18,7 @@ import {
 /** A5 portrait page, in millimetres. */
 export const PAGE_MM = { width: 148, height: 210 };
 
-const PAPER = "#efe4cf";
+const PAPER = "#e8dfcb";
 const TEXT_INK = "#1f1b18";
 const TAB_ROW = 12; // height of the tab row at the bottom of right pages, mm
 
@@ -218,7 +218,6 @@ export class PagePainter {
           );
         }
       }
-      if (right) this.paintTabs(ctx, page.section);
     }
     ctx.restore();
   }
@@ -306,26 +305,6 @@ export class PagePainter {
     ctx.restore();
   }
 
-  /** Ribbon tabs along the bottom of right-hand pages; the open one is inked in. */
-  private paintTabs(ctx: CanvasRenderingContext2D, active: SectionId): void {
-    const mm = this.mm;
-    const y = PAGE_MM.height - 6 - TAB_ROW;
-    const width = (PAGE_MM.width - 22) / SECTIONS.length;
-    SECTIONS.forEach((s, i) => {
-      const x = 8 + i * width;
-      ctx.save();
-      ctx.fillStyle = s.id === active ? "rgba(94,26,20,0.85)" : "rgba(94,26,20,0.18)";
-      ctx.beginPath();
-      ctx.roundRect((x + 1) * mm, y * mm, (width - 2) * mm, TAB_ROW * mm, 2 * mm);
-      ctx.fill();
-      ctx.font = canvasFont("small", 6.2 * mm);
-      ctx.fillStyle = s.id === active ? PAPER : TEXT_INK;
-      ctx.textAlign = "center";
-      ctx.fillText(s.label, (x + width / 2) * mm, (y + 8.4) * mm);
-      ctx.restore();
-    });
-  }
-
   /** Cream paper with fibres, foxing and darker edges, made once per size. */
   private paperCanvas(): HTMLCanvasElement {
     if (this.paper) return this.paper;
@@ -340,7 +319,7 @@ export class PagePainter {
     const image = ctx.getImageData(0, 0, w, h);
     const rand = seeded("paper");
     for (let i = 0; i < image.data.length; i += 4) {
-      const n = (rand() - 0.5) * 10;
+      const n = (rand() - 0.5) * 6;
       image.data[i] += n;
       image.data[i + 1] += n;
       image.data[i + 2] += n * 0.8;
@@ -353,7 +332,7 @@ export class PagePainter {
       const y = rand() * h;
       const r = (1 + rand() * 5) * this.mm;
       const spot = ctx.createRadialGradient(x, y, 0, x, y, r);
-      spot.addColorStop(0, "rgba(150,100,50,0.22)");
+      spot.addColorStop(0, "rgba(150,100,50,0.12)");
       spot.addColorStop(1, "rgba(150,100,50,0)");
       ctx.fillStyle = spot;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
@@ -367,7 +346,7 @@ export class PagePainter {
       Math.max(w, h) * 0.75,
     );
     edges.addColorStop(0, "rgba(120,90,50,0)");
-    edges.addColorStop(1, "rgba(120,90,50,0.22)");
+    edges.addColorStop(1, "rgba(120,90,50,0.14)");
     ctx.fillStyle = edges;
     ctx.fillRect(0, 0, w, h);
     this.paper = canvas;

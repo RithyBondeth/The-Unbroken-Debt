@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hidden chest and ritual preparation verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Hidden chest and ritual preparation"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        max-width: calc(100vw - 24px);
+        gap: 6px;
+      "
+    >
+      <button id="chest">View chest</button><button id="body">View corpse</button
+      ><button id="results-toggle">Toggle results</button>
+    </nav>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        top: 44px;
+        left: 12px;
+        right: 12px;
+        max-height: 40vh;
+        overflow: auto;
+        z-index: 1000;
+        white-space: pre-wrap;
+        background: #100c09dc;
+        color: #eee3cb;
+        padding: 12px;
+        pointer-events: none;
+        font-size: 12px;
+      "
+    ></pre>
+    <script type="module" src="./chest.ts"></script>
+  </body>
+</html>

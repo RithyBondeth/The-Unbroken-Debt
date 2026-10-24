@@ -54,8 +54,16 @@ interface Bat {
  * yard, moths round the tent's lanterns, flies over the offerings.
  */
 export class NightLife {
+  /** The insects fall quiet before A2-01; ceremonial chanting is left alone. */
+  threatSilence = 0;
   private readonly loops: StaticSound[] = [];
   private readonly calls: { sound: StaticSound; near: Vector3[] }[] = [];
+  stopForDawn(): void {
+    this.threatSilence = 1;
+    this.chant?.stop();
+    this.loops.forEach((sound) => sound.stop());
+  }
+
   private chant: AbstractSound | null = null;
   private readonly bats: Bat[] = [];
   private time = 0;
@@ -171,6 +179,8 @@ export class NightLife {
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
+    const volumes = [0.35, 0.35, 0.2, 0.2, 0.2];
+    this.loops.forEach((sound, i) => (sound.volume = volumes[i] * (1 - this.threatSilence)));
     for (const bat of this.bats) {
       const a = t * bat.speed + bat.phase;
       bat.node.position.set(
@@ -183,7 +193,7 @@ export class NightLife {
       bat.wings[0].rotation.z = flap;
       bat.wings[1].rotation.z = -flap;
     }
-    if (t >= this.nextCall && this.calls.length) {
+    if (this.threatSilence === 0 && t >= this.nextCall && this.calls.length) {
       const call = this.calls[Math.floor(this.rand() * this.calls.length)];
       call.sound.spatial.position = call.near[Math.floor(this.rand() * call.near.length)].clone();
       call.sound.play();

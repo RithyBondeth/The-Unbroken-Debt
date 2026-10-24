@@ -13,15 +13,37 @@ import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
 import { BetelOffering } from "./BetelOffering";
+import { ArrivalModels } from "./ArrivalModels";
+import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
+import { TENT_FLAME_MESH } from "../data/arrival";
+import { OfferingModels } from "./OfferingModels";
+import { SokRoomModels } from "../act2/SokRoomModels";
+import { SokInvestigation } from "../act2/SokInvestigation";
+import { WalkerModels } from "../act2/WalkerModels";
+import { HallwayWalker } from "../act2/HallwayWalker";
+import { CP3_FEET, CP3_YAW } from "../data/walker";
+import { DeskModels } from "../act2/DeskModels";
+import { DeskInvestigation } from "../act2/DeskInvestigation";
+import { CP4_FEET, CP4_YAW, FAILING_LAMPS } from "../data/desk";
+
+import { HuntModels } from "../act3/HuntModels";
+import { UnderHouseHunt } from "../act3/UnderHouseHunt";
+import { CP5_FEET, CP5_YAW } from "../data/hunt";
+import { DawnResolution } from "../resolution/DawnResolution";
+import { FinalRitual } from "../act3/FinalRitual";
+import { CP6_FEET, CP6_YAW } from "../data/ritual";
+import { ChestModels } from "../act3/ChestModels";
+import { CorpseModels } from "../act3/CorpseModels";
+import { ChestInvestigation } from "../act3/ChestInvestigation";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
   /^(M_(banana|palm|tree_leaves|bamboo|grass|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
 
 /**
- * Episode 1, Act I · Arrival and the vigil (Beat Sheet, section 3.2), from
- * checkpoint CP1 at the carriage on the flooded road, 11:30 PM. Phase 2,
- * first step: the village blockout, walkable, in rain and lightning.
+ * Episode 1 village: arrival and vigil, Sok’s investigations, the hallway
+ * walker, and the under-house hunt, from CP1 through CP6. The area stays loaded
+ * across acts so every prop, practical light and path retains its story state.
  */
 export class ActOne {
   area!: Area;
@@ -33,6 +55,16 @@ export class ActOne {
   night!: NightLife;
   apparitions!: Apparitions;
   betel!: BetelOffering;
+  beats!: ActOneBeats;
+  investigation!: SokInvestigation;
+  walker!: HallwayWalker;
+  desk!: DeskInvestigation;
+  hunt!: UnderHouseHunt;
+  chest!: ChestInvestigation;
+  ritual!: FinalRitual;
+  resolution!: DawnResolution;
+  private resolutionDelay = 0;
+  private running = false;
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
   private thunderSound: StaticSound | null = null;
@@ -45,10 +77,33 @@ export class ActOne {
     this.area = await loadArea(game.scene, "ep1", "ep1_area_village", {
       cellSize: 8,
       // The figures that turn to watch Sora (Apparitions) stay nodes of their own.
-      keep: [/^tingmong_\d+$/, "neakta_stone_watch"],
+      keep: [
+        /^tingmong_\d+$/,
+        "neakta_stone_watch",
+        "door_sok_padlock",
+        "shed_padlock",
+        TENT_FLAME_MESH,
+        /^sok_desk(?:$|_|\.)/,
+        "portrait_sok",
+        /^floor_board_(10|11|12|13)(\.|$)/,
+        "joist_13",
+        /^coffin_/,
+        /^main_burner/,
+        "prop_chinese_armchair",
+        ...FAILING_LAMPS.map((lamp) => lamp.mesh),
+      ],
       // The forest's plants are everywhere: batch them in large cells.
       coarse: { pattern: PLANTS, cellSize: 24 },
     });
+    const offeringModels = new OfferingModels(game.scene);
+    offeringModels.replacePickups(this.area);
+    const sokModels = new SokRoomModels(game.scene, this.area);
+    const walkerModels = new WalkerModels(game.scene, this.area);
+    const deskModels = new DeskModels(game.scene, this.area);
+    const huntModels = new HuntModels(game.scene, this.area);
+    const chestModels = new ChestModels(game.scene, this.area);
+    const corpseModels = await CorpseModels.load(game.scene, this.area);
+    const arrivalModels = new ArrivalModels(game.scene);
     this.sky = new StormSky(game.scene);
     this.lights = new VillageLights(game.scene, this.area, game.camera);
     // Rain in a box round Sora, following her (moved each frame).
@@ -59,13 +114,77 @@ export class ActOne {
     this.drips = new EaveDrips(game.scene, this.area);
 
     const spawn = this.area.level.spawns.get("player");
-    game.spawnPlayer(spawn?.position, spawn?.yaw ?? 0);
-    for (const { name, node } of this.area.level.interactables) game.interaction.add(name, node);
+    const actTwo = game.flags.get("ep1.act2.started", false);
+    const cp3 = game.resumedSave?.checkpoint === "CP3";
+    const cp4 = game.resumedSave?.checkpoint === "CP4";
+    const cp5 = game.resumedSave?.checkpoint === "CP5";
+    const cp6 = game.resumedSave?.checkpoint === "CP6";
+    game.spawnPlayer(
+      cp6
+        ? CP6_FEET
+        : cp5
+          ? CP5_FEET
+          : cp4
+            ? CP4_FEET
+            : cp3
+              ? CP3_FEET
+              : actTwo
+                ? CP2_FEET
+                : spawn?.position,
+      cp6
+        ? CP6_YAW
+        : cp5
+          ? CP5_YAW
+          : cp4
+            ? CP4_YAW
+            : cp3
+              ? CP3_YAW
+              : actTwo
+                ? Math.PI
+                : (spawn?.yaw ?? 0),
+    );
+    for (const { name, node } of this.area.level.interactables) {
+      if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
+      else game.interaction.add(name, node, { outline: !offeringModels.pickupIds.has(name) });
+    }
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
     this.night = new NightLife(game, this.area);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
-    this.betel = new BetelOffering(game, this.area);
+    this.betel = new BetelOffering(game, this.area, offeringModels);
+    this.beats = new ActOneBeats(
+      game,
+      this.area,
+      this.lights,
+      this.vigil,
+      this.betel,
+      this.night,
+      arrivalModels,
+    );
+    this.investigation = new SokInvestigation(game, sokModels, () => this.beats.saveProgress());
+    this.walker = new HallwayWalker(game, walkerModels, this.vigil, this.investigation, () =>
+      this.beats.saveProgress(),
+    );
+    this.desk = new DeskInvestigation(game, this.area, deskModels, this.vigil, this.lights, () =>
+      this.beats.saveProgress(),
+    );
+    this.hunt = new UnderHouseHunt(
+      game,
+      huntModels,
+      this.vigil,
+      () => this.beats.captureProgress(),
+      () => this.beats.saveProgress(),
+    );
+    this.chest = new ChestInvestigation(game, chestModels, corpseModels, () => {
+      this.hunt.refreshCheckpoint();
+      return this.beats.saveProgress();
+    });
+    this.resolution = new DawnResolution(
+      game,
+      () => this.beats.captureProgress(),
+      () => this.dawn(),
+    );
+    this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
   }
 
   async begin(): Promise<void> {
@@ -80,7 +199,7 @@ export class ActOne {
     game.atmosphere.nightSightIntensity = 1.6;
     // Night sight is the dark around her, not a light on what she holds: the cold
     // lantern stays a dark shape at her side.
-    game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes);
+    game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes, ...game.hands.meshes);
     // Rain mist: distance fades into a faint blue-grey, so silhouettes stand against it.
     const fog = game.pipeline.fog;
     if (fog) {
@@ -100,16 +219,37 @@ export class ActOne {
     await this.makeSounds();
     void game.fade.to(0, 3);
     game.cutscene = false;
+    this.running = true;
     this.vigil.begin();
+    await this.beats.begin();
   }
 
   private update(dt: number): void {
+    if (!this.running) return;
     const game = this.game;
     const eye = game.camera.globalPosition;
+    if (this.resolution.active) {
+      this.resolution.update(dt);
+      return;
+    }
+    if (game.flags.get("ep1.seal1.broken", false)) {
+      this.resolutionDelay += dt;
+      if (game.flags.get("ep1.resolution.started", false) || this.resolutionDelay >= 12) {
+        void this.resolution.begin();
+        return;
+      }
+    }
     this.vigil.update(dt);
     this.night.update(dt);
     this.apparitions.update(dt);
     this.betel.update(dt);
+    this.beats.update(dt);
+    this.investigation.update(dt);
+    this.walker.update(dt);
+    this.desk.update(dt);
+    this.hunt.update(dt);
+    this.chest.update(dt);
+    this.ritual.update(dt);
     this.lights.lookingAt = game.interaction.distance;
     this.lights.update(dt);
     this.rainAt.set(eye.x, eye.y + 7, eye.z);
@@ -123,7 +263,7 @@ export class ActOne {
     if (flashing && !this.wasFlashing)
       setTimeout(
         () => {
-          if (!this.thunderSound) return;
+          if (!this.thunderSound || this.resolution.active) return;
           this.thunderSound.spatial.position = new Vector3(eye.x - 30, eye.y + 25, eye.z - 20);
           this.thunderSound.play();
         },
@@ -132,10 +272,55 @@ export class ActOne {
     this.wasFlashing = flashing;
   }
 
+  private dawn(): void {
+    const g = this.game;
+    this.rain.system.stop();
+    this.rainSound?.stop();
+    this.thunderSound?.stop();
+    this.night.stopForDawn();
+    this.sky.dome.setEnabled(false);
+    this.lights.dawn();
+    g.scene.clearColor.set(0.26, 0.31, 0.36, 1);
+    g.atmosphere.baseExposure = 1.1;
+    g.pipeline.main.imageProcessing.exposure = 1.1;
+    if (g.pipeline.fog) {
+      g.pipeline.fog.density = 0.018;
+      g.pipeline.fog.ambient.set(0.12, 0.15, 0.18);
+    }
+    this.chest.body.pose(0);
+    this.chest.body.setLid(0);
+    const audio = g.audio;
+    if (audio) {
+      const rate = audio.context.sampleRate;
+      const birds = new Float32Array(rate * 8);
+      for (let call = 0; call < 6; call++) {
+        const start = Math.floor((call + 0.25) * rate);
+        for (let i = 0; i < rate * 0.18; i++) {
+          const t = i / rate;
+          birds[start + i] =
+            Math.sin(2 * Math.PI * (1800 * t + 3500 * t * t)) *
+            Math.sin((Math.PI * t) / 0.18) ** 2 *
+            0.15;
+        }
+      }
+      void audio
+        .spatialSound("dawn_birds", audio.buffer(birds, rate), "ambience", new Vector3(10, 4, 8), {
+          loop: true,
+          minDistance: 10,
+          volume: 0.5,
+        })
+        .then((sound) => sound.play())
+        .catch(() => undefined);
+    }
+  }
+
   /** Placeholder rain and thunder until the recordings exist. */
   private async makeSounds(): Promise<void> {
     const audio = this.game.audio;
-    if (!audio) return;
+    if (!audio) {
+      await this.investigation.makeSounds();
+      return;
+    }
     const rate = audio.context.sampleRate;
     const eye = this.game.camera.globalPosition;
     this.rainSound = await audio.spatialSound(
@@ -159,5 +344,12 @@ export class ActOne {
     await this.night.makeSounds();
     await this.apparitions.makeSounds();
     await this.betel.makeSounds();
+    await this.beats.makeSounds();
+    await this.investigation.makeSounds();
+    await this.walker.makeSounds();
+    await this.desk.makeSounds();
+    await this.hunt.makeSounds();
+    await this.chest.makeSounds();
+    await this.ritual.makeSounds();
   }
 }

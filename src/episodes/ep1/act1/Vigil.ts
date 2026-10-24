@@ -5,6 +5,9 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import type { Material } from "@babylonjs/core/Materials/material";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import type { Game } from "../../../core/Game";
 import type { Area } from "../../../core/AreaLoader";
 import type { LevelMarker } from "../../../core/LevelBuilder";
@@ -16,6 +19,7 @@ import { Upkeep } from "../../../systems/upkeep/Upkeep";
 import { BottomScaler, HeldLamp } from "../../../player/HeldLamp";
 import type { VillageLights } from "./VillageLights";
 import "@babylonjs/core/Particles/particleSystemComponent";
+import type { SaveData } from "../../../systems/saves/SaveData";
 
 /** Episode 1 Beat Sheet, section 5: corner sticks burn down every 10–12 minutes. */
 export const INCENSE_SECONDS = 11 * 60;
@@ -33,6 +37,7 @@ const LIGHT_AT = new Vector3(-0.06, -0.14, 0.1);
 interface Burner {
   marker: LevelMarker;
   sticks: AbstractMesh[];
+  materials: (Material | null)[];
   /** Burn each stick down from its tip. */
   heights: BottomScaler[];
   /** The glowing ends ride down with the tips: rest height and the sticks' full length. */
@@ -58,10 +63,12 @@ export class Vigil {
     return this.held?.meshes ?? [];
   }
   private readonly burners: Burner[] = [];
+  private readonly ash: PBRMaterial;
   private readonly sfx = new Map<string, StaticSound>();
   private whisper: StaticSound | null = null;
   private raising = false;
   private striking = false;
+  private lightingLamp = false;
   private time = 0;
   private readonly abort = new AbortController();
 
@@ -70,14 +77,22 @@ export class Vigil {
     private readonly area: Area,
     private readonly lights: VillageLights,
   ) {
+    this.ash = new PBRMaterial("M_scripted_incense_ash", game.scene);
+    this.ash.albedoColor = Color3.FromHexString("#c7c0ac");
+    this.ash.roughness = 1;
+    this.ash.maxSimultaneousLights = 8;
     const saved = game.savedLamp;
     // CP1 starts with a full lamp, unlit: the darkness at the carriage forces the first match.
-    this.lamp = new Lamp(game.bus, saved?.oil ?? 1, "out");
+    this.lamp = new Lamp(game.bus, saved?.oil ?? 1, saved?.state ?? "out");
     this.lamp.restoreAtLeast(0.5);
     this.incense = new Upkeep(
       "incense",
       { duration: INCENSE_SECONDS, warnings: INCENSE_WARNINGS },
       game.bus,
+    );
+    this.incense.restore(
+      game.flags.get("ep1.incense.remaining", 1),
+      game.flags.get("ep1.incense.outFor", 0),
     );
     for (const marker of area.level.interactables)
       if (marker.extras.action === "tend") this.burners.push(this.makeBurner(marker));
@@ -103,6 +118,7 @@ export class Vigil {
   async load(): Promise<void> {
     const game = this.game;
     this.held = await HeldLamp.load(game.scene, game.camera);
+    game.hands.attachLamp(this.held.root, () => this.lamp.burning || this.lightingLamp);
     // The light stays just below Sora's eyes, fixed to the camera, not at the wick:
     // from the hand, off to one side and swinging, every turn of the head swept the
     // shadows of leaves and posts across the scene and the mist. From near the eye
@@ -111,20 +127,29 @@ export class Vigil {
     this.lights.lamp.position.copyFrom(LIGHT_AT);
     // Lit from a few centimetres the lamp's own cage and glass would blaze; they glow
     // from their own materials instead (HeldLamp).
-    this.lights.lamp.excludedMeshes.push(...this.held.meshes);
+    this.lights.lamp.excludedMeshes.push(...this.held.meshes, ...game.hands.meshes);
     await this.makeSounds();
   }
 
   /** At the carriage: the dark asks for the lamp (A1-01, match tutorial). */
   begin(): void {
-    if (!this.lamp.burning) setTimeout(() => this.game.hints.show("hint.lamp", 10), 2500);
+    if (!this.lamp.burning)
+      setTimeout(() => {
+        if (!this.lamp.burning && !this.game.threatActive && !this.game.hiding)
+          this.game.hints.show("hint.lamp", 10);
+      }, 2500);
   }
 
   update(dt: number): void {
     const game = this.game;
     this.time += dt;
     this.lamp.update(dt);
-    this.incense.update(dt);
+    if (!this.lamp.burning) this.raising = false;
+    if (
+      game.flags.get("ep1.vigil.started", false) &&
+      !game.flags.get("ep1.ritual.tokenPlaced", false)
+    )
+      this.incense.update(dt);
     const flame = this.lamp.flame(this.time);
     this.lights.lampFlame = flame;
     this.held?.update(dt, flame, this.lamp.oil, this.raising, game.player.speed);
@@ -135,9 +160,11 @@ export class Vigil {
     // The incense: sticks shorten, smoke thins, the tent dims, whispers rise.
     const left = this.incense.alive ? this.incense.fraction : 0;
     for (const b of this.burners) {
-      const k = 0.15 + 0.85 * left;
+      const scripted = game.flags.get("ep1.incense.scripted", false);
+      const k = !this.incense.alive && scripted ? 0.9 : 0.15 + 0.85 * left;
       b.sticks.forEach((stick, i) => {
-        stick.isVisible = left > 0;
+        stick.isVisible = true;
+        stick.material = this.incense.alive ? b.materials[i] : this.ash;
         b.heights[i].set(k);
       });
       for (const e of b.embers) {
@@ -151,6 +178,8 @@ export class Vigil {
     if (this.whisper) this.whisper.volume = [0, 0.2, 0.45, 0.8][warning];
     if (
       !this.incense.alive &&
+      !game.flags.get("ep1.ritual.tokenPlaced", false) &&
+      !game.flags.get("ep1.incense.scripted", false) &&
       this.incense.outFor >= NEGLECT_SECONDS &&
       !game.flags.get("ep1.incense.neglected", false)
     )
@@ -167,27 +196,64 @@ export class Vigil {
     return this.lamp.toJSON();
   }
 
+  saveState(): void {
+    this.game.flags.set("ep1.incense.remaining", this.incense.fraction);
+    this.game.flags.set("ep1.incense.outFor", this.incense.outFor);
+  }
+
+  /** A2-09 is authored ash; it never erases earlier neglect or creates a new penalty. */
+  scriptedAsh(): void {
+    this.game.flags.set("ep1.incense.scripted", true);
+    this.incense.extinguish();
+    this.saveState();
+  }
+
+  restoreCheckpoint(save: SaveData): void {
+    this.lamp.restore(save.lamp);
+    this.lamp.restoreAtLeast(0.5);
+    this.incense.restore(
+      Number(save.flags["ep1.incense.remaining"] ?? 1),
+      Number(save.flags["ep1.incense.outFor"] ?? 0),
+    );
+    this.raising = false;
+  }
+
   // ------------------------------------------------------------- the lamp
 
   private get handsFree(): boolean {
     const game = this.game;
-    return !game.cutscene && !(game.sketchbook?.isOpen ?? false) && !game.satchel.isOpen;
+    return (
+      !game.cutscene &&
+      !game.threatActive &&
+      !(game.sketchbook?.isOpen ?? false) &&
+      !game.satchel.isOpen
+    );
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (e.repeat || e.code !== "KeyF" || !this.handsFree) return;
+    // Extinguishing a wick is the hiding action; the threat gate only prevents
+    // striking a new match or handling resources during an encounter.
+    if (
+      e.repeat ||
+      e.code !== "KeyF" ||
+      this.game.cutscene ||
+      this.game.satchel.isOpen ||
+      this.game.sketchbook?.isOpen
+    )
+      return;
     if (this.lamp.burning) {
       this.lamp.putOut();
+      this.raising = false;
       this.play("wick");
       return;
     }
-    void this.lightLamp();
+    if (this.handsFree) void this.lightLamp();
   }
 
   private onMouse(e: MouseEvent, down: boolean): void {
     if (!this.game.input.pointerLocked) return;
     if (e.button === 2) {
-      this.raising = down && this.handsFree;
+      this.raising = down && this.handsFree && this.lamp.burning;
       if (this.raising) this.game.hints.performed("hint.raise");
     }
     if (e.button === 0 && down && this.handsFree) this.pour();
@@ -197,10 +263,15 @@ export class Vigil {
     const game = this.game;
     if (this.striking) return;
     if (this.lamp.oil <= 0) return game.hints.show("note.lampDry", 4);
-    if (!(await this.strikeMatch())) return;
-    this.lamp.light();
-    this.play("wick");
-    game.hints.performed("hint.lamp");
+    this.lightingLamp = true;
+    try {
+      if (!(await this.strikeMatch())) return;
+      this.lamp.light();
+      this.play("wick");
+      game.hints.performed("hint.lamp");
+    } finally {
+      this.lightingLamp = false;
+    }
   }
 
   /** Strikes one ordinary match; false if there are none. */
@@ -211,6 +282,7 @@ export class Vigil {
       return false;
     }
     this.striking = true;
+    game.hands?.animate("strike");
     this.play("match");
     await new Promise((done) => setTimeout(done, STRIKE_SECONDS * 1000));
     this.striking = false;
@@ -223,6 +295,7 @@ export class Vigil {
     if (this.lamp.oil > 0.9) return game.hints.show("note.lampFull", 3);
     game.inventory.remove("oil");
     this.lamp.refill(1);
+    game.hands?.animate("pour");
     this.play("pour");
     game.hints.performed("hint.refill");
   }
@@ -257,16 +330,19 @@ export class Vigil {
   /** One bundle and one match renew all four corner sticks. */
   private async tendIncense(): Promise<void> {
     const game = this.game;
+    if (this.striking) return;
     if (this.incense.alive && this.incense.fraction > 0.5)
       return game.hints.show("note.stillBurning", 3);
     if (!game.inventory.has("incense")) return game.hints.show("note.needIncense", 4);
     if (!(await this.strikeMatch())) return;
     game.inventory.remove("incense");
     this.incense.renew();
+    game.flags.set("ep1.incense.scripted", false);
     game.hints.performed("hint.incense");
   }
 
   private take(marker: LevelMarker): void {
+    this.game.flags.set(`ep1.pickup.${marker.name}`, true);
     this.game.interaction.remove(marker.name);
     marker.node.setEnabled(false);
     this.play("pickup");
@@ -315,6 +391,7 @@ export class Vigil {
     return {
       marker,
       sticks,
+      materials: sticks.map((stick) => stick.material),
       heights: sticks.map((s) => new BottomScaler(s)),
       embers: embers.map((mesh) => ({ mesh, y: mesh.position.y, drop: length })),
       smoke,

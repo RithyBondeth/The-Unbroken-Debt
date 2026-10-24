@@ -1,0 +1,65 @@
+[
+  {
+    "file": "base.obj",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/3dobjs/base.obj",
+    "sha256": "8e761e6624b8f54536409135d1636da63b32486a90d4897f84e121d144f6fb4c"
+  },
+  {
+    "file": "default.mhskel",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/rigs/default.mhskel",
+    "sha256": "99f179bce0aa850b45d4191a1d0d234c5851f881c057439470ded3bddf729a24"
+  },
+  {
+    "file": "default_weights.mhw",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/rigs/default_weights.mhw",
+    "sha256": "0f3641d651ae3d00ad6b4ccee43142edb109d3bd909d27d9e4139ef1beed8625"
+  },
+  {
+    "file": "universal-male-old-minmuscle-averageweight.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/universal-male-old-minmuscle-averageweight.target",
+    "sha256": "761fbb7b920b2ebf0d00c94b5743709bc90a5a2a0410fe3d57dea34c99715751"
+  },
+  {
+    "file": "universal-male-old-averagemuscle-minweight.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/universal-male-old-averagemuscle-minweight.target",
+    "sha256": "dd7cae80610fc806b424f0b26d43994060053c9dd15f141001ca4e60479ddd5e"
+  },
+  {
+    "file": "asian-male-old.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/asian-male-old.target",
+    "sha256": "36dc5a3a135ded33885e814806b0e3668ca5bf44bddcebdee48ae75ae68bc3d3"
+  },
+  {
+    "file": "universal-male-old-averagemuscle-averageweight.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/universal-male-old-averagemuscle-averageweight.target",
+    "sha256": "4ba5396ddabda448ece15650a566fbebfbb10239256ccb201e8f883429e12249"
+  },
+  {
+    "file": "eye-left-closure.target.gz",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/master/src/mpfb/data/targets/expression/units/asian/eye-left-closure.target.gz",
+    "sha256": "0d52fee2d66b933ece83f3c7aa48e85bfe85e8adbed0931dbd37025866a1a67d"
+  },
+  {
+    "file": "mouth-open.target.gz",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/master/src/mpfb/data/targets/expression/units/asian/mouth-open.target.gz",
+    "sha256": "b52bbe631152844bb7b835c0f98d12ab0a1c0689e02e067b239d8349ccf9aab2"
+  },
+  {
+    "file": "neck-platysma.target.gz",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/master/src/mpfb/data/targets/expression/units/asian/neck-platysma.target.gz",
+    "sha256": "216f28d66439492c45f43607575ae1f6349d2f22071b240949e1cf5cef83ab2a"
+  },
+  {
+    "file": "eye-right-closure.target.gz",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/mpfb2/master/src/mpfb/data/targets/expression/units/asian/eye-right-closure.target.gz",
+    "sha256": "0c99a5f559a1d67f630a329b9724fe3742a2c35709b8baa8a6d37903f35b9b77"
+  },
+  {
+    "file": "old_lightskinned_male_diffuse2.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "skins/old_asian_male/old_lightskinned_male_diffuse2.png",
+    "zipOffset": 39306669,
+    "compressedSize": 4480595,
+    "sha256": "8b3232676c5b271b4f44ead68845155d93f15de641b6819561781e16701a6c59"
+  }
+]

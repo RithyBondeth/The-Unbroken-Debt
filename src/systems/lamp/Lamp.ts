@@ -84,6 +84,14 @@ export class Lamp {
     return { oil: Math.round(this._oil * 1000) / 1000, state: this._state };
   }
 
+  /** Restore the checkpoint exactly, then apply its minimum-oil allowance. */
+  restore(snapshot: { oil: number; state: LampState }): void {
+    this._oil = clamp01(snapshot.oil);
+    this.setState(this._oil > 0 ? snapshot.state : "out");
+    this.reported = -1;
+    this.report();
+  }
+
   private setState(state: LampState): void {
     this._state = state;
     this.bus?.emit("lamp:state", { state });

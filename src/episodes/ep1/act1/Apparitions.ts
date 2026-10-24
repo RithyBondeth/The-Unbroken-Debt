@@ -251,6 +251,12 @@ export class Apparitions {
   }
 
   update(dt: number): void {
+    if (this.game.flags.get("ep1.act2.started", false)) {
+      this.vanish();
+      this.cloth.setEnabled(false);
+      this.follower = null;
+      return;
+    }
     this.time += dt;
     const t = this.time;
     const camera = this.game.camera;
@@ -403,6 +409,7 @@ export class Apparitions {
   }
 
   private playStep(variant: number, where?: Vector3): void {
+    if (this.game.flags.get("ep1.act2.started", false)) return;
     const behind = this.forward.clone();
     behind.y = 0;
     behind.normalize();

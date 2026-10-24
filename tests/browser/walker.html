@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hallway walker verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Hallway walker encounter"></canvas>
+    <div id="overlay"></div>
+    <button id="toggle" style="position: fixed; top: 10px; left: 10px; z-index: 1001">
+      Toggle results
+    </button>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        top: 38px;
+        left: 10px;
+        right: 10px;
+        max-height: 40vh;
+        overflow: auto;
+        white-space: pre-wrap;
+        background: #0d0b0ae0;
+        color: #efe4cc;
+        padding: 12px;
+        z-index: 1000;
+        pointer-events: none;
+        font-size: 12px;
+      "
+    ></pre>
+    <script type="module" src="./walker.ts"></script>
+  </body>
+</html>
