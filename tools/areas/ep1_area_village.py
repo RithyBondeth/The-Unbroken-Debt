@@ -29,6 +29,7 @@ from kit import *  # noqa: E402,F403  (shared materials and geometry)
 from khmer import *  # noqa: E402,F403  (Khmer village builders)
 from hall_altar import build_hall_altar
 from house_detail import board_panel, gathered_hammock
+from interior_props import kitchen_hearth, palm_leaf_manuscripts
 from forest import *  # noqa: E402,F403  (the forest, the road and what the dead left)
 
 BLEND = os.path.join(ROOT, "art-source", "blender", "ep1", "ep1_area_village.blend")
@@ -903,13 +904,9 @@ def interiors(m):
     for k, (x, y) in enumerate([(-2.6, 12.0), (2.6, 17.4)]):
         box(f"hide_wardrobe_H{k + 1}", AREA, x - 0.35, x + 0.35, y - 0.3, y + 0.3, F, F + 1.9, m["teak"], edge=0.01)
         collider(f"wardrobe_H{k + 1}", AREA, x - 0.35, x + 0.35, y - 0.3, y + 0.3, F, F + 1.9)
-    # Kitchen: a clay hearth box filled with ash, three stones and a pot; shelves of jars.
-    box("kitchen_hearth", AREA, -5.8, -4.6, 11.7, 12.6, F, F + 0.45, m["clay"], edge=0.02)
-    box("kitchen_hearth_ash", AREA, -5.72, -4.68, 11.78, 12.52, F + 0.45, F + 0.47, m["ash"])
+    # Kitchen: an earth-packed hearth box, three stones and a pot; shelves of jars.
+    kitchen_hearth(AREA, m, -5.8, -4.6, 11.7, 12.6, F, F + 0.61, (-5.2, 12.08))
     collider("kitchen_hearth", AREA, -5.8, -4.6, 11.7, 12.6, F, F + 0.6)
-    # Keep the three stones under the pot's foot ring, with its base at their tops.
-    for k, (sx, sy) in enumerate(((-5.295, 12.025), (-5.105, 12.025), (-5.2, 12.19))):
-        lathe(f"hearth_stone_{k}", AREA, [(0.0, 0.0), (0.07, 0.0), (0.08, 0.06), (0.05, 0.14), (0.0, 0.15)], sx, sy, F + 0.46, m["stone"], segments=7)
     place(AREA, "ceramic_pot", (-5.2, 12.08, F + 0.61), scale=0.55)
     box("kitchen_table", AREA, -5.0, -3.6, 13.2, 14.2, F + 0.7, F + 0.75, m["worn"], edge=0.01)
     for lx in (-4.95, -3.65):
@@ -948,8 +945,8 @@ def interiors(m):
     usable("interact_sok_desk", (5.2, 16.6, F + 0.6), lambda: box("sok_desk_drawer", AREA, 4.95, 5.45, 16.58, 16.6, F + 0.6, F + 0.7, m["teak"]),
            action="open", requires="drawer_key")
     place(AREA, "chinese_armchair", (5.2, 16.15, F), rot_deg=180)
-    for k in range(4):
-        box(f"palm_leaf_manuscript_{k}", AREA, 4.75, 5.3, 17.25 + k * 0.07, 17.3 + k * 0.07, F + 0.76, F + 0.8 + 0.02 * (k % 2), m["paper"], edge=0.004)
+    # Sit on the investigation desk that replaces this one in game (DeskModels.ts, top 0.765 m).
+    palm_leaf_manuscripts(AREA, m, 5.02, 17.2, F + 0.765)
     place(AREA, "vintage_oil_lamp", (5.6, 17.35, F + 0.76))
     place(AREA, "book_encyclopedia_set_01", (3.4, 17.7, F), rot_deg=0)
     place(AREA, "vintage_suitcase", (3.6, 12.2, F), rot_deg=90)
