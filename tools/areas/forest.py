@@ -16,6 +16,12 @@ from mathutils import Matrix, Vector
 
 from kit import box, collider, empty, lathe, mesh_object, sag, tube
 from khmer import beads, join, place, pole
+from forest_detail import forest_materials, canopy_sprays, grass_geometry, tree_surface_details, understory
+from chicken import whole_chicken
+from ting_mong import ting_mong  # Shared guardian builder, also used by focused rebuilds.
+from shrine import (ground_offering, spirit_house, shrine_materials, leaf_packet,
+                    incense_burner, sla_thor, grains, flower_chain, platform, tree_bindings,
+                    ancestral_statue, ancestral_shelter)
 
 
 def pivot(obj, x, y, z=0.0):
@@ -72,21 +78,24 @@ def curve(a, b, lift, n=5):
 # ----------------------------------------------------------------- trees
 
 
-def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0):
+def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0, collision=True):
     """A big broadleaf tree of the lowland forest: a leaning trunk on buttress roots,
     a few heavy limbs and a dark, ragged crown."""
     parts = []
+    detail = forest_materials()
     r0 = rng.uniform(0.28, 0.42)
     lean = (rng.uniform(-0.8, 0.8), rng.uniform(-0.8, 0.8))
     trunk = [(x + lean[0] * t * t, y + lean[1] * t * t, h * 0.62 * t) for t in (i / 6 for i in range(7))]
     parts.append(tube(f"tree_{k}_trunk", coll, trunk, r0, m["bark"], sides=10, metres_per_v=1.5, radius_end=r0 * 0.6))
-    for j in range(5):
-        a = j * 2 * math.pi / 5 + rng.uniform(-0.3, 0.3)
-        reach = r0 + rng.uniform(0.7, 1.4)
-        parts.append(tube(f"tree_{k}_buttress_{j}", coll, [(x + math.cos(a) * r0 * 0.4, y + math.sin(a) * r0 * 0.4, 1.6),
-                                                            (x + math.cos(a) * (r0 + 0.25), y + math.sin(a) * (r0 + 0.25), 0.5),
-                                                            (x + math.cos(a) * reach, y + math.sin(a) * reach, -0.05)],
-                          r0 * 0.4, m["bark"], sides=6, radius_end=0.05))
+    # Shallow fluting catches lamplight without a cylindrical plastic silhouette.
+    for v in parts[0].data.vertices:
+        t = max(0, min(1, v.co.z / (h * .62)))
+        cx, cy = x + lean[0] * t * t, y + lean[1] * t * t
+        a = math.atan2(v.co.y - cy, v.co.x - cx)
+        f = 1 + .09 * math.sin(a * 5 + t * 3) + .045 * math.sin(a * 9 - t * 5)
+        v.co.x = cx + (v.co.x - cx) * f
+        v.co.y = cy + (v.co.y - cy) * f
+    parts.extend(tree_surface_details(coll, {**m, 'moss': detail['moss']}, x, y, h, r0, k, rng))
     ends, leaves = [], []
     for j in range(int(rng.integers(3, 6))):
         base = trunk[int(rng.integers(4, 7))]
@@ -109,8 +118,9 @@ def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0):
             centre = (e[0] + rng.normal(0, 1.0), e[1] + rng.normal(0, 1.0), e[2] + rng.normal(0, 0.6))
             leaves.append((centre, rng.uniform(2.2, 3.4), rng.uniform(0, math.pi), rng.uniform(-0.4, 0.4),
                            int(rng.choice([0, 1, 2, 2, 3] if rng.random() < 0.15 else [0, 1, 2]))))
-    parts.append(cards(f"tree_{k}_crown", coll, leaves, m["leaf_cluster"]))
-    collider(f"tree_{k}", coll, x - r0, x + r0, y - r0, y + r0, 0, 3)
+    parts.append(canopy_sprays(f"tree_{k}_crown", coll, leaves, detail['leaf'], rng))
+    if collision:
+        collider(f"tree_{k}", coll, x - r0, x + r0, y - r0, y + r0, 0, 3)
     return join(parts, f"tree_{k}")
 
 
@@ -144,7 +154,7 @@ def dead_tree(coll, m, x, y, h, k, rng):
     return join(parts, f"dead_{k}")
 
 
-def banyan(coll, m, x, y, rng):
+def banyan(coll, m, x, y, rng, dressing=True):
     """The old banyan (ជ្រៃ) by the path: a trunk of fused roots, roots crawling over the
     ground, hanging aerial roots, a huge crown. Villagers have wrapped its trunk in red,
     white and yellow cloth: a tree a spirit lives in."""
@@ -185,82 +195,12 @@ def banyan(coll, m, x, y, rng):
                 hangers.append(tube(f"banyan_hanger_{j}_{len(hangers)}", coll,
                                     [(hx, hy, p[2]), (hx + rng.normal(0, 0.08), hy + rng.normal(0, 0.08), (p[2] + bottom) / 2), (hx, hy, bottom)],
                                     rng.uniform(0.012, 0.04), m["bark"], sides=4, metres_per_v=1.5, radius_end=0.008))
-    parts.append(cards("banyan_crown", coll, leaves, m["leaf_cluster"]))
+    parts.append(canopy_sprays("banyan_crown", coll, leaves, forest_materials()['leaf'], rng))
     tree = join(parts + hangers, "banyan")
-    # Cloth wound round the trunk: three bands and their loose ends.
-    bands = []
-    for j, (z, colour) in enumerate(((1.05, "cloth_red"), (1.3, "cotton"), (1.55, "cloth_yellow"))):
-        rr = 1.5 - 0.75 * math.sin(min(1, (z + 0.2) / 6 * 1.2) * math.pi / 2) + 0.24
-        # A flat band of cloth pulled round the trunk, creased where it crosses the strands.
-        n = 48
-        verts, faces = [], []
-        for i in range(n + 1):
-            a = 2 * math.pi * i / n
-            r = rr + 0.04 * math.sin(a * strands) + 0.015 * math.sin(a * 7)
-            dz = 0.025 * math.sin(a * 3 + j)
-            verts += [(x + math.cos(a) * r, y + math.sin(a) * r, z - 0.07 + dz), (x + math.cos(a) * r, y + math.sin(a) * r, z + 0.07 + dz)]
-            if i:
-                faces.append((2 * i - 2, 2 * i, 2 * i + 1, 2 * i - 1))
-        bands.append(mesh_object(f"banyan_cloth_{j}", coll, verts, faces, m[colour], smooth=True))
-        # The knotted ends hanging down.
-        a = rng.uniform(0, 2 * math.pi)
-        side = (-math.sin(a) * 0.06, math.cos(a) * 0.06)
-        for e, lean in enumerate((-0.04, 0.05)):
-            top = (x + math.cos(a) * (rr + 0.04), y + math.sin(a) * (rr + 0.04), z)
-            bot = (x + math.cos(a + lean) * (rr + 0.12), y + math.sin(a + lean) * (rr + 0.12), z - rng.uniform(0.6, 0.95))
-            bands.append(mesh_object(f"banyan_cloth_tail_{j}_{e}", coll,
-                                     [(top[0] - side[0], top[1] - side[1], top[2]), (top[0] + side[0], top[1] + side[1], top[2]),
-                                      (bot[0] + side[0] * 0.7, bot[1] + side[1] * 0.7, bot[2]), (bot[0] - side[0] * 0.7, bot[1] - side[1] * 0.7, bot[2])],
-                                     [(0, 1, 2, 3)], m[colour]))
-    join(bands, "banyan_cloth")
-    collider("banyan", coll, x - 1.6, x + 1.6, y - 1.6, y + 1.6, 0, 6)
+    if dressing:
+        tree_bindings(coll, m, tree, x, y)
+        collider("banyan", coll, x - 1.6, x + 1.6, y - 1.6, y + 1.6, 0, 6)
     return tree
-
-
-def spirit_house(coll, m, x, y, facing, rng):
-    """A small spirit house (ខ្ទមអ្នកតា) on a post at the foot of the banyan: weathered
-    wood, a tiled gable roof, the old offerings left on its ledge (burnt-out incense, a
-    cup, a banana-leaf cone of rice, dried flowers). Intact and cared for once."""
-    parts = []
-    ca, sa = math.cos(facing), math.sin(facing)
-
-    def at(lx, ly, z):
-        return (x + lx * ca - ly * sa, y + lx * sa + ly * ca, z)
-
-    parts.append(pole("spirit_post", coll, at(0, 0, -0.1), at(0, 0, 1.15), 0.07, m["post_rough"], sides=6, metres=2.0))
-    w, d, h0, h1 = 0.62, 0.48, 1.15, 1.6
-    verts = [at(sx * w / 2, sy * d / 2, z) for z in (h0, h1) for (sx, sy) in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
-    parts.append(mesh_object("spirit_house_walls", coll, verts, [(0, 1, 5, 4), (1, 2, 6, 5), (3, 0, 4, 7), (3, 2, 1, 0)], m["old_planks"]))
-    dark = [at(-w / 2 + 0.04, -d / 2 - 0.002, h0 + 0.05), at(w / 2 - 0.04, -d / 2 - 0.002, h0 + 0.05),
-            at(w / 2 - 0.04, -d / 2 - 0.002, h1 - 0.03), at(-w / 2 + 0.04, -d / 2 - 0.002, h1 - 0.03)]
-    parts.append(mesh_object("spirit_house_inside", coll, dark, [(0, 1, 2, 3)], m["soot"]))
-    ridge = h1 + 0.32
-    roof = [at(-w / 2 - 0.12, -d / 2 - 0.15, h1 - 0.05), at(w / 2 + 0.12, -d / 2 - 0.15, h1 - 0.05), at(w / 2 + 0.12, 0, ridge),
-            at(-w / 2 - 0.12, 0, ridge), at(-w / 2 - 0.12, d / 2 + 0.15, h1 - 0.05), at(w / 2 + 0.12, d / 2 + 0.15, h1 - 0.05)]
-    parts.append(mesh_object("spirit_house_roof", coll, roof, [(0, 1, 2, 3), (5, 4, 3, 2), (3, 2, 1, 0), (2, 3, 4, 5)], m["tiles"]))
-    gables = [at(-w / 2, -d / 2, h1), at(-w / 2, d / 2, h1), at(-w / 2, 0, ridge - 0.04), at(w / 2, -d / 2, h1), at(w / 2, d / 2, h1), at(w / 2, 0, ridge - 0.04)]
-    parts.append(mesh_object("spirit_house_gables", coll, gables, [(0, 1, 2), (0, 2, 1), (3, 4, 5), (3, 5, 4)], m["old_planks"]))
-    for s in (-1, 1):
-        parts.append(tube(f"spirit_finial_{s}", coll, [at(s * (w / 2 + 0.12), 0, ridge), at(s * (w / 2 + 0.2), 0, ridge + 0.12)],
-                          0.02, m["gold_dull"], sides=4, radius_end=0.004))
-    ledge = [at(-w / 2 - 0.06, -d / 2 - 0.22, h0 - 0.03), at(w / 2 + 0.06, -d / 2 - 0.22, h0 - 0.03), at(w / 2 + 0.06, d / 2, h0 - 0.03),
-             at(-w / 2 - 0.06, d / 2, h0 - 0.03)]
-    parts.append(mesh_object("spirit_house_ledge", coll, ledge + [(p[0], p[1], p[2] + 0.03) for p in ledge],
-                             [(4, 5, 6, 7), (3, 2, 1, 0), (0, 1, 5, 4)], m["old_planks"]))
-    # Offerings on the ledge, long untended.
-    lx, ly, lz = at(0.15, -d / 2 - 0.1, h0)
-    parts.append(lathe("spirit_cup", coll, [(0.0, 0.0), (0.025, 0.0), (0.035, 0.04), (0.0, 0.035)], lx, ly, lz, m["clay"], segments=8))
-    lx, ly, lz = at(-0.15, -d / 2 - 0.1, h0)
-    parts.append(lathe("spirit_rice_cone", coll, [(0.045, 0.0), (0.0, 0.09)], lx, ly, lz, m["betel_leaf_dry"], segments=8))
-    lx, ly, lz = at(0.0, -d / 2 - 0.12, h0)
-    parts.append(lathe("spirit_incense_can", coll, [(0.03, 0.0), (0.03, 0.06), (0.0, 0.06)], lx, ly, lz, m["iron"], segments=8))
-    for j in range(5):
-        a = j * 1.3
-        tip = (lx + math.cos(a) * 0.02, ly + math.sin(a) * 0.02, lz + 0.06 + rng.uniform(0.05, 0.12))
-        parts.append(tube(f"spirit_incense_{j}", coll, [(lx, ly, lz + 0.05), tip], 0.0016, m["incense_burnt"], sides=4))
-    house = join(parts, "spirit_house")
-    collider("spirit_house", coll, x - 0.45, x + 0.45, y - 0.45, y + 0.45, 0, 1.6)
-    return house
 
 
 def bamboo_clump(coll, m, x, y, k, rng):
@@ -361,23 +301,6 @@ def path_threads(coll, m, a, b, z, k, rng):
     return join(parts, f"path_threads_{k}")
 
 
-def ground_offering(coll, m, x, y, k, rng):
-    """At the forest crossing: banana-leaf cones of rice and burnt-out incense in the mud,
-    offerings to the spirits of the way."""
-    parts = []
-    for j in range(3):
-        a = rng.uniform(0, 2 * math.pi)
-        px, py = x + math.cos(a) * 0.25, y + math.sin(a) * 0.25
-        parts.append(lathe(f"offering_{k}_cone_{j}", coll, [(0.06, 0.0), (0.0, 0.12)], px, py, 0.0, m["betel_leaf_dry"], segments=8))
-        parts.append(lathe(f"offering_{k}_rice_{j}", coll, [(0.0, 0.11), (0.03, 0.1)], px, py, 0.0, m["rice"], segments=6))
-    for j in range(6):
-        a = rng.uniform(0, 2 * math.pi)
-        px, py = x + math.cos(a) * 0.1, y + math.sin(a) * 0.1
-        parts.append(tube(f"offering_{k}_incense_{j}", coll, [(px, py, -0.02), (px + rng.normal(0, 0.03), py + rng.normal(0, 0.03), rng.uniform(0.1, 0.22))],
-                          0.0018, m["incense_burnt"], sides=4))
-    return join(parts, f"ground_offering_{k}")
-
-
 # ------------------------------------------------------------- the road
 
 
@@ -415,19 +338,14 @@ def telegraph_line(coll, m, posts, rng, broken=()):
 
 
 def grass_patch(name, coll, m, spots, rng, size=(0.5, 0.9)):
-    """Tufts of grass or rice stubble: crossed cards, all in one mesh."""
-    items = [((x, y, z + s * 0.5), s, rng.uniform(0, math.pi), 0.0, 0)
-             for (x, y, z) in spots for s in (rng.uniform(*size),)]
-    return cards(name, coll, items, m["grass"], cells=(1, 1))
+    """Curved individual grass blades, grouped into small cullable patches."""
+    return grass_geometry(name, coll, spots, rng, size)
 
 
 def cobweb(name, coll, m, corner, right, down, size):
-    """A cobweb strung into a corner: `corner` is where it is anchored, `right` and
-    `down` the two directions it spreads (the threads radiate from the texture's top left)."""
-    c = corner
-    verts = [c, tuple(c[k] + right[k] * size for k in range(3)),
-             tuple(c[k] + right[k] * size + down[k] * size for k in range(3)), tuple(c[k] + down[k] * size for k in range(3))]
-    return mesh_object(name, coll, verts, [(0, 1, 2, 3)], m["cobweb"], uvs=[(0, 1), (1, 1), (1, 0), (0, 0)])
+    """Fine geometry anchored at a corner, spreading along `right` and `down`."""
+    from house_detail import corner_web
+    return corner_web(name, coll, corner, right, down, size)
 
 
 def decal(name, coll, m, mat, centre, width, length, yaw, z):
@@ -438,64 +356,6 @@ def decal(name, coll, m, mat, centre, width, length, yaw, z):
     verts = [(x + px * c - py * s, y + px * s + py * c, z) for px, py in pts]
     return mesh_object(name, coll, verts, [(0, 1, 2, 3)], m[mat], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)])
 
-
-def ting_mong(coll, m, x, y, facing, k, rng, arms_up=False):
-    """`facing` turns the figure from looking south (0). A Ting Mong (តុកតា ទីងមោង): a life-size straw figure in old clothes, a cloth face
-    drawn in charcoal, set up at the village's edge to frighten away spirits and
-    sickness. It guards; it is not the threat. To confirm with the cultural advisor."""
-    ca, sa = math.cos(facing), math.sin(facing)
-
-    def at(lx, ly, z):
-        return (x + lx * ca - ly * sa, y + lx * sa + ly * ca, z)
-
-    parts = [pole(f"tingmong_{k}_stake", coll, at(0, 0.08, -0.3), at(0, 0.08, 1.55), 0.035, m["bamboo_dead"], sides=5, metres=0.45)]
-    # Straw legs bound at the ankles, a sarong of old cloth over the hips.
-    for s in (-1, 1):
-        parts.append(tube(f"tingmong_{k}_leg_{s}", coll, [at(s * 0.1, 0, 0.02), at(s * 0.11, 0, 0.5), at(s * 0.09, 0, 0.82)], 0.07, m["thatch"],
-                          sides=6, metres_per_v=0.6, radius_end=0.09))
-    sarong = lathe(f"tingmong_{k}_sarong", coll, [(0.2, 0.0), (0.22, 0.15), (0.2, 0.35), (0.19, 0.45)], 0, 0, 0, m["krama"], segments=12)
-    sarong.location = at(0, 0, 0.55)
-    parts.append(sarong)
-    shirt = lathe(f"tingmong_{k}_shirt", coll, [(0.19, 0.0), (0.21, 0.2), (0.2, 0.42), (0.13, 0.52), (0.06, 0.55)], 0, 0, 0, m["rag"], segments=12)
-    shirt.location = at(0, 0, 0.95)
-    parts.append(shirt)
-    # Arms of bundled straw in sleeves; one guardian holds a stick out at the road.
-    for s in (-1, 1):
-        if arms_up:
-            hand = at(s * 0.55, -0.15, 1.55)
-        else:
-            hand = at(s * 0.32, -0.12, 0.95)
-        parts.append(tube(f"tingmong_{k}_arm_{s}", coll, [at(s * 0.18, 0, 1.4), at(s * 0.3, -0.05, 1.25 if not arms_up else 1.45), hand],
-                          0.05, m["rag"], sides=5, radius_end=0.035))
-        # Straw bursting from the cuff instead of a hand.
-        for j in range(7):
-            a = 2 * math.pi * j / 7
-            parts.append(tube(f"tingmong_{k}_straw_{s}_{j}", coll, [hand, (hand[0] + math.cos(a) * 0.06 + rng.normal(0, 0.02),
-                                                                          hand[1] + math.sin(a) * 0.06, hand[2] - rng.uniform(0.1, 0.22))],
-                              0.006, m["straw"], sides=3))
-    if not arms_up:
-        tip = at(0.35, -0.9, 1.25)
-        parts.append(tube(f"tingmong_{k}_stick", coll, [at(0.32, -0.1, 0.9), tip], 0.018, m["post_rough"], sides=5))
-    # The head: a stuffed sack with the drawn face, a krama tied round it.
-    head = lathe(f"tingmong_{k}_head", coll, [(0.0, -0.12), (0.09, -0.11), (0.13, -0.02), (0.13, 0.06), (0.1, 0.13), (0.0, 0.16)],
-                 0, 0, 0, m["tingmong_face"], segments=16, v_scale=2.0)
-    head.location = at(0, 0, 1.68)
-    head.rotation_euler = (0, 0, facing + math.pi / 2)  # the drawn face (texture centre) to the front
-    parts.append(head)
-    for j in range(12):
-        a = 2 * math.pi * j / 12
-        parts.append(tube(f"tingmong_{k}_neck_straw_{j}", coll, [at(0, 0, 1.5), at(math.cos(a) * 0.14, math.sin(a) * 0.14, 1.5 + rng.uniform(0.0, 0.08))],
-                          0.006, m["straw"], sides=3))
-    band = [at(0.135 * math.cos(a), 0.135 * math.sin(a), 1.76 + 0.01 * math.sin(a * 3)) for a in (2 * math.pi * i / 16 for i in range(17))]
-    parts.append(tube(f"tingmong_{k}_krama", coll, band, 0.025, m["krama"], sides=4))
-    parts.append(tube(f"tingmong_{k}_krama_tail", coll, [at(0.05, 0.13, 1.76), at(0.08, 0.2, 1.55), at(0.06, 0.22, 1.35)], 0.03, m["krama"],
-                      sides=4, radius_end=0.015))
-    # Its own pivot at its foot: the game turns and moves it while nobody is looking.
-    figure = pivot(join(parts, f"tingmong_{k}"), x, y)
-    # Which way it faces, as an angle in the ground plane (radians from +X).
-    figure["front"] = facing - math.pi / 2
-    collider(f"tingmong_{k}", coll, x - 0.3, x + 0.3, y - 0.3, y + 0.3, 0, 1.8)
-    return figure
 
 
 def field_hut(coll, m, x, y, rng):
@@ -592,7 +452,8 @@ def wrapped_stone(name, coll, m, base, r, h, tilt, cover_mat, sash_mat, rng, fro
             for j in range(seg):
                 phi = 2 * math.pi * j / seg
                 tt = t if hem is None or i else hem[j]
-                verts.append(point(phi, tt, inflate, out + (0.02 if hem is not None and i == 0 else 0.0)))
+                fold = (.018 * math.sin(phi * 11 + tt * 5) + .005 * math.sin(phi * 23 - tt * 8)) * (1 - tt * .65) if hem is not None else 0
+                verts.append(point(phi, tt, inflate, out + fold + (0.012 if hem is not None and i == 0 else 0.0)))
         for i in range(len(rows) - 1):
             for j in range(seg):
                 a, b = i * seg + j, i * seg + (j + 1) % seg
@@ -604,11 +465,11 @@ def wrapped_stone(name, coll, m, base, r, h, tilt, cover_mat, sash_mat, rng, fro
             faces.append((last + j, last + (j + 1) % seg, top))
         return mesh_object(name, coll, verts, faces, mat, smooth=True)
 
-    seg = 14
-    parts = [shell(name, [i / 9 * 0.99 for i in range(10)], seg, m["stone_wet"], 1.0, 0.0)]
+    seg = 40
+    parts = [shell(name, [i / 19 * 0.99 for i in range(20)], seg, m["stone_wet"], 1.0, 0.0)]
     # The cloth over its head: down to a ragged hem at about half its height.
-    hem = [rng.uniform(0.38, 0.55) for _ in range(seg)]
-    parts.append(shell(f"{name}_cover", [0.45 + 0.54 * i / 6 for i in range(7)], seg, cover_mat, 1.04, 0.012, hem=hem))
+    hem = [.44 + .025 * math.sin(j * math.tau / seg * 3) + rng.uniform(-.006, .006) for j in range(seg)]
+    parts.append(shell(f"{name}_cover", [0.45 + 0.54 * i / 15 for i in range(16)], seg, cover_mat, 1.04, 0.012, hem=hem))
     # The sash, knotted at the front, its ends hanging.
     ring = [point(2 * math.pi * j / 16, 0.3, 1.0, 0.02) for j in range(17)]
     parts.append(tube(f"{name}_sash", coll, ring, 0.022, sash_mat, sides=5))
@@ -620,14 +481,18 @@ def wrapped_stone(name, coll, m, base, r, h, tilt, cover_mat, sash_mat, rng, fro
 
 
 def neak_ta_shrine(coll, m, x, y, facing, rng):
-    """The village's Neak Ta shrine (អ្នកតា) at the foot of the banyan: a spirit house
-    raised on a post under a cloth canopy, and below it the spirit's own seat, worn
-    elongated stones wrapped in saffron and red cloth among fragments of old
-    sculpture, as Neak Ta are kept in stones and roots. The offerings the custom
-    asks for (a pair of sla thor, two bowls of water, five candles, five incense
-    sticks, food, flowers, rice spirit) are all there, and all of them old: candles
-    burnt down to puddles of wax, the food gone black, the garlands brown. Nobody
-    has tended it since Sok died. Intact; to confirm with the cultural advisor."""
+    """The banyan shrine: two weathered seated ancestors under a limewashed
+    shelter, with saffron cotton and accumulated offerings. The primary effigy
+    keeps its foot pivot and offscreen watcher behaviour. Original sculpture
+    informed by the user's shrine photographs; no exact sacred figure is copied.
+    """
+    craft = shrine_materials(m)
+    m = dict(m)
+    for key, detail in {"brick": "brick", "stone_wet": "stone", "old_planks": "wood",
+                        "cloth_red": "red", "cloth_saffron": "saffron", "cotton_dirty": "cotton",
+                        "rag": "cloth", "clay": "clay", "iron": "iron", "glaze": "glaze",
+                        "wax_dirty": "wax", "dead_flowers": "flower", "dead_marigold": "flower"}.items():
+        m[key] = craft[detail]
     ca, sa = math.cos(facing), math.sin(facing)
 
     def at(lx, ly, z=0.0):
@@ -636,65 +501,46 @@ def neak_ta_shrine(coll, m, x, y, facing, rng):
     parts = []
     # A low platform of old bricks, cracked, roots pushing through.
     w, d = 2.2, 1.6
-    verts = [at(sx * w / 2, sy * d / 2, z) for z in (0.0, 0.32) for (sx, sy) in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
-    parts.append(mesh_object("neakta_platform", coll, verts, [(4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)], m["brick"]))
+    parts += platform(coll, m, at, rng)
     for k in range(5):
         a = rng.uniform(0, 2 * math.pi)
         start = at(rng.uniform(-0.8, 0.8), d / 2 - 0.1, 0.33)
         parts.append(tube(f"neakta_root_{k}", coll, [start, at(rng.uniform(-1, 1), rng.uniform(-0.3, 0.6), 0.34),
                                                      at(rng.uniform(-1.3, 1.3), -d / 2 - 0.2, 0.05)], 0.05, m["bark"], sides=5, radius_end=0.015))
-    # The spirit's seat: rough stones standing in a row, leaning, each with a cloth
-    # draped over its head and a sash knotted round it.
-    for k, (lx, h, r, cover, sash) in enumerate(((-0.52, 0.55, 0.15, "cloth_saffron", "cloth_red"),
-                                                  (-0.14, 0.78, 0.17, "cloth_red", "cotton_dirty"),
-                                                  (0.22, 0.6, 0.15, "cotton_dirty", "cloth_saffron"),
-                                                  (0.56, 0.4, 0.16, "cloth_saffron", "cloth_red"))):
-        base = at(lx, 0.2 + rng.uniform(-0.06, 0.06), 0.32)
-        stone = wrapped_stone(f"neakta_stone_{k}", coll, m, base, r, h,
-                              (rng.uniform(-0.18, 0.18), rng.uniform(-0.18, 0.18)), m[cover], m[sash], rng,
-                              front=facing - math.pi / 2)
-        if k == 1:
-            # The tallest, in red: a node of its own the game can turn to face Sora.
-            watch = pivot(join(stone, "neakta_stone_watch"), *base)
-            watch["front"] = facing - math.pi / 2  # its knot faces out of the shrine
-        else:
-            parts += stone
-    # Fragments of old carved sandstone, half sunk among the stones.
-    for k, (lx, ly) in enumerate(((-0.85, -0.1), (0.85, 0.25), (0.6, -0.45))):
-        b = box(f"neakta_fragment_{k}", coll, -0.18, 0.18, -0.12, 0.12, 0.0, rng.uniform(0.2, 0.35), m["stone_wet"], edge=0.03)
-        b.location = at(lx, ly, 0.3)
-        b.rotation_euler = (rng.uniform(-0.3, 0.3), rng.uniform(-0.3, 0.3), facing + rng.uniform(-1, 1))
-        parts.append(b)
-    # The spirit house above, on its post, under a stained cloth canopy.
-    house = spirit_house(coll, m, *at(0.0, 0.55)[:2], facing, rng)
-    house.location.z += 0.32
-    for k, (lx, ly) in enumerate(((-1.0, -0.75), (1.0, -0.75), (-1.0, 0.75), (1.0, 0.75))):
-        parts.append(pole(f"neakta_canopy_post_{k}", coll, at(lx, ly, 0.2), at(lx, ly, 2.4), 0.03, m["bamboo_dead"], sides=5))
-    n = 10
-    cverts, cfaces = [], []
-    for j in range(n + 1):
-        for i in range(n + 1):
-            u, v = i / n, j / n
-            sagz = 2.35 - 0.25 * math.sin(math.pi * u) * math.sin(math.pi * v)
-            cverts.append(at(-1.05 + 2.1 * u, -0.8 + 1.6 * v, sagz))
-    for j in range(n):
-        for i in range(n):
-            a0 = j * (n + 1) + i
-            cfaces.append((a0, a0 + 1, a0 + n + 2, a0 + n + 1))
-    parts.append(mesh_object("neakta_canopy", coll, cverts, cfaces, m["cloth_red"], smooth=True))
+    # Human anatomy and genuine seated drapery replace the wrapped oval stones.
+    ancestral_statue(coll,at,facing,'neakta_stone_watch',(-.49,.20,.34),1.0)
+    parts.append(ancestral_statue(coll,at,facing,'neakta_seated_companion',(.51,.21,.34),.90))
+    parts += ancestral_shelter(coll,m,at,rng)
+    # Keep the smaller spirit house as its own, tended object beside the shelter.
+    house = spirit_house(coll,m,*at(-1.55,.12)[:2],facing,rng)
+    house.location.z += .03
     # Offerings on the platform's front edge.
     edge = -d / 2 + 0.2
     for k, lx in enumerate((-0.35, 0.35)):
         px, py, pz = at(lx, edge, 0.32)
-        parts.append(lathe(f"neakta_slathor_{k}", coll, [(0.05, 0.0), (0.05, 0.12), (0.06, 0.13), (0.03, 0.28), (0.0, 0.32)],
-                           px, py, pz, m["betel_leaf_dry"], segments=8))
-        bx, by, bz = at(lx * 0.5, edge + 0.05, 0.32)
-        parts.append(lathe(f"neakta_bowl_{k}", coll, [(0.0, 0.0), (0.05, 0.0), (0.07, 0.05), (0.0, 0.04)], bx, by, bz, m["glaze"], segments=10))
+        parts += sla_thor(f"neakta_slathor_{k}", coll, m, (px, py, pz), rng)
+        bx, by, bz = at(lx * 0.5, edge + 0.05, 0.325)
+        parts.append(lathe(f"neakta_bowl_{k}", coll,
+                           [(0, 0), (.038, 0), (.071, .048), (.073, .056), (.065, .057), (.057, .02), (0, .014)],
+                           bx, by, bz, m["glaze"], segments=28))
+        parts.append(lathe(f"neakta_bowl_water_{k}", coll, [(0, .031), (.061, .031)], bx, by, bz, craft["water"], segments=28))
     for k in range(5):
         cx, cy, cz = at(-0.4 + 0.2 * k, edge - 0.12, 0.32)
         hgt = rng.uniform(0.0, 0.05)
-        parts.append(lathe(f"neakta_wax_{k}", coll, [(0.0, 0.0), (0.06, 0.0), (0.05, 0.008), (0.015, 0.012 + hgt), (0.0, 0.015 + hgt)],
-                           cx, cy, cz, m["wax_dirty"], segments=8))
+        wax = lathe(f"neakta_wax_{k}", coll,
+                    [(0, 0), (.05, .001), (.058, .004), (.049, .009), (.024, .012),
+                     (.016, .015 + hgt), (.01, .018 + hgt), (0, .014 + hgt)],
+                    cx, cy, cz, m["wax_dirty"], segments=32)
+        for v in wax.data.vertices:
+            dx, dy = v.co.x-cx, v.co.y-cy
+            angle = math.atan2(dy, dx)
+            radial = 1 + .13*math.sin(angle*5+k) + .07*math.sin(angle*9)
+            v.co.x = cx + dx*radial
+            v.co.y = cy + dy*radial*.86
+        parts.append(wax)
+        parts.append(tube(f"neakta_burnt_wick_{k}", coll,
+                          [(cx, cy, cz+.014+hgt), (cx+.002, cy, cz+.023+hgt)],
+                          .0018, craft["char"], sides=5))
     for k in range(5):
         a = rng.uniform(0, 2 * math.pi)
         bx, by, bz = at(0.0, edge, 0.32)
@@ -702,12 +548,14 @@ def neak_ta_shrine(coll, m, x, y, facing, rng):
         parts.append(tube(f"neakta_incense_{k}", coll, [(bx, by, bz), tip], 0.0018, m["incense_burnt"], sides=4))
     # Food gone black on a banana leaf, a bottle of rice spirit, brown garlands.
     fx, fy, fz = at(0.7, edge + 0.1, 0.33)
-    parts.append(lathe("neakta_leaf_plate", coll, [(0.0, 0.0), (0.16, 0.0), (0.18, 0.02)], fx, fy, fz, m["betel_leaf_dry"], segments=10))
-    parts.append(beads("neakta_rotten_rice", coll, [(fx + rng.normal(0, 0.05), fy + rng.normal(0, 0.05), fz + 0.025) for _ in range(40)], 0.012, m["rot"]))
+    parts += leaf_packet("neakta_leaf_rice", coll, m, (fx, fy, fz), rng, size=1.45, yaw=facing, old=True)
+    parts.append(grains("neakta_spilled_rice", coll,
+                        [(fx + rng.normal(0, .09), fy + rng.normal(0, .09), fz + .005) for _ in range(90)],
+                        craft["rice_old"], rng))
     parts.append(lathe("neakta_bottle", coll, [(0.0, 0.0), (0.035, 0.0), (0.04, 0.12), (0.015, 0.18), (0.012, 0.24), (0.0, 0.24)],
                        *at(-0.75, edge + 0.15, 0.32), m["bottle"], segments=10))
     garland = [at(-0.9 + 1.8 * t, edge - 0.25 + 0.04 * math.sin(t * 9), 0.33) for t in (i / 50 for i in range(51))]
-    parts.append(beads("neakta_dead_garland", coll, garland, 0.014, m["dead_flowers"]))
+    parts.append(flower_chain("neakta_dead_garland", coll, garland, m["dead_flowers"], rng))
     # Strips of red and white cloth tied to the canopy posts, hanging limp.
     for k, (lx, ly) in enumerate(((-1.0, -0.75), (1.0, -0.75))):
         top = at(lx, ly, 1.9)
@@ -722,29 +570,22 @@ def neak_ta_shrine(coll, m, x, y, facing, rng):
                           rng.uniform(0.006, 0.014), m["wax_dirty"], sides=5, radius_end=0.004))
     # A boiled chicken offered whole, gone black and soft.
     cx, cy, cz = at(-0.25, edge + 0.32, 0.33)
-    parts.append(lathe("neakta_plate", coll, [(0.0, 0.0), (0.17, 0.0), (0.19, 0.025), (0.0, 0.015)], cx, cy, cz, m["glaze"], segments=12))
-    body = lathe("neakta_chicken", coll, [(0.0, 0.0), (0.09, 0.01), (0.11, 0.06), (0.08, 0.11), (0.0, 0.13)], 0, 0, 0, m["rot_meat"], segments=10)
-    body.location = (cx, cy, cz + 0.02)
-    body.scale = (1.0, 1.35, 0.8)
-    body.rotation_euler = (0.0, 0.0, facing)
-    parts.append(body)
-    for sgn in (-1, 1):
-        parts.append(tube(f"neakta_chicken_leg_{sgn}", coll, [at(-0.25 + sgn * 0.05, edge + 0.4, 0.4), at(-0.25 + sgn * 0.08, edge + 0.52, 0.42),
-                                                              at(-0.25 + sgn * 0.08, edge + 0.56, 0.37)], 0.018, m["rot_meat"], sides=5, radius_end=0.008))
+    parts.append(lathe("neakta_plate", coll, [(0, 0), (.12, 0), (.18, .017), (.19, .025), (.18, .029), (.13, .014), (0, .012)], cx, cy, cz, m["glaze"], segments=12))
+    parts.append(whole_chicken(coll, (cx, cy, cz + .02), facing))
     # Incense: a can crammed with burnt stubs, more stubs scattered in the ash.
     gx, gy, gz = at(0.45, edge + 0.3, 0.33)
-    parts.append(lathe("neakta_incense_can", coll, [(0.06, 0.0), (0.065, 0.12), (0.0, 0.12)], gx, gy, gz, m["iron"], segments=10))
-    for k in range(30):
-        a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0, 0.05)
-        b0 = (gx + math.cos(a) * r, gy + math.sin(a) * r, gz + 0.1)
-        parts.append(tube(f"neakta_stub_{k}", coll, [b0, (b0[0] + rng.normal(0, 0.02), b0[1] + rng.normal(0, 0.02), b0[2] + rng.uniform(0.04, 0.2))],
-                          0.0016, m["incense_burnt"], sides=3))
+    parts += incense_burner("neakta_incense_can", coll, m, (gx, gy, gz), rng, radius=.06, height=.12, count=30)
+    for k in range(18):
+        ax, ay, az = at(.45 + rng.normal(0, .09), edge + .3 + rng.normal(0, .08), .332)
+        parts.append(tube(f"neakta_fallen_incense_{k}", coll,
+                          [(ax, ay, az), (ax + rng.uniform(-.06, .06), ay + rng.uniform(-.06, .06), az + .002)],
+                          .0017, craft["ash"], sides=4))
     # Dead marigold garlands hung on the canopy posts and heaped on the stones.
     for k, (lx, ly) in enumerate(((-1.0, -0.75), (1.0, -0.75), (0.0, 0.3))):
         cx2, cy2, cz2 = at(lx, ly, 1.6 if k < 2 else 1.0)
         loop = [(cx2 + math.cos(t) * 0.05, cy2 + math.sin(t) * 0.05, cz2 - 0.35 * (0.5 - 0.5 * math.cos(t)))
                 for t in (2 * math.pi * i / 30 for i in range(31))]
-        parts.append(beads(f"neakta_marigolds_{k}", coll, loop, 0.022, m["dead_marigold"]))
+        parts.append(flower_chain(f"neakta_marigolds_{k}", coll, loop, m["dead_marigold"], rng))
     # Yantra cloths nailed to the posts.
     for k, (lx, ly) in enumerate(((-1.0, -0.78), (1.0, -0.78))):
         px, py, pz = at(lx, ly, 1.25)
@@ -784,7 +625,7 @@ def neak_ta_shrine(coll, m, x, y, facing, rng):
         o = (px + 0.165 * math.cos(a), py + 0.165 * math.sin(a), z)
         parts.append(pole(f"neakta_pot_nail_{j}", coll, o, (o[0] + 0.05 * math.cos(a), o[1] + 0.05 * math.sin(a), z + 0.01), 0.004, m["iron"], sides=4))
     shrine = join(parts, "neakta_shrine")
-    collider("neakta_shrine", coll, x - 1.15, x + 1.15, y - 0.85, y + 0.85, 0, 0.35)
+    collider("neakta_shrine", coll, x - .84, x + .84, y - 1.14, y + 1.14, 0, 2.42)
     empty("marker_neakta", coll, at(0.0, edge - 0.3, 0.5))
     empty("marker_flies", coll, at(0.7, edge + 0.1, 0.45))
     return shrine

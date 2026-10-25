@@ -3,9 +3,6 @@ import type { Area } from "../../../core/AreaLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
-import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
-import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -15,6 +12,7 @@ import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { seededRandom } from "../../../audio/synth";
 import { WARDROBES } from "../data/walker";
+import { ShadowFigure } from "../entities/ShadowFigure";
 
 export interface HidingWardrobe {
   id: string;
@@ -25,7 +23,7 @@ export interface HidingWardrobe {
   open: number;
 }
 
-/** Physical louvred wardrobes and a shadow whose brass face catches the player's lamp. */
+/** Physical louvred wardrobes and the shrine's ancestral effigy in the hallway. */
 export class WalkerModels {
   readonly wardrobes: HidingWardrobe[] = [];
   readonly walker: TransformNode;
@@ -33,7 +31,7 @@ export class WalkerModels {
   private readonly wood: PBRMaterial;
   private readonly edge: PBRMaterial;
   private readonly brass: PBRMaterial;
-  private readonly shadow: PBRMaterial;
+  private form!: ShadowFigure;
 
   constructor(
     private readonly scene: Scene,
@@ -42,8 +40,6 @@ export class WalkerModels {
     this.wood = this.material("wardrobe_teak", "#ffffff", 0.84);
     this.edge = this.material("wardrobe_trim", "#3d291e", 0.74);
     this.brass = this.material("walker_brass", "#8d7950", 0.67, 0.72);
-    this.shadow = this.material("walker_cloth", "#080c0f", 0.99);
-    this.shadow.emissiveColor = new Color3(0.002, 0.003, 0.004);
     const tex = new DynamicTexture("T_wardrobe_teak", 512, scene, true),
       c = tex.getContext(),
       rand = seededRandom(906);
@@ -84,9 +80,8 @@ export class WalkerModels {
 
   pose(at: Vector3, direction: Vector3, time: number): void {
     this.walker.position.copyFrom(at);
-    this.walker.position.y += Math.sin(time * 3) * 0.012;
     this.walker.rotation.y = Math.atan2(direction.x, direction.z);
-    this.walker.rotation.z = Math.sin(time * 2.2) * 0.018;
+    this.form.animate(time, 1);
   }
 
   private material(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
@@ -188,67 +183,9 @@ export class WalkerModels {
     this.wardrobes.push({ id, root, doors, front, yaw, open: 0 });
   }
 
-  private sphere(name: string, size: number[], at: number[], mat: PBRMaterial): Mesh {
-    const m = CreateSphere(name, { diameter: 1, segments: 16 }, this.scene);
-    m.parent = this.walker;
-    m.scaling.set(size[0], size[1], size[2]);
-    m.position.set(at[0], at[1], at[2]);
-    m.material = mat;
-    this.meshes.push(m);
-    return m;
-  }
-
   private makeWalker(): void {
-    const robe = CreateLathe(
-      "walker_robe",
-      {
-        shape: [
-          [0.38, 0.03],
-          [0.4, 0.2],
-          [0.27, 1.1],
-          [0.34, 1.7],
-          [0.18, 1.97],
-        ].map(([r, y]) => new Vector3(r, y, 0)),
-        tessellation: 40,
-        closed: true,
-      },
-      this.scene,
-    );
-    robe.parent = this.walker;
-    robe.material = this.shadow;
-    this.meshes.push(robe);
-    this.sphere("walker_hood", [0.43, 0.6, 0.36], [0, 2.05, 0], this.shadow);
-    this.sphere("walker_mask", [0.3, 0.45, 0.13], [0, 2.08, 0.17], this.brass);
-    this.sphere("walker_nose", [0.055, 0.15, 0.07], [0, 2.08, 0.25], this.brass);
-    for (const side of [-1, 1]) {
-      this.sphere("walker_eye", [0.075, 0.029, 0.025], [side * 0.068, 2.15, 0.237], this.shadow);
-      const arm = CreateTube(
-        "walker_arm",
-        {
-          path: [
-            new Vector3(side * 0.27, 1.76, 0),
-            new Vector3(side * 0.4, 1.19, 0.02),
-            new Vector3(side * 0.38, 0.68, 0.13),
-          ],
-          radius: 0.075,
-          tessellation: 12,
-        },
-        this.scene,
-      );
-      arm.parent = this.walker;
-      arm.material = this.shadow;
-      this.meshes.push(arm);
-      for (let k = 0; k < 3; k++)
-        this.sphere(
-          "walker_finger",
-          [0.018, 0.17, 0.023],
-          [side * (0.35 + k * 0.027), 0.59, 0.15],
-          this.shadow,
-        );
-    }
-    this.sphere("walker_mouth", [0.1, 0.018, 0.02], [0, 1.96, 0.235], this.shadow);
-    for (const side of [-1, 1])
-      this.sphere("walker_foot", [0.16, 0.09, 0.32], [side * 0.14, 0.045, 0.075], this.shadow);
-    for (const mesh of this.walker.getChildMeshes()) mesh.isPickable = false;
+    this.form = new ShadowFigure(this.scene, "walker", 2.3);
+    this.form.root.parent = this.walker;
+    this.meshes.push(...this.form.meshes);
   }
 }

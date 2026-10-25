@@ -79,9 +79,14 @@ export class DeskModels {
     if (!photo) throw new Error("[Desk investigation] missing funeral portrait");
     this.portrait = this.root("sok_animated_portrait", photo.position.clone());
     const old = scene.getTransformNodeByName("portrait_sok");
-    if (old) old.setEnabled(false);
+    const authoredFrame = !!old
+      ?.getDescendants()
+      .some((node) => node.name.startsWith("portrait_floral_surround"));
+    // Keep the crafted frame and flowers; only the photograph needs animated eyes.
+    if (authoredFrame) photo.node.setEnabled(false);
+    else if (old) old.setEnabled(false);
     else photo.node.setEnabled(false);
-    this.buildPortrait();
+    this.buildPortrait(authoredFrame);
 
     const cotton = this.mat("cotton", "#d4cdb7", 1);
     // The exported village combines all four sides into one thread_mesh. Replace
@@ -334,7 +339,7 @@ export class DeskModels {
       for (const z of [-0.43, 0.43]) {
         this.box(this.desk, "desk_tapered_leg", [0.06, 0.61, 0.06], [x, 0.33, z]);
         this.box(this.desk, "desk_leg_collar", [0.075, 0.04, 0.075], [x, 0.57, z], this.edge);
-        this.box(this.desk, "desk_foot", [0.068, 0.055, 0.068], [x, 0.036, z], this.edge);
+        this.box(this.desk, "desk_foot", [0.068, 0.055, 0.068], [x, 0.0275, z], this.edge);
       }
       this.box(this.desk, "desk_side_apron", [0.04, 0.16, 0.9], [x, 0.63, 0]);
       this.box(this.desk, "desk_side_stretcher", [0.035, 0.04, 0.85], [x, 0.23, 0]);
@@ -453,10 +458,10 @@ export class DeskModels {
     cord.rotation.y = 0.05;
   }
 
-  private buildPortrait(): void {
+  private buildPortrait(authoredFrame: boolean): void {
     // The imported photo uses baked UVs. The new frame uses the original image
     // with plain portrait UVs, independent of the village's texture atlas.
-    const photoMat = this.mat("framed_photograph", "#ffffff", 0.86);
+    const photoMat = this.mat("framed_photograph", authoredFrame ? "#c9c5ba" : "#ffffff", 0.86);
     photoMat.albedoTexture = new Texture(
       `${import.meta.env.BASE_URL}assets/ep1/T_ep1_photo_sok_BC.png`,
       this.scene,
@@ -466,65 +471,74 @@ export class DeskModels {
       { width: 0.3, height: 0.4, sideOrientation: Mesh.DOUBLESIDE },
       this.scene,
     );
-    this.finish(photo, this.portrait, [0, 0, 0.015], photoMat);
+    const faceDepth = authoredFrame ? 0.002 : 0.015;
+    this.finish(photo, this.portrait, [0, 0, faceDepth], photoMat);
     photo.rotation.y = Math.PI;
-    this.box(this.portrait, "portrait_backboard", [0.385, 0.485, 0.025], [0, 0, -0.009], this.edge);
-    for (const [w, h, depth, offset] of [
-      [0.38, 0.48, 0.035, 0],
-      [0.35, 0.45, 0.018, 0.013],
-      [0.32, 0.42, 0.009, 0.021],
-    ]) {
-      for (const x of [-w / 2, w / 2])
-        this.box(
-          this.portrait,
-          "portrait_moulded_stile",
-          [0.018, h, depth],
-          [x, 0, offset],
-          this.edge,
-        );
-      for (const y of [-h / 2, h / 2])
-        this.box(
-          this.portrait,
-          "portrait_moulded_rail",
-          [w + 0.018, 0.018, depth],
-          [0, y, offset],
-          this.edge,
-        );
-    }
-    for (const x of [-0.18, 0.18])
-      for (const y of [-0.23, 0.23]) {
-        this.box(
-          this.portrait,
-          "portrait_brass_corner",
-          [0.035, 0.004, 0.002],
-          [x, y, 0.023],
-          this.brass,
-        );
-        this.screw(this.portrait, [x, y, 0.025]);
-      }
-    const flower = this.mat("dried_jasmine", "#c5bda3", 1);
-    const garland: Mesh[] = [];
-    for (let k = 0; k < 44; k++) {
-      const a = (k / 43) * Math.PI;
-      const bead = CreateSphere(
-        "portrait_jasmine_floret",
-        { diameter: 0.018, segments: 6 },
-        this.scene,
-      );
-      this.finish(
-        bead,
+    if (!authoredFrame) {
+      this.box(
         this.portrait,
-        [-Math.cos(a) * 0.213, -0.14 + Math.sin(a) * 0.39, 0.042],
-        flower,
+        "portrait_backboard",
+        [0.385, 0.485, 0.025],
+        [0, 0, -0.009],
+        this.edge,
       );
-      bead.scaling.set(1, 0.75, 0.7);
-      garland.push(bead);
-    }
-    const merged = Mesh.MergeMeshes(garland, true, true);
-    if (merged) {
-      merged.name = "portrait_jasmine_garland";
-      merged.setParent(this.portrait, true);
-      this.meshes.push(merged);
+      for (const [w, h, depth, offset] of [
+        [0.38, 0.48, 0.035, 0],
+        [0.35, 0.45, 0.018, 0.013],
+        [0.32, 0.42, 0.009, 0.021],
+      ]) {
+        for (const x of [-w / 2, w / 2])
+          this.box(
+            this.portrait,
+            "portrait_moulded_stile",
+            [0.018, h, depth],
+            [x, 0, offset],
+            this.edge,
+          );
+        for (const y of [-h / 2, h / 2])
+          this.box(
+            this.portrait,
+            "portrait_moulded_rail",
+            [w + 0.018, 0.018, depth],
+            [0, y, offset],
+            this.edge,
+          );
+      }
+      for (const x of [-0.18, 0.18])
+        for (const y of [-0.23, 0.23]) {
+          this.box(
+            this.portrait,
+            "portrait_brass_corner",
+            [0.035, 0.004, 0.002],
+            [x, y, 0.023],
+            this.brass,
+          );
+          this.screw(this.portrait, [x, y, 0.025]);
+        }
+      const flower = this.mat("dried_jasmine", "#c5bda3", 1);
+      const garland: Mesh[] = [];
+      for (let k = 0; k < 44; k++) {
+        const a = (k / 43) * Math.PI;
+        const bead = CreateSphere(
+          "portrait_jasmine_floret",
+          { diameter: 0.018, segments: 6 },
+          this.scene,
+        );
+        this.finish(
+          bead,
+          this.portrait,
+          [-Math.cos(a) * 0.213, -0.14 + Math.sin(a) * 0.39, 0.042],
+          flower,
+        );
+        bead.scaling.set(1, 0.75, 0.7);
+        garland.push(bead);
+      }
+      const merged = Mesh.MergeMeshes(garland, true, true);
+      if (merged) {
+        merged.name = "portrait_jasmine_garland";
+        merged.setParent(this.portrait, true);
+        this.meshes.push(merged);
+      }
     }
     const sclera = this.mat("portrait_eyes", "#b2a280", 0.94);
     const iris = this.mat("portrait_iris", "#302a20", 0.94);
@@ -532,7 +546,7 @@ export class DeskModels {
     for (const u of [0.451, 0.583]) {
       const eye = this.root(
         "sok_portrait_eye",
-        new Vector3((0.5 - u) * 0.3, 0.061, 0.0168),
+        new Vector3((0.5 - u) * 0.3, 0.061, faceDepth + 0.0018),
         this.portrait,
       );
       this.eyes.push(eye);
@@ -551,7 +565,8 @@ export class DeskModels {
       lid.parent = lidRoot;
       this.lids.push(lid);
     }
-    this.portrait.rotation.x = -0.12;
+    this.portrait.rotation.x = authoredFrame ? Math.PI / 18 : -0.12;
+    if (authoredFrame) this.portrait.scaling.set(0.404 / 0.3, 0.56 / 0.4, 1);
   }
 
   private woodGrain(): void {

@@ -9,9 +9,11 @@ import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
 import { EaveDrips } from "./EaveDrips";
+import { warmSceneViews } from "../../../render/warmSceneViews";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
+import { ShadowFigure } from "../entities/ShadowFigure";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
@@ -38,7 +40,7 @@ import { ChestInvestigation } from "../act3/ChestInvestigation";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
-  /^(M_(banana|palm|tree_leaves|bamboo|grass|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
+  /^(M_(banana|palm|tree_leaves|bamboo|grass|forest_|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
 
 /**
  * Episode 1 village: arrival and vigil, Sok’s investigations, the hallway
@@ -95,6 +97,7 @@ export class ActOne {
       // The forest's plants are everywhere: batch them in large cells.
       coarse: { pattern: PLANTS, cellSize: 24 },
     });
+    await ShadowFigure.prepare(game.scene);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
@@ -145,7 +148,10 @@ export class ActOne {
     );
     for (const { name, node } of this.area.level.interactables) {
       if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
-      else game.interaction.add(name, node, { outline: !offeringModels.pickupIds.has(name) });
+      else
+        game.interaction.add(name, node, {
+          outline: name !== "interact_altar" && !offeringModels.pickupIds.has(name),
+        });
     }
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
@@ -190,22 +196,21 @@ export class ActOne {
   async begin(): Promise<void> {
     const game = this.game;
     game.addFlameLights(...this.lights.flames.slice(0, 4), this.lights.lamp);
-    // A dark night, as horror games keep it: the lamp is what Sora sees by, and
-    // beyond it the forest is only shapes; her eyes adjust less than in a shut room.
-    // With the lamp out the eyes open only a little, and night sight finds no more
-    // than the nearest shapes: the dark stays dark.
-    game.atmosphere.baseExposure = 1.5;
-    game.atmosphere.maxExposure = 2.1;
-    game.atmosphere.nightSightIntensity = 1.6;
+    // Readable moonlit vegetation, with a warmer lamp pool and dark distance.
+    // The exposure cap still keeps extinguishing the lamp meaningfully darker.
+    game.atmosphere.baseExposure = 1.85;
+    game.atmosphere.maxExposure = 2.8;
+    game.atmosphere.nightSightIntensity = 2.8;
+    game.atmosphere.nightSight.range = 3.2;
     // Night sight is the dark around her, not a light on what she holds: the cold
     // lantern stays a dark shape at her side.
     game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes, ...game.hands.meshes);
     // Rain mist: distance fades into a faint blue-grey, so silhouettes stand against it.
     const fog = game.pipeline.fog;
     if (fog) {
-      fog.density = 0.034;
+      fog.density = 0.028;
       fog.heightFalloff = 0.25;
-      fog.ambient.set(0.005, 0.006, 0.009);
+      fog.ambient.set(0.014, 0.019, 0.028);
     }
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
@@ -222,6 +227,38 @@ export class ActOne {
     this.running = true;
     this.vigil.begin();
     await this.beats.begin();
+  }
+
+  async warmup(): Promise<void> {
+    await ShadowFigure.warmup(this.game.scene);
+    const finishForest = this.apparitions.prepareRenderWarmup();
+    const actors = [this.walker.models.walker, this.hunt.models.roamer].map((node) => ({
+      node,
+      position: node.position.clone(),
+      rotation: node.rotation.clone(),
+      enabled: node.isEnabled(),
+    }));
+    this.walker.models.pose(new Vector3(-1.65, 2.5, -13.8), new Vector3(0, 0, -1), 0);
+    this.walker.models.walker.setEnabled(true);
+    this.hunt.models.pose(new Vector3(-1.5, 0, -10.65), new Vector3(0, 0, -1), 0, 1);
+    try {
+      await warmSceneViews(this.game.scene, this.game.camera, [
+        { eye: new Vector3(0, 1.58, 53), target: new Vector3(0, 1.3, 40) },
+        { eye: new Vector3(0, 1.58, 46), target: new Vector3(5, 1.25, 37.2) },
+        { eye: new Vector3(0, 1.58, 24), target: new Vector3(0, 1.3, 6) },
+        { eye: new Vector3(0, 1.58, 8), target: new Vector3(0, 1.3, -10) },
+        { eye: new Vector3(0, 1.58, -2), target: new Vector3(0, 1.3, -12) },
+        { eye: new Vector3(-1.65, 4.08, -17.05), target: new Vector3(-1.65, 3.65, -13.8) },
+        { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
+      ]);
+    } finally {
+      finishForest();
+      for (const actor of actors) {
+        actor.node.position.copyFrom(actor.position);
+        actor.node.rotation.copyFrom(actor.rotation);
+        actor.node.setEnabled(actor.enabled);
+      }
+    }
   }
 
   private update(dt: number): void {

@@ -69,7 +69,7 @@ export async function loadArea(
  * renders the whole frame black (Phase 2 studio). Revisit with thin instances
  * if a crowded area needs instancing for speed.
  */
-function realiseInstances(container: AssetContainer): void {
+export function realiseInstances(container: AssetContainer): void {
   for (const instance of container.meshes.filter((m) => m instanceof InstancedMesh)) {
     const source = instance.sourceMesh;
     const mesh: Mesh = source.clone(instance.name, instance.parent, true);

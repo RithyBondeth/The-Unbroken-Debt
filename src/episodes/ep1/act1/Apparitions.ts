@@ -17,6 +17,8 @@ import { breathOut, branchSnap, shadowVanish } from "../audio/nightSounds";
 import { limitLightToRange } from "../../../render/RenderSetup";
 import type { VillageLights } from "./VillageLights";
 import type { Vigil } from "./Vigil";
+import { ShadowFigure } from "../entities/ShadowFigure";
+import { SpiritPresence } from "../entities/SpiritPresence";
 
 /** Blender (x east, y north, z up) to Babylon. */
 const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
@@ -93,12 +95,15 @@ interface Passing {
  *   shadow along the tent's back cloth while Sora is inside.
  * - The follower: on the path, steps answer Sora's own a beat late, just behind her,
  *   and stop when she stops.
- * - The watchers: the Ting Mong and the red-wrapped stone at the shrine, once seen,
+ * - The watchers: the Ting Mong and the primary ancestral shrine effigy, once seen,
  *   turn to face her while she isn't looking.
  */
 export class Apparitions {
   private time = 0;
   private readonly figure: Mesh;
+  private readonly form: ShadowFigure;
+  private readonly presence = new SpiritPresence();
+  private shrineGlow = false;
   private readonly glow: PointLight;
   private readonly cloth: Mesh;
   private readonly watchers: Watcher[] = [];
@@ -132,34 +137,11 @@ export class Apparitions {
       scene,
     );
     texture.hasAlpha = true;
-    // Out among the trees: alpha-tested, so it writes depth and the mist lies over
-    // it as over a tree, and unlit black whatever the lamp does.
-    const solid = new StandardMaterial("M_neakta_shadow", scene);
-    solid.diffuseTexture = texture;
-    solid.useAlphaFromDiffuseTexture = true;
-    solid.transparencyMode = StandardMaterial.MATERIAL_ALPHATEST;
-    solid.alphaCutOff = 0.6;
-    solid.disableLighting = true;
-    solid.emissiveColor = Color3.Black();
-    solid.diffuseColor = Color3.Black();
-    solid.backFaceCulling = false;
-    this.figure = CreatePlane("neakta_shadow", { width: 1.15, height: 2.5 }, scene);
-    this.figure.material = solid;
-    this.figure.billboardMode = Mesh.BILLBOARDMODE_Y;
-    // Its edge: the same shape blended over the cut-out, so the outline is soft
-    // smoke rather than a hard, stair-stepped cut.
-    const edge = new StandardMaterial("M_neakta_shadow_edge", scene);
-    edge.diffuseTexture = texture;
-    edge.useAlphaFromDiffuseTexture = true;
-    edge.alpha = 0.9;
-    edge.disableLighting = true;
-    edge.emissiveColor = Color3.Black();
-    edge.diffuseColor = Color3.Black();
-    edge.backFaceCulling = false;
-    const halo = CreatePlane("neakta_shadow_edge", { width: 1.15, height: 2.5 }, scene);
-    halo.material = edge;
-    halo.parent = this.figure;
-    halo.isPickable = false;
+    // The forest presence has depth and a fixed facing, so moving sideways
+    // reveals its profile rather than turning a flat card toward the player.
+    this.form = new ShadowFigure(scene, "neakta_shadow", 2.5);
+    this.figure = this.form.root;
+    this.form.setPresence(0);
     // On the cloth: a soft shadow, half seen through the light of the flash.
     const soft = new StandardMaterial("M_neakta_shadow_cloth", scene);
     soft.diffuseTexture = texture;
@@ -180,11 +162,12 @@ export class Apparitions {
     this.glow.diffuse = new Color3(0.45, 0.55, 0.75);
     this.glow.specular = Color3.Black();
     this.glow.range = 5;
-    this.glow.intensity = 4;
+    this.glow.intensity = 0;
     this.glow.shadowEnabled = false;
     this.glow.renderPriority = 3;
     limitLightToRange(this.glow, area.container.meshes);
-    this.glow.setEnabled(false);
+    // Keep this light in the shader from startup; animate intensity rather than
+    // enabling a new light (and compiling scene materials) during the scare.
 
     const nodes = [...area.container.transformNodes, ...area.container.meshes];
     for (const node of nodes) {
@@ -202,6 +185,20 @@ export class Apparitions {
     }
 
     game.bus.on("player:step", () => this.onStep());
+  }
+
+  /** Render the forest form during loading; restore its hidden encounter state afterwards. */
+  prepareRenderWarmup(): () => void {
+    const position = this.figure.position.clone();
+    this.figure.position.copyFrom(SHRINE_SPOT);
+    this.figure.position.y = 0;
+    this.form.setPresence(1);
+    this.figure.setEnabled(true);
+    return () => {
+      this.figure.position.copyFrom(position);
+      this.form.setPresence(0);
+      this.figure.setEnabled(false);
+    };
   }
 
   async makeSounds(): Promise<void> {
@@ -252,12 +249,13 @@ export class Apparitions {
 
   update(dt: number): void {
     if (this.game.flags.get("ep1.act2.started", false)) {
-      this.vanish();
+      this.vanish(true);
       this.cloth.setEnabled(false);
       this.follower = null;
       return;
     }
     this.time += dt;
+    this.form.animate(this.time);
     const t = this.time;
     const camera = this.game.camera;
     this.eye.copyFrom(camera.globalPosition);
@@ -282,6 +280,10 @@ export class Apparitions {
 
     this.updatePassing(t);
     this.updateStanding(dt, by);
+    this.presence.update(dt);
+    this.form.setPresence(this.presence.value);
+    this.figure.setEnabled(this.presence.visible);
+    this.glow.intensity = this.shrineGlow ? 4 * this.presence.value : 0;
     if (this.follower && (t > this.follower.until || t - this.follower.lastStep > 0.7)) {
       // She has stopped: one more step behind her, then nothing.
       if (t - this.follower.lastStep > 0.7) this.playStep(0);
@@ -295,7 +297,7 @@ export class Apparitions {
 
   /** Runs `start` the first time `id` comes up. */
   private once(id: string, start: () => void): void {
-    if (this.done.has(id) || this.passing || this.standing) return;
+    if (this.done.has(id) || this.passing || this.standing || this.presence.visible) return;
     this.done.add(id);
     start();
   }
@@ -314,7 +316,7 @@ export class Apparitions {
       scare: true,
       lure: 10,
     });
-    this.glow.setEnabled(true);
+    this.shrineGlow = true;
   }
 
   private startWatcher(): void {
@@ -334,8 +336,12 @@ export class Apparitions {
   }
 
   private stand(spot: Vector3, how: Omit<Standing, "start" | "seenFor">): void {
-    spot.y = this.ground() + 1.25;
+    spot.y = this.ground();
     this.figure.position.copyFrom(spot);
+    this.figure.rotation.y = Math.atan2(this.eye.x - spot.x, this.eye.z - spot.z);
+    this.shrineGlow = false;
+    this.presence.show();
+    this.form.setPresence(0);
     this.figure.setEnabled(true);
     this.standing = { ...how, start: this.time, seenFor: 0 };
   }
@@ -344,19 +350,20 @@ export class Apparitions {
   private updateStanding(dt: number, by: number): void {
     const s = this.standing;
     if (!s) return;
-    const to = this.figure.position.subtract(this.eye);
+    const to = this.figure.position.add(new Vector3(0, 1.25, 0)).subtract(this.eye);
     const distance = to.length();
     const looking = s.inView
       ? this.game.camera.isInFrustum(this.figure)
       : Vector3.Dot(to.normalize(), this.forward) > LOOKING && distance < 22;
-    if (looking) s.seenFor += dt;
+    // Give the entrance time to resolve before a direct look dismisses it.
+    if (looking && this.presence.settled) s.seenFor += dt;
     if (s.lure > 0 && distance < s.lure && s.seenFor === 0) {
       // Something moves beside the shrine: a reason to turn and look.
-      this.play(this.sounds.snap, this.figure.position.add(new Vector3(0, -1.2, 0)));
+      this.play(this.sounds.snap, this.figure.position.add(new Vector3(0, 0.05, 0)));
       s.lure = 0;
     }
     if (distance < s.near || s.seenFor > s.lookFor || this.vigil.lampRaised) {
-      // Gone in an instant: no fade, only the sound where it stood.
+      // A short recession into darkness keeps the exit sharp without a one-frame pop.
       this.play(s.sound, this.figure.position);
       if (s.scare) this.game.atmosphere.scare();
       this.vanish();
@@ -365,10 +372,14 @@ export class Apparitions {
       this.vanish();
   }
 
-  private vanish(): void {
-    this.figure.setEnabled(false);
-    this.glow.setEnabled(false);
+  private vanish(immediate = false): void {
+    this.presence.hide(immediate);
     this.standing = null;
+    if (immediate) {
+      this.form.setPresence(0);
+      this.figure.setEnabled(false);
+      this.glow.intensity = 0;
+    }
   }
 
   private startCloth(): void {
@@ -467,7 +478,8 @@ export class Apparitions {
   }
 
   dispose(): void {
-    this.figure.dispose();
-    this.cloth.dispose();
+    this.form.dispose();
+    this.cloth.dispose(false, true);
+    this.glow.dispose();
   }
 }

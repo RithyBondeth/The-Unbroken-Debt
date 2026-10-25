@@ -27,6 +27,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from kit import *  # noqa: E402,F403  (shared materials and geometry)
 from khmer import *  # noqa: E402,F403  (Khmer village builders)
+from hall_altar import build_hall_altar
+from house_detail import board_panel, gathered_hammock
 from forest import *  # noqa: E402,F403  (the forest, the road and what the dead left)
 
 BLEND = os.path.join(ROOT, "art-source", "blender", "ep1", "ep1_area_village.blend")
@@ -165,7 +167,7 @@ def wall(name, coll, x0, x1, y0, y1, z0, z1, mat, gaps=(), surface="teak"):
         if p1 - p0 < 1e-3 or zz1 - zz0 < 1e-3:
             continue
         bx = (p0, p1, y0, y1) if along_x else (x0, x1, p0, p1)
-        rotate_uvs(box(f"{name}_{k}", coll, *bx, zz0, zz1, mat))
+        board_panel(f"{name}_{k}", coll, *bx, zz0, zz1, mat)
         collider(f"{name}_{k}", coll, *bx, zz0, zz1, surface)
 
 
@@ -280,7 +282,7 @@ def materials():
         "stone_wet": lib("mud_forest", "M_wet_shrine_stone", tint=(0.42, 0.4, 0.36), tile=0.6),
         "sandstone": plain("M_sandstone", (0.32, 0.27, 0.2), rough=0.9),
         "cloth_saffron": lib("rough_linen", "M_wet_cloth_saffron", tint=(0.55, 0.24, 0.05)),
-        "rot_meat": plain("M_rotten_meat", (0.12, 0.07, 0.04), rough=0.25),
+        "rot_meat": plain("M_rotten_meat", (0.12, 0.07, 0.04), rough=0.86),
         "dead_marigold": plain("M_dead_marigold", (0.36, 0.17, 0.05), rough=0.85),
         "wax_red": plain("M_wax_red", (0.4, 0.05, 0.03), rough=0.4),
         "stains": img("M_betel_stains", texture("T_ep1_stains_BC"), rough=0.3, cutout=True),
@@ -291,7 +293,6 @@ def materials():
         "rag": lib("rough_linen", "M_wet_rag", tint=(0.42, 0.38, 0.32)),
         "straw": plain("M_straw", (0.42, 0.34, 0.18), rough=0.9),
         "tea_stain": plain("M_tea_stain", (0.09, 0.06, 0.035), rough=0.12),
-        "tingmong_face": img("M_tingmong_face", texture("T_ep1_tingmong_face_BC"), rough=0.9),
         "milestone": img("M_milestone", texture("T_ep1_milestone_BC"), rough=0.8),
         "teak": lib("dark_wooden_planks", "M_house_teak"),
         "floor": lib("dark_wood", "M_floor_boards", tint=(0.8, 0.7, 0.62)),
@@ -529,8 +530,9 @@ def vegetation(m):
         old_flag(AREA, m, x, y, j, rng)
     path_threads(AREA, m, (-4.6, -22.0), (0.4, -22.0), 2.2, 0, rng)
     path_threads(AREA, m, (-1.2, -44.0), (3.8, -44.0), 2.25, 1, rng)
-    ground_offering(AREA, m, -1.0, -25.5, 0, rng)
-    ground_offering(AREA, m, -2.0, -36.0, 1, rng)
+    # Keep the whole offering cluster beyond the 1.7 m mud-path edge.
+    ground_offering(AREA, m, -4.8, -25.5, 0, rng)
+    ground_offering(AREA, m, -4.7, -36.0, 1, rng)
     forest_fill(m)
 
 
@@ -572,6 +574,7 @@ def forest_fill(m):
     spots = [(x, y, 0.0) for x, y in scatter(6500, lambda x, y: land(x, y, -0.6), tries=60000)]
     for i in range(0, len(spots), 900):
         grass_patch(f"forest_grass_{i // 900}", AREA, m, spots[i:i + 900], rng, size=(0.45, 1.0))
+    forest_enrichment(m)
     yard_edge = [(x, y, 0.0) for x, y in scatter(400, lambda x, y: in_yard(x, y) and not in_yard(x, y, -1.2), tries=20000)]
     grass_patch("yard_edge_grass", AREA, m, yard_edge, rng, size=(0.3, 0.6))
     for j, (x, y) in enumerate(RAG_TREES):
@@ -579,6 +582,88 @@ def forest_fill(m):
     for j, (x, y, cover) in enumerate(WELLS):
         old_well(AREA, m, x, y, rng, j, cover=cover)
     lotus_pond(AREA, m, *POND, rng)
+
+
+def forest_enrichment(m):
+    """Layered fern beds and secondary trees at the path and compound edge."""
+    # Cluster growth instead of distributing every species uniformly. Keep the
+    # entire worn path, sacred-tree clearing, pond and gameplay props accessible.
+    detail_rng = np.random.default_rng(6241910)
+    occupied = TREES + DEAD + BAMBOO + [BANYAN] + HERO_TREES
+    occupied += [(o.location.x, o.location.y) for o in AREA.objects if o.name.startswith('col_tree_')]
+    for j, (x, y) in enumerate(scatter(16, lambda x, y: land(x, y, 1.5)
+                                     and all(math.hypot(x-a, y-b) > 4.5 for a, b in occupied), spacing=5)):
+        tropical_tree(AREA, m, x, y, detail_rng.uniform(10, 16), 600 + j, detail_rng, crown=1.05)
+        occupied.append((x, y))
+    seeds = scatter(180, lambda x, y: land(x, y, .35) and path_distance(x, y) < 13, spacing=1.25)
+    plants, grass = [], []
+    for x, y in seeds:
+        for _ in range(4):
+            bx, by = x + detail_rng.normal(0, .8), y + detail_rng.normal(0, .8)
+            if land(bx, by, .1):
+                plants.append((bx, by))
+        for _ in range(12):
+            bx, by = x + detail_rng.normal(0, 1.1), y + detail_rng.normal(0, 1.1)
+            if land(bx, by, -.1):
+                grass.append((bx, by, 0.))
+    understory(AREA, plants, detail_rng)
+    grass_patch('forest_edge_sedge', AREA, m, grass, detail_rng, size=(.5, 1.12))
+    house_forest(m)
+
+
+def house_forest(m):
+    """A three-sided forest belt outside the compound, visible from the house."""
+    detail_rng = np.random.default_rng(6242011)
+    before = set(AREA.objects)
+    occupied = [(o.location.x, o.location.y) for o in AREA.objects
+                if o.name.startswith(('col_tree_', 'col_palm_', 'col_coco_',
+                                      'col_dead_', 'col_bamboo_', 'col_hero_tree_'))]
+    # Three trees on each flank and four across the rear: the house sits in
+    # forest rather than facing a grove with an empty backdrop. Keep roots
+    # outside the fence and crowns above all ground-level access routes.
+    specs = [(-26, -15.5, 0, 30)] * 3 + [(15.5, 26, 0, 30)] * 3 + [(-22, 22, 25.5, 36)] * 4
+    for j, (x0, x1, y0, y1) in enumerate(specs):
+        for _ in range(5000):
+            x, y = detail_rng.uniform(x0, x1), detail_rng.uniform(y0, y1)
+            if land(x, y, 1.2) and all(math.hypot(x-a, y-b) > 4.5 for a, b in occupied):
+                break
+        else:
+            raise RuntimeError(f'No clear house-side tree position for {j}')
+        height = detail_rng.uniform(12, 17)
+        obj = tropical_tree(AREA, m, x, y, height, 700+j, detail_rng, crown=1.1)
+        obj['forest_height'] = height
+        occupied.append((x, y))
+    def belt(x, y):
+        return ((15 < abs(x) < 27 and 0 < y < 31) or
+                (-24 < x < 24 and 24 < y < 36)) and land(x, y, .1)
+    seeds = []
+    for _ in range(10000):
+        x, y = detail_rng.uniform(-27, 27), detail_rng.uniform(0, 36)
+        if belt(x, y) and all(math.hypot(x-a, y-b) > 1.3 for a, b in seeds):
+            seeds.append((x, y))
+            if len(seeds) == 80:
+                break
+    plants, grass = [], []
+    for x, y in seeds:
+        for _ in range(3):
+            bx, by = x + detail_rng.normal(0, .65), y + detail_rng.normal(0, .65)
+            if belt(bx, by):
+                plants.append((bx, by))
+        for _ in range(20):
+            bx, by = x + detail_rng.normal(0, 1.0), y + detail_rng.normal(0, 1.0)
+            if belt(bx, by):
+                grass.append((bx, by, 0.))
+    # Low growth along the inside of the back fence, clear of the shed,
+    # rear house access and the cart in the northeast corner.
+    for x in (-11.5, -9, -6.5, -3.5, 3.5, 6.5):
+        plants.append((x, 21.15))
+        for _ in range(18):
+            grass.append((x + detail_rng.uniform(-.6, .6), detail_rng.uniform(20.6, 21.7), 0.))
+    understory(AREA, plants, detail_rng)
+    grass_patch('house_sedge', AREA, m, grass, detail_rng, size=(.3, .8))
+    for obj in set(AREA.objects) - before:
+        if not obj.name.startswith(('tree_', 'col_tree_')):
+            obj.name = 'house_forest_' + obj.name
 
 
 def road(m):
@@ -789,31 +874,15 @@ def interiors(m):
     """The hall with the ancestral altar, the kitchen, Yay Mey's and Sok's rooms."""
     F = FLOOR
     box("hall_mat", AREA, -1.8, 1.8, 12.4, 15.2, F, F + 0.006, m["mat"])
-    # Ancestral altar: a teak cabinet with a stepped shelf, against the back wall.
-    usable("interact_altar", (0, 17.4, F + 1.15), lambda: (
-        box("altar_ancestral", AREA, -0.8, 0.8, 17.4, 17.92, F, F + 1.1, m["teak"], edge=0.01),
-        box("altar_ancestral_top", AREA, -0.6, 0.6, 17.62, 17.92, F + 1.1, F + 1.45, m["teak"], edge=0.01)),
-        action="place", accepts="betel_tray")
+    # Authored cabinet and close-view altar components share the original anchors.
+    build_hall_altar(AREA, m, F)
     collider("altar_ancestral", AREA, -0.8, 0.8, 17.4, 17.92, F, F + 1.1)
-    for k, sx in enumerate((-1, 1)):
-        place(AREA, "brass_vase_03", (sx * 0.5, 17.78, F + 1.45))
-        lotus_buds(f"hall_lotus_{k}", AREA, sx * 0.5, 17.78, F + 1.6, m, n=2)
-        candle(f"hall_candle_{k}", AREA, sx * 0.25, 17.75, F + 1.45, m, lit=False)
-    place(AREA, "brass_pot_01", (0.0, 17.75, F + 1.45), scale=0.45)
-    lathe("hall_altar_lamp", AREA, [(0.0, 0.0), (0.05, 0.0), (0.07, 0.02), (0.06, 0.035), (0.0, 0.03)], 0.3, 17.5, F + 1.1, m["clay"], segments=10)
-    flame("hall_altar_lamp_flame", AREA, 0.3, 17.5, F + 1.135, 0.035, m["flame"])
     empty("light_flame_hall", AREA, (0.3, 17.5, F + 1.2), radius=4.0, intensity=0.9)
-    incense_sticks("hall_incense", AREA, 0.0, 17.75, F + 1.58, m, 5, rng, lit=False)
-    sla_thor("hall_slathor", AREA, 0.0, 17.6, F + 1.1, m)
     # Kanha's drawing of the betel tray, pinned beside the altar (A1-08).
     usable("interact_kanha_drawing", (1.1, 17.9, F + 1.5), lambda: mesh_object(
         "kanha_drawing", AREA, [(0.9, 17.89, F + 1.3), (1.3, 17.89, F + 1.3), (1.3, 17.89, F + 1.7), (0.9, 17.89, F + 1.7)],
         [(0, 1, 2, 3)], m["kanha_drawing"], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)]), action="examine")
-    # A low offering stand before the altar, where the betel tray is set (A1-09).
-    box("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F + 0.3, F + 0.34, m["teak"], edge=0.008)
-    for lx in (-0.26, 0.26):
-        for ly in (16.79, 17.16):
-            box(f"offering_stand_leg_{lx:+.2f}_{ly:.2f}", AREA, lx - 0.02, lx + 0.02, ly - 0.02, ly + 0.02, F, F + 0.3, m["teak"])
+    # The detailed stand is built with the altar; retain its collision and tray marker.
     collider("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F, F + 0.34)
     empty("marker_betel_tray", AREA, (0.0, 16.975, F + 0.34))
     usable("interact_incense_bundle", (-0.45, 17.55, F + 1.12), lambda: [
@@ -838,9 +907,10 @@ def interiors(m):
     box("kitchen_hearth", AREA, -5.8, -4.6, 11.7, 12.6, F, F + 0.45, m["clay"], edge=0.02)
     box("kitchen_hearth_ash", AREA, -5.72, -4.68, 11.78, 12.52, F + 0.45, F + 0.47, m["ash"])
     collider("kitchen_hearth", AREA, -5.8, -4.6, 11.7, 12.6, F, F + 0.6)
-    for k, (sx, sy) in enumerate(((-5.4, 11.95), (-5.0, 11.95), (-5.2, 12.32))):
+    # Keep the three stones under the pot's foot ring, with its base at their tops.
+    for k, (sx, sy) in enumerate(((-5.295, 12.025), (-5.105, 12.025), (-5.2, 12.19))):
         lathe(f"hearth_stone_{k}", AREA, [(0.0, 0.0), (0.07, 0.0), (0.08, 0.06), (0.05, 0.14), (0.0, 0.15)], sx, sy, F + 0.46, m["stone"], segments=7)
-    place(AREA, "ceramic_pot", (-5.2, 12.08, F + 0.56), scale=0.55)
+    place(AREA, "ceramic_pot", (-5.2, 12.08, F + 0.61), scale=0.55)
     box("kitchen_table", AREA, -5.0, -3.6, 13.2, 14.2, F + 0.7, F + 0.75, m["worn"], edge=0.01)
     for lx in (-4.95, -3.65):
         for ly in (13.25, 14.15):
@@ -853,7 +923,8 @@ def interiors(m):
         place(AREA, "wooden_bowl_01", (-4.1, 13.9, F + 0.75), scale=0.45),
         [lathe(f"areca_{k}", AREA, [(0.0, 0.0), (0.02, 0.008), (0.022, 0.025), (0.0, 0.04)], -4.1 + 0.025 * math.cos(k * 2.1),
                13.9 + 0.025 * math.sin(k * 2.1), F + 0.77, m["areca"], segments=8) for k in range(4)]), action="pickup", item="areca")
-    usable("interact_oil_kitchen", (-5.5, 13.9, F + 1.0), lambda: oil_bottle("oil_kitchen", -5.5, 13.9, F + 0.95, m), action="pickup", item="oil")
+    # Centre the bottle and its pickup anchor over the narrow wall shelf.
+    usable("interact_oil_kitchen", (-5.82, 13.9, F + 1.0), lambda: oil_bottle("oil_kitchen", -5.82, 13.9, F + 0.95, m), action="pickup", item="oil")
     box("kitchen_shelf", AREA, -5.94, -5.7, 13.4, 14.4, F + 0.9, F + 0.95, m["post"])
     usable("interact_kitchen_drawer", (-3.8, 13.2, F + 0.65), lambda: box("kitchen_drawer", AREA, -4.0, -3.7, 13.18, 13.2, F + 0.6, F + 0.69, m["worn"]),
            action="open", item="matches")
@@ -929,16 +1000,7 @@ def under_house(m):
         place(AREA, "wicker_basket_02", (x, y, 0), rot_deg=40 * k, scale=s)
     place(AREA, "wooden_ladder_02", (5.6, 13.6, 0), rot_deg=90).rotation_euler.x = math.radians(-14)
     # A cloth hammock between two posts on the west side, out of the patrol's path.
-    pts = sag((-6.0, 10.25, 1.35), (-6.0, 13.75, 1.35), 0.6, n=14)
-    verts, faces = [], []
-    for i, (x, y, z) in enumerate(pts):
-        verts += [(x - 0.35, y, z + 0.08), (x, y, z - 0.08), (x + 0.35, y, z + 0.08)]
-        if i:
-            b = (i - 1) * 3
-            faces += [(b, b + 3, b + 4, b + 1), (b + 1, b + 4, b + 5, b + 2)]
-    mesh_object("hammock", AREA, verts, faces, m["cotton"], smooth=True)
-    for k, (yy, zz) in enumerate(((10.15, 1.4), (13.85, 1.4))):
-        tube(f"hammock_rope_{k}", AREA, [(-6.0, yy, zz), (-6.0, yy + (0.1 if k == 0 else -0.1), zz - 0.02)], 0.012, m["rope"], sides=4)
+    gathered_hammock(AREA, m)
     # Fish traps, a buffalo yoke, a spade and the family's chopping knife.
     for k, (x, y) in enumerate(((2.3, 16.9), (2.65, 17.2), (2.2, 17.45))):
         trap = lathe(f"fish_trap_{k}", AREA, [(0.0, 0.0), (0.16, 0.05), (0.2, 0.3), (0.12, 0.65), (0.06, 0.75), (0.0, 0.75)], 0, 0, 0,
@@ -970,6 +1032,8 @@ def under_house(m):
 
 
 def funeral(m):
+    from funeral import funeral_materials
+    m = funeral_materials(m)
     t = TENT
     pavilion(AREA, m, t, rng)
     # The thread and its handle: all four sides are used as one thing (A3-01 snaps it).
@@ -994,7 +1058,7 @@ def funeral(m):
     # The altar before the coffin, facing the mourners.
     flames = altar(AREA, m, 0.0, 4.25, 0.05, rng)
     for k, f in enumerate(flames):
-        empty(f"light_flame_altar_{k}", AREA, f, radius=2.5, intensity=1.2)
+        empty(f"light_flame_altar_{k}", AREA, f, radius=2.5, intensity=0.45)
     # The four tall incense urns at the dais corners (the vigil's incense loop).
     for k, (x, y) in enumerate([(-1.9, 4.55), (1.9, 4.55), (1.9, 6.6), (-1.9, 6.6)]):
         usable(f"interact_incense_{k}", (x, y, 0.95), lambda x=x, y=y, k=k: tall_burner(f"incense_burner_{k}", AREA, x, y, 0.05, m, rng),
@@ -1037,6 +1101,8 @@ def funeral_details(m):
     """The mourners' things, and the signs that something has been in the pavilion:
     an upset cup, petals and rice scattered before the altar, candle stubs burnt out,
     muddy bare footprints coming round from behind the drape towards the coffin."""
+    from funeral import funeral_materials
+    m = funeral_materials(m)
     t = TENT
     # Oiled-paper umbrellas leaned on the corner post: it has rained for three days.
     for k, (dx, a) in enumerate(((0.12, 0.22), (0.2, -0.15), (0.05, 0.05))):
@@ -1117,6 +1183,8 @@ def funeral_details(m):
         lotus_buds(f"step_lotus_{k}", AREA, cx, 5.0, 0.49, m, n=5)
     # Flies over the food left for the mourners.
     empty("marker_flies_tent", AREA, (-2.2, 2.4, 0.4))
+    from funeral import finish_props
+    finish_props(AREA, m, rng)
 
 
 def house_details(m):
@@ -1183,7 +1251,8 @@ def house_details(m):
                 m["house_papers"], uvs=papers_uv(640, 0, 512, 720))
     # Palm-leaf manuscripts (សាស្ត្រាស្លឹករឹត) between boards, tied with cord, one wrapped in cloth.
     for j in range(3):
-        z = F + 1.24 + j * 0.045
+        # Each volume rests on the binding cord of the one below it.
+        z = F + 1.24 + j * 0.04
         y0 = 15.72 + j * 0.01
         box(f"hall_satra_{j}", AREA, 2.8, 2.9, y0, y0 + 0.3, z, z + 0.035, m["worn" if j != 1 else "krama"], edge=0.004)
         for t in (0.25, 0.75):
@@ -1192,14 +1261,17 @@ def house_details(m):
 
     # Rolled sleeping mats and pillows along the hall wall, clothes hung on pegs.
     for k in range(3):
-        tube(f"rolled_mat_{k}", AREA, [(-2.75, 12.4 + k * 0.3, F + 0.12), (-1.55, 12.4 + k * 0.3, F + 0.12)], 0.11, m["mat"], sides=10, metres_per_v=1.0)
+        # The ten-sided roll's lowest vertices lie radius * cos(pi / 10) below its centre.
+        z = F + 0.11 * math.cos(math.pi / 10)
+        tube(f"rolled_mat_{k}", AREA, [(-2.75, 12.4 + k * 0.3, z), (-1.55, 12.4 + k * 0.3, z)], 0.11, m["mat"], sides=10, metres_per_v=1.0)
     for k in range(3):
         box(f"hall_pillow_{k}", AREA, -2.7, -2.3, 13.5 + k * 0.42, 13.85 + k * 0.42, F, F + 0.14, m["cotton"], edge=0.04)
-    for k, (cy, mat) in enumerate(((15.0, "krama"), (15.4, "cotton_dirty"), (15.75, "cotton"))):
+    # Hang clothes on the solid partition, clear of Yay Mey's doorway (15.6–16.5).
+    for k, (cy, mat) in enumerate(((14.68, "krama"), (15.02, "cotton_dirty"), (15.36, "cotton"))):
         pole(f"peg_{k}", AREA, (-2.93, cy, F + 1.75), (-2.82, cy, F + 1.75), 0.012, m["post"], sides=4)
         cloth(f"peg_cloth_{k}", AREA, cy - 0.17, cy + 0.17, F + 1.0, F + 1.74, -2.86, m[mat], folds=3, depth=0.03, axis="y", segments=(8, 8))
     # A hanging lamp in the hall, unlit; rice baskets and a betel set by the altar.
-    tube("hall_lamp_cord", AREA, [(0.0, 14.5, ZW + 1.5), (0.0, 14.5, F + 2.05)], 0.004, m["rope"], sides=4)
+    tube("hall_lamp_cord", AREA, [(0.0, 14.5, ZW + 1.5), (0.0, 14.5, F + 2.04)], 0.004, m["rope"], sides=4)
     place(AREA, "Lantern_01", (0.0, 14.5, F + 1.75))
     for k, (bx, by) in enumerate(((1.6, 17.5), (2.0, 17.3))):
         place(AREA, "wicker_basket_02", (bx, by, F), rot_deg=50 * k, scale=1.6)

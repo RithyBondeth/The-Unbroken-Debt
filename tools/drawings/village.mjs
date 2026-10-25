@@ -1039,107 +1039,68 @@ function paintSokNotes(ctx, W, H, data) {
   document.fonts.load("40px Freehand").then(draw);
 }
 
-/**
- * A shadow form of the Neak Ta (story bible, rule 16: all shadows are its
- * forms), for the glimpses in Act I: taller than a man, thin, arms hanging past
- * the knees, the head tilted; black, its edges soft and the feet coming apart
- * into smoke. Alpha only matters: the game draws it unlit, black.
- */
+/** Soft projected silhouette matching the stooped 3D form, for lightning on cloth. */
 function paintShadowFigure(ctx, W, H) {
   const r = rng(16);
   ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.scale(W, H);
   ctx.fillStyle = "#000";
-  ctx.strokeStyle = "#000";
-  ctx.lineCap = "round";
-  const stroke = (pts, w0, w1) => {
-    for (let i = 0; i < pts.length - 1; i++) {
-      ctx.lineWidth = w0 + ((w1 - w0) * i) / Math.max(1, pts.length - 2);
-      ctx.beginPath();
-      ctx.moveTo(...pts[i]);
-      ctx.lineTo(...pts[i + 1]);
-      ctx.stroke();
-    }
-  };
-  const cx = W / 2;
-  ctx.filter = `blur(${W * 0.01}px)`;
-  // A hunched back and shoulders, the head hung forward and to one side.
+  ctx.filter = `blur(${W * 0.003}px)`;
+  // Unequal shoulders, compressed neck and a slightly bowed, off-centre head.
   ctx.beginPath();
-  ctx.moveTo(cx - W * 0.24, H * 0.3);
-  ctx.bezierCurveTo(cx - W * 0.2, H * 0.19, cx + W * 0.05, H * 0.15, cx + W * 0.22, H * 0.27);
-  ctx.lineTo(cx + W * 0.17, H * 0.42);
-  ctx.lineTo(cx - W * 0.18, H * 0.42);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(cx + W * 0.06, H * 0.155, W * 0.075, H * 0.05, 0.6, 0, Math.PI * 2);
-  ctx.fill();
-  // Long hair hanging from the head over the shoulders and chest.
-  for (let k = 0; k < 36; k++) {
-    const x0 = cx + W * (0.0 + r(-0.06, 0.12)),
-      y0 = H * r(0.13, 0.18);
-    const len = H * r(0.2, 0.34),
-      sway = W * r(-0.05, 0.05);
-    stroke(
-      [
-        [x0, y0],
-        [x0 + sway * 0.5, y0 + len * 0.5],
-        [x0 + sway, y0 + len],
-      ],
-      W * r(0.012, 0.025),
-      W * 0.004,
-    );
+  ctx.moveTo(0.48, 0.055);
+  ctx.bezierCurveTo(0.53, 0.025, 0.595, 0.05, 0.601, 0.094);
+  ctx.bezierCurveTo(0.614, 0.142, 0.575, 0.183, 0.55, 0.19);
+  ctx.lineTo(0.57, 0.207);
+  ctx.bezierCurveTo(0.63, 0.213, 0.681, 0.231, 0.696, 0.271);
+  ctx.lineTo(0.655, 0.38);
+  ctx.bezierCurveTo(0.62, 0.46, 0.592, 0.52, 0.602, 0.605);
+  ctx.bezierCurveTo(0.608, 0.72, 0.642, 0.81, 0.631, 0.936);
+  // Irregular overlapping cloth ends, not a regular zigzag fringe.
+  for (let k = 0; k <= 21; k++) {
+    const x = 0.631 - (k / 21) * 0.285;
+    ctx.lineTo(x, 0.91 + r(-0.015, 0.055));
   }
-  // A robe gone to rags: narrow at the chest, ragged at the hem.
-  ctx.beginPath();
-  ctx.moveTo(cx - W * 0.17, H * 0.4);
-  ctx.lineTo(cx + W * 0.16, H * 0.4);
-  ctx.lineTo(cx + W * 0.2, H * 0.78);
-  const tatters = 9;
-  for (let k = 0; k <= tatters; k++) {
-    const x = cx + W * 0.2 - (W * 0.4 * k) / tatters;
-    ctx.lineTo(x + W * 0.02, H * (0.8 + r(0.02, 0.12)));
-    ctx.lineTo(x - W * 0.02, H * (0.76 + r(0, 0.03)));
-  }
-  ctx.lineTo(cx - W * 0.2, H * 0.78);
-  ctx.closePath();
+  ctx.bezierCurveTo(0.333, 0.76, 0.369, 0.67, 0.377, 0.585);
+  ctx.bezierCurveTo(0.395, 0.47, 0.361, 0.37, 0.331, 0.281);
+  ctx.bezierCurveTo(0.33, 0.241, 0.389, 0.214, 0.451, 0.205);
+  ctx.lineTo(0.468, 0.171);
+  ctx.bezierCurveTo(0.447, 0.14, 0.445, 0.081, 0.48, 0.055);
   ctx.fill();
-  // Arms hanging past the knees, bent wrong at the elbow, fingers curled.
+  // Tapered sleeves follow shoulder, upper arm, elbow and the hanging wrist.
   for (const side of [-1, 1]) {
-    const sh = [cx + side * W * 0.2, H * 0.29];
-    const el = [cx + side * W * 0.3, H * 0.48];
-    const wr = [cx + side * W * 0.25, H * 0.7];
-    stroke([sh, el, wr], W * 0.06, W * 0.035);
+    const shift = side < 0 ? 0.017 : 0;
+    const x = side < 0 ? 0.334 : 0.687;
+    ctx.beginPath();
+    ctx.moveTo(x, 0.253 + shift);
+    ctx.bezierCurveTo(x + side * 0.039, 0.34, x + side * 0.055, 0.43, x + side * 0.048, 0.49);
+    ctx.bezierCurveTo(x + side * 0.04, 0.57, x + side * 0.046, 0.65, x + side * 0.05, 0.69);
+    ctx.lineTo(x + side * 0.017, 0.699);
+    ctx.bezierCurveTo(x + side * 0.007, 0.62, x + side * 0.001, 0.55, x + side * 0.003, 0.5);
+    ctx.bezierCurveTo(x - side * 0.017, 0.43, x - side * 0.031, 0.34, x - side * 0.034, 0.29);
+    ctx.closePath();
+    ctx.fill();
+    // Fingers remain close to the palm; their joints differ in length and curl.
     for (let f = 0; f < 4; f++) {
-      const fx = wr[0] + side * W * (f * 0.012 - 0.015);
-      stroke(
-        [
-          [fx, wr[1]],
-          [fx + side * W * 0.01, wr[1] + H * (0.045 + r(0, 0.02))],
-          [fx - side * W * 0.012, wr[1] + H * (0.07 + r(0, 0.02))],
-        ],
-        W * 0.014,
-        W * 0.007,
-      );
+      const fx = x + side * (0.017 + f * 0.009),
+        len = [0.055, 0.077, 0.072, 0.049][f];
+      ctx.beginPath();
+      ctx.moveTo(fx - 0.004, 0.683 + shift);
+      ctx.bezierCurveTo(fx - 0.005, 0.705, fx + 0.002, 0.711 + len, fx + 0.009, 0.7 + len);
+      ctx.lineTo(fx + 0.01, 0.693 + len);
+      ctx.bezierCurveTo(fx + 0.004, 0.71 + len, fx + 0.003, 0.708, fx + 0.004, 0.683 + shift);
+      ctx.fill();
     }
   }
-  // Below the hem it comes apart into smoke.
-  ctx.filter = `blur(${W * 0.035}px)`;
-  for (let k = 0; k < 50; k++) {
-    ctx.globalAlpha = r(0.15, 0.5);
-    ctx.beginPath();
-    ctx.ellipse(
-      cx + r(-0.18, 0.18) * W,
-      H * r(0.82, 0.98),
-      W * r(0.02, 0.07),
-      H * r(0.01, 0.04),
-      0,
-      0,
-      Math.PI * 2,
-    );
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  ctx.filter = "none";
+  // The lowest part loses density against the fabric, rather than becoming a cloud outline.
+  ctx.globalCompositeOperation = "destination-out";
+  const fade = ctx.createLinearGradient(0, 0.82, 0, 1);
+  fade.addColorStop(0, "rgba(0,0,0,0)");
+  fade.addColorStop(1, "rgba(0,0,0,1)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0.82, 1, 0.18);
+  ctx.restore();
 }
 
 // ------------------------------------------------------------------ leaves
@@ -2307,67 +2268,147 @@ function paintYantra(ctx, W, H, data) {
   document.fonts.load(`40px Freehand`).then(draw);
 }
 
-/**
- * The face of a Ting Mong (តុកតា ទីងមោង), the straw guardian villagers stand at
- * the edge of the village to frighten off spirits and sickness: a cloth sack
- * drawn on in charcoal, staring eyes, a wide mouth. Wraps round the head.
- */
+/** Rain-worn woven sack and charcoal marks; UV front is U=.5, V=.6. */
 function paintTingMongFace(ctx, W, H) {
   const r = rng(131);
-  ctx.fillStyle = "#cfc3a8";
+  ctx.fillStyle = "#958c73";
   ctx.fillRect(0, 0, W, H);
-  mottle(ctx, W, H, 30, 132, 0.25);
-  for (let k = 0; k < 400; k++) {
-    ctx.fillStyle = `rgba(${r() < 0.5 ? "90,70,40" : "240,230,210"},${r(0.05, 0.15)})`;
-    ctx.fillRect(r(0, W), r(0, H), r(1, 3), r(4, 14));
+  mottle(ctx, W, H, 55, 132, 0.32);
+  // Broad damp tide marks and mildew, under the cloth's visible weave.
+  for (let k = 0; k < 240; k++) {
+    const x = r(0, W),
+      y = r(0, H),
+      radius = r(4, 70);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    g.addColorStop(0, `rgba(30,32,23,${r(0.04, 0.22)})`);
+    g.addColorStop(1, "rgba(30,32,23,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   }
-  // The face is drawn on the front quarter of the sack (u around 0.5).
-  const cx = W * 0.5,
-    cy = H * 0.52;
-  ctx.strokeStyle = "rgba(20,16,14,0.92)";
-  ctx.fillStyle = "rgba(20,16,14,0.92)";
-  ctx.lineCap = "round";
-  for (const side of [-1, 1]) {
-    ctx.lineWidth = 7;
+  // Soot has soaked into the fibres: uneven blind marks, with no outlined eyes/pupils.
+  for (const [u, v, rw, rh] of [
+    [0.435, 0.39, 0.03, 0.026],
+    [0.565, 0.36, 0.027, 0.022],
+  ]) {
+    ctx.save();
+    ctx.translate(W * u, H * v);
+    ctx.rotate(u < 0.5 ? -0.13 : 0.09);
+    const stain = ctx.createRadialGradient(0, 0, 0, 0, 0, W * 0.055);
+    stain.addColorStop(0, "rgba(18,18,14,.9)");
+    stain.addColorStop(0.48, "rgba(26,26,20,.62)");
+    stain.addColorStop(1, "rgba(30,29,23,0)");
+    ctx.scale(1, 0.7);
+    ctx.fillStyle = stain;
+    ctx.fillRect(-W * 0.06, -W * 0.06, W * 0.12, W * 0.12);
+    for (let j = 0; j < 45; j++) {
+      ctx.fillStyle = `rgba(12,13,11,${r(0.12, 0.4)})`;
+      ctx.beginPath();
+      ctx.ellipse(r(-4, 4), r(-3, 3), W * rw * r(0.7, 1), H * rh * r(0.6, 1), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    for (let j = 0; j < 10; j++) {
+      const x = W * u + r(-W * rw, W * rw),
+        y = H * v;
+      const g = ctx.createLinearGradient(0, y, 0, y + H * 0.35);
+      g.addColorStop(0, "rgba(24,25,18,.25)");
+      g.addColorStop(1, "rgba(24,25,18,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, r(1, 3), H * r(0.18, 0.35));
+    }
+  }
+  // Collapsed seam across the lower face, roughly repaired by hand.
+  ctx.strokeStyle = "rgba(23,22,17,.8)";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.443, H * 0.675);
+  ctx.bezierCurveTo(W * 0.477, H * 0.67, W * 0.51, H * 0.7, W * 0.553, H * 0.684);
+  ctx.stroke();
+  for (let j = 0; j < 9; j++) {
+    const x = W * (0.447 + j * 0.012),
+      y = H * (0.676 + j * 0.001);
+    ctx.lineWidth = r(1, 2);
     ctx.beginPath();
-    ctx.ellipse(cx + side * W * 0.07, cy - H * 0.06, W * 0.035, H * 0.07, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx + side * W * 0.07, cy - H * 0.05, W * 0.016, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(cx + side * W * 0.03, cy - H * 0.17);
-    ctx.lineTo(cx + side * W * 0.11, cy - H * 0.2);
+    ctx.moveTo(x - 2, y - r(3, 6));
+    ctx.lineTo(x + r(-1, 3), y + r(3, 7));
     ctx.stroke();
   }
+  // Flat-felled side seam and pinprick stitching follow the sack round its back.
+  ctx.strokeStyle = "rgba(35,32,23,.3)";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(cx, cy - H * 0.02);
-  ctx.lineTo(cx - W * 0.01, cy + H * 0.06);
+  ctx.moveTo(W * 0.12, 0);
+  ctx.lineTo(W * 0.13, H);
   ctx.stroke();
-  ctx.fillStyle = "rgba(110,20,16,0.9)";
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + H * 0.16, W * 0.06, H * 0.04, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(20,16,14,0.9)";
-  ctx.lineWidth = 3;
-  for (let k = -3; k <= 3; k++) {
-    ctx.beginPath();
-    ctx.moveTo(cx + k * W * 0.015, cy + H * 0.13);
-    ctx.lineTo(cx + k * W * 0.015, cy + H * 0.19);
-    ctx.stroke();
+  for (let y = 0; y < H; y += 9) {
+    ctx.fillStyle = "rgba(40,35,25,.6)";
+    ctx.fillRect(W * (0.12 + (0.01 * y) / H) - 3, y, 7, 1.4);
   }
-  // Rain has run the charcoal down the cloth.
-  for (let k = 0; k < 18; k++) {
-    const x = cx + r(-W * 0.12, W * 0.12),
-      y = cy + r(-H * 0.1, H * 0.15);
-    const g = ctx.createLinearGradient(0, y, 0, y + H * 0.25);
-    g.addColorStop(0, "rgba(20,16,14,0.35)");
-    g.addColorStop(1, "rgba(20,16,14,0)");
+  for (let x = 0; x < W; x += 3) {
+    ctx.fillStyle = `rgba(211,200,165,${r(0.035, 0.1)})`;
+    ctx.fillRect(x, 0, 1, H);
+  }
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillStyle = `rgba(23,25,18,${r(0.04, 0.1)})`;
+    ctx.fillRect(0, y, W, 1);
+  }
+}
+
+/** Desaturated, weather-stained cotton with faded checks on the wrap. */
+function paintGuardianCloth(ctx, W, H, wrap) {
+  const r = rng(wrap ? 414 : 413);
+  ctx.fillStyle = wrap ? "#51453b" : "#454741";
+  ctx.fillRect(0, 0, W, H);
+  mottle(ctx, W, H, 70, 415, 0.28);
+  if (wrap) {
+    for (let i = 0; i < W; i += 64) {
+      ctx.fillStyle = "rgba(25,28,25,.24)";
+      ctx.fillRect(i, 0, 12, H);
+      ctx.fillRect(0, i, W, 12);
+      ctx.fillStyle = "rgba(160,141,108,.12)";
+      ctx.fillRect(i + 20, 0, 2, H);
+      ctx.fillRect(0, i + 20, W, 2);
+    }
+  }
+  for (let j = 0; j < 420; j++) {
+    const x = r(0, W),
+      y = r(0, H),
+      radius = r(8, 140);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    g.addColorStop(0, `rgba(16,22,17,${r(0.03, 0.18)})`);
+    g.addColorStop(1, "rgba(16,22,17,0)");
     ctx.fillStyle = g;
-    ctx.fillRect(x, y, r(2, 5), H * 0.25);
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   }
+  for (let i = 0; i < W; i += 3) {
+    ctx.fillStyle = `rgba(172,163,140,${r(0.025, 0.09)})`;
+    ctx.fillRect(i, 0, 1, H);
+    ctx.fillStyle = `rgba(10,16,13,${r(0.04, 0.12)})`;
+    ctx.fillRect(0, i, W, 1);
+  }
+  for (let j = 0; j < 1600; j++) {
+    ctx.fillStyle = r() < 0.5 ? "rgba(172,158,119,.1)" : "rgba(8,14,10,.15)";
+    ctx.fillRect(r(0, W), r(0, H), r(1, 2), r(2, 8));
+  }
+}
+
+/** Analytic tangent-space thread relief; repeatable edges for tiled clothing UVs. */
+function paintGuardianWeave(ctx, W, H) {
+  const data = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const ax = (x / W) * Math.PI * 512,
+        ay = (y / H) * Math.PI * 512;
+      const dx = Math.cos(ax) * 0.38 * (1 + 0.25 * Math.sin(ay));
+      const dy = Math.cos(ay) * 0.38 * (1 + 0.25 * Math.sin(ax));
+      const norm = Math.sqrt(dx * dx + dy * dy + 1),
+        i = (y * W + x) * 4;
+      data.data[i] = Math.round(127.5 - (dx / norm) * 127.5);
+      data.data[i + 1] = Math.round(127.5 - (dy / norm) * 127.5);
+      data.data[i + 2] = Math.round(127.5 + 127.5 / norm);
+      data.data[i + 3] = 255;
+    }
+  ctx.putImageData(data, 0, 0);
 }
 
 /** A colonial road marker (borne kilométrique): white stone, red cap, the town and distance. */
@@ -2453,9 +2494,9 @@ export const villageTextures = [
   {
     name: "shadow_figure",
     file: "T_ep1_shadow_figure_BC",
-    size: [256, 512],
+    size: [512, 1024],
     alpha: true,
-    draw: () => canvasPage(256, 512, paintShadowFigure),
+    draw: () => canvasPage(512, 1024, paintShadowFigure),
   },
   { name: "family_prints", file: "T_ep1_family_prints_BC", size: [2560, 716], draw: familyPrints },
   {
@@ -2603,6 +2644,24 @@ export const villageTextures = [
     file: "T_ep1_tingmong_face_BC",
     size: [1024, 512],
     draw: () => canvasPage(1024, 512, paintTingMongFace),
+  },
+  {
+    name: "tingmong_shirt",
+    file: "T_ep1_tingmong_shirt_BC",
+    size: [1024, 1024],
+    draw: () => canvasPage(1024, 1024, paintGuardianCloth, false),
+  },
+  {
+    name: "tingmong_wrap",
+    file: "T_ep1_tingmong_wrap_BC",
+    size: [1024, 1024],
+    draw: () => canvasPage(1024, 1024, paintGuardianCloth, true),
+  },
+  {
+    name: "tingmong_weave",
+    file: "T_ep1_tingmong_weave_N",
+    size: [1024, 1024],
+    draw: () => canvasPage(1024, 1024, paintGuardianWeave),
   },
   {
     name: "milestone",

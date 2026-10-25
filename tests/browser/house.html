@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>House item placement review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="House item placement review"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      "
+    >
+      <button id="phone">Telephone</button>
+      <button id="doorway">Door and cloths</button>
+      <button id="kitchen">Kitchen</button>
+      <button id="hall">Hall shelf</button>
+      <button id="mats">Hall mats</button>
+      <button id="altar">Altar</button>
+      <button id="altar-detail">Altar detail</button>
+      <button id="leaf-offering">Leaf offering</button>
+      <button id="bedroom">Yay Mey’s room</button>
+      <button id="desk">Sok’s desk</button>
+      <button id="gramophone">Gramophone</button>
+      <button id="wood">Wood boards</button>
+      <button id="cobweb">Cobweb</button>
+      <button id="hammock">Hammock</button>
+      <button id="hammock-knot">Hammock binding</button>
+      <button id="capture">Save screenshot</button>
+    </nav>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111c;
+        padding: 8px;
+      "
+    >
+Loading village…</pre>
+    <script type="module" src="./house.ts"></script>
+  </body>
+</html>

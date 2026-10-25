@@ -43,7 +43,7 @@ export class ActOneBeats {
   private gustPlayed = false;
   private nextStep = 0;
   private playTime = 0;
-  private courtyardPause = 0;
+  private courtyardBeatRemaining = 0;
   private readonly entries: string[] = [];
 
   constructor(
@@ -58,7 +58,7 @@ export class ActOneBeats {
     this.progress = new VigilProgress(game.flags, INCENSE_SECONDS);
     this.arrival = new ArrivalProgress(game.flags);
     game.interaction.add("interact_arrival_note", arrivalModels.note);
-    game.interaction.add("interact_arrival_phone", arrivalModels.phone);
+    game.interaction.add("interact_arrival_phone", arrivalModels.phone, { outline: false });
     if (this.arrival.taken) arrivalModels.matches.setEnabled(false);
     else game.interaction.add("interact_blessed_matches", arrivalModels.matches);
     const door = (id: string, collider: string, lock: string) => {
@@ -140,7 +140,7 @@ export class ActOneBeats {
     this.progress.update(dt);
     const game = this.game;
     const feet = game.player.feet;
-    // A1-02: the first view of the white tent. Do not force the camera.
+    // A1-02: let the first view of the tent breathe without taking movement or look.
     if (
       !game.cutscene &&
       !game.flags.get("ep1.arrival.courtyard", false) &&
@@ -149,19 +149,17 @@ export class ActOneBeats {
     ) {
       game.flags.set("ep1.arrival.courtyard", true);
       game.bus.emit("sequence:start", { id: "A1-02" });
-      game.gated.holdStill = true;
-      this.courtyardPause = 3;
+      this.courtyardBeatRemaining = 3;
     }
-    if (this.courtyardPause > 0) {
-      this.courtyardPause -= dt;
-      if (this.courtyardPause <= 0) {
-        game.gated.holdStill = false;
+    if (this.courtyardBeatRemaining > 0) {
+      this.courtyardBeatRemaining -= dt;
+      if (this.courtyardBeatRemaining <= 0) {
         game.bus.emit("sequence:end", { id: "A1-02" });
       }
     }
     if (
       !this.busy &&
-      this.courtyardPause <= 0 &&
+      this.courtyardBeatRemaining <= 0 &&
       !game.cutscene &&
       !game.flags.get("ep1.vigil.started", false) &&
       this.underTent()
