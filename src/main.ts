@@ -1,10 +1,21 @@
-import { Game } from "./core/Game";
-import { createEngine } from "./render/createEngine";
-import { useLocalDecoders } from "./render/decoders";
+import type { Game } from "./core/Game";
 import { detectDevice } from "./render/detectDevice";
+import { isQualityName } from "./render/QualityPresets";
 import { hasSpike, runSpike } from "./spikes";
 import { showRequirementsPage } from "./ui/html/RequirementsPage";
 import { readWelcomeSettings, showBootError, showWelcomeScreen } from "./ui/html/WelcomeScreen";
+
+/**
+ * The engine and the game are a separate chunk, so the welcome screen appears
+ * before the whole game has downloaded; fetching starts at once, behind it.
+ */
+const gameModules = Promise.all([
+  import("./core/Game"),
+  import("./render/createEngine"),
+  import("./render/decoders"),
+]);
+// A failed download is reported when boot awaits it, not while the welcome screen is up.
+gameModules.catch(() => undefined);
 
 async function boot(): Promise<void> {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -25,6 +36,7 @@ async function boot(): Promise<void> {
     return;
   }
 
+  const [{ Game }, { createEngine }, { useLocalDecoders }] = await gameModules;
   const engine = await createEngine(canvas);
   if (!engine) {
     showRequirementsPage(overlay, "no-webgpu");
@@ -39,7 +51,12 @@ async function boot(): Promise<void> {
     return;
   }
 
-  const game = new Game(engine, device);
+  // Development builds only: ?quality=low|medium|high|ultra tests a preset this machine wouldn't pick.
+  const forced = params.get("quality");
+  const game = new Game(
+    engine,
+    import.meta.env.DEV && isQualityName(forced) ? { ...device, quality: forced } : device,
+  );
   game.input.sensitivity = settings.sensitivity;
   game.input.invertY = settings.invertY;
   await game.start({ audio: settings.sound });

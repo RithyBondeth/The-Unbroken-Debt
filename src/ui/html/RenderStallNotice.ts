@@ -1,4 +1,4 @@
-import strings from "../../data/strings/en.json";
+import { t } from "../../data/strings";
 import type { RenderLoopOptions } from "../../render/renderLoop";
 
 let notice: HTMLElement | null = null;
@@ -17,8 +17,8 @@ export const renderStallNotice: RenderLoopOptions = {
       document.body.appendChild(notice);
     }
     notice.innerHTML = `
-      <h1>${strings["render.stall.title"]}</h1>
-      <p>${strings["render.stall.body"]}</p>`;
+      <h1>${t("render.stall.title")}</h1>
+      <p>${t("render.stall.body")}</p>`;
     if (import.meta.env.DEV) {
       const detail = document.createElement("pre");
       detail.textContent = error instanceof Error ? error.message : String(error);
