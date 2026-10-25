@@ -3,9 +3,9 @@ import * as sounds from "../../src/episodes/ep1/audio/nightSounds";
 import { seededRandom } from "../../src/audio/synth";
 
 const RATE = 22050;
-const LOOPS = new Set(["frogsLoop", "cricketsLoop", "chantDrone"]);
+const LOOPS = new Set(["chantDrone"]);
 /** Loops that never fall silent: they must join end to start without a jump. */
-const BEDS = new Set(["villageRain"]);
+const BEDS = new Set(["villageRain", "frogsLoop", "cricketsLoop", "dawnBirds"]);
 
 describe("night placeholder sounds", () => {
   for (const [name, make] of Object.entries(sounds)) {

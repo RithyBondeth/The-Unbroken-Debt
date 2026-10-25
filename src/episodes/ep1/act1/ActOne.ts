@@ -4,7 +4,8 @@ import type { Game } from "../../../core/Game";
 import { loadArea, type Area } from "../../../core/AreaLoader";
 import { seededRandom } from "../../../audio/synth";
 import { thunder } from "../audio/prologueSounds";
-import { villageRain } from "../audio/nightSounds";
+import { dawnBirds, villageRain } from "../audio/nightSounds";
+import { Soundscape } from "./Soundscape";
 import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
@@ -70,6 +71,7 @@ export class ActOne {
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
   private thunderSound: StaticSound | null = null;
+  private soundscape!: Soundscape;
   private wasFlashing = false;
 
   constructor(private readonly game: Game) {}
@@ -156,6 +158,7 @@ export class ActOne {
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
     this.night = new NightLife(game, this.area);
+    this.soundscape = new Soundscape(game, () => this.night.threatSilence);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
@@ -278,6 +281,7 @@ export class ActOne {
     }
     this.vigil.update(dt);
     this.night.update(dt);
+    this.soundscape.update(dt);
     this.apparitions.update(dt);
     this.betel.update(dt);
     this.beats.update(dt);
@@ -315,6 +319,7 @@ export class ActOne {
     this.rainSound?.stop();
     this.thunderSound?.stop();
     this.night.stopForDawn();
+    this.soundscape.stop();
     this.sky.dome.setEnabled(false);
     this.lights.dawn();
     g.scene.clearColor.set(0.26, 0.31, 0.36, 1);
@@ -329,22 +334,12 @@ export class ActOne {
     const audio = g.audio;
     if (audio) {
       const rate = audio.context.sampleRate;
-      const birds = new Float32Array(rate * 8);
-      for (let call = 0; call < 6; call++) {
-        const start = Math.floor((call + 0.25) * rate);
-        for (let i = 0; i < rate * 0.18; i++) {
-          const t = i / rate;
-          birds[start + i] =
-            Math.sin(2 * Math.PI * (1800 * t + 3500 * t * t)) *
-            Math.sin((Math.PI * t) / 0.18) ** 2 *
-            0.15;
-        }
-      }
+      const birds = dawnBirds(rate, seededRandom(5));
       void audio
         .spatialSound("dawn_birds", audio.buffer(birds, rate), "ambience", new Vector3(10, 4, 8), {
           loop: true,
           minDistance: 10,
-          volume: 0.5,
+          volume: 0.2,
         })
         .then((sound) => sound.play())
         .catch(() => undefined);
@@ -379,6 +374,7 @@ export class ActOne {
       },
     );
     await this.night.makeSounds();
+    await this.soundscape.makeSounds();
     await this.apparitions.makeSounds();
     await this.betel.makeSounds();
     await this.beats.makeSounds();

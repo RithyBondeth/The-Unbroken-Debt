@@ -3,7 +3,9 @@ import * as sounds from "../../src/episodes/ep1/audio/prologueSounds";
 import { seededRandom } from "../../src/audio/synth";
 
 const RATE = 22050;
-const LOOPS = new Set(["rainLoop", "clockLoop", "phoneRing", "lineStatic"]);
+const LOOPS = new Set(["clockLoop", "phoneRing"]);
+/** Loops that never fall silent: they must join end to start without a jump. */
+const BEDS = new Set(["rainLoop", "lineStatic"]);
 
 describe("prologue placeholder sounds", () => {
   for (const [name, make] of Object.entries(sounds)) {
@@ -21,6 +23,13 @@ describe("prologue placeholder sounds", () => {
         // Loops wrap without a click: both ends near silence.
         expect(Math.abs(samples[0])).toBeLessThan(0.05);
         expect(Math.abs(samples[samples.length - 1])).toBeLessThan(0.05);
+      }
+      if (BEDS.has(name)) {
+        // The step across the seam is no bigger than steps within the sound.
+        let step = 0;
+        for (let i = 1; i < samples.length; i++)
+          step = Math.max(step, Math.abs(samples[i] - samples[i - 1]));
+        expect(Math.abs(samples[0] - samples[samples.length - 1])).toBeLessThanOrEqual(step);
       }
     });
   }

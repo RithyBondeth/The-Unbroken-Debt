@@ -3,6 +3,7 @@ import type { AudioSystem } from "../../../audio/AudioSystem";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "../../../audio/synth";
 import { chantDrone } from "./nightSounds";
+import { shellacNoise } from "./houseSounds";
 import { SOK_RECORDING } from "../data/investigation";
 import voiceManifest from "../data/sokVoice.json";
 import { parseVoiceManifest } from "../data/voiceManifest";
@@ -34,16 +35,12 @@ export class GramophoneAudio {
       at,
       { loop: true, minDistance: 1.3, volume: 0.28 },
     );
-    const rand = seededRandom(811),
-      samples = new Float32Array(rate * 4);
-    for (let k = 0; k < samples.length; k++)
-      samples[k] = (rand() - 0.5) * 0.035 + (rand() > 0.9993 ? (rand() - 0.5) * 0.65 : 0);
     this.crackle = await audio.spatialSound(
       "gramophone_crackle",
-      audio.buffer(samples, rate),
+      audio.buffer(shellacNoise(rate, seededRandom(811)), rate),
       "sfx",
       at,
-      { loop: true, minDistance: 1.2, volume: 0.17 },
+      { loop: true, minDistance: 1.2, volume: 0.05 },
     );
     const manifest = parseVoiceManifest(voiceManifest, SOK_RECORDING.length);
     let buffers = manifest
