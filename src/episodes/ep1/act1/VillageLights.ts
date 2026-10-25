@@ -8,6 +8,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Area } from "../../../core/AreaLoader";
 import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
+import { softFalloff, useSoftFalloff } from "../../../render/softLampFalloff";
 import { Lightning } from "../Lightning";
 
 /**
@@ -15,16 +16,23 @@ import { Lightning } from "../Lightning";
  * funeral tent glowing from its hanging oil lamps and altar candles; lightning;
  * and Sora's hurricane lamp, the hero light, carried at her side.
  */
-/** Sora's lamp at full flame (physical falloff, so about this much at 1 m). */
-const LAMP_INTENSITY = 10;
+/** Sora's lamp at full flame, as it was with plain physical falloff (this much at 1 m). */
+const PHYSICAL_INTENSITY = 10;
+const LAMP_RANGE = 9;
 /**
- * Close to what she looks at, Sora's lamp is shaded down, as she would lower it:
- * full beyond this distance (m), and never below the floor. From her eye, at
- * physical falloff, a page at arm's length would otherwise get ten times the
- * light of a wall across the room and burn out to white.
+ * With the soft falloff (render/softLampFalloff.ts), the same light at Sora's
+ * working distance, 4 m: everything from about 3 m out is lit as before, and
+ * what she holds up close no longer burns to white.
  */
-const SHADE_FROM = 1.8;
-const SHADE_FLOOR = 0.3;
+const LAMP_INTENSITY = PHYSICAL_INTENSITY / (16 * softFalloff(4, LAMP_RANGE));
+/**
+ * Close to what she looks at, Sora's lamp is shaded down a little more, as she
+ * would lower it: full beyond this distance (m), and never below the floor. The
+ * soft falloff already keeps what she holds from burning out; this keeps an object
+ * she inspects at 1 m as bright as it was, and one at 0.5 m from glaring.
+ */
+const SHADE_FROM = 1.3;
+const SHADE_FLOOR = 0.5;
 
 export class VillageLights {
   /** A2-01 snuffs the hanging lamps independently of incense dimming. */
@@ -87,7 +95,8 @@ export class VillageLights {
     // shadows: from (nearly) the eye, what she can see the lamp lights, and a shadow
     // map turning with her head only made shadows swim over bark and leaves.
     this.lamp = new PointLight("hurricane_lamp", new Vector3(-0.06, -0.14, 0.1), scene);
-    this.lamp.range = 9;
+    this.lamp.range = LAMP_RANGE;
+    useSoftFalloff(this.lamp);
     this.lamp.parent = camera;
     this.lamp.diffuse = FLAME_COLOR.clone();
     this.lamp.intensity = 6;

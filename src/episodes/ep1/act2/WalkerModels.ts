@@ -86,7 +86,7 @@ export class WalkerModels {
 
   private material(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
     const m = new PBRMaterial(`M_${name}`, this.scene);
-    m.albedoColor = Color3.FromHexString(hex);
+    m.albedoColor = Color3.FromHexString(hex).toLinearSpace();
     m.roughness = roughness;
     m.metallic = metallic;
     m.maxSimultaneousLights = 8;

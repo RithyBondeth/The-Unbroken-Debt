@@ -89,7 +89,7 @@ export class OfferingModels {
 
   private material(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
     const material = new PBRMaterial(`M_offering_${name}`, this.scene);
-    material.albedoColor = Color3.FromHexString(hex);
+    material.albedoColor = Color3.FromHexString(hex).toLinearSpace();
     material.roughness = roughness;
     material.metallic = metallic;
     material.maxSimultaneousLights = 8;

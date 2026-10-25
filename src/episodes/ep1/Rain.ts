@@ -8,7 +8,8 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
-const GLASS_PX = { width: 256, height: 512 };
+/** About 340 px per metre over the studio window: a 3 mm drop is a pixel across. */
+const GLASS_PX = { width: 512, height: 1024 };
 /** The glass texture redraws this often: slow drops don't need every frame. */
 const REDRAW_SECONDS = 1 / 15;
 
@@ -31,6 +32,8 @@ export class Rain {
   private readonly streaks: RainStreaks;
   private readonly drops: Drop[] = [];
   private readonly trails: { x: number; y0: number; y1: number; age: number }[] = [];
+  /** Fine beads that cling and never run, drawn once and copied under each redraw. */
+  private readonly mist: HTMLCanvasElement | OffscreenCanvas;
   private sinceDraw = 0;
 
   constructor(
@@ -63,7 +66,8 @@ export class Rain {
     this.material.metallic = 0;
     this.material.backFaceCulling = false;
     sheet.material = this.material;
-    for (let i = 0; i < 70; i++) this.drops.push(this.newDrop(true));
+    for (let i = 0; i < 140; i++) this.drops.push(this.newDrop(true));
+    this.mist = this.paintMist();
 
     // Rain falling past outside: stretched streaks in a box beyond the glass.
     this.streaks = new RainStreaks(scene, 1400, 1600);
@@ -79,13 +83,15 @@ export class Rain {
     this.streaks.light(flash);
 
     for (const drop of this.drops) {
-      if (drop.speed === 0 && this.random() < dt * 0.05 * drop.r) drop.speed = 40 + drop.r * 25;
+      // Only the larger drops grow heavy enough to run.
+      if (drop.speed === 0 && drop.r > 1.8 && this.random() < dt * 0.03 * drop.r)
+        drop.speed = 60 + drop.r * 40;
       drop.y += drop.speed * dt;
       if (drop.speed > 0) {
-        drop.x += (this.random() - 0.5) * 12 * dt;
+        drop.x += (this.random() - 0.5) * 20 * dt;
         const trail = this.trails.at(-1);
         if (this.random() < dt * 8)
-          this.trails.push({ x: drop.x, y0: drop.y - 6, y1: drop.y, age: 0 });
+          this.trails.push({ x: drop.x, y0: drop.y - 10, y1: drop.y, age: 0 });
         else if (trail && Math.abs(trail.x - drop.x) < 2) trail.y1 = drop.y;
       }
     }
@@ -112,40 +118,78 @@ export class Rain {
     return {
       x: this.random() * GLASS_PX.width,
       y: anywhere ? this.random() * GLASS_PX.height : -10 - this.random() * 40,
-      r: 1.2 + this.random() ** 3 * 4,
+      // 2–8 mm: mostly small, a few heavy enough to run.
+      r: 0.7 + this.random() ** 3 * 2.2,
       speed: 0,
     };
+  }
+
+  /**
+   * Water on glass at night is nearly invisible: each bead shows as a pin of
+   * reflected light on its upper side and a faint dark rim below, where it bends
+   * the dark street. No outline, or the drops read as bubbles.
+   */
+  private bead(
+    ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    x: number,
+    y: number,
+    r: number,
+    stretch = 1,
+  ): void {
+    ctx.fillStyle = "rgba(8,10,16,0.32)";
+    ctx.beginPath();
+    ctx.ellipse(x, y + r * 0.25, r, r * stretch, 0, 0, Math.PI);
+    ctx.fill();
+    ctx.fillStyle = "rgba(150,165,190,0.16)";
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 0.95, r * 0.95 * stretch, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(235,242,255,0.7)";
+    ctx.beginPath();
+    ctx.arc(x - r * 0.35, y - r * 0.4 * stretch, Math.max(0.45, r * 0.28), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private paintMist(): HTMLCanvasElement | OffscreenCanvas {
+    const canvas =
+      typeof OffscreenCanvas !== "undefined"
+        ? new OffscreenCanvas(GLASS_PX.width, GLASS_PX.height)
+        : Object.assign(document.createElement("canvas"), GLASS_PX);
+    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
+    // Denser towards the bottom, where water gathers on the frame.
+    for (let i = 0; i < 2600; i++) {
+      const y = GLASS_PX.height * Math.sqrt(this.random());
+      this.bead(ctx, this.random() * GLASS_PX.width, y, 0.35 + this.random() ** 2 * 0.7);
+    }
+    return canvas;
   }
 
   private draw(): void {
     const ctx = this.texture.getContext() as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, GLASS_PX.width, GLASS_PX.height);
+    ctx.drawImage(this.mist, 0, 0);
     ctx.lineCap = "round";
+    // A running drop leaves a clear path through the mist, edged by a wet line.
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.strokeStyle = "rgba(0,0,0,0.9)";
+    ctx.lineWidth = 3;
     for (const trail of this.trails) {
-      ctx.strokeStyle = `rgba(210,220,235,${0.22 * (1 - trail.age / 6)})`;
-      ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(trail.x, trail.y0);
       ctx.lineTo(trail.x, trail.y1);
       ctx.stroke();
     }
-    for (const drop of this.drops) {
-      const g = ctx.createRadialGradient(
-        drop.x - drop.r * 0.3,
-        drop.y - drop.r * 0.3,
-        0,
-        drop.x,
-        drop.y,
-        drop.r,
-      );
-      g.addColorStop(0, "rgba(255,255,255,0.75)");
-      g.addColorStop(0.5, "rgba(190,205,225,0.25)");
-      g.addColorStop(1, "rgba(120,135,160,0.5)");
-      ctx.fillStyle = g;
+    ctx.globalCompositeOperation = "source-over";
+    for (const trail of this.trails) {
+      ctx.strokeStyle = `rgba(200,212,230,${0.14 * (1 - trail.age / 6)})`;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.ellipse(drop.x, drop.y, drop.r, drop.r * (drop.speed > 0 ? 1.3 : 1), 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(trail.x, trail.y0);
+      ctx.lineTo(trail.x, trail.y1);
+      ctx.stroke();
     }
+    for (const drop of this.drops)
+      this.bead(ctx, drop.x, drop.y, drop.r, drop.speed > 0 ? 1.35 : 1);
     this.texture.update();
   }
 }

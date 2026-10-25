@@ -16,6 +16,7 @@ import { createPostPipeline, type PostPipeline } from "../render/RenderSetup";
 import { DynamicResolution } from "../render/DynamicResolution";
 import { runRenderLoop } from "../render/renderLoop";
 import { keepLightBudgets } from "../render/lightBudget";
+import { installSoftLampFalloff } from "../render/softLampFalloff";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
@@ -122,6 +123,8 @@ export class Game {
     device: DeviceProfile,
   ) {
     this.preset = getPreset(device.quality);
+    // Before any material compiles: the falloff Sora's lamp uses (VillageLights).
+    installSoftLampFalloff();
     this.scene = new Scene(engine);
     this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
     this.scene.skipPointerMovePicking = true;
