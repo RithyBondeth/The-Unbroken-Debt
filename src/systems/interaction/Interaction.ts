@@ -113,6 +113,8 @@ export class Interaction {
       if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = false;
     this.focused = target;
     for (const mesh of target?.outline ? target.meshes : []) {
+      // Invisible pickup volumes should be usable without drawing a box outline.
+      if (mesh.visibility === 0) continue;
       if (!mesh.edgesRenderer) {
         mesh.enableEdgesRendering(EDGE_EPSILON);
         mesh.edgesWidth = EDGE_WIDTH;

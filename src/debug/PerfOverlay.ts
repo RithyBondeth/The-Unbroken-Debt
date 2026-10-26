@@ -20,6 +20,7 @@ export class PerfOverlay {
     private readonly engine: AbstractEngine,
     private readonly scene: Scene,
     parent: HTMLElement = document.body,
+    private readonly details?: () => readonly string[],
   ) {
     this.engineStats = new EngineInstrumentation(engine);
     this.engineStats.captureGPUFrameTime = true;
@@ -74,6 +75,7 @@ export class PerfOverlay {
       `draw calls ${this.sceneStats.drawCallsCounter.current}`,
       `triangles drawn ${(this.scene.getActiveIndices() / 3 / 1e6).toFixed(2)} M (all passes)`,
       `${this.engine.getRenderWidth()}×${this.engine.getRenderHeight()}`,
+      ...(this.details?.() ?? []),
     ];
     this.element.textContent = lines.join("\n");
   }

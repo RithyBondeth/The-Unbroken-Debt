@@ -1,0 +1,10 @@
+START start; click to begin
+PASS fresh game starts in studio, without seeded progress
+AIM {X: -3 Y: 0.9129999876022339 Z: -0.7200000286102295}
+PASS interaction ray: interact_illustration (interact_illustration)
+AIM {X: -0.6650000214576721 Y: 0.6700000166893005 Z: -2.5}
+PASS interaction ray: interact_drawer (interact_drawer)
+PASS prologue supplies ten matches
+PASS letters collected once
+PASS ink-blot entry opens the sketchbook automatically
+FAIL Error: Timeout: ringing phone puts away the automatic sketchbook

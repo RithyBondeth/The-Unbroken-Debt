@@ -2,6 +2,7 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import type { Game } from "../../../core/Game";
 import { loadArea, type Area } from "../../../core/AreaLoader";
 import { meshesOf } from "../../../systems/interaction/Interaction";
@@ -21,6 +22,8 @@ import {
 import { StudioLights } from "./Studio";
 import { Rain } from "../Rain";
 import { InkMarks } from "./InkMarks";
+import type { StringKey } from "../../../data/strings";
+import { StudioDetails } from "./StudioDetails";
 
 const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
@@ -34,8 +37,12 @@ const PICKUPS: Record<string, { item: string; count?: number }> = {
   matchbox: { item: "matches", count: STARTING_MATCHES },
   letters: { item: "letters" },
 };
-/** How far the desk drawer slides out, in metres. */
-const DRAWER_TRAVEL = 0.28;
+const KIT_HINTS: Record<(typeof KIT)[number], StringKey> = {
+  satchel: "hint.packSatchel",
+  sketchbook: "hint.packSketchbook",
+  matches: "hint.packMatches",
+  lamp: "hint.packLamp",
+};
 
 type SoundMaker = (sampleRate: number, rand: () => number) => Float32Array;
 
@@ -56,34 +63,80 @@ export class Prologue {
   private ringing = false;
   private playTime = 0;
   private wasFlashing = false;
+  details!: StudioDetails;
 
   constructor(private readonly game: Game) {}
+
+  /** Included in the development overlay when diagnosing browser input. */
+  get debugStatus(): string {
+    const missing = KIT.filter((item) => !this.game.inventory.has(item));
+    return `phone ringing=${this.ringing} waiting=${this.waiting.has(PHONE)} answered=${this.game.flags.get("ep1.phone.answered", false)}\nkit missing: ${missing.join(", ") || "none"}`;
+  }
 
   async load(): Promise<void> {
     const game = this.game;
     this.area = await loadArea(game.scene, "ep1", "ep1_area_studio", {
-      keep: ["window_glass", "drawer_knob", "letters_string", "matchbox", /^letter_\d/],
+      keep: [
+        "window_glass",
+        "drawer_knob",
+        "letters_string",
+        "matchbox",
+        /^letter_\d/,
+        /^desk_lamp_/,
+      ],
     });
+    this.details = new StudioDetails(game.scene, this.area);
     this.lights = new StudioLights(game.scene, this.area, game.preset);
     const glass = game.scene.getMeshByName("window_glass");
     if (glass) this.rain = new Rain(game.scene, glass);
     this.ink = new InkMarks(game.scene, this.mesh(ILLUSTRATION));
+
+    // The lantern has open space through its centre. Give the whole visible
+    // silhouette a pickup target so aiming at that opening still takes it.
+    const lamp = this.node("interact_lamp");
+    if (lamp) {
+      lamp.computeWorldMatrix(true);
+      const { min, max } = lamp.getHierarchyBoundingVectors(true);
+      const size = max.subtract(min);
+      const pickup = CreateBox(
+        "studio_lamp_pickup",
+        {
+          width: size.x,
+          height: size.y,
+          depth: size.z,
+        },
+        game.scene,
+      );
+      pickup.position.copyFrom(Vector3.Center(min, max));
+      pickup.visibility = 0;
+      pickup.setParent(lamp);
+    }
 
     // P01: fade in at the drafting table, looking down at the illustration.
     const spawn = this.area.level.spawns.get("player");
     game.spawnPlayer(spawn?.position, spawn?.yaw ?? Math.PI);
     game.player.pitch = 0.6;
 
-    for (const { name, node } of this.area.level.interactables) game.interaction.add(name, node);
+    for (const { name, node } of this.area.level.interactables)
+      game.interaction.add(name, node, { outline: name !== PHONE && name !== DRAWER });
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
     game.bus.on("interact:focus", ({ id }) => {
       if (id === ILLUSTRATION) game.hints.show("hint.use");
+      if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
+      if (id === "matchbox") game.hints.show("hint.takeMatches", 8);
+      if (id === PHONE) {
+        game.hints.hide();
+        if (this.ringing) game.hints.show("hint.phone", 8);
+      }
     });
   }
 
   /** Starts the prologue once the game's post-processing exists. */
   async begin(): Promise<void> {
     const game = this.game;
+    game.atmosphere.baseExposure = 1.25;
+    game.atmosphere.maxExposure = 3.1;
+    game.atmosphere.nightSightIntensity = 1.8;
     game.addFlameLights(this.lights.deskLamp, this.lights.candle);
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { prologue: Prologue }).prologue = this;
@@ -151,6 +204,10 @@ export class Prologue {
 
     // P06: the telephone rings until Sora answers.
     await this.wait(TIMING.ringDelay);
+    // The ink-blot entry opens the book automatically. Put it away as the
+    // phone rings so the reading gate cannot silently block answering with E.
+    game.sketchbook?.close();
+    game.satchel.close();
     this.ringing = true;
     this.sfx.get("ring")?.play();
     setTimeout(() => {
@@ -172,6 +229,7 @@ export class Prologue {
     game.cutscene = true;
     game.gated.holdStill = true;
     this.node("telephone_earpiece")?.setEnabled(false);
+    game.hands.holdPhone(true);
     this.play("static");
     await this.say(LINES.call1);
     await this.wait(0.4);
@@ -187,6 +245,7 @@ export class Prologue {
     await this.wait(0.9);
     await this.say(LINES.call4);
     this.node("telephone_earpiece")?.setEnabled(true);
+    game.hands.holdPhone(false);
     game.gated.holdStill = false;
     game.cutscene = false;
     game.flags.set("ep1.phone.answered", true);
@@ -245,8 +304,13 @@ export class Prologue {
     const pickup = PICKUPS[id];
     if (pickup) return void this.take(id, pickup.item, pickup.count);
     if (id === DRAWER && !this.drawerOpen) return this.openDrawer();
-    if (id === DOOR && !game.flags.get("ep1.phone.answered", false)) {
-      if (!game.flags.get("ep1.kit.collected", false)) game.hints.show("hint.notYet", 3);
+    if (
+      (id === PHONE || id === DOOR) &&
+      !this.ringing &&
+      !game.flags.get("ep1.phone.answered", false)
+    ) {
+      const missing = KIT.find((item) => !game.inventory.has(item));
+      game.hints.show(missing ? KIT_HINTS[missing] : "hint.phoneQuiet", 8);
     }
   }
 
@@ -264,9 +328,18 @@ export class Prologue {
       parts.forEach((n, i) => {
         // Out of the desk towards the room: Blender +X, Babylon −X.
         const from = start[i];
-        if (n && from) n.setAbsolutePosition(from.add(new Vector3(-DRAWER_TRAVEL * ease, 0, 0)));
+        if (n && from)
+          n.setAbsolutePosition(from.add(new Vector3(-this.details.drawerTravel * ease, 0, 0)));
       });
-      if (t >= 1) slide.remove();
+      if (t >= 1) {
+        slide.remove();
+        // Lean toward the exposed contents; movement keys leave inspection.
+        const match = this.node("matchbox");
+        if (match && !this.game.inventory.has("matches")) {
+          this.game.inspectObject(match.getAbsolutePosition(), 0.2);
+          this.game.hints.show("hint.takeMatches", 10);
+        }
+      }
     });
     const letters = [
       this.node("letters_string"),
@@ -296,6 +369,7 @@ export class Prologue {
     for (const name of nodes) this.node(name)?.setEnabled(false);
     this.play("pickup");
     game.inventory.add(item, count);
+    if (item === "matches") game.hints.performed("hint.takeMatches");
     // P04: the satchel opens once by itself, to show where things go.
     if (item === "satchel") {
       game.toggleSatchel();
