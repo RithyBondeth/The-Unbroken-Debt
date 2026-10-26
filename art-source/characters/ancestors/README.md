@@ -7,6 +7,10 @@ Original forms guided by the four village-shrine photographs supplied by the use
 - Seated forms: appended from this source by `tools/areas/shrine.py` into the authored village. The larger statue retains `neakta_stone_watch` and its offscreen turning behaviour.
 - Anatomical face, ears, hands and fingers are modelled geometry. The eyes are inset behind eyelids. Mineral paint and fine surface relief are image-backed. Lap cloth is settled against anatomical collision geometry and a stone-seat support, then baked; the game runs no cloth or skeleton simulation.
 - Three encounters share one loaded asset and its GPU geometry/materials. All forms remain non-pickable.
+- The standing apparition is the **black Neak Ta** (user direction, 26 October 2026). `ShadowFigure.prepare`
+  multiplies the shared mineral paint down to soot-black lacquer, keeping its mottling and relief, with a dull
+  sheen so the lamp still finds the face. The chalk eyes and the cotton are unchanged. The seated shrine
+  statues in the village keep their pale paint, because only the encounter asset is darkened.
 
 ## Rebuild
 

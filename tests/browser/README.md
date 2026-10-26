@@ -10,7 +10,8 @@ the path, individual grass blades, trunk roots, canopy, road and compound edge.
 are in `docs/production/forest-reference-study.md` and `tools/areas/rebuild-forest.py`.
 **House and forest** and **Behind the house** cover the three-sided forest belt.
 **Player lamp** toggles the real lamp so nighttime readability can be compared
-without enabling the optional **Overcast detail light**. A focused belt update
+without enabling the optional **Overcast detail light**. Add `&quality=low` to review
+the Low preset's thinner forest border and fog. A focused belt update
 uses `tools/areas/rebuild-house-forest.py` and the forest merge tool.
 
 Run `npm run dev`, then open

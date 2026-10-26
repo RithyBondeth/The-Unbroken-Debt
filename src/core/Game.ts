@@ -21,6 +21,7 @@ import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
+import { FallGuard } from "../player/FallGuard";
 import { PerfOverlay } from "../debug/PerfOverlay";
 import { AudioSystem } from "../audio/AudioSystem";
 import { Footsteps } from "../audio/Footsteps";
@@ -92,6 +93,9 @@ export class Game {
   pipeline!: PostPipeline;
   atmosphere!: Atmosphere;
   player!: PlayerController;
+  /** Puts Sora back on solid ground if she ever leaves the world (the area may set walls). */
+  readonly fallGuard = new FallGuard();
+  private readonly feetNow = new Vector3();
   private resolution!: DynamicResolution;
   private inspection: Vector3 | null = null;
   private inspectionRadius = 0.31;
@@ -218,6 +222,7 @@ export class Game {
   spawnPlayer(feet = Vector3.Zero(), yaw = 0): void {
     this.player = new PlayerController(this.scene, this.camera, this.gated, feet, this.bus);
     this.player.yaw = yaw;
+    this.fallGuard.reset(feet);
   }
 
   /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
@@ -241,6 +246,7 @@ export class Game {
   }
 
   private update(): void {
+    this.guardFall();
     const book = this.sketchbook;
     book?.update(this.deltaSeconds);
     if (book?.isOpen || book?.isBusy) this.stopInspecting();
@@ -274,6 +280,17 @@ export class Game {
       book?.book.root ?? null,
       this.player?.speed ?? 0,
     );
+  }
+
+  /** Back to the last solid footing, behind a brief black, if Sora has dropped out of the world. */
+  private guardFall(): void {
+    if (!this.player) return;
+    const feet = this.player.feetToRef(this.feetNow);
+    const respawn = this.fallGuard.update(this.deltaSeconds, feet, this.player.supported);
+    if (!respawn) return;
+    console.warn(`[Game] fell out of the world at ${feet.toString()}; back to ${respawn.toString()}`);
+    this.player.teleport(respawn, this.player.yaw);
+    void this.fade.to(1, 0).then(() => this.fade.to(0, 0.8));
   }
 
   /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */

@@ -135,3 +135,27 @@ strip, with folded-back ends and stitched hems. Its lettering uses UASTC
 compression. `rebuild-floral-tributes.py` updates just the two stands, while the
 runtime merge's `--reuse-materials` option keeps the existing compressed craft
 materials and all unrelated village art.
+
+## Black and white mourning cloth (26 October 2026)
+
+The user supplied a photograph of a present-day Cambodian funeral pavilion (Together
+Studio watermark). It was used only as a colour and arrangement reference and is not
+shipped or copied. The pavilion keeps its 1930s bamboo frame and palm thatch. Its
+cloth now follows the black-and-white Khmer funeral scheme:
+
+- The ceiling lining alternates white and black bays between the rafters.
+- A white band with a scalloped black valance runs round the eaves.
+- Black swags are hung over deeper white ones across the entrance, with the gold
+  hems kept. A garland of white chrysanthemums and yellow daisies, in alternating
+  groups of three, runs along their hem.
+- Gathered black curtains hang at every post of the white back and side walls.
+  They are tied at shoulder height with white bows (back) or white cords (sides).
+- The front tie-back curtains and the portrait canopy's top swag are black.
+
+These are made by `mourning_cloth()` and `pavilion()` in `tools/areas/funeral.py`,
+using the new `M_funeral_black_cloth` (rough linen at near-black). The focused rebuild
+now does two things it didn't before. It remakes village materials the saved scene
+has pruned (`M_jasmine` had blocked every run), and it leaves the house pass's silk
+tent cobwebs alone. The run rebuilt 597 funeral nodes, preserved 4,361 unrelated
+Blender objects and 4,161 unrelated exported nodes, and grew the village GLB by
+2.4 MB. Captures: `debug-shots/before-tent-*` and `after-tent-*`.

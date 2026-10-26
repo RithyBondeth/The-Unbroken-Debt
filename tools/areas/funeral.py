@@ -68,6 +68,8 @@ def funeral_materials(m):
         ('lining','rough_linen',(.24,.21,.17),.98,.20),
         ('gold_cloth','fabric_pattern_07',(.68,.48,.18),.78,.17),
         ('cushion','fabric_pattern_07',(.40,.20,.08),.86,.25),
+        # Mourning black, hung with the white (Khmer funeral pavilions are both).
+        ('black','rough_linen',(.032,.030,.030),.92,.20),
     ):
         mat=library_material(source,'M_funeral_'+key,tint=tint,tile=tile)
         bsdf=mat.node_tree.nodes['Principled BSDF']
@@ -390,28 +392,39 @@ def pavilion(coll,m,t,rng):
     for name in names:
         obj=bpy.data.objects.get(name)
         if obj:bpy.data.objects.remove(obj,do_unlink=True)
+    mourning_cloth(coll,m,t)
     fabric('tent_drape_back',coll,f['linen'],lambda u,v,w:(x0+(x1-x0)*u,y1-.03+w,.07+v*(eave-.12)),folds=26,depth=.055,nu=128,nv=32)
     for side,name in ((-1,'w'),(1,'e')):
         px=x0 if side<0 else x1
         fabric(f'tent_drape_{name}',coll,f['linen'],lambda u,v,w,xx=px:(xx+w,y0+1.6+(y1-y0-1.6)*u,.07+v*(eave-.12)),folds=17,depth=.05,nu=96,nv=30)
         # Gathered front curtains open in a curved, load-bearing silhouette.
-        fabric(f'tent_drape_{name}_tied',coll,f['linen'],
+        fabric(f'tent_drape_{name}_tied',coll,f['black'],
                lambda u,v,w,xx=px,sgn=side:(xx+sgn*(.08+.22*math.sin(v*math.pi))+(u-.5)*(.14+.30*abs(v-.48)),
                     y0+.19+w,eave-.06-v*(eave-.30)),nu=26,nv=50,folds=8,depth=.022)
         bow(f'tent_curtain_tie_{name}',coll,m,(px+side*.28,y0+.13,1.28),.19)
     # Layered white swags with narrow gold hems span the pavilion entrance.
+    # Black swags over deeper white ones, as at Cambodian funerals, with a
+    # garland of white and yellow flowers along their hem.
+    garland=Flowers('tent_front_garland',coll,m,7101)
     for k in range(4):
         a=x0+(x1-x0)*k/4;b=x0+(x1-x0)*(k+1)/4
-        fabric(f'tent_entrance_swag_{k}',coll,f['linen'],
+        fabric(f'tent_entrance_underswag_{k}',coll,f['linen'],
+               lambda u,v,w,aa=a,bb=b:(aa+(bb-aa)*u,y0-.07+w,eave+.035-.52*math.sin(math.pi*u)-v*.16),nu=34,nv=14,folds=11,depth=.022)
+        fabric(f'tent_entrance_swag_{k}',coll,f['black'],
                lambda u,v,w,aa=a,bb=b:(aa+(bb-aa)*u,y0-.10+w,eave+.035-.39*math.sin(math.pi*u)-v*.15),nu=34,nv=14,folds=9,depth=.025)
+        for j in range(1,18):
+            u=j/18
+            garland.bloom((a+(b-a)*u,y0-.16,eave-.115-.39*math.sin(math.pi*u)),radius=.036,
+                          normal=(0,-1,.15),yellow=(j//3)%2==1,kind=None if (j//3)%2 else 'chrysanthemum')
         tube(f'tent_entrance_gold_hem_{k}',coll,[(a+(b-a)*u,y0-.135,eave-.11-.39*math.sin(math.pi*u)) for u in (j/44 for j in range(45))],.009,f['gold_cloth'],sides=7)
+    garland.finish()
     # A portrait canopy, distinct from the larger weather shelter.
     for side in (-1,1):
         pole(f'funeral_canopy_post_{side}',coll,(side*1.24,4.65,.32),(side*1.24,4.65,2.42),.025,f['gilt'],sides=10)
         fabric(f'funeral_canopy_curtain_{side}',coll,f['linen'],
                lambda u,v,w,sg=side:(sg*(.40+v*.72)+(u-.5)*(.54-.24*math.sin(v*math.pi)),4.65+w,2.37-v*1.78),nu=32,nv=54,folds=9,depth=.028)
         bow(f'funeral_canopy_tie_{side}',coll,m,(side*.88,4.60,1.27),.14)
-    fabric('funeral_canopy_top_swag',coll,f['linen'],lambda u,v,w:(-1.30+2.6*u,4.62+w,2.42-.25*math.sin(u*math.pi)-v*.17),nu=66,nv=20,folds=16,depth=.022)
+    fabric('funeral_canopy_top_swag',coll,f['black'],lambda u,v,w:(-1.30+2.6*u,4.62+w,2.42-.25*math.sin(u*math.pi)-v*.17),nu=66,nv=20,folds=16,depth=.022)
     tube('funeral_canopy_gold_edge',coll,[(-1.30+2.6*u,4.59,2.25-.25*math.sin(u*math.pi)) for u in (j/64 for j in range(65))],.007,f['gold_cloth'],sides=7)
     # Actual cross-laid floor boards and bamboo joints remain visible at the mat edges.
     boards=[]
@@ -428,6 +441,78 @@ def pavilion(coll,m,t,rng):
     for k,side in enumerate((-1,1)):
         floral_stand(coll,m,side*2.20,5.68,.31,k)
         flower_basket(coll,m,side*1.10,3.78,.065,k)
+
+
+def mourning_cloth(coll,m,t):
+    """The black and white of a Khmer funeral pavilion: the ceiling lined in
+    alternate black and white bays, a scalloped black valance on a white band
+    round the eaves, and black curtains gathered at every post of the white walls."""
+    f=funeral_materials(m)['_funeral']
+    x0,x1,y0,y1,eave,ridge=t['x0'],t['x1'],t['y0'],t['y1'],t['eave'],t['ridge']
+    ym=(y0+y1)/2;half=ym-y0
+    for name in ('tent_lining_-1','tent_lining_1','tent_valance_s','tent_valance_n','tent_valance_-4','tent_valance_4'):
+        obj=bpy.data.objects.get(name)
+        if obj:bpy.data.objects.remove(obj,do_unlink=True)
+    # Ceiling: one panel per rafter bay, sagging between them, black and white in turn.
+    bays=int(round(x1-x0))
+    for side in (-1,1):
+        panels={0:[],1:[]}
+        for i in range(bays):
+            verts,faces=[],[]
+            nx,ny=8,8
+            for j in range(ny+1):
+                v=j/ny
+                for q in range(nx+1):
+                    px=x0+i+q/nx
+                    py=ym+side*half*v
+                    pz=ridge-.12-(ridge-eave)*v-.08*math.sin(math.pi*q/nx)**2*(.4+.6*v)
+                    verts.append((px,py,pz))
+            for j in range(ny):
+                for q in range(nx):
+                    a=j*(nx+1)+q
+                    faces.append((a,a+1,a+nx+2,a+nx+1) if side<0 else (a,a+nx+1,a+nx+2,a+1))
+            uvs=[]
+            for face in faces:
+                for index in face:
+                    px,py,_=verts[index];uvs.append(((px-x0)*.9,(py-ym)*.9))
+            panels[i%2].append(mesh_object(f'tent_lining_bay_{side}_{i}',coll,verts,faces,
+                                           f['linen'] if i%2==0 else f['black'],uvs=uvs,smooth=True))
+        join(panels[0],f'tent_lining_white_{side}');join(panels[1],f'tent_lining_black_{side}')
+    # Valance: a white band with black scallops hanging below it.
+    def valance(name,a,b,z):
+        length=math.dist(a,b);n=max(8,int(length/.05))
+        dx,dy=(b[0]-a[0])/length,(b[1]-a[1])/length
+        for label,mat,top,drop in (('band',f['linen'],0,lambda s:.13),
+                                   ('scallop',f['black'],.11,lambda s:.13+.27*math.sin(math.pi*(s%.5)/.5))):
+            verts,faces,uvs=[],[],[]
+            for i in range(n+1):
+                s=length*i/n;wave=.012*math.sin(s*14)
+                px,py=a[0]+dx*s-dy*wave,a[1]+dy*s+dx*wave
+                verts+=[(px,py,z-top),(px,py,z-top-drop(s))]
+            for i in range(n):
+                faces.append((2*i,2*i+2,2*i+3,2*i+1))
+                uvs+=[(i/n*length,1),((i+1)/n*length,1),((i+1)/n*length,0),(i/n*length,0)]
+            mesh_object(f'{name}_{label}',coll,verts,faces,mat,uvs=uvs)
+    valance('tent_valance_s',(x0-.45,y0-.06),(x1+.45,y0-.06),eave+.02)
+    valance('tent_valance_n',(x0-.45,y1+.06),(x1+.45,y1+.06),eave+.02)
+    for px in (x0,x1):
+        off=.06 if px>0 else -.06
+        valance(f'tent_valance_{px:.0f}',(px+off,y0),(px+off,y1),eave)
+    # Gathered black curtains at the posts, tied at shoulder height with white bows.
+    def gathered(v):
+        return .52-.40*math.sin(math.pi*min(1,v/.62))**1.5 if v<.62 else .12+.30*((v-.62)/.38)**1.2
+    for k,cx in enumerate((x0+.32,-2.0,0.0,2.0,x1-.32)):
+        fabric(f'tent_post_curtain_back_{k}',coll,f['black'],
+               lambda u,v,w,c=cx:(c+(u-.5)*gathered(v),y1-.12+w,eave-.07-v*(eave-.12)),nu=16,nv=40,folds=5,depth=.02)
+        if 0<k<4:bow(f'tent_post_curtain_back_{k}_tie',coll,m,(cx,y1-.15,eave-.07-.62*(eave-.12)),.12)
+    for side,px in ((-1,x0),(1,x1)):
+        for k,cy in enumerate((y0+1.75,(y0+y1)/2+.4,y1-.32)):
+            fabric(f'tent_post_curtain_{"w" if side<0 else "e"}_{k}',coll,f['black'],
+                   lambda u,v,w,c=cy,xx=px-side*.12:(xx+w,c+(u-.5)*gathered(v),eave-.07-v*(eave-.12)),
+                   nu=16,nv=40,folds=5,depth=.02)
+            z=eave-.07-.62*(eave-.12)
+            tube(f'tent_post_curtain_{"w" if side<0 else "e"}_{k}_tie',coll,
+                 [(px-side*.08,cy-.08,z),(px-side*.17,cy,z),(px-side*.08,cy+.08,z)],.012,f['linen'],sides=6)
 
 
 def monks_seat(coll,m,x0,x1,y0,y1,h):

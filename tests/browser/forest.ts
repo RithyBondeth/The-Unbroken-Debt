@@ -5,6 +5,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Game } from "../../src/core/Game";
 import { createEngine } from "../../src/render/createEngine";
 import { detectDevice } from "../../src/render/detectDevice";
+import { isQualityName } from "../../src/render/QualityPresets";
 import { useLocalDecoders } from "../../src/render/decoders";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { saveShot } from "../../src/debug/saveShot";
@@ -16,7 +17,11 @@ async function review(): Promise<void> {
   const engine = await createEngine(document.getElementById("game") as HTMLCanvasElement);
   if (!engine) throw new Error("WebGPU is required");
   useLocalDecoders();
-  const game = new Game(engine, await detectDevice());
+  const device = await detectDevice();
+  // `&quality=low` reviews another preset's forest density and fog on this machine.
+  const quality = new URLSearchParams(location.search).get("quality");
+  if (isQualityName(quality)) device.quality = quality;
+  const game = new Game(engine, device);
   Object.defineProperty(game, "saves", {
     value: new SaveStore(undefined, "boon-sop-forest-review"),
   });

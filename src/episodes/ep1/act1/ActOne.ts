@@ -9,6 +9,9 @@ import { Soundscape } from "./Soundscape";
 import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
+import { ForestBorder } from "./ForestBorder";
+import { PLAY } from "../data/forestBorder";
+import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 import { EaveDrips } from "./EaveDrips";
 import { warmSceneViews } from "../../../render/warmSceneViews";
 import { Vigil } from "./Vigil";
@@ -53,6 +56,7 @@ export class ActOne {
   lights!: VillageLights;
   private rain!: RainStreaks;
   private sky!: StormSky;
+  border!: ForestBorder;
   private drips!: EaveDrips;
   vigil!: Vigil;
   night!: NightLife;
@@ -78,6 +82,7 @@ export class ActOne {
 
   async load(): Promise<void> {
     const game = this.game;
+    this.border = new ForestBorder(game.scene, game.preset);
     this.area = await loadArea(game.scene, "ep1", "ep1_area_village", {
       cellSize: 8,
       // The figures that turn to watch Sora (Apparitions) stay nodes of their own.
@@ -98,7 +103,11 @@ export class ActOne {
       ],
       // The forest's plants are everywhere: batch them in large cells.
       coarse: { pattern: PLANTS, cellSize: 24 },
+      // The forest round the village grows from copies of its own plants.
+      beforeBatch: (container) => this.border.capture(container),
     });
+    this.border.build();
+    game.fallGuard.bounds = PLAY;
     await ShadowFigure.prepare(game.scene);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
@@ -199,21 +208,23 @@ export class ActOne {
   async begin(): Promise<void> {
     const game = this.game;
     game.addFlameLights(...this.lights.flames.slice(0, 4), this.lights.lamp);
-    // Readable moonlit vegetation, with a warmer lamp pool and dark distance.
-    // The exposure cap still keeps extinguishing the lamp meaningfully darker.
-    game.atmosphere.baseExposure = 1.85;
-    game.atmosphere.maxExposure = 2.8;
-    game.atmosphere.nightSightIntensity = 2.8;
-    game.atmosphere.nightSight.range = 3.2;
+    // A dark monsoon night: the lamp's warm pool, flames and lightning, and little
+    // else; adapted eyes find shapes a few metres out. The exposure cap still keeps
+    // extinguishing the lamp meaningfully darker.
+    game.atmosphere.baseExposure = NIGHT_LOOK.baseExposure;
+    game.atmosphere.maxExposure = NIGHT_LOOK.maxExposure;
+    game.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
+    game.atmosphere.nightSight.range = NIGHT_LOOK.nightSightRange;
     // Night sight is the dark around her, not a light on what she holds: the cold
     // lantern stays a dark shape at her side.
     game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes, ...game.hands.meshes);
-    // Rain mist: distance fades into a faint blue-grey, so silhouettes stand against it.
+    // Rain mist: distance fades into a dim blue-black, still just lighter than the
+    // trees, so their silhouettes stand against it.
     const fog = game.pipeline.fog;
     if (fog) {
-      fog.density = 0.028;
+      fog.density = NIGHT_LOOK.fogDensity;
       fog.heightFalloff = 0.25;
-      fog.ambient.set(0.014, 0.019, 0.028);
+      fog.ambient.set(...NIGHT_LOOK.fogAmbient);
     }
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
@@ -297,7 +308,7 @@ export class ActOne {
     // Unlit streaks: faint in the dark, warmed a little by the lamp, white in lightning.
     this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.12, 0.25);
     this.drips.light(this.lights.storm.level);
-    this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure);
+    this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure, dt);
     if (this.rainSound) this.rainSound.spatial.position = eye.clone();
     game.atmosphere.update(dt, this.lights.lightAtEye(eye));
     const flashing = this.lights.flashing;
@@ -322,12 +333,12 @@ export class ActOne {
     this.soundscape.stop();
     this.sky.dome.setEnabled(false);
     this.lights.dawn();
-    g.scene.clearColor.set(0.26, 0.31, 0.36, 1);
-    g.atmosphere.baseExposure = 1.1;
-    g.pipeline.main.imageProcessing.exposure = 1.1;
+    g.scene.clearColor.set(...DAWN_LOOK.clearColor, 1);
+    g.atmosphere.baseExposure = DAWN_LOOK.baseExposure;
+    g.pipeline.main.imageProcessing.exposure = DAWN_LOOK.baseExposure;
     if (g.pipeline.fog) {
-      g.pipeline.fog.density = 0.018;
-      g.pipeline.fog.ambient.set(0.12, 0.15, 0.18);
+      g.pipeline.fog.density = DAWN_LOOK.fogDensity;
+      g.pipeline.fog.ambient.set(...DAWN_LOOK.fogAmbient);
     }
     this.chest.body.pose(0);
     this.chest.body.setLid(0);

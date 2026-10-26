@@ -298,7 +298,8 @@ def materials():
         "teak": lib("dark_wooden_planks", "M_house_teak"),
         "floor": lib("dark_wood", "M_floor_boards", tint=(0.8, 0.7, 0.62)),
         "boards": lib("weathered_brown_planks", "M_house_boards", tint=(0.5, 0.38, 0.3)),
-        "post": lib("dark_wood", "M_house_posts"),
+        # Grey, checked, rain-darkened teak; the grain and its checks run along each post.
+        "post": lib("weathered_planks", "M_house_posts", tint=(0.66, 0.6, 0.54)),
         "post_rough": lib("weathered_planks", "M_wet_rough_posts", tint=(0.55, 0.5, 0.45)),
         "worn": lib("wood_table_worn", "M_worn_wood"),
         "old_planks": lib("old_planks_02", "M_wet_old_planks", tint=(0.7, 0.62, 0.55)),
@@ -1379,6 +1380,8 @@ def build():
     funeral_details(m)
     house(m)
     house_details(m)
+    from house_decay import house_decay
+    house_decay(AREA, m)
     interiors(m)
     under_house(m)
     cooking_shelter(m)
