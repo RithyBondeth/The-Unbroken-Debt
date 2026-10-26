@@ -362,130 +362,23 @@ def lotus_buds(name, coll, x, y, z, m, n=3):
 
 
 def coffin(coll, m, x0, x1, y0, y1, z):
-    """The coffin (មឈូស) on its dais: teak with gilt kbach panels on red lacquer, a
-    gabled lid with upswept corner finials, the white cloth laid across it and a
-    jasmine garland along the ridge. Returns the lid's ridge height."""
-    w = y1 - y0
-    box("coffin_plinth", coll, x0 - 0.06, x1 + 0.06, y0 - 0.06, y1 + 0.06, z, z + 0.08, m["teak"], edge=0.01)
-    zb = z + 0.08
-    zt = zb + 0.48
-    box("coffin_body", coll, x0, x1, y0, y1, zb, zt, m["lacquer"], edge=0.005)
-    # Gilt panels on the four sides, each framed by a gold moulding.
-    for name, (a0, a1, b0, b1) in {
-        "s": (x0 + 0.04, x1 - 0.04, y0 - 0.006, y0), "n": (x0 + 0.04, x1 - 0.04, y1, y1 + 0.006),
-        "w": (x0 - 0.006, x0, y0 + 0.04, y1 - 0.04), "e": (x1, x1 + 0.006, y0 + 0.04, y1 - 0.04),
-    }.items():
-        panel = box(f"coffin_panel_{name}", coll, a0, a1, b0, b1, zb + 0.05, zt - 0.05, m["coffin_panel"])
-        right = (1, 0, 0) if name == "s" else (-1, 0, 0) if name == "n" else (0, -1, 0) if name == "w" else (0, 1, 0)
-        picture_uvs(panel, right, (0, 0, 1))
-    for zz in (zb + 0.02, zt - 0.02):
-        box(f"coffin_band_{zz:.2f}", coll, x0 - 0.012, x1 + 0.012, y0 - 0.012, y1 + 0.012, zz - 0.012, zz + 0.012, m["gold"])
-    # The gabled lid: two sloping gilt faces, lacquered ends, a gold ridge.
-    ridge = zt + 0.22
-    ov = 0.05
-    ym = (y0 + y1) / 2
-    verts = [(x0 - ov, y0 - ov, zt), (x1 + ov, y0 - ov, zt), (x1 + ov, ym, ridge), (x0 - ov, ym, ridge),
-             (x0 - ov, y1 + ov, zt), (x1 + ov, y1 + ov, zt)]
-    lid = mesh_object("coffin_lid", coll, verts, [(0, 1, 2, 3), (5, 4, 3, 2)], m["coffin_panel"],
-                      uvs=[(0, 0), (1, 0), (1, 1), (0, 1), (0, 0), (1, 0), (1, 1), (0, 1)])
-    lid.data.update()
-    mesh_object("coffin_lid_ends", coll, verts, [(0, 3, 4), (1, 5, 2)], m["lacquer"])
-    box("coffin_lid_eave_s", coll, x0 - ov, x1 + ov, y0 - ov - 0.02, y0 - ov + 0.02, zt - 0.03, zt + 0.01, m["gold"])
-    box("coffin_lid_eave_n", coll, x0 - ov, x1 + ov, y1 + ov - 0.02, y1 + ov + 0.02, zt - 0.03, zt + 0.01, m["gold"])
-    pole("coffin_ridge", coll, (x0 - ov - 0.03, ym, ridge), (x1 + ov + 0.03, ym, ridge), 0.022, m["gold"], sides=8)
-    # Upswept finials at the corners and the ridge ends, like small flames (ក្បាច់).
-    for (cx, cy, cz, dx, dy) in ((x0 - ov, y0 - ov, zt, -1, -1), (x1 + ov, y0 - ov, zt, 1, -1),
-                                 (x0 - ov, y1 + ov, zt, -1, 1), (x1 + ov, y1 + ov, zt, 1, 1),
-                                 (x0 - ov - 0.03, ym, ridge, -1, 0), (x1 + ov + 0.03, ym, ridge, 1, 0)):
-        tube(f"coffin_finial_{cx:.1f}_{cy:.1f}_{cz:.1f}", coll,
-             [(cx, cy, cz), (cx + dx * 0.05, cy + dy * 0.04, cz + 0.06), (cx + dx * 0.06, cy + dy * 0.05, cz + 0.13)],
-             0.018, m["gold"], sides=6, radius_end=0.003)
-    # The white cloth across the coffin (to be drawn off by the monks), falling to each side.
-    cx = (x0 + x1) / 2
-    pts = [(ym - (w / 2 + ov + 0.02) - 0.0, zt - 0.3), (ym - (w / 2 + ov + 0.01), zt), (ym, ridge + 0.012),
-           (ym + (w / 2 + ov + 0.01), zt), (ym + (w / 2 + ov + 0.02), zt - 0.3)]
-    verts, faces = [], []
-    for i, (yy, zz) in enumerate(pts):
-        verts += [(cx - 0.25, yy, zz + 0.005), (cx + 0.25, yy, zz + 0.005)]
-        if i:
-            faces.append((2 * i - 2, 2 * i - 1, 2 * i + 1, 2 * i))
-    mesh_object("coffin_cloth", coll, verts, faces, m["cotton"])
-    beads("coffin_garland", coll, [(x0 + 0.1 + (x1 - x0 - 0.2) * t / 40, ym + 0.012 * math.sin(t), ridge + 0.03)
-                                   for t in range(41)], 0.016, m["jasmine"])
-    collider("coffin", coll, x0 - ov, x1 + ov, y0 - ov, y1 + ov, z, ridge)
-    return ridge
+    from funeral import coffin as build
+    return build(coll,m,x0,x1,y0,y1,z)
 
 
-def portrait(coll, m, x, y, z, width=0.3):
-    """Sok's portrait on the altar: the photograph in a dark carved frame on a stand,
-    leaning back a little, facing the mourners (south), with a jasmine garland."""
-    h = width / 0.75
-    tilt = math.radians(10)
-    frame = 0.035
-    parent = empty("portrait_sok", coll, (x, y, z), (tilt, 0, 0))
-    pieces = [
-        box("portrait_frame_l", coll, -width / 2 - frame, -width / 2, -0.012, 0.012, 0, h + 2 * frame, m["frame"], edge=0.004),
-        box("portrait_frame_r", coll, width / 2, width / 2 + frame, -0.012, 0.012, 0, h + 2 * frame, m["frame"], edge=0.004),
-        box("portrait_frame_b", coll, -width / 2, width / 2, -0.012, 0.012, 0, frame, m["frame"], edge=0.004),
-        box("portrait_frame_t", coll, -width / 2, width / 2, -0.012, 0.012, h + frame, h + 2 * frame, m["frame"], edge=0.004),
-        box("portrait_back", coll, -width / 2, width / 2, 0.004, 0.012, frame, h + frame, m["frame"]),
-    ]
-    photo = box("interact_portrait", coll, -width / 2, width / 2, -0.004, 0.004, frame, h + frame, m["photo"], action="examine")
-    picture_uvs(photo, (1, 0, 0), (0, 0, 1))
-    for obj in pieces + [photo]:
-        obj.parent = parent
-    # The stand behind it.
-    stand = pole("portrait_stand", coll, (0, 0.012, h * 0.6), (0, 0.16, -0.01), 0.008, m["frame"], sides=6)
-    stand.parent = parent
-    garland = []
-    for t in range(48):
-        u = t / 47
-        a = math.pi * u
-        garland.append((-math.cos(a) * (width / 2 + frame + 0.01), -0.03, h * 0.35 + math.sin(a) * (h * 0.72)))
-    beads("portrait_garland", coll, garland, 0.013, m["jasmine"]).parent = parent
-    return parent
+def portrait(coll, m, x, y, z, width=0.42):
+    from funeral import portrait as build
+    return build(coll,m,x,y,z,width)
 
 
 def altar(coll, m, x, y, z, rng):
-    """The low table before the coffin: the portrait, two candles, the incense pot, a
-    pair of sla thor, lotus buds, bananas, a coconut and rice."""
-    w, d, h = 1.5, 0.55, 0.62
-    x0, x1, y0, y1 = x - w / 2, x + w / 2, y - d / 2, y + d / 2
-    box("altar_top", coll, x0, x1, y0, y1, z + h - 0.04, z + h, m["teak"], edge=0.008)
-    for lx in (x0 + 0.05, x1 - 0.05):
-        for ly in (y0 + 0.05, y1 - 0.05):
-            box(f"altar_leg_{lx:.1f}_{ly:.1f}", coll, lx - 0.03, lx + 0.03, ly - 0.03, ly + 0.03, z, z + h - 0.04, m["teak"])
-    cloth("altar_cloth_front", coll, x0, x1, z + 0.12, z + h, y0 - 0.01, m["cotton"], folds=9, depth=0.012)
-    collider("altar_table", coll, x0, x1, y0, y1, z, z + h)
-    t = z + h
-    # The portrait stands raised at the back, above the offerings.
-    box("altar_riser", coll, x - 0.24, x + 0.24, y + 0.05, y + 0.25, t, t + 0.14, m["teak"], edge=0.006)
-    portrait(coll, m, x, y + 0.15, t + 0.14, 0.3)
-    flames = [candle(f"altar_candle_{k}", coll, x + sx * 0.5, y + 0.05, t, m) for k, sx in enumerate((-1, 1))]
-    for k, sx in enumerate((-1, 1)):
-        sla_thor(f"altar_slathor_{k}", coll, x + sx * 0.29, y + 0.12, t, m)
-        place(coll, "brass_vase_03", (x + sx * 0.67, y + 0.13, t), rot_deg=40 * k)
-        lotus_buds(f"altar_lotus_{k}", coll, x + sx * 0.67, y + 0.13, t + 0.15, m)
-    # Front row: incense pot, bananas, coconut, rice.
-    place(coll, "brass_pot_01", (x, y - 0.17, t), scale=0.45)
-    lathe("altar_incense_sand", coll, [(0.0, 0.0), (0.062, 0.0)], x, y - 0.17, t + 0.115, m["sand"], segments=12)
-    incense_sticks("altar_incense", coll, x, y - 0.17, t + 0.115, m, 7, rng, length=0.17, spread=0.035)
-    place(coll, "wooden_bowl_01", (x - 0.4, y - 0.12, t), scale=0.75)
-    place(coll, "bananas", (x - 0.4, y - 0.12, t + 0.03), rot_deg=20, scale=0.5)
-    lathe("altar_coconut", coll, [(0.0, 0.0), (0.06, 0.01), (0.085, 0.07), (0.07, 0.14), (0.04, 0.17), (0.0, 0.175)],
-          x + 0.34, y - 0.12, t, m["coconut"], segments=12)
-    place(coll, "wooden_bowl_01", (x + 0.58, y - 0.14, t), scale=0.42)
-    lathe("altar_rice", coll, [(0.0, 0.045), (0.055, 0.03), (0.06, 0.02)], x + 0.58, y - 0.14, t, m["rice"], segments=10)
-    return flames
+    from funeral import altar as build
+    return build(coll,m,x,y,z,rng)
 
 
 def tall_burner(name, coll, x, y, z, m, rng, **props):
-    """One of the four tall brass incense urns at the corners of the coffin."""
-    lathe(name, coll, [(0.16, 0.0), (0.16, 0.03), (0.07, 0.06), (0.045, 0.12), (0.04, 0.55), (0.06, 0.6),
-                       (0.12, 0.66), (0.16, 0.75), (0.17, 0.82), (0.15, 0.84), (0.0, 0.84)], x, y, z, m["brass"], segments=18)
-    lathe(f"{name}_sand", coll, [(0.0, 0.0), (0.145, 0.0)], x, y, z + 0.835, m["sand"], segments=14)
-    incense_sticks(f"{name}_stick", coll, x, y, z + 0.84, m, 3, rng, length=0.32, spread=0.03)
-    collider(name, coll, x - 0.17, x + 0.17, y - 0.17, y + 0.17, z, z + 0.84)
+    from funeral import tall_burner as build
+    return build(name,coll,x,y,z,m,rng,**props)
 
 
 def crocodile_flag(coll, m, x, y, rng):
@@ -522,7 +415,7 @@ def crocodile_flag(coll, m, x, y, rng):
              0.006, m["rope"], sides=4)
 
 
-def pavilion(coll, m, t, rng):
+def _pavilion_base(coll, m, t, rng):
     """រោងបុណ្យ, the funeral pavilion: a bamboo frame lashed with rattan under a palm
     thatch roof, lined with white cloth, a scalloped valance along the eaves, white
     drapes at the back and sides, a slatted bamboo floor laid with mats."""
@@ -630,7 +523,7 @@ def protective_thread(coll, m, t):
         tube(f"thread_{k}", coll, sag((ax, ay, z), (bx, by, z), 0.03 * span, n=16), 0.004, m["thread"], sides=4)
 
 
-def monks_seat(coll, m, x0, x1, y0, y1, h):
+def _monks_seat_base(coll, m, x0, x1, y0, y1, h):
     """The raised seat where the monks sit to chant in the evening: white cloth over
     a plank platform, triangular cushions against the drape, a brass bowl of water."""
     box("monk_seat", coll, x0, x1, y0, y1, 0.0, h, m["teak"], edge=0.01)
@@ -653,19 +546,19 @@ def skor_drums(coll, m, x, y):
     """A pair of skor, the barrel drums of the funeral ensemble, resting on their frame."""
     for k, dx in enumerate((-0.28, 0.28)):
         d = lathe(f"skor_{k}", coll, [(0.21, -0.36), (0.235, -0.2), (0.245, 0.0), (0.235, 0.2), (0.21, 0.36)],
-                  0, 0, 0, m["drum_wood"], segments=16)
+                  0, 0, 0, m["drum_wood"], segments=48)
         d.location = (x + dx, y, 0.42)
         d.rotation_euler = (math.radians(90), 0, math.radians(8))
         for s in (-1, 1):
             # The hide head stretched over each end, laced down the barrel.
-            h = lathe(f"skor_{k}_head_{s}", coll, [(0.0, 0.0), (0.215, 0.0), (0.22, -0.02)], 0, 0, 0, m["hide"], segments=16)
+            h = lathe(f"skor_{k}_head_{s}", coll, [(0.0, 0.0), (0.215, 0.0), (0.22, -0.02)], 0, 0, 0, m["hide"], segments=48)
             h.location = (x + dx, y + s * 0.362, 0.42)
             h.rotation_euler = (math.radians(-90 * s), 0, 0)
-        for j in range(8):
-            a = 2 * math.pi * j / 8
+        for j in range(16):
+            a = 2 * math.pi * j / 16
             tube(f"skor_{k}_lace_{j}", coll, [(x + dx + math.cos(a) * 0.215, y - 0.35, 0.42 + math.sin(a) * 0.215),
                                               (x + dx + math.cos(a + 0.4) * 0.25, y, 0.42 + math.sin(a + 0.4) * 0.25),
-                                              (x + dx + math.cos(a) * 0.215, y + 0.35, 0.42 + math.sin(a) * 0.215)], 0.006, m["rope"], sides=3)
+                                              (x + dx + math.cos(a) * 0.215, y + 0.35, 0.42 + math.sin(a) * 0.215)], 0.006, m["rope"], sides=6)
     box("skor_frame", coll, x - 0.6, x + 0.6, y - 0.2, y + 0.2, 0.05, 0.12, m["worn"])
     collider("skor", coll, x - 0.6, x + 0.6, y - 0.32, y + 0.32, 0, 0.7)
     for k in range(2):
@@ -763,3 +656,13 @@ def bamboo_fence(coll, m, name, a, b, gap=None):
         cy0, cy1 = sorted((p0[1], p1[1]))
         collider(f"{name}_{pi}", coll, cx0 - 0.06, cx1 + 0.06, cy0 - 0.06, cy1 + 0.06, 0, 1.25)
     return n
+
+
+def pavilion(coll,m,t,rng):
+    from funeral import pavilion as build
+    return build(coll,m,t,rng)
+
+
+def monks_seat(coll,m,x0,x1,y0,y1,h):
+    from funeral import monks_seat as build
+    return build(coll,m,x0,x1,y0,y1,h)

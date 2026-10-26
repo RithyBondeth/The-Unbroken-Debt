@@ -11,6 +11,7 @@ import { TENT_FLAME_MESH } from "../data/arrival";
 import { FAILING_LAMPS } from "../data/desk";
 import { coldGust } from "../audio/actTwoSounds";
 import { matchStrike } from "../audio/vigilSounds";
+import { ritualDrone, spiritShriek } from "../audio/actThreeSounds";
 import { rattlingBreath, seededRandom } from "../../../audio/synth";
 
 /** A3-07–08. The player keeps mouse look while movement and other interactions are gated. */
@@ -236,23 +237,9 @@ export class FinalRitual {
     if (!a) return;
     const rate = a.context.sampleRate;
     // Wordless timing stand-in: no invented ceremonial text. The licensed smot remains in NightLife.
-    const mantra = new Float32Array(rate * 4);
-    const screech = new Float32Array(rate * 2);
-    for (let i = 0; i < screech.length; i++) {
-      const t = i / rate;
-      screech[i] =
-        Math.sin(2 * Math.PI * (950 * t - 170 * t * t + 2 * Math.sin(t * 31))) *
-        Math.min(1, t * 20) *
-        Math.exp(-t * 2.5) *
-        0.3;
-    }
+    const mantra = ritualDrone(rate, seededRandom(1913));
+    const screech = spiritShriek(rate, seededRandom(1914));
     const breath = rattlingBreath(rate, seededRandom(1910));
-    for (let i = 0; i < mantra.length; i++) {
-      const t = i / rate;
-      mantra[i] =
-        (Math.sin(t * Math.PI * 2 * 98) * 0.12 + Math.sin(t * Math.PI * 2 * 147) * 0.05) *
-        Math.sin((Math.PI * t) / 4) ** 2;
-    }
     for (const [id, data, at, loop] of [
       ["match", matchStrike(rate, seededRandom(1912)), RITUAL_BURNER, false],
       ["mantra", mantra, RITUAL_BURNER, true],

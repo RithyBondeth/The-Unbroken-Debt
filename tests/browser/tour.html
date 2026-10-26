@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Episode 1 scene tour</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      #game {
+        position: fixed;
+        inset: auto 0;
+        top: 50%;
+        width: 100vw;
+        height: 56.25vw;
+        transform: translateY(-50%);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Episode 1 scene tour"></canvas>
+    <div id="overlay"></div>
+    <nav
+      id="views"
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      "
+    ></nav>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111c;
+        padding: 8px;
+      "
+    >
+Loading…</pre>
+    <script type="module" src="./tour.ts"></script>
+  </body>
+</html>

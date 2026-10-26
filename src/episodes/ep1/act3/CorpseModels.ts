@@ -9,6 +9,7 @@ import { BoundingBox } from "@babylonjs/core/Culling/boundingBox";
 import { Frustum } from "@babylonjs/core/Maths/math.frustum";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Ray } from "@babylonjs/core/Culling/ray";
+import { extrasOf } from "../../../core/LevelBuilder";
 import { RelicCraft } from "./RelicCraft";
 
 /** Anatomical, textured funeral body with five baked, instantaneous offscreen poses. */
@@ -28,6 +29,7 @@ export class CorpseModels {
     const b = new RelicCraft(scene);
     const lid = (this.lid = b.root("coffin_lid_hinge", [0, 1.12, -6.25]));
     const original = area.container.meshes.find((mesh) => mesh.name === "coffin_body");
+    const authoredShell = original ? extrasOf(original).hollow === true : false;
     const timber =
       original?.material instanceof PBRMaterial
         ? original.material
@@ -42,15 +44,18 @@ export class CorpseModels {
           mesh.material = material;
         }
       }
-      if (/^coffin_(cloth|garland|body|band)/.test(mesh.name)) mesh.setEnabled(false);
+      if (/^coffin_(cloth|garland)/.test(mesh.name)) mesh.setEnabled(false);
+      if (!authoredShell && /^coffin_(body|band)/.test(mesh.name)) mesh.setEnabled(false);
     }
     // Four separate walls and a low bed leave a genuine open cavity.
     const shell = b.root("coffin_open_shell", [0, 0, -5.9]);
-    b.box(shell, "coffin_bed", [1.96, 0.045, 0.66], [0, 0.7, 0], timber);
-    for (const z of [-0.335, 0.335])
-      b.box(shell, "coffin_side_wall", [2, 0.48, 0.03], [0, 0.88, z], timber);
-    for (const x of [-0.985, 0.985])
-      b.box(shell, "coffin_end_wall", [0.03, 0.48, 0.7], [x, 0.88, 0], timber);
+    if (!authoredShell) {
+      b.box(shell, "coffin_bed", [1.96, 0.045, 0.66], [0, 0.7, 0], timber);
+      for (const z of [-0.335, 0.335])
+        b.box(shell, "coffin_side_wall", [2, 0.48, 0.03], [0, 0.88, z], timber);
+      for (const x of [-0.985, 0.985])
+        b.box(shell, "coffin_end_wall", [0.03, 0.48, 0.7], [x, 0.88, 0], timber);
+    }
     const gilt = b.mat("coffin_rim_brass", "#8c7134", 0.54, 0.7);
     for (const z of [-0.34, 0.34])
       b.box(shell, "coffin_rim_rail", [2.02, 0.025, 0.035], [0, 1.115, z], gilt);
@@ -64,7 +69,11 @@ export class CorpseModels {
     b.box(this.closeGrip, "coffin_close_handle", [0.28, 0.035, 0.045], [0, 0, 0], gilt);
     area.container.transformNodes.push(shell, this.closeGrip);
     this.root = b.root("sok_funeral_body", [0, 0.725, -5.9]);
-    const dark = b.mat("coffin_lining", "#211b15", 1);
+    const authoredLining = area.container.materials.find(
+      (material) => material.name === "M_funeral_lining",
+    );
+    const dark =
+      authoredLining instanceof PBRMaterial ? authoredLining : b.mat("coffin_lining", "#211b15", 1);
     b.box(this.root, "coffin_inner_padding", [1.88, 0.018, 0.61], [0, 0, 0], dark);
     for (const z of [-0.305, 0.305])
       b.box(this.root, "coffin_inner_rim", [1.96, 0.035, 0.017], [0, 0.015, z], dark);

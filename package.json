@@ -24,7 +24,8 @@
     "postinstall": "node tools/vendor-decoders.mjs",
     "vendor": "node tools/vendor-decoders.mjs",
     "fetch-library": "node tools/fetch-library.mjs",
-    "drawings": "node tools/drawings/render.mjs"
+    "drawings": "node tools/drawings/render.mjs",
+    "credits": "node tools/credits.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",

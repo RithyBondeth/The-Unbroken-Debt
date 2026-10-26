@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forest visual review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Forest visual review"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      "
+    >
+      <button id="path">Forest path</button>
+      <button id="grass">Grass detail</button>
+      <button id="tree">Trunk and roots</button>
+      <button id="canopy">Overhead canopy</button>
+      <button id="road">Road entrance</button>
+      <button id="yard">Compound edge</button>
+      <button id="house">House and forest</button>
+      <button id="rear">Behind the house</button>
+      <button id="lamp" aria-pressed="true">Player lamp</button>
+      <button id="fill" aria-pressed="false">Overcast detail light</button>
+      <button id="capture">Save screenshot</button>
+    </nav>
+    <output
+      id="review-status"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111c;
+        padding: 8px;
+      "
+      >Loading forest…</output
+    >
+    <script type="module" src="./forest.ts"></script>
+  </body>
+</html>

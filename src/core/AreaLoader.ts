@@ -30,6 +30,8 @@ export interface AreaOptions {
   cellSize?: number;
   /** A larger cell size for meshes whose material name matches (scattered plants). */
   coarse?: { pattern: RegExp; cellSize: number };
+  /** Reads the loaded meshes before batching merges them (e.g. to copy plants as templates). */
+  beforeBatch?: (container: AssetContainer) => void;
 }
 
 export async function loadArea(
@@ -49,6 +51,7 @@ export async function loadArea(
   realiseInstances(container);
   const level = buildLevel(scene, [...container.transformNodes, ...container.meshes]);
   for (const warning of level.warnings) console.warn(`[area ${id}] ${warning}`);
+  options.beforeBatch?.(container);
   batchStatics(container, options.keep ?? [], options.cellSize ?? 3, options.coarse);
   return {
     id,
@@ -69,7 +72,7 @@ export async function loadArea(
  * renders the whole frame black (Phase 2 studio). Revisit with thin instances
  * if a crowded area needs instancing for speed.
  */
-function realiseInstances(container: AssetContainer): void {
+export function realiseInstances(container: AssetContainer): void {
   for (const instance of container.meshes.filter((m) => m instanceof InstancedMesh)) {
     const source = instance.sourceMesh;
     const mesh: Mesh = source.clone(instance.name, instance.parent, true);

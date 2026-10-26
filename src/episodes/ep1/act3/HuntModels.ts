@@ -5,7 +5,6 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
-import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
@@ -16,6 +15,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "../../../audio/synth";
 import { JARS } from "../data/hunt";
+import { ShadowFigure } from "../entities/ShadowFigure";
 
 export interface SearchJar {
   id: string;
@@ -30,7 +30,7 @@ export class HuntModels {
   readonly jars: SearchJar[] = [];
   readonly roamer: TransformNode;
   readonly meshes: Mesh[] = [];
-  private readonly arms: TransformNode[] = [];
+  private form!: ShadowFigure;
   private readonly brass: PBRMaterial;
   private readonly dark: PBRMaterial;
   private readonly wood: PBRMaterial;
@@ -179,14 +179,10 @@ export class HuntModels {
   }
   pose(at: Vector3, direction: Vector3, seconds: number, visibility: number): void {
     this.roamer.position.copyFrom(at);
-    this.roamer.position.y += Math.sin(seconds * 3) * 0.018;
     this.roamer.rotation.y = Math.atan2(direction.x, direction.z);
-    this.roamer.rotation.z = Math.sin(seconds * 2) * 0.025;
+    this.form.animate(seconds, 0.65);
     this.roamer.setEnabled(visibility > 0);
-    for (const mesh of this.roamer.getChildMeshes()) mesh.visibility = visibility;
-    this.arms.forEach((arm, i) => {
-      arm.rotation.x = Math.sin(seconds * 3 + i * Math.PI) * 0.08;
-    });
+    this.form.setPresence(visibility);
   }
 
   createPreview(camera: Camera): void {
@@ -299,136 +295,9 @@ export class HuntModels {
     shaft.rotation.z = Math.PI / 2;
   }
   private buildRoamer(): void {
-    const robe = this.textured("roamer_cloth", "#121715", true);
-    robe.roughness = 1;
-    const profile = [
-      [0.25, 0.06],
-      [0.37, 0.15],
-      [0.31, 0.5],
-      [0.29, 0.85],
-      [0.36, 1.15],
-      [0.27, 1.43],
-      [0.16, 1.52],
-    ];
-    const body = CreateLathe(
-      "roamer_folded_shroud",
-      {
-        shape: profile.map(([x, y]) => new Vector3(x, y, 0)),
-        tessellation: 64,
-        sideOrientation: Mesh.DOUBLESIDE,
-      },
-      this.scene,
-    );
-    this.finish(body, this.roamer, [0, 0, 0], robe);
-    for (let k = 0; k < 14; k++) {
-      const a = (k / 14) * Math.PI * 2;
-      this.tube(
-        this.roamer,
-        "roamer_shroud_pleat",
-        [
-          [Math.sin(a) * 0.33, 0.12, Math.cos(a) * 0.33],
-          [Math.sin(a) * 0.285, 0.65, Math.cos(a) * 0.285],
-          [Math.sin(a) * 0.34, 1.14, Math.cos(a) * 0.34],
-          [Math.sin(a) * 0.23, 1.42, Math.cos(a) * 0.23],
-        ],
-        0.012,
-        robe,
-      );
-      const strip = this.box(
-        this.roamer,
-        "roamer_torn_hem",
-        [0.045, 0.12 + (k % 4) * 0.025, 0.006],
-        [Math.sin(a) * 0.31, 0.11, Math.cos(a) * 0.31],
-        robe,
-      );
-      strip.rotation.y = a;
-    }
-    const head = this.root("roamer_bowed_head", new Vector3(0, 1.54, 0.13), this.roamer);
-    this.sphere(head, "roamer_wrapped_head", [0.31, 0.36, 0.27], [0, 0.11, 0], robe);
-    this.sphere(head, "roamer_bronze_face", [0.216, 0.28, 0.055], [0, 0.09, 0.126], this.brass);
-    for (const x of [-0.052, 0.052]) {
-      this.sphere(head, "roamer_hollow_eye", [0.052, 0.029, 0.009], [x, 0.125, 0.153], this.dark);
-      this.box(
-        head,
-        "roamer_brow",
-        [0.062, 0.009, 0.012],
-        [x, 0.151, 0.157],
-        this.brass,
-      ).rotation.z = x > 0 ? -0.12 : 0.12;
-    }
-    this.sphere(head, "roamer_nose", [0.025, 0.08, 0.027], [0, 0.086, 0.161], this.brass);
-    this.box(head, "roamer_silent_mouth", [0.062, 0.006, 0.008], [0, 0.028, 0.155], this.dark);
-    for (let k = 0; k < 5; k++)
-      this.tube(
-        head,
-        "roamer_head_wrap",
-        [
-          [-0.145, -0.01 + k * 0.042, 0],
-          [-0.15, 0.01 + k * 0.042, 0.07],
-          [-0.105, 0.02 + k * 0.042, 0.13],
-        ],
-        0.008,
-        robe,
-      );
-    for (const side of [-1, 1]) {
-      const arm = this.root(
-        "roamer_dragging_arm",
-        new Vector3(side * 0.29, 1.26, 0.03),
-        this.roamer,
-      );
-      this.arms.push(arm);
-      this.tube(
-        arm,
-        "roamer_sleeve",
-        [
-          [0, 0, 0],
-          [side * 0.09, -0.3, 0.05],
-          [side * 0.12, -0.61, 0.18],
-        ],
-        0.065,
-        robe,
-      );
-      this.sphere(
-        arm,
-        "roamer_long_palm",
-        [0.07, 0.12, 0.035],
-        [side * 0.12, -0.7, 0.18],
-        this.dark,
-      );
-      for (let k = 0; k < 4; k++)
-        this.tube(
-          arm,
-          "roamer_curled_finger",
-          [
-            [side * (0.092 + k * 0.017), -0.72, 0.19],
-            [side * (0.092 + k * 0.017), -0.84 - (k % 2) * 0.025, 0.21],
-            [side * (0.092 + k * 0.017), -0.88, 0.17],
-          ],
-          0.006,
-          this.dark,
-        );
-    }
-    this.tube(
-      this.roamer,
-      "roamer_amulet_cord",
-      [
-        [-0.15, 1.5, 0.13],
-        [-0.1, 1.1, 0.31],
-        [0, 0.99, 0.34],
-        [0.1, 1.1, 0.31],
-        [0.15, 1.5, 0.13],
-      ],
-      0.005,
-      this.cloth,
-    );
-    const amulet = this.box(
-      this.roamer,
-      "roamer_bronze_amulet",
-      [0.055, 0.08, 0.008],
-      [0, 1, 0.346],
-      this.brass,
-    );
-    amulet.rotation.z = 0.14;
+    this.form = new ShadowFigure(this.scene, "roamer", 1.87);
+    this.form.root.parent = this.roamer;
+    this.meshes.push(...this.form.meshes);
   }
   private root(name: string, at: Vector3, parent?: TransformNode): TransformNode {
     const root = new TransformNode(name, this.scene);
@@ -438,7 +307,7 @@ export class HuntModels {
   }
   private mat(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
     const m = new PBRMaterial(`M_hunt_${name}`, this.scene);
-    m.albedoColor = Color3.FromHexString(hex);
+    m.albedoColor = Color3.FromHexString(hex).toLinearSpace();
     m.roughness = roughness;
     m.metallic = metallic;
     m.maxSimultaneousLights = 8;
@@ -479,22 +348,6 @@ export class HuntModels {
       at,
       mat,
     );
-  }
-  private sphere(
-    root: TransformNode,
-    name: string,
-    size: number[],
-    at: number[],
-    mat: PBRMaterial,
-  ): Mesh {
-    const m = this.finish(
-      CreateSphere(name, { diameter: 1, segments: 20 }, this.scene),
-      root,
-      at,
-      mat,
-    );
-    m.scaling.set(size[0], size[1], size[2]);
-    return m;
   }
   private tube(
     root: TransformNode,

@@ -166,6 +166,7 @@ export class DawnResolution {
           "Built with Babylon.js · Havok · TypeScript · Vite",
           "Fonts: Ubuntu · Preah Vihear · Patrick Hand · Freehand. Original fonts retain their licences.",
           "Library assets: Poly Haven (CC0). Character base: MakeHuman Community (CC0). Sound library: Kenney (CC0).",
+          "Archive photographs: Léon Busy, 1921, Albert Kahn Museum, Archives of the Planet (CC0).",
           "Story, art and audio © 2026 Rithy Bondeth. Third-party assets retain their own licences.",
           "Episode 1 complete. Your journal choice, lore and respect are saved for Episode 2: The Whispering Pagoda.",
         ],

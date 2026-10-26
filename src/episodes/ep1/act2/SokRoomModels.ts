@@ -174,7 +174,7 @@ export class SokRoomModels {
 
   private material(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
     const m = new PBRMaterial(`M_sok_${name}`, this.scene);
-    m.albedoColor = Color3.FromHexString(hex);
+    m.albedoColor = Color3.FromHexString(hex).toLinearSpace();
     m.roughness = roughness;
     m.metallic = metallic;
     m.maxSimultaneousLights = 8;
@@ -238,14 +238,14 @@ export class SokRoomModels {
     const root = this.gramophone;
     for (const x of [-0.24, 0.24])
       for (const z of [-0.24, 0.24]) {
-        this.cylinder(root, "stand_foot", 0.065, 0.045, [x, 0.025, z], this.edge);
+        this.cylinder(root, "stand_foot", 0.065, 0.045, [x, 0.0225, z], this.edge);
         this.box(root, "stand_leg", [0.046, 0.58, 0.046], [x, 0.32, z], this.wood);
       }
     this.box(root, "stand_lower_shelf", [0.55, 0.025, 0.55], [0, 0.22, 0], this.wood);
     this.box(root, "stand_top", [0.61, 0.035, 0.61], [0, 0.61, 0], this.edge);
     this.box(root, "cabinet", [0.405, 0.148, 0.405], [0, 0.714, 0], this.wood);
     for (const [y, w, h] of [
-      [0.643, 0.45, 0.025],
+      [0.64, 0.45, 0.025],
       [0.666, 0.426, 0.014],
       [0.79, 0.44, 0.025],
       [0.807, 0.461, 0.012],

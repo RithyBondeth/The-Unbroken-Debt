@@ -4,14 +4,20 @@ import type { Game } from "../../../core/Game";
 import { loadArea, type Area } from "../../../core/AreaLoader";
 import { seededRandom } from "../../../audio/synth";
 import { thunder } from "../audio/prologueSounds";
-import { villageRain } from "../audio/nightSounds";
+import { dawnBirds, villageRain } from "../audio/nightSounds";
+import { Soundscape } from "./Soundscape";
 import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
+import { ForestBorder } from "./ForestBorder";
+import { PLAY } from "../data/forestBorder";
+import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 import { EaveDrips } from "./EaveDrips";
+import { warmSceneViews } from "../../../render/warmSceneViews";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
+import { ShadowFigure } from "../entities/ShadowFigure";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
@@ -38,7 +44,7 @@ import { ChestInvestigation } from "../act3/ChestInvestigation";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
-  /^(M_(banana|palm|tree_leaves|bamboo|grass|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
+  /^(M_(banana|palm|tree_leaves|bamboo|grass|forest_|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
 
 /**
  * Episode 1 village: arrival and vigil, Sok’s investigations, the hallway
@@ -50,6 +56,7 @@ export class ActOne {
   lights!: VillageLights;
   private rain!: RainStreaks;
   private sky!: StormSky;
+  border!: ForestBorder;
   private drips!: EaveDrips;
   vigil!: Vigil;
   night!: NightLife;
@@ -68,12 +75,14 @@ export class ActOne {
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
   private thunderSound: StaticSound | null = null;
+  private soundscape!: Soundscape;
   private wasFlashing = false;
 
   constructor(private readonly game: Game) {}
 
   async load(): Promise<void> {
     const game = this.game;
+    this.border = new ForestBorder(game.scene, game.preset);
     this.area = await loadArea(game.scene, "ep1", "ep1_area_village", {
       cellSize: 8,
       // The figures that turn to watch Sora (Apparitions) stay nodes of their own.
@@ -94,7 +103,12 @@ export class ActOne {
       ],
       // The forest's plants are everywhere: batch them in large cells.
       coarse: { pattern: PLANTS, cellSize: 24 },
+      // The forest round the village grows from copies of its own plants.
+      beforeBatch: (container) => this.border.capture(container),
     });
+    this.border.build();
+    game.fallGuard.bounds = PLAY;
+    await ShadowFigure.prepare(game.scene);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
@@ -145,11 +159,15 @@ export class ActOne {
     );
     for (const { name, node } of this.area.level.interactables) {
       if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
-      else game.interaction.add(name, node, { outline: !offeringModels.pickupIds.has(name) });
+      else
+        game.interaction.add(name, node, {
+          outline: name !== "interact_altar" && !offeringModels.pickupIds.has(name),
+        });
     }
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
     this.night = new NightLife(game, this.area);
+    this.soundscape = new Soundscape(game, () => this.night.threatSilence);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
@@ -190,22 +208,23 @@ export class ActOne {
   async begin(): Promise<void> {
     const game = this.game;
     game.addFlameLights(...this.lights.flames.slice(0, 4), this.lights.lamp);
-    // A dark night, as horror games keep it: the lamp is what Sora sees by, and
-    // beyond it the forest is only shapes; her eyes adjust less than in a shut room.
-    // With the lamp out the eyes open only a little, and night sight finds no more
-    // than the nearest shapes: the dark stays dark.
-    game.atmosphere.baseExposure = 1.5;
-    game.atmosphere.maxExposure = 2.1;
-    game.atmosphere.nightSightIntensity = 1.6;
+    // A dark monsoon night: the lamp's warm pool, flames and lightning, and little
+    // else; adapted eyes find shapes a few metres out. The exposure cap still keeps
+    // extinguishing the lamp meaningfully darker.
+    game.atmosphere.baseExposure = NIGHT_LOOK.baseExposure;
+    game.atmosphere.maxExposure = NIGHT_LOOK.maxExposure;
+    game.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
+    game.atmosphere.nightSight.range = NIGHT_LOOK.nightSightRange;
     // Night sight is the dark around her, not a light on what she holds: the cold
     // lantern stays a dark shape at her side.
     game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes, ...game.hands.meshes);
-    // Rain mist: distance fades into a faint blue-grey, so silhouettes stand against it.
+    // Rain mist: distance fades into a dim blue-black, still just lighter than the
+    // trees, so their silhouettes stand against it.
     const fog = game.pipeline.fog;
     if (fog) {
-      fog.density = 0.034;
+      fog.density = NIGHT_LOOK.fogDensity;
       fog.heightFalloff = 0.25;
-      fog.ambient.set(0.005, 0.006, 0.009);
+      fog.ambient.set(...NIGHT_LOOK.fogAmbient);
     }
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
@@ -222,6 +241,38 @@ export class ActOne {
     this.running = true;
     this.vigil.begin();
     await this.beats.begin();
+  }
+
+  async warmup(): Promise<void> {
+    await ShadowFigure.warmup(this.game.scene);
+    const finishForest = this.apparitions.prepareRenderWarmup();
+    const actors = [this.walker.models.walker, this.hunt.models.roamer].map((node) => ({
+      node,
+      position: node.position.clone(),
+      rotation: node.rotation.clone(),
+      enabled: node.isEnabled(),
+    }));
+    this.walker.models.pose(new Vector3(-1.65, 2.5, -13.8), new Vector3(0, 0, -1), 0);
+    this.walker.models.walker.setEnabled(true);
+    this.hunt.models.pose(new Vector3(-1.5, 0, -10.65), new Vector3(0, 0, -1), 0, 1);
+    try {
+      await warmSceneViews(this.game.scene, this.game.camera, [
+        { eye: new Vector3(0, 1.58, 53), target: new Vector3(0, 1.3, 40) },
+        { eye: new Vector3(0, 1.58, 46), target: new Vector3(5, 1.25, 37.2) },
+        { eye: new Vector3(0, 1.58, 24), target: new Vector3(0, 1.3, 6) },
+        { eye: new Vector3(0, 1.58, 8), target: new Vector3(0, 1.3, -10) },
+        { eye: new Vector3(0, 1.58, -2), target: new Vector3(0, 1.3, -12) },
+        { eye: new Vector3(-1.65, 4.08, -17.05), target: new Vector3(-1.65, 3.65, -13.8) },
+        { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
+      ]);
+    } finally {
+      finishForest();
+      for (const actor of actors) {
+        actor.node.position.copyFrom(actor.position);
+        actor.node.rotation.copyFrom(actor.rotation);
+        actor.node.setEnabled(actor.enabled);
+      }
+    }
   }
 
   private update(dt: number): void {
@@ -241,6 +292,7 @@ export class ActOne {
     }
     this.vigil.update(dt);
     this.night.update(dt);
+    this.soundscape.update(dt);
     this.apparitions.update(dt);
     this.betel.update(dt);
     this.beats.update(dt);
@@ -256,7 +308,7 @@ export class ActOne {
     // Unlit streaks: faint in the dark, warmed a little by the lamp, white in lightning.
     this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.12, 0.25);
     this.drips.light(this.lights.storm.level);
-    this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure);
+    this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure, dt);
     if (this.rainSound) this.rainSound.spatial.position = eye.clone();
     game.atmosphere.update(dt, this.lights.lightAtEye(eye));
     const flashing = this.lights.flashing;
@@ -278,36 +330,27 @@ export class ActOne {
     this.rainSound?.stop();
     this.thunderSound?.stop();
     this.night.stopForDawn();
+    this.soundscape.stop();
     this.sky.dome.setEnabled(false);
     this.lights.dawn();
-    g.scene.clearColor.set(0.26, 0.31, 0.36, 1);
-    g.atmosphere.baseExposure = 1.1;
-    g.pipeline.main.imageProcessing.exposure = 1.1;
+    g.scene.clearColor.set(...DAWN_LOOK.clearColor, 1);
+    g.atmosphere.baseExposure = DAWN_LOOK.baseExposure;
+    g.pipeline.main.imageProcessing.exposure = DAWN_LOOK.baseExposure;
     if (g.pipeline.fog) {
-      g.pipeline.fog.density = 0.018;
-      g.pipeline.fog.ambient.set(0.12, 0.15, 0.18);
+      g.pipeline.fog.density = DAWN_LOOK.fogDensity;
+      g.pipeline.fog.ambient.set(...DAWN_LOOK.fogAmbient);
     }
     this.chest.body.pose(0);
     this.chest.body.setLid(0);
     const audio = g.audio;
     if (audio) {
       const rate = audio.context.sampleRate;
-      const birds = new Float32Array(rate * 8);
-      for (let call = 0; call < 6; call++) {
-        const start = Math.floor((call + 0.25) * rate);
-        for (let i = 0; i < rate * 0.18; i++) {
-          const t = i / rate;
-          birds[start + i] =
-            Math.sin(2 * Math.PI * (1800 * t + 3500 * t * t)) *
-            Math.sin((Math.PI * t) / 0.18) ** 2 *
-            0.15;
-        }
-      }
+      const birds = dawnBirds(rate, seededRandom(5));
       void audio
         .spatialSound("dawn_birds", audio.buffer(birds, rate), "ambience", new Vector3(10, 4, 8), {
           loop: true,
           minDistance: 10,
-          volume: 0.5,
+          volume: 0.2,
         })
         .then((sound) => sound.play())
         .catch(() => undefined);
@@ -342,6 +385,7 @@ export class ActOne {
       },
     );
     await this.night.makeSounds();
+    await this.soundscape.makeSounds();
     await this.apparitions.makeSounds();
     await this.betel.makeSounds();
     await this.beats.makeSounds();

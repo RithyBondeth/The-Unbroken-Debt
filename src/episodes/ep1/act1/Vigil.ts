@@ -78,7 +78,7 @@ export class Vigil {
     private readonly lights: VillageLights,
   ) {
     this.ash = new PBRMaterial("M_scripted_incense_ash", game.scene);
-    this.ash.albedoColor = Color3.FromHexString("#c7c0ac");
+    this.ash.albedoColor = Color3.FromHexString("#c7c0ac").toLinearSpace();
     this.ash.roughness = 1;
     this.ash.maxSimultaneousLights = 8;
     const saved = game.savedLamp;

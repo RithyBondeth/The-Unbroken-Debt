@@ -63,7 +63,9 @@ export class HandRig {
     skin.bumpTexture = normal;
     skin.invertNormalMapX = true;
     skin.invertNormalMapY = false;
-    skin.albedoColor.set(1, 0.96, 0.92);
+    // The photographic atlas is a light peach; Sora is Khmer. Multiplied (linear) to a
+    // warm medium tone, about sRGB #be8c6e on the back of the hand, keeping its detail.
+    skin.albedoColor.set(0.69, 0.51, 0.38);
     skin.metallic = 0;
     skin.metallicTexture = roughness;
     skin.useRoughnessFromMetallicTextureGreen = true;

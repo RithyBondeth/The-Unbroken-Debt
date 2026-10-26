@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Guardian material and silhouette review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Guardian visual review"></canvas>
+    <div id="overlay"></div>
+    <nav style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px">
+      <button id="front">Front, lamplight</button>
+      <button id="side">Side, lamplight</button>
+      <button id="road">Road distance</button>
+      <button id="raised">Raised arms</button>
+      <button id="capture">Save screenshot</button>
+    </nav>
+    <output
+      id="review-status"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111a;
+        padding: 8px;
+      "
+      >Loading village…</output
+    >
+    <script type="module" src="./guardians.ts"></script>
+  </body>
+</html>

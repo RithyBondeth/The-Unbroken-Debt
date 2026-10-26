@@ -15,10 +15,13 @@ import { getPreset, type QualityPreset } from "../render/QualityPresets";
 import { createPostPipeline, type PostPipeline } from "../render/RenderSetup";
 import { DynamicResolution } from "../render/DynamicResolution";
 import { runRenderLoop } from "../render/renderLoop";
+import { keepLightBudgets } from "../render/lightBudget";
+import { installSoftLampFalloff } from "../render/softLampFalloff";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
+import { FallGuard } from "../player/FallGuard";
 import { PerfOverlay } from "../debug/PerfOverlay";
 import { AudioSystem } from "../audio/AudioSystem";
 import { Footsteps } from "../audio/Footsteps";
@@ -47,6 +50,7 @@ import type { SaveData } from "../systems/saves/SaveData";
 interface Section {
   load(): Promise<void>;
   begin(): Promise<void>;
+  warmup?(): Promise<void>;
 }
 
 /**
@@ -89,6 +93,9 @@ export class Game {
   pipeline!: PostPipeline;
   atmosphere!: Atmosphere;
   player!: PlayerController;
+  /** Puts Sora back on solid ground if she ever leaves the world (the area may set walls). */
+  readonly fallGuard = new FallGuard();
+  private readonly feetNow = new Vector3();
   private resolution!: DynamicResolution;
   private inspection: Vector3 | null = null;
   private inspectionRadius = 0.31;
@@ -120,9 +127,12 @@ export class Game {
     device: DeviceProfile,
   ) {
     this.preset = getPreset(device.quality);
+    // Before any material compiles: the falloff Sora's lamp uses (VillageLights).
+    installSoftLampFalloff();
     this.scene = new Scene(engine);
     this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
     this.scene.skipPointerMovePicking = true;
+    keepLightBudgets(this.scene);
     this.camera = new UniversalCamera("eye", new Vector3(0, 1.6, 0), this.scene);
     this.camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED;
     // Art Bible section 4: 75° by default.
@@ -148,14 +158,15 @@ export class Game {
     return Math.min(this.engine.getDeltaTime() / 1000, 0.1);
   }
 
-  async start(): Promise<void> {
+  /** Visual review fixtures can omit audio initialization; normal play enables it. */
+  async start({ audio = true }: { audio?: boolean } = {}): Promise<void> {
     await Promise.all([enablePhysics(this.scene), loadSketchbookFonts(), this.hands.load()]);
-    this.audio = await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch(
-      (error: unknown) => {
-        console.warn("[Game] no audio", error);
-        return null;
-      },
-    );
+    this.audio = audio
+      ? await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch((error: unknown) => {
+          console.warn("[Game] no audio", error);
+          return null;
+        })
+      : null;
     this.audio?.attachListener(this.camera);
     if (this.audio) this.footsteps = await Footsteps.load(this.audio, this.bus);
     this.resolution = new DynamicResolution(this.engine, this.preset);
@@ -164,6 +175,10 @@ export class Game {
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
     this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
     this.createSketchbook();
+    if (section.warmup) {
+      await this.fade.to(1, 0);
+      await section.warmup();
+    }
     if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
     this.scene.onBeforeRenderObservable.add(() => this.update());
     void section.begin();
@@ -207,6 +222,7 @@ export class Game {
   spawnPlayer(feet = Vector3.Zero(), yaw = 0): void {
     this.player = new PlayerController(this.scene, this.camera, this.gated, feet, this.bus);
     this.player.yaw = yaw;
+    this.fallGuard.reset(feet);
   }
 
   /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
@@ -230,6 +246,7 @@ export class Game {
   }
 
   private update(): void {
+    this.guardFall();
     const book = this.sketchbook;
     book?.update(this.deltaSeconds);
     if (book?.isOpen || book?.isBusy) this.stopInspecting();
@@ -263,6 +280,19 @@ export class Game {
       book?.book.root ?? null,
       this.player?.speed ?? 0,
     );
+  }
+
+  /** Back to the last solid footing, behind a brief black, if Sora has dropped out of the world. */
+  private guardFall(): void {
+    if (!this.player) return;
+    const feet = this.player.feetToRef(this.feetNow);
+    const respawn = this.fallGuard.update(this.deltaSeconds, feet, this.player.supported);
+    if (!respawn) return;
+    console.warn(
+      `[Game] fell out of the world at ${feet.toString()}; back to ${respawn.toString()}`,
+    );
+    this.player.teleport(respawn, this.player.yaw);
+    void this.fade.to(1, 0).then(() => this.fade.to(0, 0.8));
   }
 
   /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */

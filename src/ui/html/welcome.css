@@ -1,0 +1,445 @@
+.welcome {
+  --title-bone: #e5dfd2;
+  --title-red: #ae4640;
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  min-height: 100dvh;
+  overflow: auto;
+  color: var(--title-bone);
+  background: #080b0a;
+  isolation: isolate;
+}
+
+.welcome-scene,
+.welcome-haze {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+.welcome-scene {
+  z-index: -3;
+  background: url("/assets/ui/welcome-house.jpg") center / cover no-repeat;
+  animation: welcome-arrive 2s ease-out both;
+}
+.welcome-weather {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Match the artwork's cover crop so rain stays outside and glow follows the lamp. */
+.welcome-atmosphere {
+  position: absolute;
+  width: max(100%, 177.69vh);
+  height: max(100%, 56.28vw);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.welcome-rain {
+  position: absolute;
+  left: 63%;
+  top: 18%;
+  width: 18%;
+  height: 53%;
+  overflow: hidden;
+  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
+  mask-image: linear-gradient(transparent, #000 12%, #000 90%, transparent);
+}
+.welcome-rain::before,
+.welcome-rain::after {
+  --rain-step-x: -31px;
+  --rain-step-y: 166px;
+  content: "";
+  position: absolute;
+  inset: -120%;
+  background-image: linear-gradient(
+    102deg,
+    transparent 49%,
+    rgb(204 221 217 / 0.4) 50%,
+    transparent 52%
+  );
+  background-size: 31px 83px;
+  opacity: 0.32;
+  animation: welcome-rain-fall 1.1s linear infinite;
+  will-change: transform;
+}
+.welcome-rain::after {
+  --rain-step-x: -47px;
+  --rain-step-y: 234px;
+  background-size: 47px 117px;
+  opacity: 0.19;
+  animation-duration: 1.65s;
+  animation-delay: -0.7s;
+}
+.welcome-lamp-glow,
+.welcome-lamp-flame {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 94.8%;
+  top: 69.4%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  animation: welcome-lamp-flicker 3.7s linear infinite;
+}
+.welcome-lamp-glow {
+  width: 18%;
+  height: 30%;
+  background: radial-gradient(
+    ellipse,
+    rgb(240 123 39 / 0.19),
+    rgb(185 71 18 / 0.08) 38%,
+    transparent 70%
+  );
+}
+.welcome-lamp-flame {
+  width: 2.2%;
+  height: 5.4%;
+  background: radial-gradient(
+    ellipse,
+    rgb(255 221 154 / 0.5),
+    rgb(255 148 61 / 0.14) 40%,
+    transparent 72%
+  );
+  animation-duration: 2.3s;
+  animation-delay: -0.8s;
+}
+.welcome-paused .welcome-rain::before,
+.welcome-paused .welcome-rain::after,
+.welcome-paused .welcome-lamp-glow,
+.welcome-paused .welcome-lamp-flame {
+  animation-play-state: paused;
+}
+.welcome-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.welcome-footer button[data-action="ambience"] {
+  color: #c6b5a0;
+}
+@keyframes welcome-rain-fall {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--rain-step-x), var(--rain-step-y));
+  }
+}
+@keyframes welcome-lamp-flicker {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  13% {
+    opacity: 0.83;
+  }
+  21% {
+    opacity: 0.59;
+  }
+  37% {
+    opacity: 0.77;
+  }
+  48% {
+    opacity: 0.68;
+  }
+  63% {
+    opacity: 0.85;
+  }
+  76% {
+    opacity: 0.63;
+  }
+  88% {
+    opacity: 0.74;
+  }
+}
+.welcome-haze {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(3 6 5 / 0.9), rgb(3 6 5 / 0.45) 37%, transparent 70%),
+    linear-gradient(0deg, rgb(2 4 3 / 0.85), transparent 25%, transparent 80%, rgb(2 4 3 / 0.35));
+}
+.welcome-content {
+  box-sizing: border-box;
+  width: min(590px, 48vw);
+  min-height: calc(100dvh - 90px);
+  padding: clamp(24px, 4vh, 50px) 0 16px;
+  margin-left: clamp(40px, 8vw, 160px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.welcome-brand {
+  width: min(430px, 100%);
+  text-align: center;
+}
+.welcome-khmer {
+  font-family: "Preah Vihear", sans-serif;
+  font-size: 14px;
+  color: #b8b4a8;
+  margin: 0 0 10px;
+}
+.welcome-brand h1 {
+  margin: 0;
+  line-height: 0;
+}
+.welcome-logo {
+  width: 100%;
+  height: auto;
+  max-height: 28vh;
+  object-fit: contain;
+}
+.welcome-series {
+  text-transform: uppercase;
+  letter-spacing: 0.42em;
+  font-size: 11px;
+  color: #aaa99c;
+  margin: 16px 0 0;
+}
+.welcome-menu {
+  display: grid;
+  gap: 4px;
+  margin: clamp(18px, 3vh, 36px) 0 0 36px;
+}
+.welcome button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+}
+.welcome-menu button {
+  position: relative;
+  min-height: 43px;
+  padding: 8px 20px 8px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(17px, 1.5vw, 23px);
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  text-align: left;
+  transition:
+    color 0.2s,
+    transform 0.2s,
+    text-shadow 0.2s;
+}
+.welcome-menu button::before {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: var(--title-red);
+  left: -36px;
+  top: 50%;
+  opacity: 0;
+  box-shadow: 0 0 14px #8e302c;
+}
+.welcome-menu button:enabled:hover,
+.welcome-menu button:focus-visible {
+  color: #e99b90;
+  transform: translateX(6px);
+  text-shadow: 0 0 22px #8e302c;
+}
+.welcome-menu button:enabled:hover::before,
+.welcome-menu button:focus-visible::before {
+  opacity: 1;
+}
+.welcome button:focus-visible,
+.welcome input:focus-visible {
+  outline: 1px solid #d89082;
+  outline-offset: 5px;
+}
+.welcome-menu button:disabled {
+  color: #757a72;
+  cursor: default;
+}
+.welcome-status {
+  max-width: 360px;
+  margin: 22px 0 0 36px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #a6aaa0;
+}
+.welcome-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px clamp(30px, 5vw, 85px);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #b4b6ab;
+}
+.welcome-footer p {
+  margin: 0;
+}
+.welcome-footer span {
+  color: #c47668;
+  margin-right: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+.welcome-footer button {
+  min-height: 44px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.welcome-dialog {
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 40px));
+  max-height: calc(100dvh - 40px);
+  padding: clamp(24px, 4vw, 40px);
+  border: 1px solid #484239;
+  border-top: 2px solid #8e302c;
+  background: #121714;
+  color: var(--title-bone);
+  box-shadow: 0 25px 100px #000;
+  line-height: 1.7;
+}
+.welcome-dialog::backdrop {
+  background: rgb(0 0 0 / 0.75);
+}
+.welcome-dialog h2 {
+  margin: 0 0 24px;
+  font:
+    26px Georgia,
+    serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.welcome-dialog p {
+  font-size: 14px;
+}
+.welcome-dialog .welcome-note {
+  color: #afb3a7;
+  font-size: 12px;
+}
+.welcome-dialog button {
+  min-height: 44px;
+  padding: 8px 0;
+  color: #e7a296;
+}
+.welcome-dialog form {
+  margin-top: 24px;
+}
+.welcome-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0 10px;
+  font-size: 14px;
+}
+.welcome-dialog input {
+  accent-color: #b85b50;
+}
+.welcome-dialog input[type="range"] {
+  width: 100%;
+  min-height: 32px;
+}
+.welcome-dialog input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.welcome-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 14px;
+}
+.welcome-controls dt {
+  color: #dba395;
+}
+.welcome-controls dd {
+  margin: 0;
+}
+.welcome-loading .welcome-status {
+  color: var(--title-bone);
+}
+.welcome-error {
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  box-sizing: border-box;
+}
+.welcome-error section {
+  max-width: 440px;
+}
+.welcome-error h1 {
+  font:
+    32px Georgia,
+    serif;
+}
+.welcome-error button {
+  padding: 15px 0;
+  color: #e7a296;
+}
+@keyframes welcome-arrive {
+  from {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (max-width: 700px) {
+  .welcome-content {
+    width: min(440px, calc(100% - 64px));
+    margin-left: 32px;
+  }
+  .welcome-brand {
+    width: min(340px, 100%);
+  }
+  .welcome-scene {
+    background-position: 65% center;
+  }
+  .welcome-atmosphere {
+    left: 65%;
+    transform: translate(-65%, -50%);
+  }
+  .welcome-haze {
+    background: linear-gradient(90deg, rgb(3 6 5 / 0.9), rgb(3 6 5 / 0.55));
+  }
+  .welcome-footer {
+    flex-wrap: wrap;
+  }
+}
+@media (max-height: 650px) and (min-width: 701px) {
+  .welcome-content {
+    padding-top: 22px;
+  }
+  .welcome-logo {
+    max-height: 25vh;
+  }
+  .welcome-menu {
+    margin-top: 20px;
+    gap: 0;
+  }
+  .welcome-menu button {
+    min-height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rain {
+    display: none;
+  }
+  .welcome-lamp-glow,
+  .welcome-lamp-flame {
+    animation: none;
+    opacity: 0.65;
+  }
+  .welcome-scene {
+    animation: none;
+  }
+  .welcome-menu button {
+    transition: none;
+  }
+}
+.welcome-menu[hidden] {
+  display: none;
+}
