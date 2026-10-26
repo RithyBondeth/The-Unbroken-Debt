@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Studio visual and pickup review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Studio review"></canvas>
+    <div id="overlay"></div>
+    <nav
+      id="views"
+      aria-label="Studio views"
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        z-index: 4000;
+      "
+    ></nav>
+    <pre
+      id="status"
+      style="
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        z-index: 4000;
+        color: #ede2ce;
+        background: #181613cc;
+        padding: 8px;
+        pointer-events: none;
+      "
+    ></pre>
+    <script type="module" src="./studio.ts"></script>
+  </body>
+</html>

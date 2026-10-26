@@ -64,6 +64,12 @@ async function run() {
     say(speaker, text, speaker === "Sok" ? seconds : seconds * 0.1);
   const use = (id: string) => game.bus.emit("interact:use", { id });
   const key = (code: string) => window.dispatchEvent(new KeyboardEvent("keydown", { code }));
+  // A timer can finish before the browser renders a teleported camera. Wait for
+  // real frames so inspection and picking use its current position and view.
+  async function frames(count = 2) {
+    for (let i = 0; i < count; i++)
+      await new Promise<void>((done) => game.scene.onAfterRenderObservable.addOnce(() => done()));
+  }
   async function free() {
     game.stopInspecting();
     game.satchel.close();
@@ -71,19 +77,26 @@ async function run() {
     game.sketchbook?.close();
     await wait(() => !game.gated.reading, "book closes");
   }
-  async function aim(feet: Vector3, at: Vector3, radius = 0.4) {
-    await free();
+  async function aim(feet: Vector3, at: Vector3, radius = 0.4, closeMenus = true) {
+    if (closeMenus) await free();
     game.player.teleport(feet);
     await pause(300);
+    await frames();
+    // Havok can retain small idle motion on contact; do not wait indefinitely
+    // for an almost-zero speed when the character is already standing still.
+    await pause(500);
+    await frames();
     game.inspectObject(at, radius);
     if (step === "start") report(`AIM ${at.toString()}`);
     await pause(350);
-    if (game.sketchbook?.isOpen || game.sketchbook?.isBusy) {
+    await frames();
+    if (closeMenus && (game.sketchbook?.isOpen || game.sketchbook?.isBusy)) {
       await free();
       await pause(400);
       await free();
       game.inspectObject(at, radius);
       await pause(350);
+      await frames();
     }
   }
   async function ray(id: string) {
@@ -92,7 +105,13 @@ async function run() {
         `DIAG feet=${game.player.feet.toString()} eye=${game.camera.globalPosition.toString()} forward=${game.camera.getForwardRay().direction.toString()} hit=${game.scene.pickWithRay(game.camera.getForwardRay(1.8))?.pickedMesh?.name}`,
       );
     assert(game.interaction.focus === id, `interaction ray: ${id} (${game.interaction.focus})`);
-    game.interaction.use();
+    if (id === "interact_telephone" && params.has("manual-phone")) {
+      report("MANUAL PHONE READY: press E on the focused ringing phone");
+      await wait(() => game.flags.get("ep1.phone.answered", false), "physical E answers phone");
+    } else {
+      key("KeyE");
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyE" }));
+    }
     await pause(100);
   }
   async function readAll() {
@@ -144,34 +163,84 @@ async function run() {
     await ray("interact_illustration");
     await wait(() => game.flags.get("ep1.illustration.inked", false), "ink line");
     await aim(
+      new Vector3(object("interact_telephone").x + 0.9, 0, object("interact_telephone").z),
+      object("interact_telephone"),
+    );
+    assert(
+      game.interaction.focus === "interact_telephone",
+      "quiet phone can be focused before packing",
+    );
+    key("KeyE");
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyE" }));
+    assert(
+      document.querySelector(".story-hint.shown")?.textContent?.includes("satchel"),
+      "using the quiet phone identifies the missing satchel instead of silently ignoring E",
+    );
+    await aim(
       new Vector3(object("interact_drawer").x, 0, object("interact_drawer").z - 0.8),
       object("interact_drawer"),
     );
     await ray("interact_drawer");
     await pause(600);
-    for (const id of [
-      "letters",
-      "matchbox",
-      "interact_satchel",
-      "interact_sketchbook",
-      "interact_lamp",
-    ]) {
+    await wait(
+      () => game.interaction.focus === "matchbox",
+      "drawer opening reveals and focuses matchbox",
+    );
+    key("KeyE");
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyE" }));
+    assert(
+      game.inventory.count("matches") === 10,
+      "E takes ten matches directly from the opened drawer without precision aiming",
+    );
+    await frames();
+    for (const id of ["letters", "interact_satchel", "interact_sketchbook", "interact_lamp"]) {
       await free();
-      use(id);
+      const n =
+        game.scene.getMeshByName(id === "letters" ? "letters_string" : id) ??
+        game.scene.getTransformNodeByName(id);
+      if (!n) throw new Error(`missing pickup ${id}`);
+      const bounds = n.getHierarchyBoundingVectors(true);
+      const at = Vector3.Center(bounds.min, bounds.max);
+      const feet = at.add(
+        id === "interact_satchel"
+          ? new Vector3(0, 0, 0.9)
+          : new Vector3(id === "interact_lamp" ? 1.3 : -0.85, 0, 0),
+      );
+      feet.y = 0;
+      await aim(feet, at, 0.25);
+      await ray(id);
       await pause(id === "letters" ? 800 : 200);
     }
     await free();
     assert(game.inventory.count("matches") === 10, "prologue supplies ten matches");
     assert(game.inventory.count("letters") === 1, "letters collected once");
     await wait(() => game.flags.has("ep1.clock.stopped"), "ink spill");
-    await pause(8500);
-    await free();
+    await wait(() => game.sketchbook?.isOpen === true, "automatic ink-blot entry");
+    report("PASS ink-blot entry opens the sketchbook automatically");
+    await wait(() => Reflect.get(p, "ringing") === true, "phone rings with notebook untouched");
+    await wait(
+      () => !game.sketchbook?.isOpen && !game.sketchbook?.isBusy,
+      "ringing phone puts away the automatic sketchbook",
+      5000,
+    );
     await aim(
       new Vector3(object("interact_telephone").x + 0.9, 0, object("interact_telephone").z),
       object("interact_telephone"),
+      0.4,
+      false,
     );
+    report("PASS ringing phone is reachable without the test closing the sketchbook");
     await ray("interact_telephone");
+    if (!params.has("manual-phone"))
+      assert(
+        game.scene.getTransformNodeByName("telephone_earpiece")?.isEnabled() === false,
+        "answering lifts the rebuilt receiver from its hook",
+      );
     await wait(() => game.flags.get("ep1.phone.answered", false), "phone call");
+    assert(
+      game.scene.getTransformNodeByName("telephone_earpiece")?.isEnabled() === true,
+      "completed call returns the rebuilt receiver to its hook",
+    );
     // Reproduce storage failure at the first real checkpoint.
     const original = saves.save.bind(saves);
     let failed = false;

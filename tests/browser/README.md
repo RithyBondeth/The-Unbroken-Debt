@@ -1,5 +1,17 @@
 # Episode 1 browser verification
 
+## Studio and matchbox
+
+Open `/tests/browser/studio.html` for the actual studio's room, telephone, desk,
+drawer, matchbox, window and bed views. Click to begin. The preview auto-inks the
+first illustration and uses an isolated database. E still uses real interaction
+targets; movement keys leave close-up inspection. The detail pass and browser
+pickup evidence are in `docs/production/studio-detail-pass.md`.
+
+The fresh `/tests/browser/episode.html` route now verifies that opening the drawer
+focuses the matchbox and E collects ten matches without precision aiming. It also
+checks the rebuilt phone receiver leaving and returning to its hook.
+
 ## Forest vegetation
 
 Open `/tests/browser/forest.html?start=act1` for a silent review of the actual

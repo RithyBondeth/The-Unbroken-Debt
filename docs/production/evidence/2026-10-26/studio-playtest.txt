@@ -1,0 +1,31 @@
+START start; click to begin
+PASS fresh game starts in studio, without seeded progress
+AIM {X: -3 Y: 0.9129999876022339 Z: -0.7200000286102295}
+PASS interaction ray: interact_illustration (interact_illustration)
+AIM {X: -5.980000019073486 Y: 1.4500000476837158 Z: -3.549999952316284}
+PASS quiet phone can be focused before packing
+PASS using the quiet phone identifies the missing satchel instead of silently ignoring E
+AIM {X: -0.6650000214576721 Y: 0.6700000166893005 Z: -2.5}
+PASS interaction ray: interact_drawer (interact_drawer)
+PASS E takes ten matches directly from the opened drawer without precision aiming
+AIM {X: -0.9100571982562542 Y: 0.6624640692025423 Z: -2.4800000190734863}
+PASS interaction ray: letters (letters)
+AIM {X: -2.549999952316284 Y: 1.46999359224381 Z: -4.83750431150972}
+PASS interaction ray: interact_satchel (interact_satchel)
+AIM {X: -0.30000001192092896 Y: 0.7925000190734863 Z: -2.1600000858306885}
+PASS interaction ray: interact_sketchbook (interact_sketchbook)
+AIM {X: -5.8200297355651855 Y: 1.6471233367919922 Z: -1.5750000476837158}
+PASS interaction ray: interact_lamp (interact_lamp)
+PASS prologue supplies ten matches
+PASS letters collected once
+PASS ink-blot entry opens the sketchbook automatically
+AIM {X: -5.980000019073486 Y: 1.4500000476837158 Z: -3.549999952316284}
+PASS ringing phone is reachable without the test closing the sketchbook
+PASS interaction ray: interact_telephone (interact_telephone)
+PASS answering lifts the rebuilt receiver from its hook
+PASS completed call returns the rebuilt receiver to its hook
+AIM {X: -6.005000114440918 Y: 1.1150000095367432 Z: -2.5}
+PASS interaction ray: interact_door (interact_door)
+INJECT CP1 storage failure
+PASS CP1 storage failure recovered
+START act1; click to begin
