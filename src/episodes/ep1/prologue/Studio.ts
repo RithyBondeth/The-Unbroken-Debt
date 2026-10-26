@@ -11,6 +11,7 @@ import type { QualityPreset } from "../../../render/QualityPresets";
 import { createShadowedPointLight, FLAME_COLOR } from "../../../render/RenderSetup";
 import type { Area } from "../../../core/AreaLoader";
 import { Lightning } from "../Lightning";
+import { useSoftFalloff } from "../../../render/softLampFalloff";
 
 /**
  * The studio's lights (Beat Sheet 4.1): the green glass desk lamp as the key
@@ -21,6 +22,7 @@ export class StudioLights {
   readonly deskLamp: PointLight;
   readonly candle: PointLight;
   readonly lightning: SpotLight;
+  readonly writingLight: PointLight;
   private readonly candleFlame: Mesh;
   private readonly windowGlass: PBRMaterial | null;
   private candleLit = true;
@@ -36,7 +38,8 @@ export class StudioLights {
     const sky = new HemisphericLight("night_sky", new Vector3(0, 1, -0.4), scene);
     sky.diffuse = new Color3(0.35, 0.42, 0.6);
     sky.groundColor = new Color3(0.04, 0.035, 0.03);
-    sky.intensity = 0.05;
+    sky.intensity = 0.13;
+    sky.specular = new Color3(0.12, 0.15, 0.2);
 
     const lamp = createShadowedPointLight(
       scene,
@@ -44,12 +47,40 @@ export class StudioLights {
       at(markers.get("desk_lamp"), new Vector3(-0.3, 1.1, -2.45)),
       6,
       preset.lampShadowMapSize,
-      (m) => m.isVisible && m.renderingGroupId === 0 && !m.name.startsWith("desk_lamp"),
+      (m) =>
+        m.isEnabled() &&
+        m.isVisible &&
+        m.visibility > 0 &&
+        m.renderingGroupId === 0 &&
+        !m.name.startsWith("desk_lamp"),
     );
     this.deskLamp = lamp.light;
     // An electric bulb under green glass: warmer than daylight, cooler than a flame.
     this.deskLamp.diffuse = new Color3(1, 0.86, 0.62);
     this.deskLamp.intensity = 4;
+    useSoftFalloff(this.deskLamp);
+
+    // A shaded writing light makes the drawer's pale lining and printed matchbox
+    // readable. Its soft core avoids bleaching paper and nearby brass to white.
+    this.writingLight = new PointLight("writing_sconce", new Vector3(-0.27, 1.55, -2.5), scene);
+    this.writingLight.diffuse = new Color3(1, 0.81, 0.53);
+    this.writingLight.range = 3.8;
+    this.writingLight.intensity = 3.2;
+    this.writingLight.shadowEnabled = false;
+    useSoftFalloff(this.writingLight);
+    const windowBounce = new SpotLight(
+      "studio_window_bounce",
+      new Vector3(-3, 2.15, 0.1),
+      new Vector3(0, -0.3, -1),
+      2.2,
+      1,
+      scene,
+    );
+    windowBounce.diffuse = new Color3(0.45, 0.59, 0.76);
+    windowBounce.specular = new Color3(0.15, 0.2, 0.28);
+    windowBounce.intensity = 1.4;
+    windowBounce.range = 7;
+    windowBounce.shadowEnabled = false;
 
     const candleAt = flames.get("candle");
     this.candle = new PointLight("candle", at(candleAt, new Vector3(-2.33, 1.53, -4.83)), scene);
@@ -96,7 +127,7 @@ export class StudioLights {
   /** Light reaching Sora's eyes for eye adaptation (1 = her lamp at arm's length). */
   lightAtEye(eye: Vector3): number {
     let light = 0;
-    for (const l of [this.deskLamp, this.candle]) {
+    for (const l of [this.deskLamp, this.writingLight, this.candle]) {
       if (!l.isEnabled()) continue;
       const d = Math.max(0.5, Vector3.Distance(eye, l.getAbsolutePosition()));
       light += l.intensity / (d * d) / 14;

@@ -1,5 +1,8 @@
 # Episode 1 verification — 23 October 2026
 
+Latest: [fresh current-version journey, 26 October 2026](episode-1-verification-2026-10-26.md)
+passed from the studio through the revised phone arrival to credits.
+
 ## Result
 
 A scripted fresh-prologue-to-credits journey passed in the desktop in-app WebGPU

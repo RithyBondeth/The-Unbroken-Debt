@@ -1,0 +1,17 @@
+START start; click to begin
+PASS fresh game starts in studio, without seeded progress
+AIM {X: -3 Y: 0.9129999876022339 Z: -0.7200000286102295}
+PASS interaction ray: interact_illustration (interact_illustration)
+AIM {X: -0.6650000214576721 Y: 0.6700000166893005 Z: -2.5}
+PASS interaction ray: interact_drawer (interact_drawer)
+PASS prologue supplies ten matches
+PASS letters collected once
+PASS ink-blot entry opens the sketchbook automatically
+AIM {X: -5.980000019073486 Y: 1.4500000476837158 Z: -3.549999952316284}
+PASS ringing phone is reachable without the test closing the sketchbook
+PASS interaction ray: interact_telephone (interact_telephone)
+AIM {X: -6.005000114440918 Y: 1.1150000095367432 Z: -2.5}
+PASS interaction ray: interact_door (interact_door)
+INJECT CP1 storage failure
+PASS CP1 storage failure recovered
+START act1; click to begin

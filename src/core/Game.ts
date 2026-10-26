@@ -100,6 +100,9 @@ export class Game {
   private inspection: Vector3 | null = null;
   private inspectionRadius = 0.31;
   private readonly normalFov = (75 * Math.PI) / 180;
+  private debugKey = "none";
+  private debugHandledKey = "none";
+  private debugUse = "none";
 
   get inspecting(): boolean {
     return this.inspection !== null;
@@ -145,7 +148,16 @@ export class Game {
     this.gated = new GatedInput(this.input);
     this.interaction = new Interaction(this.scene, this.camera, this.bus);
     window.addEventListener("keydown", (e) => this.press(e));
-    this.bus.on("interact:use", () => {
+    if (import.meta.env.DEV)
+      window.addEventListener(
+        "keydown",
+        (e) => {
+          this.debugKey = `${e.code || "no code"} / ${e.key} repeat=${e.repeat}`;
+        },
+        { capture: true },
+      );
+    this.bus.on("interact:use", ({ id }) => {
+      this.debugUse = id;
       if (!this.cutscene && !this.hiding) this.hands.animate("reach");
     });
     this.bus.on("inventory:changed", () => {
@@ -179,7 +191,17 @@ export class Game {
       await this.fade.to(1, 0);
       await section.warmup();
     }
-    if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
+    if (import.meta.env.DEV)
+      new PerfOverlay(this.engine, this.scene, document.body, () => [
+        `input diagnostic v1`,
+        `key received: ${this.debugKey}`,
+        `key handled: ${this.debugHandledKey}`,
+        `last use: ${this.debugUse}`,
+        `target: ${this.interaction.focus ?? "none"} active=${this.interaction.active}`,
+        `page focused=${document.hasFocus()} pointer=${this.input.pointerLocked}`,
+        `cutscene=${this.cutscene} reading=${this.gated.reading} satchel=${this.satchel.isOpen}`,
+        ...(section instanceof Prologue ? [section.debugStatus] : []),
+      ]);
     this.scene.onBeforeRenderObservable.add(() => this.update());
     void section.begin();
     runRenderLoop(this.engine, () => this.scene.render(), renderStallNotice);
@@ -297,6 +319,7 @@ export class Game {
 
   /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */
   private press(e: KeyboardEvent): void {
+    if (import.meta.env.DEV) this.debugHandledKey = `${e.code || "no code"} / ${e.key}`;
     if (e.code === "Tab") e.preventDefault();
     if (e.repeat) return;
     if (["Escape", "KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "Tab"].includes(e.code))
