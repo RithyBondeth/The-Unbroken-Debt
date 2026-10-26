@@ -15,6 +15,7 @@ import { getPreset, type QualityPreset } from "../render/QualityPresets";
 import { createPostPipeline, type PostPipeline } from "../render/RenderSetup";
 import { DynamicResolution } from "../render/DynamicResolution";
 import { runRenderLoop } from "../render/renderLoop";
+import { keepLightBudgets } from "../render/lightBudget";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
@@ -124,6 +125,7 @@ export class Game {
     this.scene = new Scene(engine);
     this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
     this.scene.skipPointerMovePicking = true;
+    keepLightBudgets(this.scene);
     this.camera = new UniversalCamera("eye", new Vector3(0, 1.6, 0), this.scene);
     this.camera.fovMode = Camera.FOVMODE_HORIZONTAL_FIXED;
     // Art Bible section 4: 75° by default.

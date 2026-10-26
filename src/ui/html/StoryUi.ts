@@ -1,9 +1,7 @@
 import "./story.css";
-import strings from "../../data/strings/en.json";
+import { t, type StringKey } from "../../data/strings";
 
-export type StringKey = keyof typeof strings;
-
-export const t = (key: StringKey): string => strings[key];
+export { t, type StringKey };
 
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,

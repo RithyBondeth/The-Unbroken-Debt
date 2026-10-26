@@ -182,7 +182,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
           case "credits":
             open(
               "Boon Sop",
-              `<p>The Unbroken Debt</p><p>A game by Rithy Bondeth.</p><p class="welcome-note">Built with Babylon.js and Havok. Ubuntu font by Canonical; Preah Vihear by Danh Hong. Patrick Hand and Freehand are used in Sora’s sketchbook.</p><p class="welcome-note">Title artwork created with OpenAI image generation.</p>`,
+              `<p>The Unbroken Debt</p><p>A game by Rithy Bondeth.</p><p class="welcome-note">Built with Babylon.js and Havok. Ubuntu font by Canonical; Preah Vihear by Danh Hong. Patrick Hand and Freehand are used in Sora’s sketchbook.</p><p class="welcome-note">Library assets from Poly Haven, character bases from the MakeHuman Community and sounds from Kenney (all CC0). Archive photographs by Léon Busy, 1921, Albert Kahn Museum (CC0).</p><p class="welcome-note">Title artwork created with OpenAI image generation.</p>`,
             );
             break;
           case "fullscreen":
