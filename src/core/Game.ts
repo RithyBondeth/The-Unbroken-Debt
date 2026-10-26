@@ -47,6 +47,7 @@ import type { SaveData } from "../systems/saves/SaveData";
 interface Section {
   load(): Promise<void>;
   begin(): Promise<void>;
+  warmup?(): Promise<void>;
 }
 
 /**
@@ -148,14 +149,15 @@ export class Game {
     return Math.min(this.engine.getDeltaTime() / 1000, 0.1);
   }
 
-  async start(): Promise<void> {
+  /** Visual review fixtures can omit audio initialization; normal play enables it. */
+  async start({ audio = true }: { audio?: boolean } = {}): Promise<void> {
     await Promise.all([enablePhysics(this.scene), loadSketchbookFonts(), this.hands.load()]);
-    this.audio = await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch(
-      (error: unknown) => {
-        console.warn("[Game] no audio", error);
-        return null;
-      },
-    );
+    this.audio = audio
+      ? await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch((error: unknown) => {
+          console.warn("[Game] no audio", error);
+          return null;
+        })
+      : null;
     this.audio?.attachListener(this.camera);
     if (this.audio) this.footsteps = await Footsteps.load(this.audio, this.bus);
     this.resolution = new DynamicResolution(this.engine, this.preset);
@@ -164,6 +166,10 @@ export class Game {
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
     this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
     this.createSketchbook();
+    if (section.warmup) {
+      await this.fade.to(1, 0);
+      await section.warmup();
+    }
     if (import.meta.env.DEV) new PerfOverlay(this.engine, this.scene);
     this.scene.onBeforeRenderObservable.add(() => this.update());
     void section.begin();

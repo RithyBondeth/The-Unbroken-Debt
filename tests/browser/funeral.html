@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Khmer funeral visual review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Funeral visual review"></canvas>
+    <div id="overlay"></div>
+    <nav style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px">
+      <button id="overview">Overview</button><button id="altar">Altar</button
+      ><button id="flowers">Flowers</button><button id="coffin">Coffin</button
+      ><button id="pavilion">Pavilion</button><button id="monks">Monks’ seat</button
+      ><button id="capture">Save screenshot</button>
+    </nav>
+    <output
+      id="review-status"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111a;
+        padding: 8px;
+      "
+      >Loading funeral…</output
+    >
+    <script type="module" src="./funeral.ts"></script>
+  </body>
+</html>

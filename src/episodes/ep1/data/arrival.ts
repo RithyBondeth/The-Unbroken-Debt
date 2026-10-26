@@ -89,7 +89,7 @@ export const ACT_TWO_OPENING = {
 
 /** Flames in the pavilion must remain separate from static batches so they can go out. */
 export const TENT_FLAME_MESH =
-  /^(lantern_flame_\d+|altar_candle_\d+_flame|coffin_lamp_flame|step_candle_\d+_flame)$/;
+  /^(lantern_flame_\d+|altar_candle_\d+_flame|altar_globe_\d+|coffin_lamp_flame|step_candle_\d+_flame)$/;
 
 export const ARRIVAL_NOTE = [
   {

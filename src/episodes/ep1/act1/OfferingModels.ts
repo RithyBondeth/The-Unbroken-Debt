@@ -60,7 +60,8 @@ export class OfferingModels {
       areca: -0.05,
       lime: -0.06,
       candle: -0.02,
-      incense: -0.015,
+      // The horizontal sticks' lowest surface is 0.2 mm above their root.
+      incense: -0.0202,
     };
     for (const marker of area.level.interactables) {
       const prop = marker.extras.item as Prop | undefined;

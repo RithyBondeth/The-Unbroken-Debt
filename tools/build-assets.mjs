@@ -25,7 +25,7 @@ function findGlbs(dir) {
 const DETAIL_MAPS = "@(*_N|*_nor_gl*|*_ORM|*_arm*)";
 
 /** Ink on paper: Sora's drawings and the printed charts (rendered by `npm run drawings`). */
-const LINE_ART = "@(T_*_illustration_*|T_*_print_*|T_*_study_*)";
+const LINE_ART = "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*)";
 
 // Hero assets and player items get 4K textures; everything else 2K (Art Bible, section 6).
 function maxTextureSize(file) {
@@ -66,6 +66,10 @@ for (const input of files) {
   // Keep empty leaf nodes: spawn_ and patrol_ markers are empties (TDD section 7.1).
   gltf("prune", output, output, "--keep-leaves", "true");
   gltf("weld", output, output);
+  // Preserve the authored facial contours within 0.1% mesh-radius error while
+  // keeping the shared ancestral apparition inside its 60K triangle budget.
+  if (relative(SRC, input) === "ep1/neakta_shadow.glb")
+    gltf("simplify", output, output, "--ratio", "0.4", "--error", "0.001");
   gltf("resize", output, output, "--width", size, "--height", size);
   // Normal and packed occlusion-roughness-metal maps at 1K: detail the eye barely sees at
   // furniture scale, and the biggest share of download size (Phase 2 studio: 122 MB → see TDD 8).
