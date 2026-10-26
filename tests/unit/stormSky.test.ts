@@ -25,7 +25,8 @@ describe("storm clouds", () => {
 
   it("is deterministic and wraps round the dome", () => {
     expect(cloudDeck(W, H).data).toEqual(deck.data);
-    for (const y of [20, 50, 60]) expect(Math.abs(luma(deck.data, 0, y) - luma(deck.data, W - 1, y))).toBeLessThan(40);
+    for (const y of [20, 50, 60])
+      expect(Math.abs(luma(deck.data, 0, y) - luma(deck.data, W - 1, y))).toBeLessThan(40);
   });
 
   it("has real cloud structure, not a flat dome", () => {
