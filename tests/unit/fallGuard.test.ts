@@ -22,7 +22,8 @@ describe("FallGuard", () => {
     const guard = new FallGuard();
     guard.bounds = { minX: -10, maxX: 10, minZ: -10, maxZ: 10 };
     guard.reset(new Vector3(0, 0, 0));
-    for (let i = 0; i < 60; i++) expect(guard.update(0.016, new Vector3(9, 2, 0), false)).toBeNull();
+    for (let i = 0; i < 60; i++)
+      expect(guard.update(0.016, new Vector3(9, 2, 0), false)).toBeNull();
     expect(guard.update(0.016, new Vector3(12, 0, 0), true)).toEqual(new Vector3(0, 0, 0));
   });
 });
