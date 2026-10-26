@@ -10,6 +10,8 @@ import { WardrobeHiding } from "./WardrobeHiding";
 import { CP3_FEET, CP3_YAW } from "../data/walker";
 import { boardCreak, seededRandom, wetStep } from "../../../audio/synth";
 import { breathOut } from "../audio/nightSounds";
+import { heartbeat } from "../audio/houseSounds";
+import { StalkerVoice } from "../audio/StalkerVoice";
 
 const copySave = (save: SaveData): SaveData => structuredClone(save);
 const after = (seconds: number) =>
@@ -30,6 +32,7 @@ export class HallwayWalker {
   private creak: StaticSound | null = null;
   private heartbeat: StaticSound | null = null;
   private heartbeatOn = false;
+  private readonly voice = new StalkerVoice(0.5);
   private pendingEntry = false;
   private readonly caught = document.createElement("div");
   restarts = 0;
@@ -100,20 +103,14 @@ export class HallwayWalker {
       "threat",
       0.7,
     );
-    const pulse = new Float32Array(rate * 1.2);
-    for (let i = 0; i < pulse.length; i++) {
-      const t = i / rate;
-      for (const at of [0, 0.19])
-        if (t >= at && t < at + 0.12)
-          pulse[i] += Math.sin((t - at) * Math.PI * 2 * 56) * Math.exp(-(t - at) * 34) * 0.45;
-    }
     this.heartbeat = await audio.sound(
       "wardrobe_heartbeat",
-      audio.buffer(pulse, rate),
+      audio.buffer(heartbeat(rate, seededRandom(949)), rate),
       "sfx",
-      0.09,
+      0.08,
     );
     this.heartbeat.loop = true;
+    await this.voice.load(audio, "hallway_walker", 950);
   }
 
   update(dt: number): void {
@@ -178,12 +175,15 @@ export class HallwayWalker {
         step.spatial.position = this.brain.position.add(new Vector3(0, 0.05, 0));
         step.play();
       }
+      this.voice.step(this.brain.position);
       if (index === 0 && this.creak) {
         this.creak.spatial.position = this.brain.position.clone();
         this.creak.play();
       }
       this.stepIn = 0.85;
     }
+    // Its breath goes with it, heavier while it stands listening at a door.
+    this.voice.breathe(this.brain.position, this.brain.waiting ? 0.2 : 0);
     if (!this.hinted && this.brain.elapsed > 4 && !game.hiding) {
       this.hinted = true;
       game.hints.show("hint.walkerHide", 10);
@@ -225,6 +225,7 @@ export class HallwayWalker {
   private complete(): void {
     const game = this.game;
     this.models.walker.setEnabled(false);
+    this.voice.stop();
     this.heartbeat?.stop();
     this.heartbeatOn = false;
     game.threatActive = false;
@@ -259,6 +260,7 @@ export class HallwayWalker {
     this.hiding.exit(false);
     this.heartbeat?.stop();
     this.heartbeatOn = false;
+    this.voice.breathe(null);
     this.breath?.play();
     const eye = game.camera.globalPosition;
     const forward = game.camera.getForwardRay().direction;
@@ -271,6 +273,7 @@ export class HallwayWalker {
     await after(0.7);
     await game.fade.to(1, 0.45);
     for (const sound of [...this.steps, this.creak]) sound?.stop();
+    this.voice.stop();
     game.flags.load(saved.flags);
     game.inventory.load(saved.inventory);
     this.vigil.restoreCheckpoint(saved);

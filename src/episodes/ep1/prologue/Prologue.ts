@@ -403,6 +403,8 @@ export class Prologue {
       ["clockStop", sounds.clockStop, "sfx", markers.get("clock")?.position ?? desk, {}],
       ["train", sounds.trainPassing, "ambience", desk, { minDistance: 20 }],
     ];
+    // A small plastered room: Sora's own steps and the telephone ring in it.
+    audio.setSpace("studio", 0);
     const sampleRate = audio.context.sampleRate;
     const made = await Promise.all(
       list.map(([name, make, bus, position, options], i) =>

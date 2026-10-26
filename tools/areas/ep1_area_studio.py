@@ -298,12 +298,147 @@ def build():
         # rotate around the fan's axis
         blade.location = (3.0 + math.cos(k * math.pi / 2 + 0.3) * 0.42, 2.5 + math.sin(k * math.pi / 2 + 0.3) * 0.42, H - 0.57)
 
+    dress_working_studio(area, m, tx, ty)
+
     # Sora starts on the stool at the drafting table, facing the window (south).
     empty("spawn_player", area, (tx, ty + 0.95, 0), (0, 0, math.pi), checkpoint="CP0")
 
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
     print(f"Saved {BLEND}")
+
+
+# ------------------------------------------------------------------- the working studio
+
+
+def crumpled_sheet(name, coll, x, y, radius, mat):
+    """A sheet balled up and thrown aside: a lumpy low sphere resting on the floor."""
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=radius, location=(x, y, radius * 0.8))
+    obj = bpy.context.active_object
+    obj.name = name
+    for c in obj.users_collection:
+        c.objects.unlink(obj)
+    coll.objects.link(obj)
+    for v in obj.data.vertices:
+        v.co *= rng.uniform(0.7, 1.15)
+    obj.scale = (1.0, rng.uniform(0.8, 1.0), rng.uniform(0.7, 0.85))
+    obj.rotation_euler = (0, 0, rng.uniform(0, math.tau))
+    obj.data.materials.append(mat)
+    world_uvs(obj)
+    return obj
+
+
+def hanging_sheet(name, coll, centre, along, width, height, mat):
+    """A drawing clipped to the drying line by its top edge, facing into the room."""
+    angle = math.atan2(along[1], along[0])
+    x, y, z = centre
+    sheet = box(name, coll, x - width / 2, x + width / 2, y - 0.001, y + 0.001, z - height, z, mat, tilt=(0, 0, angle))
+    normal = (-along[1], along[0])
+    picture_uvs(sheet, (-normal[1], normal[0], 0), (0, 0, 1))
+    return sheet
+
+
+def dress_working_studio(area, m, tx, ty):
+    """Art Bible pillar 'grounded and lived-in': an illustrator works here every day.
+    Drawings drying on a line, boards against the wall, rolls of paper, sheets she
+    gave up on. Nothing here has a collider, and nothing stands on the route from
+    the stool to the desk, the shelf, the hook and the door."""
+    newsprint = plain("M_newsprint", (0.62, 0.6, 0.55), rough=0.95)
+    string = plain("M_string", (0.55, 0.5, 0.42), rough=0.9)
+    umbrella = plain("M_umbrella_cloth", (0.03, 0.03, 0.035), rough=0.75)
+    aged = plain("M_aged_paper", (0.66, 0.6, 0.48), rough=0.95)
+
+    # A drying line across the south-west corner, high above head height, with three
+    # drawings pegged to it; lightning through the window throws them into silhouette.
+    a, b = (0.0, 1.0, 2.32), (1.75, 0.0, 2.32)
+    line = sag(a, b, 0.07, n=12)
+    tube("drying_line", area, line, 0.002, string, sides=4)
+    along = (b[0] - a[0], b[1] - a[1])
+    length = math.hypot(*along)
+    along = (along[0] / length, along[1] / length)
+    for k, (t, subject) in enumerate(((0.26, "palms"), (0.52, "lettering"), (0.78, "ornament"))):
+        p = line[round(t * (len(line) - 1))]
+        hanging_sheet(f"drying_sheet_{k}", area, (p[0], p[1], p[2] - 0.005), along, 0.26, 0.34, m[subject])
+        for s in (-1, 1):
+            cx, cy = p[0] + s * 0.1 * along[0], p[1] + s * 0.1 * along[1]
+            box(f"drying_peg_{k}_{s}", area, cx - 0.006, cx + 0.006, cy - 0.004, cy + 0.004, p[2] - 0.035, p[2] + 0.01,
+                m["worn"], tilt=(0, 0, math.atan2(along[1], along[0])))
+
+    # Stretched canvases leaning on the west wall in the corner: two show their raw
+    # backs and stretcher frames, one faces out with a study on it.
+    canvas_back = plain("M_canvas_back", (0.46, 0.4, 0.31), rough=0.95)
+    for k, (y, w, h, face) in enumerate(((0.32, 0.5, 0.7, False), (0.62, 0.6, 0.8, True), (0.95, 0.45, 0.6, False))):
+        lean = -0.13
+        cx = 0.03 + 0.01 * k + h / 2 * math.sin(-lean)
+        box(f"canvas_board_{k}", area, cx - 0.004, cx + 0.004, y - w / 2, y + w / 2, 0.0, h, canvas_back, tilt=(0, lean, 0))
+        if face:
+            art = box(f"canvas_study_{k}", area, cx + 0.005, cx + 0.007, y - w / 2 + 0.03, y + w / 2 - 0.03, 0.03, h - 0.03,
+                      m["boats"], tilt=(0, lean, 0))
+            picture_uvs(art, (0, 1, 0), (math.sin(lean), 0, math.cos(lean)))
+            continue
+        # Stretcher frame on the back: four bars round the edge and a cross brace.
+        bars = [(y - w / 2, y + w / 2, 0.0, 0.035), (y - w / 2, y + w / 2, h - 0.035, h),
+                (y - w / 2, y - w / 2 + 0.035, 0.0, h), (y + w / 2 - 0.035, y + w / 2, 0.0, h),
+                (y - w / 2, y + w / 2, h / 2 - 0.0175, h / 2 + 0.0175)]
+        for j, (y0, y1, z0, z1) in enumerate(bars):
+            bar = box(f"canvas_stretcher_{k}_{j}", area, cx + 0.004, cx + 0.022, y0, y1, z0, z1, m["worn"])
+            # Lean each bar with the canvas, about the canvas's own centre.
+            dz = (z0 + z1) / 2 - h / 2
+            bar.location = (cx + 0.013 + dz * math.sin(lean), (y0 + y1) / 2, h / 2 + dz * math.cos(lean))
+            bar.rotation_euler = (0, lean, 0)
+
+    # Rolled paper standing in the wicker basket by the desk.
+    for k in range(6):
+        ang = k * math.tau / 6 + rng.uniform(-0.3, 0.3)
+        r = 0.05 + 0.02 * (k % 2)
+        x, y = 0.35 + r * math.cos(ang), 1.45 + r * math.sin(ang)
+        roll = cylinder(f"paper_roll_{k}", area, x, y, 0.04, 0.04 + rng.uniform(0.6, 0.85), rng.uniform(0.018, 0.028),
+                        aged if k % 3 else newsprint, verts=10)
+        roll.rotation_euler = (rng.uniform(-0.12, 0.12) + 0.1 * math.sin(ang), rng.uniform(-0.12, 0.12) - 0.1 * math.cos(ang), 0)
+
+    # Sheets she gave up on, balled and thrown under the drafting table.
+    for k, (x, y) in enumerate(((tx - 0.35, ty - 0.15), (tx - 0.1, ty + 0.25), (tx + 0.62, ty + 0.35),
+                                (tx - 0.75, ty + 0.4), (tx + 0.45, ty + 0.55))):
+        crumpled_sheet(f"crumpled_sheet_{k}", area, x, y, rng.uniform(0.035, 0.05), m["paper"])
+
+    # A tied stack of fresh paper on the floor under the drafting table.
+    px, py = tx + 0.25, ty - 0.1
+    for k in range(14):
+        jitter = rng.uniform(-0.008, 0.008)
+        box(f"paper_stack_{k}", area, px - 0.21 + jitter, px + 0.21 + jitter, py - 0.15, py + 0.15, k * 0.0035, k * 0.0035 + 0.0025,
+            m["paper"], tilt=(0, 0, rng.uniform(-0.03, 0.03)))
+    box("paper_stack_string_a", area, px - 0.215, px + 0.215, py - 0.006, py + 0.006, 0.0, 0.051, string)
+    box("paper_stack_string_b", area, px - 0.006, px + 0.006, py - 0.155, py + 0.155, 0.0, 0.052, string)
+
+    # Pinned studies spreading along the walls she faces from the desk and the bed.
+    for k, (y, z, subject, turn) in enumerate(((4.15, 1.75, "house", 0.04), (4.5, 1.95, "boats", -0.05), (3.85, 1.95, "palms", -0.02))):
+        sheet = box(f"pinned_drawing_n_{k}", area, 0.002, 0.004, y - 0.13, y + 0.13, z - 0.17, z + 0.17, m[subject], tilt=(turn, 0, 0))
+        picture_uvs(sheet, (0, math.cos(turn), math.sin(turn)), (0, -math.sin(turn), math.cos(turn)))
+        cylinder(f"pin_n_{k}", area, 0.006, y, z + 0.15, z + 0.155, 0.004, m["brass"], verts=6)
+    for k, (x, z, subject, turn) in enumerate(((1.55, 1.65, "lettering", 0.05), (1.85, 1.95, "ornament", -0.04))):
+        sheet = box(f"pinned_drawing_nw_{k}", area, x - 0.14, x + 0.14, D - 0.004, D - 0.002, z - 0.18, z + 0.18, m[subject],
+                    tilt=(0, turn, 0))
+        picture_uvs(sheet, (math.cos(turn), 0, -math.sin(turn)), (math.sin(turn), 0, math.cos(turn)))
+        cylinder(f"pin_nw_{k}", area, x, D - 0.006, z + 0.16, z + 0.165, 0.004, m["brass"], verts=6)
+
+    # A stack of books at the back of the desk, the top one open-faced down.
+    for k, (w, d, h, mat) in enumerate(((0.2, 0.28, 0.04, m["book"]), (0.18, 0.25, 0.035, m["leather"]), (0.16, 0.23, 0.03, m["book"]))):
+        z = 0.78 + sum(s[2] for s in ((0.2, 0.28, 0.04), (0.18, 0.25, 0.035), (0.16, 0.23, 0.03))[:k])
+        box(f"desk_book_{k}", area, 0.3 - w / 2, 0.3 + w / 2, 2.88 - d / 2, 2.88 + d / 2, z, z + h, mat,
+            tilt=(0, 0, rng.uniform(-0.15, 0.15)), edge=0.004)
+
+    # Yesterday's newspapers, folded, on the floor by the armchair.
+    for k in range(9):
+        box(f"newspaper_{k}", area, 5.15, 5.5, 0.35, 0.6, k * 0.004, k * 0.004 + 0.003, newsprint,
+            tilt=(0, 0, rng.uniform(-0.2, 0.2)))
+
+    # A black umbrella leaning in the corner by the console table, and slippers by the bed.
+    shaft = cylinder("umbrella_folded", area, W - 0.12, 0.12, 0.08, 0.85, 0.045, umbrella, verts=8, radius_top=0.012)
+    shaft.rotation_euler = (0.12, -0.1, 0)
+    tube("umbrella_handle", area, [(W - 0.08, 0.16, 0.86), (W - 0.07, 0.17, 0.95), (W - 0.1, 0.19, 0.99)], 0.008, m["wood"], sides=6)
+    for k, x in enumerate((4.25, 4.42)):
+        box(f"slipper_{k}", area, x - 0.05, x + 0.05, D - 1.3, D - 1.06, 0.0, 0.025, m["leather"],
+            tilt=(0, 0, rng.uniform(-0.2, 0.2)), edge=0.01)
 
 
 build()

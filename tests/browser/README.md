@@ -10,7 +10,8 @@ the path, individual grass blades, trunk roots, canopy, road and compound edge.
 are in `docs/production/forest-reference-study.md` and `tools/areas/rebuild-forest.py`.
 **House and forest** and **Behind the house** cover the three-sided forest belt.
 **Player lamp** toggles the real lamp so nighttime readability can be compared
-without enabling the optional **Overcast detail light**. A focused belt update
+without enabling the optional **Overcast detail light**. Add `&quality=low` to review
+the Low preset's thinner forest border and fog. A focused belt update
 uses `tools/areas/rebuild-house-forest.py` and the forest merge tool.
 
 Run `npm run dev`, then open
@@ -289,3 +290,12 @@ the production village. It keeps its saves in `boon-sop-encounter-regression`.
 - The loading fade now covers shader preparation and actual renders of upcoming
   forest, courtyard and house views. Frame timing is reported after loading;
   avoid profiling while build tools are competing for CPU time.
+
+## Scene tour
+
+Open `/tests/browser/tour.html` for a screenshot tour of every Episode 1 location
+in story order (forest path, courtyard, tent, house, rooms, under the house, the
+ritual burner) with production lighting and the lamp lit; `?area=studio` tours the
+prologue studio. Add `&run` to save every view to `debug-shots/tour-*.png` for a
+before-and-after comparison. Keep the tab in front: background tabs are throttled.
+Uses the isolated `boon-sop-tour` database.

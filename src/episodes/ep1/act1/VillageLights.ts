@@ -8,23 +8,32 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Area } from "../../../core/AreaLoader";
 import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
+import { softFalloff, useSoftFalloff } from "../../../render/softLampFalloff";
 import { Lightning } from "../Lightning";
+import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 
 /**
  * The village at night (Art Bible, section 3): a dark, rain-heavy sky; the
  * funeral tent glowing from its hanging oil lamps and altar candles; lightning;
  * and Sora's hurricane lamp, the hero light, carried at her side.
  */
-/** Sora's lamp at full flame (physical falloff, so about this much at 1 m). */
-const LAMP_INTENSITY = 10;
+/** Sora's lamp at full flame, as it was with plain physical falloff (this much at 1 m). */
+const PHYSICAL_INTENSITY = 10;
+const LAMP_RANGE = 9;
 /**
- * Close to what she looks at, Sora's lamp is shaded down, as she would lower it:
- * full beyond this distance (m), and never below the floor. From her eye, at
- * physical falloff, a page at arm's length would otherwise get ten times the
- * light of a wall across the room and burn out to white.
+ * With the soft falloff (render/softLampFalloff.ts), the same light at Sora's
+ * working distance, 4 m: everything from about 3 m out is lit as before, and
+ * what she holds up close no longer burns to white.
  */
-const SHADE_FROM = 1.8;
-const SHADE_FLOOR = 0.3;
+const LAMP_INTENSITY = PHYSICAL_INTENSITY / (16 * softFalloff(4, LAMP_RANGE));
+/**
+ * Close to what she looks at, Sora's lamp is shaded down a little more, as she
+ * would lower it: full beyond this distance (m), and never below the floor. The
+ * soft falloff already keeps what she holds from burning out; this keeps an object
+ * she inspects at 1 m as bright as it was, and one at 0.5 m from glaring.
+ */
+const SHADE_FROM = 1.3;
+const SHADE_FLOOR = 0.5;
 
 export class VillageLights {
   /** A2-01 snuffs the hanging lamps independently of incense dimming. */
@@ -48,21 +57,22 @@ export class VillageLights {
   private readonly phases: number[] = [];
 
   constructor(scene: Scene, area: Area, camera: Camera) {
-    // Rain-heavy sky with the moon somewhere behind the clouds: dark slate, light
-    // enough that roofs, palms and the flag read as silhouettes (Art Bible 1, 3).
-    scene.clearColor = new Color4(0.02, 0.024, 0.032, 1);
+    // Rain-heavy sky with the moon somewhere behind the clouds: near black, the
+    // storm dome and fog just light enough that roofs, palms and the flag read as
+    // silhouettes (Art Bible 1, 3).
+    scene.clearColor = new Color4(...NIGHT_LOOK.clearColor, 1);
     this.sky = new HemisphericLight("night_sky", new Vector3(0.2, 1, -0.3), scene);
     this.sky.diffuse = new Color3(0.48, 0.56, 0.72);
     this.sky.groundColor = new Color3(0.13, 0.16, 0.2);
     this.sky.specular = new Color3(0.03, 0.04, 0.06);
     // Soft cloud bounce exposes leaf veins and bark between pools of lamplight.
-    this.sky.intensity = 0.38;
+    this.sky.intensity = NIGHT_LOOK.skyIntensity;
     // The moon hides low in the south, over the flooded fields: their water catches it.
     this.moon = new DirectionalLight("moonlight", new Vector3(-0.25, -0.45, -0.85), scene);
-    // Cool and weak through the cloud: enough for the forest to read as shapes in blue.
+    // Cool and weak through the cloud: the forest reads only as dim shapes in blue.
     this.moon.diffuse = Color3.FromHexString("#7F9FD6");
     this.moon.specular = new Color3(0.1, 0.13, 0.18);
-    this.moon.intensity = 0.38;
+    this.moon.intensity = NIGHT_LOOK.moonIntensity;
 
     this.flash = new DirectionalLight("lightning", new Vector3(0.4, -1, 0.5), scene);
     this.flash.diffuse = new Color3(0.75, 0.82, 1);
@@ -87,7 +97,8 @@ export class VillageLights {
     // shadows: from (nearly) the eye, what she can see the lamp lights, and a shadow
     // map turning with her head only made shadows swim over bark and leaves.
     this.lamp = new PointLight("hurricane_lamp", new Vector3(-0.06, -0.14, 0.1), scene);
-    this.lamp.range = 9;
+    this.lamp.range = LAMP_RANGE;
+    useSoftFalloff(this.lamp);
     this.lamp.parent = camera;
     this.lamp.diffuse = FLAME_COLOR.clone();
     this.lamp.intensity = 6;
@@ -119,9 +130,9 @@ export class VillageLights {
   }
 
   dawn(): void {
-    this.sky.intensity = 0.65;
+    this.sky.intensity = DAWN_LOOK.skyIntensity;
     this.sky.diffuse.set(0.65, 0.72, 0.8);
-    this.moon.intensity = 0.4;
+    this.moon.intensity = DAWN_LOOK.moonIntensity;
     this.moon.diffuse.set(0.7, 0.76, 0.84);
     this.flash.intensity = 0;
   }

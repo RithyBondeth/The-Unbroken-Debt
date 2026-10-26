@@ -4,6 +4,7 @@ import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { BoundingInfo } from "@babylonjs/core/Culling/boundingInfo";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DitheredTileFadeMaterialPlugin } from "@babylonjs/core/Materials/ditheredTileFadeMaterialPlugin";
@@ -12,6 +13,8 @@ import { realiseInstances } from "../../../core/AreaLoader";
 const templates = new WeakMap<Scene, AssetContainer>();
 const loading = new WeakMap<Scene, Promise<void>>();
 const forms = new WeakMap<Scene, Set<ShadowFigure>>();
+/** Multiplies the pale painted map down to near-black (linear). */
+const BLACK_PAINT = new Color3(0.07, 0.066, 0.062);
 
 /** The shrine's ancestral effigy seen upright in the forest and house.
  * Baked anatomical geometry, inset eyes, weathered paint and woven cotton are
@@ -40,6 +43,13 @@ export class ShadowFigure {
         for (const material of asset.materials)
           if (material instanceof PBRMaterial) {
             material.maxSimultaneousLights = 8;
+            // The apparition is the black Neak Ta: the shrine statues' mineral paint
+            // darkened to soot-black lacquer, its mottling and relief kept, with a
+            // dull sheen so the lamp still finds the face. The chalk eyes stay pale.
+            if (material.name === "M_ancestor_painted_mineral") {
+              material.albedoColor = BLACK_PAINT.clone();
+              material.roughness = 0.58;
+            }
             // Coverage changes stay opaque and keep depth / prepass outputs coherent.
             // The plugin uses per-mesh uniforms, so the three forms remain independent.
             DitheredTileFadeMaterialPlugin.GetOrCreate(material);

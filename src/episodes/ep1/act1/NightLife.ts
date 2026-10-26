@@ -123,14 +123,14 @@ export class NightLife {
       this.calls.push({ sound, near });
     };
     const far = [pos(-34, 2, 1), pos(32, 14, 1), pos(-26, 30, 1), pos(28, -24, 1)];
-    await call("dog_howl", dogHowl(rate, seededRandom(46)), 0.11, far);
-    await call("dog_barks", dogBarks(rate, seededRandom(47)), 0.42, far);
+    await call("dog_howl", dogHowl(rate, seededRandom(46)), 0.16, far);
+    await call("dog_barks", dogBarks(rate, seededRandom(47)), 0.31, far);
     await call("owl", owlHoot(rate, seededRandom(48)), 0.18, [
       pos(-7, -35, 9),
       pos(15, 10, 12),
       pos(-20, 14, 10),
     ]);
-    await call("crows", crowCaws(rate, seededRandom(49)), 0.35, [
+    await call("crows", crowCaws(rate, seededRandom(49)), 0.29, [
       pos(-5, -15, 8),
       pos(6, -24, 8),
       pos(-14, -48, 8),

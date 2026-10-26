@@ -4,7 +4,9 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import type { Game } from "../../../core/Game";
 import type { SaveData } from "../../../systems/saves/SaveData";
 import type { Vigil } from "../act1/Vigil";
-import { wetStep, seededRandom, boardCreak } from "../../../audio/synth";
+import { wetStep, seededRandom } from "../../../audio/synth";
+import { jarLid } from "../audio/actThreeSounds";
+import { StalkerVoice } from "../audio/StalkerVoice";
 import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, JARS, inHunt } from "../data/hunt";
 import { HuntProgress } from "./HuntProgress";
 import { RoamerBrain } from "./RoamerBrain";
@@ -27,6 +29,8 @@ export class UnderHouseHunt {
   private readonly entries: string[] = [];
   private readonly steps: StaticSound[] = [];
   private lidSound: StaticSound | null = null;
+  private readonly voice = new StalkerVoice(0.55);
+  private lastState = "";
   private readonly caught = document.createElement("div");
 
   constructor(
@@ -91,11 +95,12 @@ export class UnderHouseHunt {
     }
     this.lidSound = await audio.spatialSound(
       "jar_lid_scrape",
-      audio.buffer(boardCreak(rate, seededRandom(1205)), rate),
+      audio.buffer(jarLid(rate, seededRandom(1205)), rate),
       "sfx",
       CP5_FEET,
       { minDistance: 2, volume: 0.45 },
     );
+    await this.voice.load(audio, "roamer", 1210);
   }
 
   update(dt: number): void {
@@ -152,12 +157,25 @@ export class UnderHouseHunt {
           step.spatial.position = this.brain.position.add(new Vector3(0, 0.1, 0));
           step.play();
         }
+        this.voice.step(this.brain.position);
         this.stepIn = this.brain.state === "chasing" ? 0.55 : 0.95;
       }
+      const state = this.brain.state;
+      // Wet breath on its patrol, ragged when it hunts; it stops to scent where it lost her.
+      this.voice.breathe(
+        this.intro < 1 ? this.brain.position : null,
+        state === "chasing" ? 1 : state === "investigating" ? 0.4 : 0,
+      );
+      if (state === "investigating" && this.lastState !== "investigating")
+        this.voice.sniffAt(this.brain.position);
+      this.lastState = state;
       if (this.brain.state === "caught") {
         void this.restart();
         return;
       }
+    } else if (this.lastState) {
+      this.voice.breathe(null);
+      this.lastState = "";
     }
     if (
       !inside &&
@@ -352,6 +370,8 @@ export class UnderHouseHunt {
     await after(0.65);
     await g.fade.to(1, 0.4);
     for (const step of this.steps) step.stop();
+    this.voice.stop();
+    this.lastState = "";
     g.flags.load(saved.flags);
     g.inventory.load(saved.inventory);
     this.vigil.restoreCheckpoint(saved);

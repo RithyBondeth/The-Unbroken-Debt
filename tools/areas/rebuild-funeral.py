@@ -33,11 +33,16 @@ fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == '
 dictionary = next(n.value for n in fn.body if isinstance(n, ast.Assign)
                   and isinstance(n.value, ast.Dict))
 m = {}
+ns['lib'], ns['img'] = ns['library_material'], ns['image_material']
 for key, value in zip(dictionary.keys, dictionary.values):
     names = [a.value for a in value.args if isinstance(a, ast.Constant)
              and isinstance(a.value, str) and a.value.startswith('M_')]
     if names and names[0] in bpy.data.materials:
         m[key.value] = bpy.data.materials[names[0]]
+    elif names:
+        # Materials the saved scene no longer holds (pruned when unused) are made
+        # again from the builder's own definition.
+        m[key.value] = eval(compile(ast.Expression(value), source, 'eval'), ns)
 
 prefixes = ('tent_', 'dais', 'coffin_', 'portrait_', 'altar_', 'monk_',
             'incense_burner_', 'main_burner', 'skor_', 'flag_pole',
@@ -56,6 +61,8 @@ exact = {'betel_tray', 'betel_box', 'teapot', 'teapot_lid', 'teapot_spout',
 
 def owns(obj):
     name = obj.name.removeprefix('col_')
+    if name.startswith('tent_web_'):
+        return False  # the house finish pass owns the silk cobwebs (rebuild-house-details.py)
     if name.startswith(prefixes) or name in exact:
         return True
     if re.fullmatch(r'(interact_incense_[0-3]|thread_[0-3]|sandal_\d+.*)', name):
@@ -96,6 +103,10 @@ print(f'Rebuilding {len(old_names)} funeral nodes', flush=True)
 ns['funeral'](m)
 ns['funeral_details'](m)
 created = {obj for obj in coll.objects if obj not in before}
+# funeral_details() also draws the plain tent cobwebs; keep the finished silk ones.
+for obj in [o for o in created if re.fullmatch(r'tent_web_\d+\.\d+', o.name)]:
+    created.discard(obj)
+    bpy.data.objects.remove(obj, do_unlink=True)
 # Imported library copies need funeral-specific IDs; other rooms use the same props.
 prop_roots = sorted((o for o in created if o.name.startswith('prop_')), key=lambda o: o.name)
 for i, root in enumerate(prop_roots):

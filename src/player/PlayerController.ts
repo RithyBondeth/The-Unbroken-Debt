@@ -142,8 +142,12 @@ export class PlayerController {
   }
 
   get feet(): Vector3 {
+    return this.feetToRef(new Vector3());
+  }
+
+  feetToRef(result: Vector3): Vector3 {
     const p = this.controller.getPosition();
-    return new Vector3(p.x, p.y - this.currentHeight() / 2, p.z);
+    return result.set(p.x, p.y - this.currentHeight() / 2, p.z);
   }
 
   addLadder(ladder: Ladder): void {

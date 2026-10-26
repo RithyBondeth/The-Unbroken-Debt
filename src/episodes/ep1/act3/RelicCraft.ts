@@ -25,7 +25,7 @@ export class RelicCraft {
   }
   mat(name: string, color: string, roughness = 0.8, metallic = 0): PBRMaterial {
     const m = new PBRMaterial(`M_relic_${name}`, this.scene);
-    m.albedoColor = Color3.FromHexString(color);
+    m.albedoColor = Color3.FromHexString(color).toLinearSpace();
     m.roughness = roughness;
     m.metallic = metallic;
     m.maxSimultaneousLights = 8;

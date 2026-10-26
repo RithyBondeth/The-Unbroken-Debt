@@ -3,6 +3,7 @@ import type { CorpseModels } from "./CorpseModels";
 import { CoffinProgress } from "./CoffinProgress";
 import { boardCreak, seededRandom } from "../../../audio/synth";
 import { drawerOpen } from "../audio/prologueSounds";
+import { coffinKnock } from "../audio/actThreeSounds";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
@@ -25,14 +26,7 @@ export class CoffinEncounter {
     const audio = this.game.audio;
     if (!audio) return;
     const rate = audio.context.sampleRate;
-    const bang = new Float32Array(rate * 0.85);
-    const random = seededRandom(1691);
-    for (let i = 0; i < bang.length; i++) {
-      const t = i / rate;
-      bang[i] =
-        0.44 * Math.sin(t * 2 * Math.PI * 67) * Math.exp(-t * 12) +
-        (random() * 2 - 1) * 0.32 * Math.exp(-t * 28);
-    }
+    const bang = coffinKnock(rate, seededRandom(1691));
     for (const [name, data] of [
       ["rattle", boardCreak(rate, seededRandom(1690))],
       ["bang", bang],

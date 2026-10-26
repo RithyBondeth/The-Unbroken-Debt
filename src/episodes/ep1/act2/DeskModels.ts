@@ -218,7 +218,7 @@ export class DeskModels {
   }
   private mat(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
     const mat = new PBRMaterial(`M_desk_${name}`, this.scene);
-    mat.albedoColor = Color3.FromHexString(hex);
+    mat.albedoColor = Color3.FromHexString(hex).toLinearSpace();
     mat.roughness = roughness;
     mat.metallic = metallic;
     mat.maxSimultaneousLights = 8;
