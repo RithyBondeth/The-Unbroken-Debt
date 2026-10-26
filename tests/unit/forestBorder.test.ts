@@ -70,7 +70,8 @@ describe("forest border layout", () => {
 
   it("puts painted far trees only beyond the modelled ring", () => {
     expect(layout.cards.length).toBeGreaterThan(800);
-    for (const c of layout.cards) expect(outside(TERRAIN, c.x, c.z)).toBeGreaterThan(options.nearDepth - 6);
+    for (const c of layout.cards)
+      expect(outside(TERRAIN, c.x, c.z)).toBeGreaterThan(options.nearDepth - 6);
   });
 
   it("thins out on the low preset", () => {

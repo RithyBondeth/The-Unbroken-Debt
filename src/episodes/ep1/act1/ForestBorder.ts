@@ -178,7 +178,11 @@ export class ForestBorder {
     for (const name of ["telegraph_0", "telegraph_3"]) {
       const node = byName.get(name);
       const glass = node && this.meshesOf(node).find((m) => m.material?.name.startsWith("M_glass"));
-      if (glass) this.wireEnds.push({ x: glass.getBoundingInfo().boundingBox.centerWorld.x, ends: this.insulators(glass) });
+      if (glass)
+        this.wireEnds.push({
+          x: glass.getBoundingInfo().boundingBox.centerWorld.x,
+          ends: this.insulators(glass),
+        });
     }
   }
 
@@ -248,7 +252,13 @@ export class ForestBorder {
       if (!positions) continue;
       const p = new Vector3();
       for (let i = 0; i < positions.length; i += 3) {
-        Vector3.TransformCoordinatesFromFloatsToRef(positions[i], positions[i + 1], positions[i + 2], world, p);
+        Vector3.TransformCoordinatesFromFloatsToRef(
+          positions[i],
+          positions[i + 1],
+          positions[i + 2],
+          world,
+          p,
+        );
         const ix = Math.round(p.x - TERRAIN.minX);
         const iz = Math.round(p.z - TERRAIN.minZ);
         if (ix >= 0 && ix < nx && iz >= 0 && iz < nz) heights[ix + iz * nx] = p.y;
@@ -312,17 +322,31 @@ export class ForestBorder {
     const world = mesh.computeWorldMatrix(true);
     const normalMatrix = world.clone().invert().transpose();
     const positions = Float32Array.from(mesh.getVerticesData("position") ?? []);
-    const normals = Float32Array.from(mesh.getVerticesData("normal") ?? new Float32Array(positions.length));
+    const normals = Float32Array.from(
+      mesh.getVerticesData("normal") ?? new Float32Array(positions.length),
+    );
     const uv = mesh.getVerticesData("uv");
     const source = mesh.getIndices() ?? [];
     const indices = Uint32Array.from(source);
     const p = new Vector3();
     for (let i = 0; i < positions.length; i += 3) {
-      Vector3.TransformCoordinatesFromFloatsToRef(positions[i], positions[i + 1], positions[i + 2], world, p);
+      Vector3.TransformCoordinatesFromFloatsToRef(
+        positions[i],
+        positions[i + 1],
+        positions[i + 2],
+        world,
+        p,
+      );
       positions[i] = p.x - foot.x;
       positions[i + 1] = p.y - foot.y;
       positions[i + 2] = p.z - foot.z;
-      Vector3.TransformNormalFromFloatsToRef(normals[i], normals[i + 1], normals[i + 2], normalMatrix, p);
+      Vector3.TransformNormalFromFloatsToRef(
+        normals[i],
+        normals[i + 1],
+        normals[i + 2],
+        normalMatrix,
+        p,
+      );
       p.normalize();
       normals[i] = p.x;
       normals[i + 1] = p.y;
@@ -353,7 +377,12 @@ export class ForestBorder {
     const alongX = e.x > e.z;
     const reach = Math.max(e.x, e.z) - 0.04;
     return [-1, 1].map(
-      (s) => new Vector3(c.x + (alongX ? s * reach : 0), box.maximumWorld.y - 0.02, c.z + (alongX ? 0 : s * reach)),
+      (s) =>
+        new Vector3(
+          c.x + (alongX ? s * reach : 0),
+          box.maximumWorld.y - 0.02,
+          c.z + (alongX ? 0 : s * reach),
+        ),
     );
   }
 
@@ -373,7 +402,8 @@ export class ForestBorder {
     this.add(buckets, template, plant.layer, plant.x, y, plant.z, plant.yaw, plant.scale);
     const half = TRUNK[plant.species];
     if (half && plant.layer !== "under" && outside(PLAY, plant.x, plant.z) < 1.5) {
-      const fixed = plant.species === "sugarPalm" || plant.species === "coconut" || plant.species === "dead";
+      const fixed =
+        plant.species === "sugarPalm" || plant.species === "coconut" || plant.species === "dead";
       const w = half * (fixed ? 1 : plant.scale);
       trunks.push({ minX: plant.x - w, maxX: plant.x + w, minZ: plant.z - w, maxZ: plant.z + w });
     }
@@ -448,7 +478,16 @@ export class ForestBorder {
         if (!list?.length) continue;
         const bx = x + side * dx,
           bz = ROAD_Z + dz;
-        this.add(buckets, list[Math.floor(random() * list.length)], species === "broadleaf" || species === "bamboo" ? "canopy" : "under", bx, this.groundAt(bx, bz) - 0.03, bz, random() * Math.PI * 2, s);
+        this.add(
+          buckets,
+          list[Math.floor(random() * list.length)],
+          species === "broadleaf" || species === "bamboo" ? "canopy" : "under",
+          bx,
+          this.groundAt(bx, bz) - 0.03,
+          bz,
+          random() * Math.PI * 2,
+          s,
+        );
       }
     }
   }
@@ -460,7 +499,11 @@ export class ForestBorder {
     const glass = pole.parts.find((p) => p.material.name.startsWith("M_glass"));
     const reach = (() => {
       if (!glass) return null;
-      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, top = -Infinity;
+      let minX = Infinity,
+        maxX = -Infinity,
+        minZ = Infinity,
+        maxZ = -Infinity,
+        top = -Infinity;
       for (let i = 0; i < glass.positions.length; i += 3) {
         minX = Math.min(minX, glass.positions[i]);
         maxX = Math.max(maxX, glass.positions[i]);
@@ -591,8 +634,18 @@ export class ForestBorder {
       return out;
     };
     const height = (x: number, z: number) => borderHeight(x, z, (a, b) => this.terrainAt(a, b));
-    const xs = steps(TERRAIN.minX - depth, TERRAIN.maxX + depth, TERRAIN.minX - 6, TERRAIN.maxX + 6);
-    const zs = steps(TERRAIN.minZ - depth, TERRAIN.maxZ + depth, TERRAIN.minZ - 6, TERRAIN.maxZ + 6);
+    const xs = steps(
+      TERRAIN.minX - depth,
+      TERRAIN.maxX + depth,
+      TERRAIN.minX - 6,
+      TERRAIN.maxX + 6,
+    );
+    const zs = steps(
+      TERRAIN.minZ - depth,
+      TERRAIN.maxZ + depth,
+      TERRAIN.minZ - 6,
+      TERRAIN.maxZ + 6,
+    );
     const drawn = (cx: number, cz: number) =>
       (outside(TERRAIN, cx, cz) > 0 || (inBund(cx, cz) && Math.abs(cz - ROAD_Z) > 2.7)) &&
       !onOuterRoad(cx, cz);
@@ -652,7 +705,11 @@ export class ForestBorder {
       true,
       Texture.TRILINEAR_SAMPLINGMODE,
     );
-    paintForestCards(texture.getContext() as unknown as CanvasRenderingContext2D, cell, seededRandom(6242040));
+    paintForestCards(
+      texture.getContext() as unknown as CanvasRenderingContext2D,
+      cell,
+      seededRandom(6242040),
+    );
     texture.hasAlpha = true;
     texture.update();
     this.atlas = texture;
@@ -708,7 +765,11 @@ export class ForestBorder {
             positions[o + 1] = y + up * card.height;
             positions[o + 2] = card.z + side * dz;
             // Rounded normals: the card shades like a crown, not a board.
-            const n = new Vector3(side * Math.cos(a) * 0.7, 0.35 + 0.65 * up, side * Math.sin(a) * 0.7).normalize();
+            const n = new Vector3(
+              side * Math.cos(a) * 0.7,
+              0.35 + 0.65 * up,
+              side * Math.sin(a) * 0.7,
+            ).normalize();
             normals[o] = n.x;
             normals[o + 1] = n.y;
             normals[o + 2] = n.z;
@@ -718,7 +779,14 @@ export class ForestBorder {
           indices.set([v, v + 2, v + 1, v, v + 3, v + 2], k * 12 + q * 6);
         }
       });
-      const mesh = this.mesh(`forest_border_far_${key}`, material, positions, normals, uvs, indices);
+      const mesh = this.mesh(
+        `forest_border_far_${key}`,
+        material,
+        positions,
+        normals,
+        uvs,
+        indices,
+      );
       mesh.receiveShadows = false;
     }
   }
@@ -740,7 +808,10 @@ export class ForestBorder {
       let level = Infinity;
       for (let k = 0; k < 8; k++) {
         const a = (k / 8) * Math.PI * 2;
-        level = Math.min(level, this.terrainAt(x + Math.cos(a) * r * 0.6, z + Math.sin(a) * r * 0.6));
+        level = Math.min(
+          level,
+          this.terrainAt(x + Math.cos(a) * r * 0.6, z + Math.sin(a) * r * 0.6),
+        );
       }
       level = Math.min(level, this.terrainAt(x, z)) + 0.035;
       const base = positions.length / 3;
@@ -779,7 +850,14 @@ export class ForestBorder {
     anchor.metadata = { surface: "leaves" };
     const body = new PhysicsBody(anchor, PhysicsMotionType.STATIC, false, this.scene);
     const shape = new PhysicsShapeContainer(this.scene);
-    const box = (minX: number, maxX: number, minY: number, maxY: number, minZ: number, maxZ: number) => {
+    const box = (
+      minX: number,
+      maxX: number,
+      minY: number,
+      maxY: number,
+      minZ: number,
+      maxZ: number,
+    ) => {
       const child = new PhysicsShapeBox(
         new Vector3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2),
         Quaternion.Identity(),

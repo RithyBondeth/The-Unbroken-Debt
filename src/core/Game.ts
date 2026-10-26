@@ -288,7 +288,9 @@ export class Game {
     const feet = this.player.feetToRef(this.feetNow);
     const respawn = this.fallGuard.update(this.deltaSeconds, feet, this.player.supported);
     if (!respawn) return;
-    console.warn(`[Game] fell out of the world at ${feet.toString()}; back to ${respawn.toString()}`);
+    console.warn(
+      `[Game] fell out of the world at ${feet.toString()}; back to ${respawn.toString()}`,
+    );
     this.player.teleport(respawn, this.player.yaw);
     void this.fade.to(1, 0).then(() => this.fade.to(0, 0.8));
   }

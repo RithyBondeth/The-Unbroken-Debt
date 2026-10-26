@@ -323,7 +323,11 @@ export function inBelt(x: number, z: number): boolean {
 export function openGround(x: number, z: number, radius: number): boolean {
   if (inside(YARD, x, z, -(1.2 + radius))) return false;
   if (pathDistance(x, z) < 2.2 + radius) return false;
-  if (((x - POND.x) / (POND.rx + 1.5 + radius)) ** 2 + ((z - POND.z) / (POND.rz + 1.5 + radius)) ** 2 < 1)
+  if (
+    ((x - POND.x) / (POND.rx + 1.5 + radius)) ** 2 +
+      ((z - POND.z) / (POND.rz + 1.5 + radius)) ** 2 <
+    1
+  )
     return false;
   return WELLS.every(([wx, wz]) => Math.hypot(x - wx, z - wz) > 2.5 + radius);
 }
@@ -369,8 +373,7 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
           if (trunks.some((t) => Math.hypot(x - t.x, z - t.z) < t.r + spec.radius * 0.6)) continue;
           const [lo, hi] = SCALE[species];
           plants.push({ species, layer: spec.layer, x, z, yaw, scale: lo + (hi - lo) * k, pick });
-          if (spec.layer !== "under")
-            trunks.push({ x, z, r: spec.layer === "canopy" ? 2.2 : 1 });
+          if (spec.layer !== "under") trunks.push({ x, z, r: spec.layer === "canopy" ? 2.2 : 1 });
         }
       }
     }

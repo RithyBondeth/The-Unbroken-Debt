@@ -54,7 +54,8 @@ function fbm(seed: number, octaves: number, base: number, stretch: number) {
       amp = 0.5,
       norm = 0;
     for (const { period, rows, grid } of layers) {
-      sum += amp * sample(grid, period, rows, u * period + warp * period * 0.05, v * period * stretch);
+      sum +=
+        amp * sample(grid, period, rows, u * period + warp * period * 0.05, v * period * stretch);
       norm += amp;
       amp *= 0.5;
     }
