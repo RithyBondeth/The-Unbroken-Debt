@@ -13,7 +13,12 @@ const night = (marks: string): NightMark[] =>
  */
 export const EP1_SKETCHBOOK: SketchbookData = {
   entries: [
-    { id: "SB-01", beat: "P05", section: "notes", drawing: { id: "inkBlot", height: 62 } },
+    {
+      id: "SB-01",
+      beat: "P05",
+      section: "notes",
+      text: "20:12 · Phnom Penh studio. Ink spread across the illustration without my touching it. The candle went out and the clock stopped. Then the telephone rang.",
+    },
     {
       id: "SB-02",
       beat: "A1-05",

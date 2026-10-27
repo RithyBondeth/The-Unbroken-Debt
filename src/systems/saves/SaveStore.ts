@@ -1,9 +1,9 @@
-import { createStore, del, get, set, type UseStore } from "idb-keyval";
+import { createStore, del, get, set, setMany, type UseStore } from "idb-keyval";
 import { SaveError, type SaveData } from "./SaveData";
 import { migrate } from "./migrations";
 
 /** Save slots: the player's slot and the checkpoint autosave (Technical Design Document, section 13). */
-export type SlotName = "slot1" | "autosave" | "episode1";
+export type SlotName = "slot1" | "autosave" | "episode1" | "checkpoint";
 
 export interface LoadResult {
   save: SaveData | null;
@@ -19,9 +19,11 @@ export interface LoadResult {
 export class SaveStore {
   private readonly store: UseStore;
   private writes = 0;
+  private writeFailed = false;
 
   constructor(
-    private readonly onSaving: (saving: boolean) => void = () => undefined,
+    private readonly onSaving: (saving: boolean, result?: "saved" | "failed") => void = () =>
+      undefined,
     database = "boon-sop",
   ) {
     this.store = createStore(database, "saves");
@@ -32,16 +34,33 @@ export class SaveStore {
   }
 
   async save(slot: SlotName, data: SaveData): Promise<void> {
+    return this.write([[`save.${slot}`, structuredClone(data)]]);
+  }
+
+  /** Both keys commit in one IndexedDB transaction, never a half-written safe point. */
+  async saveCheckpoint(data: SaveData): Promise<void> {
+    const captured = structuredClone(data);
+    return this.write([
+      ["save.autosave", captured],
+      ["save.checkpoint", captured],
+    ]);
+  }
+
+  private async write(entries: [string, SaveData][]): Promise<void> {
     if (this.writes++ === 0) {
+      this.writeFailed = false;
       window.addEventListener("beforeunload", warnLeaving);
       this.onSaving(true);
     }
     try {
-      await set(`save.${slot}`, data, this.store);
+      await setMany(entries, this.store);
+    } catch (error) {
+      this.writeFailed = true;
+      throw error;
     } finally {
       if (--this.writes === 0) {
         window.removeEventListener("beforeunload", warnLeaving);
-        this.onSaving(false);
+        this.onSaving(false, this.writeFailed ? "failed" : "saved");
       }
     }
   }

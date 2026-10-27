@@ -1,4 +1,5 @@
 import { SaveStore } from "../../systems/saves/SaveStore";
+import { checkpointName } from "../../systems/saves/Checkpoints";
 import { WelcomeAmbience } from "../../audio/WelcomeAmbience";
 import "./welcome.css";
 
@@ -88,7 +89,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
     status.textContent = result.problem
       ? "Your saved game could not be read. You can begin a new game."
       : hasSave
-        ? "Continue from your last checkpoint."
+        ? `Continue: ${checkpointName(result.save!)} · ${result.save!.clock}`
         : "A debt waits to be repaid.";
   } catch {
     status.textContent = "Browser saves are unavailable. Progress may not be saved.";
@@ -131,7 +132,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
       if (continuing) url.searchParams.set("continue", "");
       history.replaceState(null, "", url);
       menu.hidden = true;
-      status.textContent = continuing ? "Returning to the house…" : "Entering the darkness…";
+      status.textContent = continuing ? "Returning to your saved place…" : "Entering the darkness…";
       root.querySelector(".welcome")?.classList.add("welcome-loading");
       root.querySelector<HTMLButtonElement>('[data-action="fullscreen"]')!.disabled = true;
       resolve({ ...settings });
@@ -176,7 +177,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
           case "controls":
             open(
               "How to play",
-              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Crouch</dd><dt>Q</dt><dd>Sketchbook</dd></dl><p class="welcome-note">Click inside the game to capture your mouse. Escape releases it.</p>`,
+              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / record at a safe writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape releases it.</p>`,
             );
             break;
           case "credits":

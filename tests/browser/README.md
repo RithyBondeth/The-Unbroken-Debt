@@ -1,5 +1,17 @@
 # Episode 1 browser verification
 
+## New opening and safe checkpoints
+
+`/tests/browser/opening.html?stage=taxi` previews the rainy journey. Use
+`?stage=stealth` for the first village encounter, or the default route for the
+studio. The toolbar supplies setup and camera views; E, Q, saving, sight/hearing
+and checkpoint retry use production code. All saves use an isolated QA database.
+
+The full journey fixture now includes taxi arrival and a road catch/retry before
+the vigil. New openings use the shared safe checkpoint for hallway and under-house
+deaths. Older saves retain their local recovery described below. Implementation
+and recorded evidence are in `docs/production/opening-survival-checkpoints.md`.
+
 ## Studio and matchbox
 
 Open `/tests/browser/studio.html` for the actual studio's room, telephone, desk,
@@ -311,3 +323,11 @@ ritual burner) with production lighting and the lamp lit; `?area=studio` tours t
 prologue studio. Add `&run` to save every view to `debug-shots/tour-*.png` for a
 before-and-after comparison. Keep the tab in front: background tabs are throttled.
 Uses the isolated `boon-sop-tour` database.
+
+## Taxi cabin and storm road
+
+Open `/tests/browser/opening.html?stage=taxi&review` for camera presets covering
+the road, dashboard, driver, passenger window and rear cabin. Review loops the
+ride; omit `review` to verify normal arrival at CP1. The fixture uses the separate
+`boon-sop-opening-qa` database. **Hide review overlays** produces a clean view.
+See `docs/production/taxi-realism.md` for asset sources and rebuild commands.

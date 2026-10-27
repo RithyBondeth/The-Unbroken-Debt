@@ -372,6 +372,11 @@ export class UnderHouseHunt {
     for (const step of this.steps) step.stop();
     this.voice.stop();
     this.lastState = "";
+    if (g.flags.get("ep1.opening.version", 0) >= 2 && g.checkpoints.last) {
+      this.caught.hidden = true;
+      await g.retryFromCheckpoint();
+      return;
+    }
     g.flags.load(saved.flags);
     g.inventory.load(saved.inventory);
     this.vigil.restoreCheckpoint(saved);

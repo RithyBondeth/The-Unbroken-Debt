@@ -1,0 +1,11 @@
+npm run check
+TypeScript: passed
+ESLint: passed
+ Test Files  69 passed (69)
+      Tests  355 passed (355)
+✓ built in 1.96s
+
+Dialogue: 14 readable, non-overlapping lines; active reply selected after resume.
+Subtitle race: old timed lines cannot hide timeline replies.
+Assets: seated legs, floor contact and clear shoe sight lines; 494 tree nodes.
+Route culling: both 60 m viewing directions remain covered.

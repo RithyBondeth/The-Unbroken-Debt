@@ -274,6 +274,11 @@ export class HallwayWalker {
     await game.fade.to(1, 0.45);
     for (const sound of [...this.steps, this.creak]) sound?.stop();
     this.voice.stop();
+    if (game.flags.get("ep1.opening.version", 0) >= 2 && game.checkpoints.last) {
+      this.caught.hidden = true;
+      await game.retryFromCheckpoint();
+      return;
+    }
     game.flags.load(saved.flags);
     game.inventory.load(saved.inventory);
     this.vigil.restoreCheckpoint(saved);
