@@ -45,6 +45,9 @@ import { ITEMS } from "../episodes/ep1/data/items";
 import { Prologue } from "../episodes/ep1/prologue/Prologue";
 import { ActOne } from "../episodes/ep1/act1/ActOne";
 import type { SaveData } from "../systems/saves/SaveData";
+import { Checkpoints, checkpointName } from "../systems/saves/Checkpoints";
+import { NotebookReader } from "../ui/html/NotebookReader";
+import { TaxiRide } from "../episodes/ep1/travel/TaxiRide";
 
 /** A part of an episode with its own area and script (the prologue, an act). */
 interface Section {
@@ -70,12 +73,14 @@ export class Game {
   readonly gated: GatedInput;
   readonly inventory = new Inventory(this.bus);
   readonly interaction: Interaction;
+  readonly notebook: NotebookReader;
   readonly hints = new Hints();
   readonly subtitles = new Subtitles();
   readonly fade = new ScreenFade();
   readonly satchel = new SatchelPanel();
   private readonly saveIndicator = new SaveIndicator();
-  readonly saves = new SaveStore((saving) => this.saveIndicator.set(saving));
+  readonly saves = new SaveStore((saving, result) => this.saveIndicator.set(saving, result));
+  readonly checkpoints = new Checkpoints(() => this.saves);
   /** Null if the browser refused to create audio. */
   audio: AudioSystem | null = null;
   /** Sora's footsteps; null without audio. */
@@ -147,6 +152,7 @@ export class Game {
     this.input = new KeyboardMouseInput(engine.getRenderingCanvas() as HTMLCanvasElement, 0.0022);
     this.gated = new GatedInput(this.input);
     this.interaction = new Interaction(this.scene, this.camera, this.bus);
+    this.notebook = new NotebookReader(this);
     window.addEventListener("keydown", (e) => this.press(e));
     if (import.meta.env.DEV)
       window.addEventListener(
@@ -216,8 +222,11 @@ export class Game {
     const resumed = params.has("continue") ? (await this.saves.load("autosave")).save : null;
     if (resumed) {
       this.restore(resumed);
+      await this.checkpoints.load(resumed);
+      if (resumed.flags["ep1.travel.pending"] === true) return new TaxiRide(this);
       if (resumed.checkpoint === "CP0") return new Prologue(this);
     } else if (params.get("start") === "act1") {
+      this.flags.set("ep1.checkpoint", "CP1");
       for (const [item, n] of Object.entries({
         satchel: 1,
         sketchbook: 1,
@@ -235,9 +244,45 @@ export class Game {
   private restore(save: SaveData): void {
     this.resumedSave = save;
     this.flags.load(save.flags);
+    this.flags.set("ep1.checkpoint", save.checkpoint);
     this.flags.set("ep1.clock", save.clock);
     this.inventory.load(save.inventory);
     this.savedLamp = save.lamp;
+  }
+
+  /** Death retries restore the last safe snapshot, not the state at the catch. */
+  async retryFromCheckpoint(): Promise<void> {
+    this.cutscene = true;
+    this.threatActive = false;
+    this.gated.holdStill = true;
+    this.gated.holdLook = true;
+    this.stopInspecting();
+    this.sketchbook?.close();
+    this.satchel.close();
+    this.hints.hide();
+    document.exitPointerLock();
+    await this.fade.to(1, 0.5);
+    const last = this.checkpoints.last;
+    let failed = false;
+    while (true) {
+      await this.fade.show({
+        title: failed ? "Retry could not be saved" : "You were caught",
+        body: failed
+          ? "Your checkpoint is still here. Free browser storage and retry."
+          : `Return to ${last ? checkpointName(last) : "your last checkpoint"}.`,
+        button: "Retry checkpoint",
+      });
+      try {
+        await this.checkpoints.prepareRetry();
+        break;
+      } catch {
+        failed = true;
+      }
+    }
+    const url = new URL(location.href);
+    url.searchParams.set("continue", "");
+    url.searchParams.delete("start");
+    location.replace(url.toString());
   }
 
   /** Puts Sora at `feet`, facing `yaw`. */
@@ -269,6 +314,11 @@ export class Game {
 
   private update(): void {
     this.guardFall();
+    if (
+      this.notebook.isOpen &&
+      (this.cutscene || this.threatActive || this.hiding || this.satchel.isOpen)
+    )
+      this.notebook.close();
     const book = this.sketchbook;
     book?.update(this.deltaSeconds);
     if (book?.isOpen || book?.isBusy) this.stopInspecting();
@@ -291,7 +341,7 @@ export class Game {
         )
       : this.normalFov;
     this.camera.fov += (fov - this.camera.fov) * (1 - Math.exp(-this.deltaSeconds * 8));
-    this.gated.reading = (book?.isOpen || book?.isBusy) ?? false;
+    this.gated.reading = this.notebook.isOpen || ((book?.isOpen || book?.isBusy) ?? false);
     this.interaction.active =
       !this.cutscene && !this.hiding && !this.gated.reading && !this.satchel.isOpen;
     this.interaction.update();
@@ -338,6 +388,7 @@ export class Game {
   toggleSatchel(): void {
     if (this.cutscene || this.threatActive || this.hiding || !this.inventory.has("satchel")) return;
     this.hints.performed("hint.satchel");
+    this.notebook.close();
     if (this.satchel.isOpen) return this.satchel.close();
     if (this.sketchbook?.isOpen) this.sketchbook.toggle();
     this.satchel.open(this.satchelEntries());
@@ -354,7 +405,11 @@ export class Game {
       return;
     this.hints.performed("hint.sketchbook");
     this.satchel.close();
-    this.sketchbook.toggle();
+    if (this.notebook.isOpen) this.notebook.close();
+    else {
+      if (!this.sketchbook.isOpen && !this.sketchbook.isBusy) this.sketchbook.toggle();
+      this.notebook.show();
+    }
   }
 
   private satchelEntries(): SatchelEntry[] {

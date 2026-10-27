@@ -20,6 +20,7 @@ import { ArrivalProgress } from "./ArrivalProgress";
 import { DocumentReader } from "../../../ui/html/DocumentReader";
 import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
+import { checkpointName } from "../../../systems/saves/Checkpoints";
 
 /** CP2's clear aisle at the south end of the pavilion, facing the house. */
 export const CP2_FEET = new Vector3(0, 0, -2);
@@ -371,7 +372,7 @@ export class ActOneBeats {
       ...(this.betel?.pendingEntries ?? []),
     ]);
     game.flags.set("sketchbook.written", [...written].join(","));
-    return {
+    const data: SaveData = {
       ...newGameSave(),
       checkpoint: game.flags.get(
         "ep1.checkpoint",
@@ -386,13 +387,24 @@ export class ActOneBeats {
       lamp: this.vigil.toJSON(),
       playTimeSec: (game.resumedSave?.playTimeSec ?? 0) + Math.round(this.playTime),
     };
+    const last = game.checkpoints?.last;
+    if (last?.checkpoint === data.checkpoint) {
+      for (const [key, value] of Object.entries(last.flags))
+        if (key.startsWith("checkpoint.")) data.flags[key] = value;
+    }
+    return data;
   }
 
   async saveProgress(): Promise<SaveData> {
     const game = this.game;
     const save = this.captureProgress();
     try {
-      await game.saves.save("autosave", save);
+      // Entering a new story chapter establishes its safe restart. Puzzle
+      // autosaves within the chapter do not replace the death checkpoint.
+      if (!game.threatActive && game.checkpoints.last?.checkpoint !== save.checkpoint) {
+        delete save.flags["checkpoint.location"];
+        await game.checkpoints.mark(save, checkpointName(save));
+      } else await game.saves.save("autosave", save);
       game.bus.emit("checkpoint:reached", { id: save.checkpoint });
     } catch (error) {
       // Storage can be unavailable or full: the story must still be playable.

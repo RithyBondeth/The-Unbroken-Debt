@@ -41,6 +41,8 @@ import { CP6_FEET, CP6_YAW } from "../data/ritual";
 import { ChestModels } from "../act3/ChestModels";
 import { CorpseModels } from "../act3/CorpseModels";
 import { ChestInvestigation } from "../act3/ChestInvestigation";
+import { EarlyStealth } from "./EarlyStealth";
+import { SavePoint } from "../../../systems/saves/SavePoint";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
@@ -70,6 +72,7 @@ export class ActOne {
   chest!: ChestInvestigation;
   ritual!: FinalRitual;
   resolution!: DawnResolution;
+  early!: EarlyStealth;
   private resolutionDelay = 0;
   private running = false;
   private readonly rainAt = new Vector3();
@@ -157,6 +160,17 @@ export class ActOne {
                 ? Math.PI
                 : (spawn?.yaw ?? 0),
     );
+    const saved = game.resumedSave;
+    if (saved && saved.flags["checkpoint.spawn.cp"] === saved.checkpoint) {
+      const p = ["x", "y", "z", "yaw"].map((axis) => saved.flags[`checkpoint.spawn.${axis}`]);
+      if (p.every((v) => typeof v === "number" && Number.isFinite(v))) {
+        game.player.teleport(
+          new Vector3(p[0] as number, p[1] as number, p[2] as number),
+          p[3] as number,
+        );
+        game.fallGuard.reset(game.player.feet);
+      }
+    }
     for (const { name, node } of this.area.level.interactables) {
       if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
       else
@@ -203,6 +217,26 @@ export class ActOne {
       () => this.dawn(),
     );
     this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
+    this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress());
+    new SavePoint(
+      game,
+      "interact_save_courtyard",
+      new Vector3(-4.9, 0, 1.4),
+      "COURTYARD",
+      async () => {
+        const data = this.beats.captureProgress(),
+          feet = game.player.feet;
+        Object.assign(data.flags, {
+          "checkpoint.spawn.cp": data.checkpoint,
+          "checkpoint.spawn.x": feet.x,
+          "checkpoint.spawn.y": feet.y,
+          "checkpoint.spawn.z": feet.z,
+          "checkpoint.spawn.yaw": game.player.yaw,
+        });
+        await game.checkpoints.mark(data, "Village · Courtyard writing desk");
+      },
+      () => !this.early.required && !game.hiding && !game.flags.get("ep1.seal1.broken", false),
+    );
   }
 
   async begin(): Promise<void> {
@@ -240,6 +274,7 @@ export class ActOne {
     game.cutscene = false;
     this.running = true;
     this.vigil.begin();
+    await this.early.begin();
     await this.beats.begin();
   }
 
@@ -291,17 +326,20 @@ export class ActOne {
       }
     }
     this.vigil.update(dt);
-    this.night.update(dt);
-    this.soundscape.update(dt);
-    this.apparitions.update(dt);
-    this.betel.update(dt);
-    this.beats.update(dt);
-    this.investigation.update(dt);
-    this.walker.update(dt);
-    this.desk.update(dt);
-    this.hunt.update(dt);
-    this.chest.update(dt);
-    this.ritual.update(dt);
+    this.early.update(dt);
+    if (!this.early.active) {
+      this.night.update(dt);
+      this.soundscape.update(dt);
+      this.apparitions.update(dt);
+      this.betel.update(dt);
+      this.beats.update(dt);
+      this.investigation.update(dt);
+      this.walker.update(dt);
+      this.desk.update(dt);
+      this.hunt.update(dt);
+      this.chest.update(dt);
+      this.ritual.update(dt);
+    }
     this.lights.lookingAt = game.interaction.distance;
     this.lights.update(dt);
     this.rainAt.set(eye.x, eye.y + 7, eye.z);

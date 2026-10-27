@@ -20,7 +20,7 @@ it("captures Act I as CP1 at 23:30 and Act II as CP2 at 01:00 when old saves lac
   flags.set("ep1.clock", "02:35");
   expect(capture()).toMatchObject({ checkpoint: "CP5", clock: "02:35" });
 });
-it("retries a failed CP1 write before emitting checkpoint completion or navigating", async () => {
+it("retries the departure checkpoint before navigating into the taxi journey", async () => {
   const writes: string[] = [];
   const save = vi
     .fn()
@@ -43,7 +43,7 @@ it("retries a failed CP1 write before emitting checkpoint completion or navigati
       flags: new Flags(),
       sketchbook: { written: new Set(["SB-01"]) },
       inventory: new Inventory(),
-      saves: { save },
+      checkpoints: { mark: save },
       bus: { emit: vi.fn(() => writes.push("event")) },
     },
     play: vi.fn(),
@@ -61,10 +61,10 @@ it("retries a failed CP1 write before emitting checkpoint completion or navigati
     expect(state.game.fade.show).toHaveBeenCalledWith(
       expect.objectContaining({ button: "Retry save" }),
     );
-    expect(save.mock.calls[1][1]).toMatchObject({
-      checkpoint: "CP1",
-      clock: "23:30",
-      flags: { "ep1.checkpoint": "CP1", "ep1.clock": "23:30" },
+    expect(save.mock.calls[1][0]).toMatchObject({
+      checkpoint: "CP0",
+      clock: "20:12",
+      flags: { "ep1.checkpoint": "CP0", "ep1.travel.pending": true },
     });
     expect(replace).toHaveBeenCalledWith("/?continue");
   } finally {

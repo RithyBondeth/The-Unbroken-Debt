@@ -1,0 +1,8 @@
+npm run check
+TypeScript: passed
+ESLint: passed
+ Test Files  67 passed (67)
+      Tests  344 passed (344)
+✓ built in 1.41s
+
+Renderer regression: all shared plants survive batching; sector bounds follow motion.

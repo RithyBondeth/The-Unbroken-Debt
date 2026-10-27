@@ -10,20 +10,14 @@ import type { BusName, SpatialOptions } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
 import * as sounds from "../audio/prologueSounds";
 import { newGameSave } from "../../../systems/saves/SaveData";
-import {
-  INK_BLOT_ENTRY,
-  KIT,
-  LINES,
-  STARTING_MATCHES,
-  TIMING,
-  TITLE_CARD,
-  type Line,
-} from "../data/prologue";
+import { INK_BLOT_ENTRY, KIT, LINES, STARTING_MATCHES, TIMING, type Line } from "../data/prologue";
 import { StudioLights } from "./Studio";
 import { Rain } from "../Rain";
 import { InkMarks } from "./InkMarks";
 import type { StringKey } from "../../../data/strings";
 import { StudioDetails } from "./StudioDetails";
+import type { SaveData } from "../../../systems/saves/SaveData";
+import { SavePoint } from "../../../systems/saves/SavePoint";
 
 const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
@@ -63,6 +57,7 @@ export class Prologue {
   private ringing = false;
   private playTime = 0;
   private wasFlashing = false;
+  private readonly taking = new Set<string>();
   details!: StudioDetails;
 
   constructor(private readonly game: Game) {}
@@ -117,9 +112,22 @@ export class Prologue {
     game.spawnPlayer(spawn?.position, spawn?.yaw ?? Math.PI);
     game.player.pitch = 0.6;
 
+    // Studio checkpoints restore the collected props and drawer, not just inventory.
+    for (const [id, pickup] of Object.entries(PICKUPS)) {
+      if (!game.inventory.has(pickup.item)) continue;
+      const names =
+        id === "letters" ? ["letters_string", ...[0, 1, 2, 3, 4].map((i) => `letter_${i}`)] : [id];
+      for (const name of names) this.node(name)?.setEnabled(false);
+    }
+    if (game.flags.get("ep1.studio.drawerOpen", false)) this.openDrawer(true);
+
     for (const { name, node } of this.area.level.interactables)
-      game.interaction.add(name, node, { outline: name !== PHONE && name !== DRAWER });
+      if (node.isEnabled())
+        game.interaction.add(name, node, { outline: name !== PHONE && name !== DRAWER });
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
+    new SavePoint(game, "interact_save_studio", new Vector3(-0.18, 0.8, -3.12), "STUDIO", () =>
+      game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
+    );
     game.bus.on("interact:focus", ({ id }) => {
       if (id === ILLUSTRATION) game.hints.show("hint.use");
       if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
@@ -172,49 +180,60 @@ export class Prologue {
     // P01: rain, the clock, the desk lamp. Pencil hints if the player sits still.
     void game.fade.to(0, 3);
     game.cutscene = false;
-    game.interaction.allow = (id) => id === ILLUSTRATION;
+    game.interaction.allow = (id) => id === ILLUSTRATION || id === "interact_save_studio";
     void this.idleHints();
 
-    // P02: only the illustration can be used: Sora inks a line.
-    await this.used(ILLUSTRATION);
-    game.cutscene = true;
-    this.play("pen");
-    await this.ink.inkLine(1.1);
-    game.cutscene = false;
-    game.flags.set("ep1.illustration.inked", true);
+    game.flags.set("ep1.opening.version", 2);
+    if (!game.flags.has("game.run")) game.flags.set("game.run", crypto.randomUUID());
+    if (!game.resumedSave) await this.saveProgress("Studio · Drafting table");
+    // Completed studio beats do not replay after a reload.
+    if (!game.flags.get("ep1.illustration.inked", false)) {
+      await this.used(ILLUSTRATION);
+      game.cutscene = true;
+      this.play("pen");
+      await this.ink.inkLine(1.1);
+      game.flags.set("ep1.illustration.inked", true);
+      game.cutscene = false;
+      await this.saveProgress("Studio · Packing for home");
+    } else void this.ink.inkLine(0.01);
     game.interaction.allow = () => true;
 
     // P03–P04: the drawer, the letters and the kit, in any order (see onUse).
     await this.until(() => KIT.every((item) => game.inventory.has(item)));
     game.flags.set("ep1.kit.collected", true);
 
-    // P05: dread. Ink across the drawing, the candle out, the clock stops at 8:12.
-    await this.wait(TIMING.dreadDelay);
-    this.lights.strike();
-    void this.ink.spill(2.4);
+    if (!game.flags.has("ep1.clock.stopped")) {
+      await this.wait(TIMING.dreadDelay);
+      this.lights.strike();
+      void this.ink.spill(2.4);
+      this.play("candle");
+      this.play("clockStop");
+      game.flags.set("ep1.clock.stopped", "20:12");
+      game.satchel.close();
+      game.sketchbook?.write(INK_BLOT_ENTRY);
+      await this.saveProgress("Studio · The telephone call");
+      await this.wait(2.5);
+      game.hints.show("hint.sketchbook", 8);
+    } else void this.ink.spill(0.01);
     this.lights.snuffCandle();
-    this.play("candle");
     this.sfx.get("clock")?.stop();
-    this.play("clockStop");
-    game.flags.set("ep1.clock.stopped", "20:12");
-    game.satchel.close();
-    game.sketchbook?.write(INK_BLOT_ENTRY);
-    await this.wait(2.5);
-    game.hints.show("hint.sketchbook", 8);
 
     // P06: the telephone rings until Sora answers.
-    await this.wait(TIMING.ringDelay);
-    // The ink-blot entry opens the book automatically. Put it away as the
-    // phone rings so the reading gate cannot silently block answering with E.
-    game.sketchbook?.close();
-    game.satchel.close();
-    this.ringing = true;
-    this.sfx.get("ring")?.play();
-    setTimeout(() => {
-      if (this.ringing) game.hints.show("hint.phone");
-    }, 5000);
-    await this.used(PHONE);
-    await this.phoneCall();
+    if (!game.flags.get("ep1.phone.answered", false)) {
+      await this.wait(TIMING.ringDelay);
+      // The ink-blot entry opens the book automatically. Put it away as the
+      // phone rings so the reading gate cannot silently block answering with E.
+      game.sketchbook?.close();
+      game.satchel.close();
+      this.ringing = true;
+      this.sfx.get("ring")?.play();
+      setTimeout(() => {
+        if (this.ringing) game.hints.show("hint.phone");
+      }, 5000);
+      await this.used(PHONE);
+      await this.phoneCall();
+      await this.saveProgress("Studio · After the phone call");
+    }
 
     // P07: out of the door, into the night.
     await this.used(DOOR);
@@ -259,26 +278,24 @@ export class Prologue {
     this.play("drawer");
     await game.fade.to(1, 1.5);
     for (const sound of this.loops) sound.stop();
-    this.play("train", game.camera.globalPosition);
-    await this.wait(5);
-    await game.fade.show({ title: TITLE_CARD.title, khmer: TITLE_CARD.khmer });
-    // Checkpoint CP1: the carriage at the village, lamp full (Beat Sheet, section 7).
-    game.flags.set("ep1.checkpoint", "CP1");
-    game.flags.set("ep1.clock", TIMING.cp1Clock);
+    game.flags.set("ep1.travel.pending", true);
+    game.flags.set("ep1.opening.version", 2);
+    game.flags.set("ep1.checkpoint", "CP0");
+    game.flags.set("ep1.clock", "20:12");
     game.flags.set("sketchbook.written", [...(game.sketchbook?.written ?? [])].join(","));
     const checkpoint = {
       ...newGameSave(),
-      checkpoint: "CP1",
-      clock: TIMING.cp1Clock,
+      checkpoint: "CP0",
+      clock: "20:12",
       flags: game.flags.toJSON(),
       inventory: game.inventory.toJSON(),
       lamp: { oil: 1, state: "out" as const },
-      playTimeSec: Math.round(this.playTime),
+      playTimeSec: (game.resumedSave?.playTimeSec ?? 0) + Math.round(this.playTime),
     };
     while (true) {
       try {
-        await game.saves.save("autosave", checkpoint);
-        game.bus.emit("checkpoint:reached", { id: "CP1" });
+        await game.checkpoints.mark(checkpoint, "Taxi · Departing Phnom Penh");
+        game.bus.emit("checkpoint:reached", { id: "CP0" });
         break;
       } catch {
         await game.fade.show({
@@ -288,9 +305,7 @@ export class Prologue {
         });
       }
     }
-    await game.fade.show({ title: TITLE_CARD.title, khmer: TITLE_CARD.khmer });
-    await this.wait(3.5);
-    // Act I loads from the checkpoint just saved, as it will after any restart.
+    // The saved section selects the taxi; the village is saved after arrival.
     location.replace(`${location.pathname}?continue`);
   }
 
@@ -315,46 +330,56 @@ export class Prologue {
   }
 
   /** P03: the drawer slides out: Yay Mey's letters, tied with red string, and the matchbox. */
-  private openDrawer(): void {
+  private openDrawer(restoring = false): void {
     this.drawerOpen = true;
+    this.game.flags.set("ep1.studio.drawerOpen", true);
     this.play("drawer");
     const parts = [DRAWER, "drawer_knob", "letters_string", "matchbox"].map((n) => this.node(n));
     for (let i = 0; i < 5; i++) parts.push(this.node(`letter_${i}`));
     const start = parts.map((n) => n?.getAbsolutePosition().clone());
     let t = 0;
-    const slide = this.game.scene.onBeforeRenderObservable.add(() => {
-      t = Math.min(1, t + this.game.deltaSeconds / 0.45);
-      const ease = 1 - (1 - t) ** 3;
+    const move = (ease: number) =>
       parts.forEach((n, i) => {
-        // Out of the desk towards the room: Blender +X, Babylon −X.
         const from = start[i];
         if (n && from)
           n.setAbsolutePosition(from.add(new Vector3(-this.details.drawerTravel * ease, 0, 0)));
       });
-      if (t >= 1) {
-        slide.remove();
-        // Lean toward the exposed contents; movement keys leave inspection.
-        const match = this.node("matchbox");
-        if (match && !this.game.inventory.has("matches")) {
-          this.game.inspectObject(match.getAbsolutePosition(), 0.2);
-          this.game.hints.show("hint.takeMatches", 10);
+    if (restoring) move(1);
+    else {
+      const slide = this.game.scene.onBeforeRenderObservable.add(() => {
+        t = Math.min(1, t + this.game.deltaSeconds / 0.45);
+        const ease = 1 - (1 - t) ** 3;
+        move(ease);
+        if (t >= 1) {
+          slide.remove();
+          // Lean toward the exposed contents; movement keys leave inspection.
+          const match = this.node("matchbox");
+          if (match && !this.game.inventory.has("matches")) {
+            this.game.inspectObject(match.getAbsolutePosition(), 0.2);
+            this.game.hints.show("hint.takeMatches", 10);
+          }
+          void this.saveProgress();
         }
-      }
-    });
+      });
+    }
     const letters = [
       this.node("letters_string"),
       ...[0, 1, 2, 3, 4].map((i) => this.node(`letter_${i}`)),
     ];
-    this.game.interaction.add(
-      "letters",
-      letters.flatMap((n) => (n ? meshesOf(n) : [])),
-    );
+    if (!this.game.inventory.has("letters"))
+      this.game.interaction.add(
+        "letters",
+        letters.flatMap((n) => (n ? meshesOf(n) : [])),
+      );
     const matchbox = this.node("matchbox");
-    if (matchbox) this.game.interaction.add("matchbox", matchbox);
+    if (matchbox && !this.game.inventory.has("matches"))
+      this.game.interaction.add("matchbox", matchbox);
   }
 
   private async take(id: string, item: string, count = 1): Promise<void> {
     const game = this.game;
+    if (this.taking.has(id) || game.inventory.has(item)) return;
+    this.taking.add(id);
     if (id === "letters") {
       // P03: she hesitates, then takes them anyway.
       game.cutscene = true;
@@ -374,6 +399,38 @@ export class Prologue {
     if (item === "satchel") {
       game.toggleSatchel();
       game.hints.show("hint.satchel", 8);
+    }
+    await this.saveProgress();
+  }
+
+  captureProgress(): SaveData {
+    const g = this.game;
+    g.flags.set("sketchbook.written", [...(g.sketchbook?.written ?? [])].join(","));
+    g.flags.set("ep1.checkpoint", "CP0");
+    const clock = g.flags.has("ep1.clock.stopped") ? "20:12" : "20:00";
+    g.flags.set("ep1.clock", clock);
+    return {
+      ...newGameSave(),
+      checkpoint: "CP0",
+      clock,
+      flags: g.flags.toJSON(),
+      inventory: g.inventory.toJSON(),
+      lamp: { oil: 1, state: "out" },
+      playTimeSec: (g.resumedSave?.playTimeSec ?? 0) + Math.round(this.playTime),
+    };
+  }
+
+  async saveProgress(location?: string): Promise<void> {
+    const g = this.game;
+    const name =
+      location ??
+      (g.flags.get("ep1.phone.answered", false)
+        ? "Studio · After the phone call"
+        : "Studio · Packing for home");
+    try {
+      await g.checkpoints.mark(this.captureProgress(), name);
+    } catch {
+      g.hints.show("note.saveFailed", 7);
     }
   }
 

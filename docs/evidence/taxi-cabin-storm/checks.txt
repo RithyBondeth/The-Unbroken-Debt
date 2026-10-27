@@ -1,0 +1,11 @@
+npm run check
+TypeScript: passed
+ESLint: passed
+ Test Files  67 passed (67)
+      Tests  347 passed (347)
+✓ built in 1.47s
+
+Cabin enclosure: 42 rays against the exported opaque shell passed.
+Fascia visibility: six rays confirm the wood fascia sits in front of the dashboard shell.
+Curved route: centreline and tangent alignment remain continuous for the full ride.
+Browser: full ride reached CP1, ten matches intact; no console errors.

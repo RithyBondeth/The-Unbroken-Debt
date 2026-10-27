@@ -1,0 +1,92 @@
+START investigate; click to begin
+PASS earned save resumes village
+PASS CP2 guarantees half a tank on reload
+PASS CP2 restores extinguished tent
+PASS CP2 restores open doorway
+PASS interaction ray: interact_sok_wall_plank (interact_sok_wall_plank)
+PASS interaction ray: interact_sok_journal (interact_sok_journal)
+GOVERNOR tuning=true rpm=64 distanceToFloorRoot=2.1045268901833913
+PASS reachable gramophone accepts governor input
+PASS all four Sok paragraphs played
+PASS CP3 written from earned progress
+RELOAD CP3 → walker
+START walker; click to begin
+PASS earned save resumes village
+PASS CP3 guarantees half a tank on reload
+PASS CP3 resumes inside Sok’s room
+START walker; click to begin
+PASS earned save resumes village
+PASS CP3 guarantees half a tank on reload
+PASS CP3 resumes inside Sok’s room
+PASS CP3 restores inventory snapshot
+PASS CP3 restores respect flags
+PASS interaction ray: interact_wardrobe_H1 (interact_wardrobe_H1)
+PASS F extinguishes the lamp during the live threat
+PASS threat gates menus
+PASS survival releases hiding and threat gates
+PASS walker caught → CP3 retry → H1 survival
+PASS interaction ray: interact_altar_key_panel (interact_altar_key_panel)
+PASS interaction ray: interact_desk_key (interact_desk_key)
+PASS interaction ray: interact_sok_desk (interact_sok_desk)
+PASS interaction ray: interact_sok_journal_b (interact_sok_journal_b)
+PASS CP4 written from earned progress
+RELOAD CP4 → hunt-entry
+START hunt-entry; click to begin
+PASS earned save resumes village
+PASS CP4 guarantees half a tank on reload
+PASS CP4 restores clear tent aisle
+PASS CP4 retains walker survival
+PASS CP5 written from earned progress
+RELOAD CP5 → hunt
+START hunt; click to begin
+PASS earned save resumes village
+PASS CP5 guarantees half a tank on reload
+PASS CP5 resumes safe entrance
+PASS interaction ray: interact_jar_J6 (interact_jar_J6)
+PASS J6 fragment collected
+START hunt; click to begin
+PASS earned save resumes village
+PASS CP5 guarantees half a tank on reload
+PASS CP5 resumes safe entrance
+PASS CP5 death restores the last safe checkpoint before the fragment pickup
+PASS interaction ray: interact_jar_J6 (interact_jar_J6)
+PASS J6 fragment collected
+PASS interaction ray: interact_jar_J2 (interact_jar_J2)
+PASS J2 fragment collected
+PASS interaction ray: interact_jar_J4 (interact_jar_J4)
+PASS J4 fragment collected
+PASS three fragments enable satchel recipe
+PASS chest discovery bronze_token
+PASS chest discovery seal_map
+PASS chest discovery folded_slip
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS token placed without burning
+PASS CP6 written from earned progress
+RELOAD CP6 → ritual
+START ritual; click to begin
+START ritual; click to begin
+START ritual; click to begin
+START ritual; click to begin
+PASS earned save resumes village
+PASS CP6 guarantees half a tank on reload
+PASS CP6 restores burner and token
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS ritual starts
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS ritual starts
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS ritual starts
+PASS three turn failures consume matches, retain seal
+PASS altar spare prevents soft lock
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS CP6 written from earned progress
+RELOAD CP6 → ritual-resume
+START ritual-resume; click to begin
+PASS earned save resumes village
+PASS CP6 guarantees half a tank on reload
+PASS interrupted CP6 retains spent match and resets hold
+PASS interaction ray: interact_ritual_burner (interact_ritual_burner)
+PASS seal consumes token
+PASS earned journey reaches credits and Episode 2 completion archive
+PASS ending choice and night count persist
+FULL JOURNEY PASSED: fresh prologue → CP1 → CP2 → CP3 catch/retry → CP4 → CP5 catch/loot → CP6 failures/spares/reload → credits

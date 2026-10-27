@@ -1,0 +1,36 @@
+Browser tab: 16, Title: "Opening checkpoint and stealth verification", URL: "http://localhost:5173/tests/browser/opening.html?continue".
+1 AXWebArea Opening checkpoint and stealth verification, URL: localhost:5173/tests/browser/opening.html?continue
+	2 image Description: Game verification, ID: game
+	3 container Description: Verification controls, ID: controls
+		4 button Notebook Q
+		5 button Reload saved game
+		6 button Approach cover
+		7 button Ghost view
+		8 button Trigger a real catch
+		9 button Reach safe courtyard
+		10 button Aim safe writing desk
+	17 text Isolated QA database; CP1 · CP1
+Checkpoint: Village · Flooded road · matches 10 · post-checkpoint flag false
+Feet -0.6,0.0,59.5 · target none
+Early required=true active=false brain=patrol at={X: -0.3 Y: 0 Z: 44} time=0.0 threat=false sight=true suspicion=0.00 · courtyard=false
+	12 container
+		13 heading Click to begin, Value: 1
+			14 text Click to begin
+		15 text Headphones recommended
+	16 text Saving
+	18 text 31 fps
+cpu frame 13.69 ms · render 9.27 ms
+gpu n/a
+draw calls 568
+triangles drawn 3.69 M (all passes)
+668×810
+input diagnostic v1
+key received: none
+key handled: none
+last use: none
+target: none active=false
+page focused=true pointer=false
+cutscene=true reading=false satchel=false
+
+The focused UI element is 1 AXWebArea Opening checkpoint and stealth verification, URL: localhost:5173/tests/browser/opening.html?continue
+Console errors: []

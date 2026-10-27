@@ -1,0 +1,6 @@
+Isolated QA database; CP0 · TAXI
+Checkpoint: Taxi · Departing Phnom Penh · matches 10 · post-checkpoint flag false
+Feet 0.4,0.0,-0.2 · target none
+
+Taxi 25.7s · road lights taxi_headlight_-0.6:1500.0, taxi_headlight_0.6:2200.0, taxi_storm_bounce:0.3, taxi_moonlight:0.2, taxi_storm_flash:0.0, night_sight:1.3 · rain 4532+3139 · route yaw -0.012
+Console errors: []

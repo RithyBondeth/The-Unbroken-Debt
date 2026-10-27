@@ -52,6 +52,13 @@ export class KeyboardMouseInput implements InputSource {
     return this.held.has(code);
   }
 
+  /** Menus must not retain movement keys pressed before they took focus. */
+  clear(): void {
+    this.held.clear();
+    this.lookX = 0;
+    this.lookY = 0;
+  }
+
   get pointerLocked(): boolean {
     return document.pointerLockElement === this.canvas;
   }
@@ -108,6 +115,7 @@ export class KeyboardMouseInput implements InputSource {
  * fade) can hold Sora still or stop the camera too.
  */
 export class GatedInput implements InputSource {
+  notebook = false;
   hiding = false;
   inspecting = false;
   reading = false;
@@ -119,7 +127,7 @@ export class GatedInput implements InputSource {
   readMove(out: MoveIntent): MoveIntent {
     this.inner.readMove(out);
     if (this.reading) out.x = 0;
-    if (this.holdStill || this.inspecting || this.hiding) {
+    if (this.holdStill || this.inspecting || this.hiding || this.notebook) {
       out.x = 0;
       out.z = 0;
       out.hurry = false;
@@ -130,7 +138,7 @@ export class GatedInput implements InputSource {
 
   consumeLook(out: { yaw: number; pitch: number }): void {
     this.inner.consumeLook(out);
-    if (this.holdLook) {
+    if (this.holdLook || this.notebook) {
       out.yaw = 0;
       out.pitch = 0;
     }

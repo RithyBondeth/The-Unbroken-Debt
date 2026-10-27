@@ -1,0 +1,174 @@
+.notebook-reader {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 3vw, 36px);
+  background: #080c0dda;
+  backdrop-filter: blur(5px);
+  color: #30291f;
+  font-family: "Ubuntu", sans-serif;
+}
+.notebook-reader[hidden] {
+  display: none;
+}
+.notebook-reader > article {
+  width: min(1040px, 100%);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: #ece2cb;
+  border: 1px solid #a8956b;
+  border-radius: 6px 16px 16px 6px;
+  box-shadow:
+    inset 14px 0 18px #67503622,
+    0 20px 90px #000a;
+  overflow: hidden;
+}
+.notebook-reader header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px 16px;
+  border-bottom: 1px solid #aa947355;
+}
+.notebook-reader h1 {
+  font:
+    normal clamp(23px, 3vw, 32px)/1.2 Georgia,
+    serif;
+  margin: 5px 0;
+}
+.notebook-reader small {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: #6e6048;
+}
+.notebook-reader button {
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 1px solid #9f8d6a;
+  border-radius: 3px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.notebook-reader button:focus-visible {
+  outline: 3px solid #386a79;
+  outline-offset: 2px;
+}
+.notebook-reader nav {
+  display: flex;
+  gap: 8px;
+  padding: 14px 32px;
+  flex-wrap: wrap;
+}
+.notebook-reader nav [aria-pressed="true"] {
+  background: #3c493e;
+  color: #f3e9d1;
+  border-color: #3c493e;
+}
+.notebook-content {
+  padding: 8px 32px 32px;
+  overflow-y: auto;
+  font-size: 18px;
+  line-height: 1.65;
+}
+.notebook-content h2 {
+  font:
+    normal 29px/1.25 Georgia,
+    serif;
+  margin: 14px 0;
+}
+.notebook-content h3 {
+  font-size: 18px;
+  margin: 20px 0 5px;
+}
+.notebook-content p {
+  max-width: 72ch;
+  margin: 10px 0 18px;
+}
+.notebook-content article {
+  padding: 0 0 12px;
+  border-bottom: 1px solid #b5a480;
+}
+.notebook-tasks {
+  list-style: none;
+  padding: 10px 0;
+  margin: 12px 0 24px;
+}
+.notebook-tasks li {
+  padding: 8px 0;
+  border-bottom: 1px solid #c5b694;
+}
+.notebook-tasks .done {
+  color: #59634e;
+}
+.notebook-map {
+  background: #f7efd9;
+  border: 1px solid #c1b291;
+  max-width: 650px;
+}
+.notebook-map svg {
+  display: block;
+  width: 100%;
+  max-height: 56vh;
+}
+.notebook-map rect {
+  fill: #ddd1b2;
+  stroke: #6a604b;
+  stroke-width: 0.04;
+}
+.notebook-map .walls {
+  fill: #eae0c5;
+  stroke: #433d31;
+  stroke-width: 0.08;
+}
+.notebook-map path {
+  fill: none;
+  stroke: #70644d;
+  stroke-width: 0.07;
+}
+.notebook-map .door,
+.notebook-map .window {
+  stroke: #477c8c;
+  stroke-width: 0.16;
+}
+.notebook-map .path {
+  stroke: #a18e68;
+  stroke-dasharray: 0.2 0.2;
+}
+.notebook-map text {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font:
+    0.22px "Ubuntu",
+    sans-serif;
+  fill: #30291f;
+}
+.notebook-map svg[viewBox^="-11"] text {
+  font-size: 1.22px;
+}
+.notebook-map.approach-map text {
+  font-size: 1.8px;
+}
+.notebook-map .you {
+  fill: #b13c2e;
+  stroke: #faf1d7;
+  stroke-width: 0.035;
+}
+@media (max-width: 600px) {
+  .notebook-reader header,
+  .notebook-reader nav,
+  .notebook-content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .notebook-reader header {
+    align-items: flex-start;
+  }
+  .notebook-content {
+    font-size: 16px;
+  }
+}

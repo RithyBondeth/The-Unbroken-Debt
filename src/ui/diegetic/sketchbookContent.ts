@@ -8,7 +8,7 @@ export type SectionId = "map" | "now" | "notes" | "people" | "lore";
 /** The ribbon tabs, in order. */
 export const SECTIONS: readonly { id: SectionId; label: string }[] = [
   { id: "map", label: "Map" },
-  { id: "now", label: "Now" },
+  { id: "now", label: "Objective" },
   { id: "notes", label: "Notes" },
   { id: "people", label: "People" },
   { id: "lore", label: "Lore" },
