@@ -65,24 +65,42 @@ export function subtitleChunks(text: string, max = SUBTITLE_CHARS): string[] {
 /** Bottom centre, at most two lines, with the speaker's name (section 6.3). */
 export class Subtitles {
   private readonly node = element("div", "story-subtitles");
+  private sequence = 0;
 
   constructor() {
     this.node.hidden = true;
     this.node.setAttribute("aria-live", "polite");
   }
 
+  private render(speaker: string, text: string): void {
+    this.node.innerHTML = "";
+    const name = document.createElement("b");
+    name.textContent = `${speaker}: `;
+    this.node.append(name, text);
+    this.node.hidden = false;
+  }
+
+  /** A timeline owns visibility; stale timed subtitles cannot overwrite it. */
+  show(speaker: string, text: string): void {
+    this.sequence++;
+    this.render(speaker, text);
+  }
+
+  hide(): void {
+    this.sequence++;
+    this.node.hidden = true;
+  }
+
   /** Shows a line; a long one is split at sentence breaks and shown in turn. */
   async say(speaker: string, text: string, seconds: number): Promise<void> {
+    const sequence = ++this.sequence;
     const chunks = subtitleChunks(text);
     for (const chunk of chunks) {
-      this.node.innerHTML = "";
-      const name = document.createElement("b");
-      name.textContent = `${speaker}: `;
-      this.node.append(name, chunk);
-      this.node.hidden = false;
+      if (sequence !== this.sequence) return;
+      this.render(speaker, chunk);
       await after((seconds * chunk.length) / text.length);
     }
-    this.node.hidden = true;
+    if (sequence === this.sequence) this.node.hidden = true;
   }
 }
 
@@ -236,12 +254,21 @@ export class SatchelPanel {
 /** The small save indicator while a checkpoint is written (section 6.3). */
 export class SaveIndicator {
   private readonly node = element("div", "story-saving");
+  private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     this.node.textContent = t("save.saving");
   }
 
-  set(saving: boolean): void {
-    this.node.classList.toggle("shown", saving);
+  set(saving: boolean, result?: "saved" | "failed"): void {
+    clearTimeout(this.timer);
+    this.node.textContent = saving
+      ? t("save.saving")
+      : result === "saved"
+        ? t("save.saved")
+        : t("save.failed");
+    this.node.setAttribute("role", "status");
+    this.node.classList.toggle("shown", saving || result !== undefined);
+    if (!saving) this.timer = setTimeout(() => this.node.classList.remove("shown"), 3500);
   }
 }

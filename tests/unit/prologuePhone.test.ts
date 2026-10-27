@@ -64,6 +64,7 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     until: vi.fn(),
     phoneCall: vi.fn(),
     leave: vi.fn(),
+    saveProgress: vi.fn(),
     used: vi.fn((id: string) => {
       if (id === "interact_telephone") {
         expect(state.ringing).toBe(true);

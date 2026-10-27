@@ -48,6 +48,9 @@ async function run() {
   if (step === "start") {
     await saves.clear("autosave");
     await saves.clear("episode1");
+    await saves.clear("checkpoint");
+    for (const key of ["road-caught", "walker-caught", "hunt-caught", "hunt-retry-verified"])
+      sessionStorage.removeItem(`journey-${key}`);
   }
   const restore = params.get("restore");
   if (restore) {
@@ -147,6 +150,10 @@ async function run() {
   }
   report(`START ${step}; click to begin`);
   await game.start();
+  if (game.flags.get("ep1.travel.pending", false)) {
+    report("PASS studio departure resumes the rainy taxi; click to begin the full 72-second ride");
+    return;
+  }
   await wait(() => !game.cutscene, "start", 300000);
   if (step === "start") {
     const p = (window as unknown as { prologue: Prologue }).prologue;
@@ -242,15 +249,15 @@ async function run() {
       "completed call returns the rebuilt receiver to its hook",
     );
     // Reproduce storage failure at the first real checkpoint.
-    const original = saves.save.bind(saves);
+    const original = saves.saveCheckpoint.bind(saves);
     let failed = false;
-    saves.save = async (slot, data) => {
-      if (!failed && data.checkpoint === "CP1") {
+    saves.saveCheckpoint = async (data) => {
+      if (!failed && data.flags["ep1.travel.pending"] === true) {
         failed = true;
-        report("INJECT CP1 storage failure");
-        throw new Error("QA CP1 storage unavailable");
+        report("INJECT departure storage failure");
+        throw new Error("QA departure storage unavailable");
       }
-      return original(slot, data);
+      return original(data);
     };
     await aim(
       new Vector3(object("interact_door").x + 0.9, 0, object("interact_door").z),
@@ -258,7 +265,7 @@ async function run() {
     );
     await ray("interact_door");
     await button("Retry save");
-    report("PASS CP1 storage failure recovered");
+    report("PASS departure storage failure recovered");
     return;
   }
   const act = (window as unknown as { act: ActOne }).act;
@@ -267,6 +274,47 @@ async function run() {
   assert(act.vigil.lamp.oil >= 0.49, `${cp} guarantees half a tank on reload`);
   if (step === "act1") {
     assert(cp === "CP1" && game.inventory.count("matches") === 10, "CP1 retains the prologue kit");
+    if (act.early.required) {
+      await wait(() => act.early.active, "early encounter begins");
+      if (!sessionStorage.getItem("journey-road-caught")) {
+        game.inventory.add("qa_transient");
+        game.flags.set("qa.afterCheckpoint", true);
+        game.player.teleport(
+          act.early.brain.position.add(act.early.brain.direction.scale(0.6)),
+          Math.PI,
+        );
+        await wait(() => act.early.brain.state === "caught", "road watcher sees and catches Sora");
+        sessionStorage.setItem("journey-road-caught", "1");
+        await button("Retry checkpoint");
+        return;
+      }
+      assert(
+        !game.inventory.has("qa_transient") && !game.flags.get("qa.afterCheckpoint", false),
+        "death restores the road snapshot without post-save changes",
+      );
+      assert(
+        game.flags.get("ep1.travel.complete", false) &&
+          !game.flags.get("ep1.travel.pending", false),
+        "road death does not replay the taxi",
+      );
+      game.player.teleport(new Vector3(-2.65, 0, 50.1), Math.PI);
+      key("KeyC");
+      await wait(
+        () => game.player.stance === "crouch" && !act.early.canSeeSora(),
+        "crouched cover blocks real sight ray",
+      );
+      report("PASS crouching behind the solid cart blocks the watcher’s sight");
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" }));
+      game.player.teleport(new Vector3(0, 0, 6), Math.PI);
+      await wait(
+        () => game.flags.get("ep1.early.complete", false) && !act.early.active,
+        "courtyard checkpoint",
+      );
+      assert(
+        game.checkpoints.last?.flags["ep1.early.complete"] === true,
+        "safe courtyard saves encounter completion",
+      );
+    }
     await new SaveStore(undefined, "boon-sop-journey-CP1").save("slot1", game.resumedSave!);
     key("KeyF");
     await wait(() => act.vigil.lamp.burning, "first lamp match");
@@ -383,10 +431,25 @@ async function run() {
       game.player.teleport(new Vector3(-2.2, 2.5, -13.45));
       await wait(() => w.brain.active, "walker starts");
       const matches = game.inventory.count("matches");
-      game.inventory.add("qa_transient");
-      game.flags.set("ep1.incense.neglected", true);
-      game.player.teleport(w.brain.position.clone());
-      await wait(() => w.restarts === 1 && !game.cutscene, "CP3 catch recovery");
+      if (
+        !sessionStorage.getItem("journey-walker-caught") ||
+        game.flags.get("ep1.opening.version", 0) < 2
+      ) {
+        game.inventory.add("qa_transient");
+        game.flags.set("ep1.incense.neglected", true);
+      }
+      if (
+        game.flags.get("ep1.opening.version", 0) >= 2 &&
+        !sessionStorage.getItem("journey-walker-caught")
+      ) {
+        game.player.teleport(w.brain.position.clone());
+        sessionStorage.setItem("journey-walker-caught", "1");
+        await button("Retry checkpoint");
+        return;
+      } else if (game.flags.get("ep1.opening.version", 0) < 2) {
+        game.player.teleport(w.brain.position.clone());
+        await wait(() => w.restarts === 1 && !game.cutscene, "CP3 catch recovery");
+      }
       assert(
         !game.inventory.has("qa_transient") && game.inventory.count("matches") === matches,
         "CP3 restores inventory snapshot",
@@ -465,6 +528,17 @@ async function run() {
       "CP5 resumes safe entrance",
     );
     const h = act.hunt;
+    if (
+      game.flags.get("ep1.opening.version", 0) >= 2 &&
+      sessionStorage.getItem("journey-hunt-caught") &&
+      !sessionStorage.getItem("journey-hunt-retry-verified")
+    ) {
+      assert(
+        !game.inventory.has("brass_key_bit"),
+        "CP5 death restores the last safe checkpoint before the fragment pickup",
+      );
+      sessionStorage.setItem("journey-hunt-retry-verified", "1");
+    }
     for (const id of ["J6", "J2", "J4"]) {
       const jar = JARS.find((j) => j.id === id)!;
       await wait(
@@ -480,10 +554,24 @@ async function run() {
       game.interaction.use();
       assert(game.flags.get(`ep1.jar.${id}.taken`, false), `${id} fragment collected`);
       if (id === "J6") {
-        h.brain.position.copyFrom(game.player.feet);
-        h.brain.position.y = 0;
-        await wait(() => h.restarts === 1, "roamer catch recovery");
-        assert(game.inventory.count("brass_key_bit") === 1, "CP5 catch retains fresh fragment");
+        if (
+          game.flags.get("ep1.opening.version", 0) >= 2 &&
+          !sessionStorage.getItem("journey-hunt-caught")
+        ) {
+          h.brain.position.copyFrom(game.player.feet);
+          h.brain.position.y = 0;
+          sessionStorage.setItem("journey-hunt-caught", "1");
+          await button("Retry checkpoint");
+          return;
+        } else if (game.flags.get("ep1.opening.version", 0) < 2) {
+          h.brain.position.copyFrom(game.player.feet);
+          h.brain.position.y = 0;
+          await wait(() => h.restarts === 1, "roamer catch recovery");
+          assert(
+            game.inventory.count("brass_key_bit") === 1,
+            "legacy CP5 catch retains fresh fragment",
+          );
+        }
       }
       game.stopInspecting();
       game.player.teleport(CP5_FEET);

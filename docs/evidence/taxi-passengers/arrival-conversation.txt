@@ -1,0 +1,51 @@
+Browser tab: 18, Title: "Opening checkpoint and stealth verification", URL: "http://localhost:5173/tests/browser/opening.html?continue".
+1 AXWebArea Opening checkpoint and stealth verification, URL: localhost:5173/tests/browser/opening.html?continue
+	2 image Description: Game verification, ID: game
+	3 container Description: Verification controls, ID: controls
+		4 button Notebook Q
+		5 button Reload saved game
+		6 button Approach cover
+		7 button Ghost view
+		8 button Trigger a real catch
+		9 button Reach safe courtyard
+		10 button Aim safe writing desk
+	17 text Isolated QA database; CP1 · CP1
+Checkpoint: Village · Flooded road · matches 10 · post-checkpoint flag false
+Feet -0.6,0.0,59.5 · target none
+Early required=true active=false brain=patrol at={X: -0.3 Y: 0 Z: 44} time=0.0 threat=false sight=true suspicion=0.00 · courtyard=false
+Taxi replies observed: 14/14
+2.0s Driver: The road is flooded. Is someone expecting you?
+6.5s Sora: My grandmother called. I'm going to Uncle Sok's house.
+12.0s Driver: I took mourners there this morning.
+16.0s Sora: I haven't been home in years. It looks different.
+21.0s Driver: The trees have grown. The road hasn't changed.
+25.6s Sora: You keep looking into the forest.
+29.2s Driver: People don't wait beside this road. Not in this weather.
+34.2s Sora: Then who are you looking for?
+40.0s Sora: Wait. There—beside the trees. Did you see that?
+44.8s Driver: Keep your eyes forward. Don't call to it.
+49.5s Sora: There's nobody behind us.
+53.0s Driver: Good. Keep your lamp covered until you're out.
+58.0s Sora: Can't you take me to the house?
+62.0s Driver: This is as far as I go. Follow the path to the funeral tent. Stay quiet.
+	12 container
+		13 heading Click to begin, Value: 1
+			14 text Click to begin
+		15 text Headphones recommended
+	16 text Saving
+	18 text 28 fps
+cpu frame 14.61 ms · render 9.98 ms
+gpu n/a
+draw calls 568
+triangles drawn 3.69 M (all passes)
+1440×810
+input diagnostic v1
+key received: none
+key handled: none
+last use: none
+target: none active=false
+page focused=true pointer=false
+cutscene=true reading=false satchel=false
+
+The focused UI element is 1 AXWebArea Opening checkpoint and stealth verification, URL: localhost:5173/tests/browser/opening.html?continue
+Console errors: []

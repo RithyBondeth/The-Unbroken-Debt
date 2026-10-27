@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Opening checkpoint and stealth verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Game verification"></canvas>
+    <div id="overlay"></div>
+    <nav
+      id="controls"
+      aria-label="Verification controls"
+      style="
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        z-index: 4000;
+      "
+    ></nav>
+    <pre
+      id="results"
+      style="
+        position: fixed;
+        bottom: 8px;
+        left: 8px;
+        color: #eee5d1;
+        background: #111b;
+        padding: 10px;
+        z-index: 3900;
+        pointer-events: none;
+        max-width: 65vw;
+        white-space: pre-wrap;
+      "
+    ></pre>
+    <script type="module" src="./opening.ts"></script>
+  </body>
+</html>
