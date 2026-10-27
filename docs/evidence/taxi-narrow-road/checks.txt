@@ -1,0 +1,8 @@
+Road width: 6.8 m -> 4.4 m.
+Measured exported maximum track half-width: 2.217 m, allowing curve sampling/quantization tolerance.
+Broadleaf tree nodes: 494 -> 572.
+Trees, saplings and low ferns brought closer to both verges.
+Optimized roadside asset: 11,501,664 bytes (within 12 MiB budget).
+Taxi asset, batching and motion checks: 16 passed across 3 test files.
+Moving browser scene inspected; console errors: [].
+Native 1600 x 1000 renderer capture: road.png.

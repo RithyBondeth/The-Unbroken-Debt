@@ -572,33 +572,39 @@ def roadside():
         z=-24+float(rng.random()*8)
         while z<510:
             kind=str(rng.choice(['tree_0','tree_3','palm_0','coco_0','bamboo_0'],p=[.32,.32,.08,.08,.20]))
-            x=side*float(rng.uniform(5.5,11.5))
+            x=side*float(rng.uniform(4.3,10.5))
             at=road_point(x,-.12,z)
             plant(kind,at[0],at[2],float(rng.uniform(.6,1.18)))
-            z+=float(rng.uniform(3.2,6.2))
+            z+=float(rng.uniform(2.8,5.6))
         z=-24+float(rng.random()*7)
         while z<510:
             kind=str(rng.choice(['tree_0','tree_3','banana_1','bamboo_0'],p=[.35,.35,.12,.18]))
-            x=side*float(rng.uniform(4.7,7.7))
+            x=side*float(rng.uniform(3.2,6.8))
             at=road_point(x,-.12,z)
             scale=float(rng.uniform(.32,.53) if kind.startswith('tree') else rng.uniform(.60,1.02))
             plant(kind,at[0],at[2],scale)
-            z+=float(rng.uniform(3.5,6.5))
+            z+=float(rng.uniform(2.8,5.1))
         # A second wall of lower-detail trees closes the view behind the near trunks.
         z=-24+float(rng.random()*5)
         while z<510:
-            at=road_point(side*float(rng.uniform(11,21)),-.12,z)
+            at=road_point(side*float(rng.uniform(9.5,19)),-.12,z)
             plant('far_tree_0' if rng.random()<.5 else 'far_tree_3',at[0],at[2],float(rng.uniform(.65,1.15)))
-            z+=float(rng.uniform(3.5,6.5))
-        for i in range(260):
-            z=float(rng.uniform(-24,510)); x=side*float(rng.uniform(3.5,15))
+            z+=float(rng.uniform(3.2,5.6))
+        for i in range(320):
+            z=float(rng.uniform(-24,510)); x=side*float(rng.uniform(2.7,13))
             kind=str(rng.choice(['fern_02_a.001','shrub_02_a.001','forest_grass_-1_-1']))
-            if kind.startswith('forest_grass'): x=side*float(rng.uniform(8,17))
+            if kind.startswith('forest_grass'): x=side*float(rng.uniform(3,12))
             at=road_point(x,-.12,z)
             plant(kind,at[0],at[2],float(rng.uniform(.65,1.25)))
+        # Low ferns soften the narrowed verge; trunks remain outside the driving corridor.
+        z=-24+float(rng.random()*4)
+        while z<510:
+            at=road_point(side*float(rng.uniform(2.45,3.2)),-.12,z)
+            plant('fern_02_a.001',at[0],at[2],float(rng.uniform(.4,.72)))
+            z+=float(rng.uniform(3.5,7))
     # Sculpted continuous verge and a slightly crowned, deeply rutted muddy track.
     floor=mats['M_wet_forest_floor']; mud=mats['M_wet_mud']
-    for name,mat,span,steps in [('taxi_road_ground',floor,26,26),('taxi_muddy_track',mud,3.4,16)]:
+    for name,mat,span,steps in [('taxi_road_ground',floor,26,26),('taxi_muddy_track',mud,2.2,16)]:
         vs=[]; fs=[]; rows=540
         for i in range(rows+1):
             z=-28+i
@@ -622,7 +628,7 @@ def roadside():
     # Occasional old markers, clustered near bends rather than a picket fence.
     post=mats.get('M_wet_old_planks',floor)
     for z,side in [(31,-1),(76,1),(131,-1),(181,-1),(252,1),(319,-1),(404,1),(449,1)]:
-        rounded('taxi_road_marker',road_point(side*3.8,.10,z),(.10,.5,.12),post,.008)
+        rounded('taxi_road_marker',road_point(side*2.65,.10,z),(.10,.5,.12),post,.008)
     for obj in far_templates:bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.scenes.remove(original)
     bpy.data.orphans_purge(do_recursive=True)
