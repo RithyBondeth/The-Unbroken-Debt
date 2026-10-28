@@ -11,40 +11,21 @@
 .walker-caught {
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: var(--ui-z-caught);
   display: grid;
   place-items: center;
-  background: #070706b8;
+  background: rgb(9 13 12 / 0.94);
+  color: var(--ui-text);
   pointer-events: none;
 }
 .walker-caught p {
-  max-width: min(24rem, 80vw);
-  padding: 3rem 2rem;
-  background: #cabc9b;
-  color: #3e3526;
-  font:
-    1.9rem/1.4 "Patrick Hand",
-    cursive;
-  transform: rotate(-4deg);
-  clip-path: polygon(
-    1% 0,
-    96% 2%,
-    100% 17%,
-    95% 21%,
-    100% 34%,
-    97% 40%,
-    100% 52%,
-    95% 60%,
-    99% 76%,
-    96% 84%,
-    100% 100%,
-    2% 97%,
-    5% 88%,
-    0 78%,
-    4% 65%,
-    0 54%,
-    4% 43%,
-    0 29%,
-    4% 19%
-  );
+  box-sizing: border-box;
+  width: min(36rem, calc(100vw - 2 * var(--ui-safe-x)));
+  margin: 0;
+  padding: var(--ui-space-8);
+  font: 400 var(--ui-heading) / 1.45 var(--ui-font-display);
+  letter-spacing: -0.025em;
+  text-align: center;
+  white-space: pre-line;
+  text-wrap: balance;
 }

@@ -1,72 +1,67 @@
 .resolution {
   position: fixed;
   inset: 0;
-  z-index: 1500;
+  z-index: var(--ui-z-resolution);
   display: grid;
   place-items: center;
-  padding: 24px;
+  box-sizing: border-box;
+  padding: var(--ui-safe-bottom) var(--ui-safe-x);
   overflow: auto;
-  background: #10171755;
-  color: #342c23;
+  background: rgb(9 13 12 / 0.85);
+  color: var(--ui-ink);
 }
 .resolution[hidden] {
   display: none;
 }
 .resolution-paper {
-  width: min(650px, 100%);
-  max-height: 90vh;
-  overflow: auto;
   box-sizing: border-box;
-  padding: clamp(24px, 5vw, 56px);
-  background: #e0d5b9;
-  box-shadow: 0 10px 50px #0008;
-  font:
-    1.2rem/1.55 Georgia,
-    serif;
+  width: min(44rem, 100%);
+  max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
+  overflow: auto;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--ui-paper-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-paper);
+  box-shadow: var(--ui-shadow);
+  font-size: var(--ui-reading);
 }
 .resolution-paper h1 {
-  font-weight: normal;
-  font-size: 2rem;
-  margin-top: 0;
+  margin: 0 0 var(--ui-space-6);
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.resolution-paper p {
+  max-width: 65ch;
+  margin: var(--ui-space-4) 0;
+  text-wrap: pretty;
 }
 .resolution-paper nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 30px;
-}
-.resolution-paper button {
-  cursor: pointer;
-  padding: 12px 18px;
-  color: #eee3cb;
-  background: #343d36;
-  border: 1px solid #343d36;
-  font: inherit;
-}
-.resolution-paper button:focus-visible {
-  outline: 3px solid #9b4530;
-  outline-offset: 4px;
-}
-.resolution-paper button:disabled {
-  opacity: 0.6;
-  cursor: default;
+  gap: var(--ui-space-3);
+  margin-top: var(--ui-space-8);
+  padding-top: var(--ui-space-6);
+  border-top: 1px solid var(--ui-paper-border);
 }
 .resolution-names {
   display: grid;
-  gap: 14px;
-  padding: 12px 24px;
-  font:
-    1.8rem/1.4 "Patrick Hand",
-    cursive;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-4) var(--ui-space-6);
+  font: 400 var(--ui-heading) / 1.5 var(--ui-font-display);
+}
+.resolution-names s {
+  color: var(--ui-paper-muted);
+  text-decoration-thickness: 1px;
 }
 .resolution-names strong {
-  color: #852e2a;
-  font-size: 2.4rem;
-  border-bottom: 1px dotted #756b57;
+  color: var(--ui-paper-accent);
+  font-weight: 400;
+  border-bottom: 1px dotted var(--ui-paper-border);
 }
 .resolution-map svg {
   width: 100%;
-  margin-top: 20px;
+  margin-top: var(--ui-space-6);
 }
 .resolution-map circle[fill] {
   animation: resolution-blood 4s ease-out both;
@@ -76,8 +71,7 @@
   text-align: center;
 }
 .resolution-book .resolution-paper {
-  background: linear-gradient(90deg, #ded1b2 49.6%, #b9aa8c 50%, #e8ddc1 50.5%);
-  width: min(900px, 100%);
+  width: min(56rem, 100%);
 }
 @keyframes resolution-blood {
   from {

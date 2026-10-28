@@ -15,7 +15,15 @@ Both assets were created with the built-in OpenAI image generation tool. The bac
 
 The default URL opens the title screen before hardware detection and game initialization. New game starts the prologue; Continue uses the existing IndexedDB autosave and checkpoint loader. Unreadable or unavailable saves receive a visible status message. Restarting with an existing save asks for confirmation inside the game. Settings persist sound, mouse sensitivity and inverted vertical look; changes apply at startup. Settings remain usable for the current session if local storage is unavailable. Arrow keys, Home/End, Tab and Enter support menu navigation. Dialogs use native focus management and Escape dismissal. Fullscreen is requested only when its button is clicked.
 
-Existing `?start=act1`, `?continue` and recognized spike URLs retain their direct entry behavior. The engine's existing requirements page still handles unsupported devices. Game loading failures show a return-to-title action. The existing in-game click-to-begin prompt remains responsible for pointer capture/audio unlock.
+Existing `?start=act1`, `?continue` and recognized spike URLs retain their direct entry behavior. The engine's existing requirements page still handles unsupported devices. Game loading failures show a return-to-title action. The in-game listening screen handles pointer capture and audio unlock when the player presses Enter.
+
+## Listening screen
+
+After the scene loads, a dedicated listening screen replaces the old click-to-begin card. It uses a charcoal green background, a fine headphone illustration, a serif “Listen closely.” heading and a visible Enter key. The copy explains that directional sound helps locate things in the darkness. Enter starts the scene from anywhere on the screen; the focused button also supports pointer activation. Clicking the background does not start play.
+
+Audio unlock and pointer capture run synchronously inside the activation gesture. Repeated, composing and modified Enter presses do not start play, and activation is guarded during the 650 ms departure fade. The listener is removed and focus returns to the canvas before the scene continues. Reduced-motion preferences skip the departure delay. Entry styling is removed before ordinary story cards are displayed.
+
+`/tests/browser/entry.html` previews the real screen without touching saves or loading the game. Press Enter to verify activation, audio unlock, focus restoration, listener removal and ordinary story-card styling; pointer capture is reported separately because embedded browsers may reject it. Preview again repeats the check.
 
 ## Living atmosphere
 

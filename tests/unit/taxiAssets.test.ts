@@ -204,6 +204,61 @@ describe("authored taxi assets", () => {
     expect(bounds.min[2]).toBeLessThan(-25);
     expect(bounds.max[2]).toBeGreaterThan(505);
   });
+  it("keeps low vegetation outside the widened road and exposes standing water above its crown", () => {
+    const lateral = (x: number, z: number) => {
+      let t = z;
+      for (let i = 0; i < 5; i++) {
+        const centre = 3.8 * Math.sin(t * 0.018) + 2.2 * Math.sin(t * 0.037),
+          slope = 3.8 * 0.018 * Math.cos(t * 0.018) + 2.2 * 0.037 * Math.cos(t * 0.037);
+        t += ((x - centre) * slope + z - t) / (1 + slope * slope);
+      }
+      const angle = Math.atan(
+        3.8 * 0.018 * Math.cos(t * 0.018) + 2.2 * 0.037 * Math.cos(t * 0.037),
+      );
+      return (
+        (x - 3.8 * Math.sin(t * 0.018) - 2.2 * Math.sin(t * 0.037)) * Math.cos(angle) -
+        (z - t) * Math.sin(angle)
+      );
+    };
+    let plants = 0,
+      clearance = Infinity,
+      halfWidth = 0,
+      water = 0;
+    for (const node of road.getRoot().listNodes()) {
+      const name = node.getName(),
+        plant =
+          /^taxi_road_(?:(?:far_)?tree_|palm_|coco_|banana_|bamboo_|fern_|shrub_|forest_grass_)/.test(
+            name,
+          ),
+        track = name === "taxi_muddy_track",
+        pool = name.startsWith("taxi_rut_water");
+      if (!plant && !track && !pool) continue;
+      if (plant) plants++;
+      if (pool) water++;
+      const matrix = node.getWorldMatrix();
+      for (const primitive of node.getMesh()!.listPrimitives()) {
+        const positions = primitive.getAttribute("POSITION")!,
+          v: number[] = [];
+        for (let i = 0; i < positions.getCount(); i++) {
+          positions.getElement(i, v);
+          const x = -(v[0] * matrix[0] + v[1] * matrix[4] + v[2] * matrix[8] + matrix[12]),
+            y = v[0] * matrix[1] + v[1] * matrix[5] + v[2] * matrix[9] + matrix[13],
+            z = v[0] * matrix[2] + v[1] * matrix[6] + v[2] * matrix[10] + matrix[14];
+          if (plant && y < 2.8) clearance = Math.min(clearance, Math.abs(lateral(x, z)));
+          if (track) halfWidth = Math.max(halfWidth, Math.abs(lateral(x, z)));
+          if (pool) {
+            expect(y).toBeGreaterThan(-0.062);
+            expect(y).toBeLessThan(-0.054);
+          }
+        }
+      }
+    }
+    expect(plants).toBeGreaterThan(1000);
+    expect(clearance).toBeGreaterThan(3.2);
+    expect(halfWidth).toBeGreaterThan(2.75);
+    expect(halfWidth).toBeLessThan(2.85);
+    expect(water).toBeGreaterThanOrEqual(218);
+  });
   it("seats Sora's anatomical legs and shoes inside the passenger footwell", () => {
     const nodes = cabin.getRoot().listNodes();
     const legs = nodes.find((n) => n.getName() === "taxi_sora_legs")!;

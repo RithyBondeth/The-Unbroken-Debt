@@ -36,7 +36,7 @@ async function review(): Promise<void> {
     "ep1.sok.unlocked",
   ])
     game.flags.set(flag, true);
-  game.fade.waitForClick = async () => {};
+  game.fade.waitForEnter = async () => {};
   await game.start({ audio: false });
   const act = (window as unknown as { act: ActOne }).act;
   while (game.cutscene) await new Promise((resolve) => setTimeout(resolve, 100));

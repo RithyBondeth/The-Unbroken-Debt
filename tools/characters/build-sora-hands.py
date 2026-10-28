@@ -8,6 +8,9 @@ from mathutils import Vector,Quaternion
 import numpy as np
 ROOT=Path(__file__).resolve().parents[2];SRC=ROOT/'art-source/library/makehuman-sora';OUT=ROOT/'public/assets/shared'
 OUT.mkdir(parents=True,exist_ok=True);EDIT=ROOT/'art-source/characters/sora';EDIT.mkdir(parents=True,exist_ok=True)
+phone_only='--phone-only' in sys.argv
+previous=(OUT/'sora_hand.mesh').read_bytes() if phone_only else None
+preserved_textures={name:(OUT/name).read_bytes() for name in ['sora_hand_skin.png','sora_hand_normal.png','sora_hand_roughness.png']} if phone_only else {}
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 verts=[];uvs=[];faces=[];faceuv=[];group=''
 for line in (SRC/'base.obj').read_text().splitlines():
@@ -67,6 +70,7 @@ profiles={
  'journal':([18,38,24],[8,12,5],8),
  'pinch':([65,82,55],[28,38,25],65),
  'reach':([0,4,2],[0,4,0],0),
+ 'drawing':([0,0,0],[0,0,0],0),
 }
 def pose(name):
  for b in rig.pose.bones:b.rotation_mode='QUATERNION';b.rotation_quaternion=Quaternion()
@@ -81,6 +85,14 @@ def pose(name):
   sys.path.insert(0,str(Path(__file__).resolve().parent))
   from sora_grip import lamp_grip
   lamp_grip(rig,ax,ay,az)
+ if name=='phone':
+  sys.path.insert(0,str(Path(__file__).resolve().parent))
+  from sora_grip import phone_grip
+  phone_grip(rig,ax,ay,az)
+ if name=='drawing':
+  sys.path.insert(0,str(Path(__file__).resolve().parent))
+  from sora_drawing_grip import drawing_grip
+  drawing_grip(rig,ax,ay,az)
  bpy.context.view_layer.update()
 
 def evaluated():
@@ -146,4 +158,13 @@ real.update()
 bpy.ops.object.select_all(action='DESELECT');anatomy.select_set(True);bpy.context.view_layer.objects.active=anatomy
 bpy.ops.wm.save_as_mainfile(filepath=str(EDIT/'sora-hands.blend'))
 bpy.ops.export_scene.gltf(filepath=str(EDIT/'sora-hands.glb'),export_format='GLB',use_selection=True,export_morph=True,export_yup=False)
+if phone_only:
+ old_size=struct.unpack_from('<I',previous,4)[0]
+ old_header=json.loads(previous[8:8+old_size])
+ assert all(old_header[key]==header[key] for key in ['vertexCount','indexCount','poses']), 'Phone-only rebuild requires matching topology'
+ start=8+old_size+header['indexCount']*4+header['vertexCount']*8
+ at=start+header['poses'].index('phone')*header['vertexCount']*24
+ patched=bytearray(previous);patched[at:at+header['vertexCount']*24]=arrays[header['poses'].index('phone')].tobytes()
+ (OUT/'sora_hand.mesh').write_bytes(patched)
+ for name,data in preserved_textures.items():(OUT/name).write_bytes(data)
 print('HAND_ASSET',json.dumps(header),'atlas',x1-x0,y1-y0,flush=True)

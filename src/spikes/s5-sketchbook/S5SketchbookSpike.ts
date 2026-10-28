@@ -1,3 +1,4 @@
+import { loadNotebookPortraits } from "../../ui/notebook/NotebookPortraits";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -72,6 +73,7 @@ export async function runS5(
   const input = new GatedInput(keyboard);
   const player = new PlayerController(scene, camera, input, hall.spawn);
 
+  await loadNotebookPortraits();
   const sketchbook = new Sketchbook(scene, EP1_SKETCHBOOK, textureHeight, camera);
   // Drawn after the room with its own depth, so the book never sinks into a wall.
   sketchbook.book.setRenderingGroup(1);

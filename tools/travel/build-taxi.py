@@ -540,6 +540,19 @@ def road_point(x,y,z):
     a=road_heading(z)
     return (road_x(z)+x*math.cos(a),y,z-x*math.sin(a))
 
+ROAD_HALF_WIDTH=2.8
+PLANT_CLEARANCE=ROAD_HALF_WIDTH+.6
+
+def road_lateral(x,z):
+    # Nearest centreline parameter, including the normal offset around bends.
+    t=np.array(z,copy=True)
+    for _ in range(5):
+        centre=3.8*np.sin(t*.018)+2.2*np.sin(t*.037)
+        slope=3.8*.018*np.cos(t*.018)+2.2*.037*np.cos(t*.037)
+        t+=((x-centre)*slope+z-t)/(1+slope*slope)
+    angle=np.arctan(3.8*.018*np.cos(t*.018)+2.2*.037*np.cos(t*.037))
+    return (x-3.8*np.sin(t*.018)-2.2*np.sin(t*.037))*np.cos(angle)-(z-t)*np.sin(angle)
+
 def roadside():
     bpy.ops.wm.open_mainfile(filepath=str(ART/'ep1_area_village.blend'))
     original=bpy.context.scene
@@ -548,7 +561,8 @@ def roadside():
     scene=bpy.data.scenes.new('Taxi_monsson_road'); bpy.context.window.scene=scene
     # Existing vegetation keeps its authored folded leaves, bark maps and root detail.
     rng=np.random.default_rng(2008)
-    def plant(name,x,z,scale=1):
+    plant_vertices={}
+    def plant(name,offset,z,scale=1):
         src=templates[name]
         if not src: return
         bounds=[src.matrix_world @ Vector(c) for c in src.bound_box]
@@ -557,7 +571,19 @@ def roadside():
         if col: foot=col.matrix_world.translation.copy(); foot.z=0
         obj=src.copy(); obj.data=src.data; scene.collection.objects.link(obj); obj.parent=None
         obj.name='taxi_road_'+name
-        obj.matrix_world=Matrix.Translation(w((x,-.12,z))) @ Matrix.Rotation(float(rng.random()*math.tau),4,'Z') @ Matrix.Scale(scale,4) @ Matrix.Translation(-foot) @ src.matrix_world
+        pose=Matrix.Rotation(float(rng.random()*math.tau),4,'Z') @ Matrix.Scale(scale,4) @ Matrix.Translation(-foot) @ src.matrix_world
+        if name not in plant_vertices:
+            plant_vertices[name]=np.array([(*v.co,1) for v in src.data.vertices],dtype=np.float64)
+        side=1 if offset>0 else -1
+        for _ in range(6):
+            obj.matrix_world=Matrix.Translation(w(road_point(offset,-.12,z))) @ pose
+            points=plant_vertices[name] @ np.array(obj.matrix_world,dtype=np.float64).T
+            low=points[points[:,2]<2.8]
+            if not len(low): break
+            clearance=float(np.min(side*road_lateral(-low[:,0],-low[:,1])))
+            if clearance>=PLANT_CLEARANCE: break
+            offset+=side*(PLANT_CLEARANCE-clearance+.04)
+        else: raise RuntimeError('Vegetation intrudes on taxi road: '+obj.name)
         obj.hide_render=False; obj.hide_set(False)
     far_templates=[]
     for name in ['tree_0','tree_3']:
@@ -573,38 +599,34 @@ def roadside():
         while z<510:
             kind=str(rng.choice(['tree_0','tree_3','palm_0','coco_0','bamboo_0'],p=[.32,.32,.08,.08,.20]))
             x=side*float(rng.uniform(4.3,10.5))
-            at=road_point(x,-.12,z)
-            plant(kind,at[0],at[2],float(rng.uniform(.6,1.18)))
+            plant(kind,x,z,float(rng.uniform(.6,1.18)))
             z+=float(rng.uniform(2.8,5.6))
         z=-24+float(rng.random()*7)
         while z<510:
             kind=str(rng.choice(['tree_0','tree_3','banana_1','bamboo_0'],p=[.35,.35,.12,.18]))
             x=side*float(rng.uniform(3.2,6.8))
-            at=road_point(x,-.12,z)
             scale=float(rng.uniform(.32,.53) if kind.startswith('tree') else rng.uniform(.60,1.02))
-            plant(kind,at[0],at[2],scale)
+            plant(kind,x,z,scale)
             z+=float(rng.uniform(2.8,5.1))
         # A second wall of lower-detail trees closes the view behind the near trunks.
         z=-24+float(rng.random()*5)
         while z<510:
-            at=road_point(side*float(rng.uniform(9.5,19)),-.12,z)
-            plant('far_tree_0' if rng.random()<.5 else 'far_tree_3',at[0],at[2],float(rng.uniform(.65,1.15)))
+            x=side*float(rng.uniform(9.5,19))
+            plant('far_tree_0' if rng.random()<.5 else 'far_tree_3',x,z,float(rng.uniform(.65,1.15)))
             z+=float(rng.uniform(3.2,5.6))
         for i in range(320):
             z=float(rng.uniform(-24,510)); x=side*float(rng.uniform(2.7,13))
             kind=str(rng.choice(['fern_02_a.001','shrub_02_a.001','forest_grass_-1_-1']))
             if kind.startswith('forest_grass'): x=side*float(rng.uniform(3,12))
-            at=road_point(x,-.12,z)
-            plant(kind,at[0],at[2],float(rng.uniform(.65,1.25)))
-        # Low ferns soften the narrowed verge; trunks remain outside the driving corridor.
+            plant(kind,x,z,float(rng.uniform(.65,1.25)))
+        # The complete fern footprint stays beyond the cleared, flooded shoulder.
         z=-24+float(rng.random()*4)
         while z<510:
-            at=road_point(side*float(rng.uniform(2.45,3.2)),-.12,z)
-            plant('fern_02_a.001',at[0],at[2],float(rng.uniform(.4,.72)))
+            plant('fern_02_a.001',side*float(rng.uniform(3.6,4.3)),z,float(rng.uniform(.4,.72)))
             z+=float(rng.uniform(3.5,7))
     # Sculpted continuous verge and a slightly crowned, deeply rutted muddy track.
     floor=mats['M_wet_forest_floor']; mud=mats['M_wet_mud']
-    for name,mat,span,steps in [('taxi_road_ground',floor,26,26),('taxi_muddy_track',mud,2.2,16)]:
+    for name,mat,span,steps in [('taxi_road_ground',floor,26,26),('taxi_muddy_track',mud,ROAD_HALF_WIDTH,16)]:
         vs=[]; fs=[]; rows=540
         for i in range(rows+1):
             z=-28+i
@@ -619,16 +641,24 @@ def roadside():
             for j in range(steps): a=i*(steps+1)+j; fs.append((a,a+steps+1,a+steps+2,a+1))
         mesh(name,vs,fs,mat)
     puddle=mats['M_puddle']
+    def water_patch(x,z,radius,long):
+        # Shallow standing water lies above the road crown, never buried beneath mud.
+        vs=[road_point(x,-.058,z)]; count=24
+        for j in range(count):
+            a=j/count*math.tau; r=radius*(.90+.07*math.sin(j*2.7)+.03*math.sin(j*4.1))
+            lateral=max(-ROAD_HALF_WIDTH+.08,min(ROAD_HALF_WIDTH-.08,x+math.cos(a)*r))
+            vs.append(road_point(lateral,-.058,z+math.sin(a)*long))
+        mesh('taxi_rut_water',vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
     for i in range(170):
         x=float(rng.choice([-1,1]))*.74+float(rng.normal(0,.22)); z=-24+float(rng.random()*532)
-        vs=[road_point(x,-.111,z)]; count=20; radius=float(.25+rng.random()*.65); long=float(1+rng.random()*2)
-        for j in range(count):
-            a=j/count*math.tau; r=radius*(.85+.15*math.sin(j*2.7)); vs.append(road_point(x+math.cos(a)*r,-.111,z+math.sin(a)*r*long))
-        mesh('taxi_rut_water',vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
+        water_patch(x,z,float(rng.uniform(.4,.95)),float(rng.uniform(.8,2.7)))
+    # Broad flooded patches replace the former verge clutter across the clear road.
+    for i in range(48):
+        water_patch(float(rng.uniform(-.15,.15)),-22+i*11.1+float(rng.uniform(-2,2)),float(rng.uniform(2.1,2.65)),float(rng.uniform(3.5,6.2)))
     # Occasional old markers, clustered near bends rather than a picket fence.
     post=mats.get('M_wet_old_planks',floor)
     for z,side in [(31,-1),(76,1),(131,-1),(181,-1),(252,1),(319,-1),(404,1),(449,1)]:
-        rounded('taxi_road_marker',road_point(side*2.65,.10,z),(.10,.5,.12),post,.008)
+        rounded('taxi_road_marker',road_point(side*3.15,.10,z),(.10,.5,.12),post,.008)
     for obj in far_templates:bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.scenes.remove(original)
     bpy.data.orphans_purge(do_recursive=True)

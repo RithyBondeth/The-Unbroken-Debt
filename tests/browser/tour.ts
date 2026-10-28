@@ -37,6 +37,10 @@ const VILLAGE: Record<string, View> = {
     [0, 0, -2],
     [0, 1.1, -5],
   ],
+  "05b-sok-portrait": [
+    [0.05, 0, -3.4],
+    [0, 1.12, -4.4],
+  ],
   "06-house-front": [
     [5, 0, -3],
     [0, 3, -12],
@@ -103,7 +107,7 @@ async function tour(): Promise<void> {
       game.flags.set(flag, true);
     history.replaceState(null, "", `${location.pathname}?start=act1&${params}`);
   }
-  game.fade.waitForClick = async () => {};
+  game.fade.waitForEnter = async () => {};
   await game.start({ audio: false });
   const deadline = performance.now() + 20000;
   while (game.cutscene && performance.now() < deadline)
@@ -159,7 +163,13 @@ async function tour(): Promise<void> {
   if (params.has("run")) {
     for (const name of Object.keys(views)) await show(name, true);
     output.textContent = `DONE ${Object.keys(views).length} views`;
-  } else await show(Object.keys(views)[0], false);
+  } else
+    await show(
+      params.get("view") && views[params.get("view")!]
+        ? params.get("view")!
+        : Object.keys(views)[0],
+      false,
+    );
 }
 
 void tour().catch((error: unknown) => {

@@ -474,11 +474,17 @@ export function trainPassing(sampleRate: number, rand: () => number): Float32Arr
  * tiny bright clicks, the paper's hiss, rising and falling with each stroke.
  */
 export function penScratch(sampleRate: number, rand: () => number): Float32Array {
-  const length = seconds(0.9, sampleRate);
-  const stroke = (t: number) =>
-    Math.max(0, Math.sin(t * 2 * Math.PI * 4.3 + 0.4)) ** 0.7 *
-    Math.min(1, t / 0.05) *
-    Math.min(1, (0.9 - t) / 0.2);
+  const length = seconds(3.6, sampleRate);
+  // Four strokes, with the same approach, nib lifts and withdrawal as P02.
+  const stroke = (t: number) => {
+    const progress = (t - 0.432) / 2.736;
+    if (progress <= 0 || progress >= 1) return 0;
+    const cycle = progress * 4;
+    const phase = cycle % 1;
+    const writingFraction = cycle >= 3 ? 0.95 : 0.82;
+    if (phase >= writingFraction) return 0;
+    return Math.sin((phase / writingFraction) * Math.PI) ** 0.7;
+  };
   const nib = modal(
     stickSlip(length, sampleRate, rand, (t) => 380 + 520 * stroke(t), stroke, 0.9),
     sampleRate,

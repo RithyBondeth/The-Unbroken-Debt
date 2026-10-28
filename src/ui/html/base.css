@@ -1,23 +1,4 @@
-@font-face {
-  font-family: "Ubuntu";
-  src: url("/fonts/Ubuntu-Regular.ttf");
-  font-weight: 400;
-}
-@font-face {
-  font-family: "Ubuntu";
-  src: url("/fonts/Ubuntu-Medium.ttf");
-  font-weight: 500;
-}
-@font-face {
-  font-family: "Ubuntu";
-  src: url("/fonts/Ubuntu-Bold.ttf");
-  font-weight: 700;
-}
-@font-face {
-  font-family: "Preah Vihear";
-  src: url("/fonts/Preahvihear-Regular.ttf");
-  unicode-range: U+1780-17FF, U+19E0-19FF;
-}
+@import "./design-system.css";
 
 :root {
   --paper: #efe4cf;
@@ -32,7 +13,7 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--night);
-  font-family: "Ubuntu", "Preah Vihear", sans-serif;
+  font-family: var(--ui-font-body);
 }
 
 #game {
@@ -53,63 +34,64 @@ body {
   display: none;
 }
 
-.requirements {
+.requirements,
+.render-stall {
   box-sizing: border-box;
-  max-width: min(34rem, calc(100vw - 32px));
-  padding: 2rem 2.4rem;
-  background: var(--paper);
-  color: var(--ink);
-  border-radius: 6px;
-  line-height: 1.6;
+  width: min(38rem, calc(100vw - 2 * var(--ui-safe-x)));
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--ui-border);
+  border-top-color: var(--ui-accent);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow);
 }
-
-.requirements h1 {
-  margin-top: 0;
+.requirements {
+  max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
+  overflow-y: auto;
 }
-
+.requirements h1,
+.render-stall h1 {
+  margin: 0 0 var(--ui-space-4);
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.requirements p,
+.render-stall p {
+  max-width: 65ch;
+  color: var(--ui-muted);
+  text-wrap: pretty;
+}
 .requirements dt {
+  margin-top: var(--ui-space-6);
+  color: var(--ui-accent-bright);
+  font-size: var(--ui-small);
   font-weight: 500;
-  margin-top: 0.6rem;
 }
-
 .requirements dd {
-  margin: 0;
+  margin: var(--ui-space-2) 0 0;
+  font-size: var(--ui-small);
+  color: var(--ui-muted);
 }
-
-/* Shown while frames keep failing (src/ui/html/RenderStallNotice.ts). */
 .render-stall {
   position: fixed;
+  z-index: var(--ui-z-entry);
   left: 50%;
-  bottom: 2rem;
+  bottom: var(--ui-safe-bottom);
   transform: translateX(-50%);
-  box-sizing: border-box;
-  max-width: min(30rem, calc(100vw - 32px));
-  padding: 1.2rem 1.6rem;
-  background: var(--paper);
-  color: var(--ink);
-  border-radius: 6px;
-  line-height: 1.5;
 }
-
 .render-stall[hidden] {
   display: none;
 }
-
-.render-stall h1 {
-  margin: 0 0 0.4rem;
-  font-size: 1.1rem;
-  font-weight: 500;
-}
-
 .render-stall p {
   margin: 0;
 }
-
 .render-stall pre {
-  margin: 0.6rem 0 0;
-  font-size: 12px;
+  margin: var(--ui-space-4) 0 0;
+  color: var(--ui-subtle);
+  font-size: var(--ui-caption);
   white-space: pre-wrap;
-  opacity: 0.7;
 }
 
 /* Development overlays: spike panel and performance readout. Not game UI. */

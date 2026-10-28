@@ -1,0 +1,47 @@
+Browser tab: 3, Title: "Studio visual and pickup review", URL: "http://localhost:5174/tests/browser/studio.html".
+1 AXWebArea Studio visual and pickup review, URL: localhost:5174/tests/browser/studio.html
+	2 image Description: Studio review, ID: game
+	3 container Description: Studio views, ID: views
+		5 button Drawing table
+		6 button Room
+		7 button Writing desk
+		8 button Telephone
+		9 button Window
+		10 button Bed and shelf
+		11 button Lantern hook
+		12 button Books and candle
+		13 button Gathered net
+		14 button Open drawer
+		15 button Matchbox close-up
+		16 button Preview drawing
+		17 button Free look
+		18 button Interact E
+		19 button Preview receiver
+		28 text Saved debug-shots/studio-telephone.png
+		20 button Save screenshot
+	29 text Target: interact_telephone · illustration inked=true · lamp collected=false · E uses the focused object · Q closes the sketchbook
+Isolated visual preview; start with Click to begin.
+	27 text E to use
+	22 container
+		23 heading Click to begin, Value: 1
+			24 text Click to begin
+		25 text Headphones recommended
+	4 text Saving
+	30 text 57 fps
+cpu frame 5.18 ms · render 1.08 ms
+gpu n/a
+draw calls 982
+triangles drawn 4.23 M (all passes)
+1769×1080
+input diagnostic v1
+key received: none
+key handled: none
+last use: interact_illustration
+target: interact_telephone active=true
+page focused=true pointer=false
+cutscene=false reading=false satchel=false
+phone ringing=false waiting=false answered=false
+kit missing: satchel, sketchbook, matches, lamp
+
+The focused UI element is 20 button Save screenshot
+Console errors: []

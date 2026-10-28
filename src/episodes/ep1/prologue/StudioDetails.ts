@@ -1,3 +1,4 @@
+import { createTelephoneReceiver } from "../../../player/TelephoneReceiver";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -29,6 +30,10 @@ export class StudioDetails {
   private readonly ceramic: PBRMaterial;
   private readonly staticMeshes: Mesh[] = [];
   private batching = false;
+  private phoneCord: Mesh | null = null;
+  private phoneCordRest!: TransformNode;
+  private phoneCordSocket!: TransformNode;
+  private readonly lastCordEnd = new Vector3(Infinity, Infinity, Infinity);
 
   constructor(
     private readonly scene: Scene,
@@ -415,38 +420,15 @@ export class StudioDetails {
       );
       hole.rotation.x = Math.PI / 2;
     }
-    const receiver = new TransformNode("telephone_earpiece", this.scene);
+    const receiver = createTelephoneReceiver(this.scene, "telephone_earpiece");
     receiver.parent = root;
     receiver.position.set(-0.193, -0.075, 0.105);
-    this.lathe(
-      receiver,
-      "receiver_handle",
-      [
-        [0.012, -0.1],
-        [0.02, -0.085],
-        [0.018, -0.065],
-        [0.013, 0.06],
-        [0.02, 0.075],
-      ],
-      [0, 0, 0],
-      this.black,
-    );
-    const ear = this.lathe(
-      receiver,
-      "receiver_earcup",
-      [
-        [0.014, 0],
-        [0.026, 0.01],
-        [0.046, 0.025],
-        [0.052, 0.038],
-        [0.05, 0.043],
-        [0.034, 0.033],
-      ],
-      [0, 0.077, 0],
-      this.black,
-    );
-    ear.rotation.x = -0.36;
-    this.ring(receiver, "receiver_collar", 0.036, 0.004, [0, -0.069, 0], this.brass, false);
+    this.phoneCordRest = new TransformNode("telephone_cord_rest", this.scene);
+    this.phoneCordRest.parent = receiver;
+    this.phoneCordRest.position.set(0, -0.116, 0);
+    this.phoneCordSocket = new TransformNode("telephone_cord_terminal", this.scene);
+    this.phoneCordSocket.parent = root;
+    this.phoneCordSocket.position.set(-0.055, -0.32, 0.05);
     this.tube(
       root,
       "receiver_hook",
@@ -458,16 +440,6 @@ export class StudioDetails {
       0.006,
       this.brass,
     );
-    const cord: number[][] = [];
-    for (let i = 0; i <= 72; i++) {
-      const t = i / 72;
-      cord.push([
-        -0.194 + 0.075 * t + 0.009 * Math.sin(t * Math.PI * 20),
-        -0.18 - 0.3 * Math.sin(t * Math.PI) + 0.01 * t,
-        0.09 + 0.011 * Math.cos(t * Math.PI * 20),
-      ]);
-    }
-    this.tube(root, "braided_receiver_cord", cord, 0.004, this.black);
     this.tube(
       root,
       "magneto_crank",
@@ -559,7 +531,36 @@ export class StudioDetails {
     );
     hit.visibility = 0;
     this.batchParts(root, receiver);
-    this.batchParts(receiver);
+    this.updateTelephoneCord();
+  }
+
+  updateTelephoneCord(heldEnd: Vector3 | null = null): void {
+    const end = heldEnd ?? this.phoneCordRest.getAbsolutePosition();
+    if (Vector3.DistanceSquared(end, this.lastCordEnd) < 0.000001) return;
+    this.lastCordEnd.copyFrom(end);
+    const start = this.phoneCordSocket.getAbsolutePosition();
+    const sag = Math.min(0.3, Math.max(0.12, Vector3.Distance(start, end) * 0.22));
+    const path = Array.from({ length: 33 }, (_, i) => {
+      const t = i / 32,
+        p = Vector3.Lerp(start, end, t);
+      p.y -= Math.sin(t * Math.PI) * sag;
+      p.x += Math.sin(t * Math.PI) * 0.035;
+      return p;
+    });
+    this.phoneCord = CreateTube(
+      "studio_cloth_telephone_cord",
+      {
+        path,
+        radius: 0.0026,
+        tessellation: 8,
+        cap: Mesh.CAP_ALL,
+        updatable: true,
+        instance: this.phoneCord ?? undefined,
+      },
+      this.scene,
+    );
+    this.phoneCord.material = this.black;
+    this.phoneCord.isPickable = false;
   }
 
   private buildDrawer(drawer: TransformNode): void {

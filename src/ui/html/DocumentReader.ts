@@ -1,4 +1,5 @@
 import "./document.css";
+import { setControlText } from "./controlText";
 
 /** A readable translation alongside the physical journal, with keyboard and button controls. */
 export class DocumentReader {
@@ -29,7 +30,7 @@ export class DocumentReader {
     previous.onclick = () => this.turn(-1);
     this.next.onclick = () => this.turn(1);
     const close = document.createElement("button");
-    close.textContent = "Close · Esc";
+    setControlText(close, "Close · Esc");
     close.onclick = () => this.close();
     controls.append(previous, this.count, this.next, close);
     this.panel.append(byline, this.title, this.body, controls);
@@ -102,7 +103,7 @@ export class DocumentReader {
     this.title.textContent = this.pages[this.page].title;
     this.body.textContent = this.pages[this.page].text;
     this.count.textContent = `${this.page + 1} / ${this.pages.length}`;
-    this.next.textContent = this.page === this.pages.length - 1 ? "Finish · E" : "Next · E →";
+    setControlText(this.next, this.page === this.pages.length - 1 ? "Finish · E" : "Next · E →");
     this.pageAction?.(this.page);
   }
 }

@@ -11,7 +11,7 @@
   "requirements.browser.value": "Chrome ឬ Edge ជំនាន់ថ្មី · Safari លើ macOS 26 ឡើងទៅ · Firefox លើ Windows ឬ Apple Silicon",
   "render.stall.title": "រូបភាពឈប់ធ្វើបច្ចុប្បន្នភាព",
   "render.stall.body": "ហ្គេមនៅតែកំពុងព្យាយាមគូរវា។ បើសារនេះមិនបាត់ទេ សូមផ្ទុកទំព័រឡើងវិញ។",
-  "start.click": "ចុចដើម្បីចាប់ផ្ដើម",
+  "start.enter": "ចុច Enter ដើម្បីចាប់ផ្ដើម",
   "start.note": "ណែនាំឱ្យប្រើកាស",
   "hint.look": "រំកិលកណ្ដុរដើម្បីមើល",
   "hint.move": "W A S D ដើម្បីដើរ",

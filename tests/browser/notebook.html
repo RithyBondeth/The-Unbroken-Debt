@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Unified notebook verification</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Notebook review"></canvas>
+    <div id="overlay"></div>
+    <nav
+      id="qa"
+      aria-label="Notebook verification"
+      style="
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 4000;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        max-width: 95vw;
+      "
+    ></nav>
+    <output
+      id="report"
+      style="
+        position: fixed;
+        top: 58px;
+        left: 10px;
+        z-index: 4000;
+        padding: 8px;
+        background: #151b17ed;
+        color: #eee2c6;
+        white-space: pre-wrap;
+        max-width: 90vw;
+        font: 13px sans-serif;
+      "
+    ></output>
+    <script type="module" src="./notebook.ts"></script>
+  </body>
+</html>

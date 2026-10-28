@@ -13,6 +13,7 @@ import { newGameSave } from "../../../systems/saves/SaveData";
 import { INK_BLOT_ENTRY, KIT, LINES, STARTING_MATCHES, TIMING, type Line } from "../data/prologue";
 import { StudioLights } from "./Studio";
 import { Rain } from "../Rain";
+import { DRAWING_VIEW_RADIUS, drawingFocus } from "../../../player/DrawingPose";
 import { InkMarks } from "./InkMarks";
 import type { StringKey } from "../../../data/strings";
 import { StudioDetails } from "./StudioDetails";
@@ -84,7 +85,7 @@ export class Prologue {
     this.lights = new StudioLights(game.scene, this.area, game.preset);
     const glass = game.scene.getMeshByName("window_glass");
     if (glass) this.rain = new Rain(game.scene, glass);
-    this.ink = new InkMarks(game.scene, this.mesh(ILLUSTRATION));
+    this.ink = new InkMarks(game.scene, this.mesh(ILLUSTRATION), game.hands);
 
     // The lantern has open space through its centre. Give the whole visible
     // silhouette a pickup target so aiming at that opening still takes it.
@@ -155,6 +156,7 @@ export class Prologue {
     const game = this.game;
     this.playTime += dt;
     this.lights.update(dt);
+    this.details.updateTelephoneCord(game.hands.phoneCordPoint);
     this.rain?.update(dt, this.lights.lightning.intensity / 60);
     this.ink.update(dt);
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
@@ -171,7 +173,7 @@ export class Prologue {
     const game = this.game;
     game.cutscene = true;
     await game.fade.to(1, 0);
-    await game.fade.waitForClick(() => {
+    await game.fade.waitForEnter(() => {
       void game.input.lockPointer();
       void game.audio?.unlock();
     });
@@ -190,8 +192,7 @@ export class Prologue {
     if (!game.flags.get("ep1.illustration.inked", false)) {
       await this.used(ILLUSTRATION);
       game.cutscene = true;
-      this.play("pen");
-      await this.ink.inkLine(1.1);
+      await this.drawIllustration();
       game.flags.set("ep1.illustration.inked", true);
       game.cutscene = false;
       await this.saveProgress("Studio · Packing for home");
@@ -238,6 +239,27 @@ export class Prologue {
     // P07: out of the door, into the night.
     await this.used(DOOR);
     await this.leave();
+  }
+
+  private async drawIllustration(): Promise<void> {
+    const game = this.game;
+    const yaw = game.player.yaw,
+      pitch = game.player.pitch;
+    const heldStill = game.gated.holdStill,
+      heldLook = game.gated.holdLook;
+    game.inspectObject(drawingFocus(this.mesh(ILLUSTRATION)), DRAWING_VIEW_RADIUS);
+    game.gated.holdStill = true;
+    game.gated.holdLook = true;
+    try {
+      this.play("pen");
+      await this.ink.inkLine(3.6);
+    } finally {
+      game.stopInspecting();
+      game.player.yaw = yaw;
+      game.player.pitch = pitch;
+      game.gated.holdStill = heldStill;
+      game.gated.holdLook = heldLook;
+    }
   }
 
   private async phoneCall(): Promise<void> {

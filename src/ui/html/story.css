@@ -1,220 +1,239 @@
-/* In-game text that is allowed on screen (Controls and Interface, section 6.3):
-   pencil control hints, subtitles, the save indicator, fades and title cards. */
-
+/* Screen text follows the listening screen; physical pages keep Sora's handwriting. */
 .story-hint {
   position: fixed;
+  z-index: var(--ui-z-hud);
   left: 50%;
-  bottom: 22%;
-  transform: translateX(-50%) rotate(-1deg);
-  font:
-    1.7rem "Patrick Hand",
-    "Freehand",
-    sans-serif;
-  color: rgba(232, 222, 200, 0.82);
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-  letter-spacing: 0.04em;
+  bottom: 23%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--ui-safe-x));
+  padding: var(--ui-space-2) var(--ui-space-4);
+  border-radius: var(--ui-radius);
+  background: rgb(9 13 12 / 0.9);
+  color: var(--ui-text);
+  font-size: var(--ui-body);
+  line-height: 1.7;
+  text-align: center;
+  text-wrap: pretty;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.9s ease;
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  white-space: normal;
-  text-align: center;
+  transition: opacity var(--ui-motion-fade) ease;
 }
-
 .story-hint.shown {
   opacity: 1;
 }
-
+.story-hint kbd {
+  margin-inline: 0.12em;
+  color: var(--ui-accent-bright);
+}
+.road-stealth-status {
+  position: fixed;
+  z-index: var(--ui-z-hud);
+  top: clamp(4.5rem, 12vh, 8rem);
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: min(40rem, calc(100vw - 2 * var(--ui-safe-x)));
+  padding: var(--ui-space-3) var(--ui-space-6);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: rgb(9 13 12 / 0.94);
+  color: var(--ui-text);
+  font-size: var(--ui-body);
+  text-align: center;
+  white-space: pre-line;
+  text-wrap: pretty;
+  pointer-events: none;
+}
+.road-stealth-status[hidden] {
+  display: none;
+}
+.road-stealth-status kbd {
+  color: var(--ui-accent-bright);
+}
 .story-subtitles {
   position: fixed;
+  z-index: var(--ui-z-hud);
   left: 50%;
-  bottom: 7%;
+  bottom: calc(var(--ui-safe-bottom) + 1rem);
   transform: translateX(-50%);
-  max-width: min(46rem, calc(100vw - 32px));
-  padding: 0.35rem 0.9rem;
-  border-radius: 4px;
-  background: rgba(10, 8, 6, 0.55);
-  color: #f2eadb;
-  font:
-    1.35rem/1.45 "Ubuntu",
-    "Preah Vihear",
-    sans-serif;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(54rem, calc(100vw - 2 * var(--ui-safe-x)));
+  padding: var(--ui-space-3) var(--ui-space-6);
+  border: 1px solid rgb(229 223 210 / 0.14);
+  border-radius: var(--ui-radius);
+  background: rgb(9 13 12 / 0.94);
+  color: var(--ui-text);
+  font-size: var(--ui-subtitle);
+  line-height: 1.5;
   text-align: center;
+  text-wrap: pretty;
   pointer-events: none;
-  /* At most two lines (section 6.3). */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
-
 .story-subtitles[hidden] {
   display: none;
 }
-
 .story-subtitles b {
+  display: block;
+  margin-bottom: var(--ui-space-1);
+  color: var(--ui-accent-bright);
+  font-size: var(--ui-caption);
   font-weight: 500;
-  color: var(--flame);
+  line-height: 1.5;
+  letter-spacing: 0.12em;
 }
-
 .story-fade {
   position: fixed;
+  z-index: var(--ui-z-fade);
   inset: 0;
-  background: #000;
   display: grid;
   place-items: center;
+  background: #000;
   pointer-events: none;
   transition-property: opacity;
   transition-timing-function: ease-in-out;
 }
-
-.story-fade.waiting {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
 .story-card {
+  box-sizing: border-box;
+  width: min(44rem, calc(100vw - 2 * var(--ui-safe-x)));
+  max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
+  overflow-y: auto;
+  padding: var(--ui-space-8) var(--ui-space-2);
+  color: var(--ui-text);
   text-align: center;
-  color: #efe4cf;
-  font-family: "Patrick Hand", "Freehand", sans-serif;
   opacity: 0;
-  transition: opacity 1.4s ease;
+  transition: opacity var(--ui-motion-fade) ease;
 }
-
 .story-card.shown {
   opacity: 1;
 }
-
 .story-card h1 {
   margin: 0;
-  font-size: 3.4rem;
-  font-weight: 400;
-  letter-spacing: 0.08em;
+  font: 400 var(--ui-display) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.035em;
+  text-wrap: balance;
 }
-
 .story-card p {
-  margin: 0.4rem 0 0;
-  font-size: 1.5rem;
-  opacity: 0.75;
+  max-width: 60ch;
+  margin: var(--ui-space-6) auto 0;
+  color: var(--ui-muted);
+  font-size: var(--ui-reading);
+  text-wrap: pretty;
 }
-
 .story-card .khmer {
-  font-family: "Freehand", sans-serif;
-  font-size: 2.2rem;
-  opacity: 0.8;
+  font-family: "Preah Vihear", sans-serif;
+  font-size: var(--ui-reading);
+  line-height: 1.9;
 }
-
 .story-card button {
-  margin-top: 1.6rem;
-  font: inherit;
-  font-size: 1.3rem;
-  padding: 0.3rem 1.2rem;
-  color: var(--ink);
-  background: var(--paper);
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-  pointer-events: auto;
+  margin-top: var(--ui-space-8);
 }
-
 .story-satchel {
   position: fixed;
+  z-index: var(--ui-z-panel);
   left: 50%;
   bottom: 9%;
-  transform: translateX(-50%) rotate(0.6deg);
-  min-width: 19rem;
-  max-width: min(26rem, calc(100vw - 32px));
-  padding: 1rem 1.4rem 1.1rem;
-  background: var(--paper);
-  color: var(--ink);
-  border-radius: 3px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  font:
-    1.25rem/1.35 "Patrick Hand",
-    "Freehand",
-    sans-serif;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: min(26rem, calc(100vw - 2 * var(--ui-safe-x)));
+  max-height: 74dvh;
+  overflow-y: auto;
+  padding: var(--ui-space-6);
+  border: 1px solid var(--ui-border);
+  border-top-color: var(--ui-accent);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: var(--ui-shadow);
   pointer-events: none;
 }
-
 .story-satchel[hidden] {
   display: none;
 }
-
 .story-satchel h2 {
-  margin: 0 0 0.4rem;
-  font-size: 1.6rem;
-  font-weight: 400;
-  border-bottom: 1px solid rgba(31, 27, 24, 0.35);
+  margin: 0 0 var(--ui-space-6);
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.025em;
 }
-
 .story-satchel ul {
-  margin: 0;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
-
+.story-satchel li {
+  padding: var(--ui-space-3) 0;
+  border-bottom: 1px solid var(--ui-border);
+  font-size: var(--ui-body);
+}
 .story-satchel li span {
   display: block;
-  font-size: 1rem;
-  opacity: 0.7;
+  margin-top: var(--ui-space-1);
+  color: var(--ui-muted);
+  font-size: var(--ui-small);
 }
-
 .story-satchel small {
   display: block;
-  margin-top: 0.6rem;
-  font:
-    0.75rem "Ubuntu",
-    sans-serif;
-  opacity: 0.55;
+  margin-top: var(--ui-space-4);
+  color: var(--ui-muted);
+  font-size: var(--ui-caption);
 }
-
-.story-saving {
-  position: fixed;
-  right: 1.4rem;
-  bottom: 1.2rem;
-  font:
-    1.1rem "Patrick Hand",
-    sans-serif;
-  color: var(--flame);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
-
-.story-saving.shown {
-  opacity: 0.85;
-}
-
 .story-satchel.has-action {
-  max-height: 74vh;
-  overflow-y: auto;
   pointer-events: auto;
-  scrollbar-width: thin;
 }
-
 .story-satchel button {
   position: sticky;
   bottom: 0;
-  pointer-events: auto;
-  font: inherit;
-  color: inherit;
-  border: 1px solid #74654c;
-  background: #d6c5a1;
-  padding: 0.6rem 0.9rem;
-  cursor: pointer;
+  width: 100%;
+  margin-top: var(--ui-space-6);
 }
-.story-satchel button:disabled {
-  opacity: 0.6;
-  cursor: default;
+.story-saving {
+  position: fixed;
+  z-index: var(--ui-z-hud);
+  top: var(--ui-safe-bottom);
+  right: var(--ui-safe-x);
+  max-width: calc(100vw - 2 * var(--ui-safe-x));
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border-radius: var(--ui-radius);
+  background: rgb(9 13 12 / 0.9);
+  color: var(--ui-muted);
+  font-size: var(--ui-caption);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ui-motion-fast) ease;
 }
-.story-satchel button:focus-visible {
-  outline: 2px solid #463f30;
-  outline-offset: 3px;
+.story-saving::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: var(--ui-space-2);
+  border-radius: 50%;
+  background: var(--ui-accent);
+  vertical-align: 0.12em;
+}
+.story-saving.shown {
+  opacity: 1;
+}
+.taxi-skip {
+  position: fixed;
+  z-index: var(--ui-z-panel);
+  right: var(--ui-safe-x);
+  bottom: var(--ui-safe-bottom);
 }
 @media (min-width: 850px) {
   .story-satchel.has-action {
     left: 26%;
-    max-width: 22rem;
+    width: min(22rem, calc(100vw - 2 * var(--ui-safe-x)));
+  }
+}
+@media (max-height: 560px) {
+  .story-hint {
+    bottom: 30%;
+  }
+  .story-subtitles {
+    bottom: var(--ui-safe-bottom);
+    padding: var(--ui-space-2) var(--ui-space-4);
   }
 }

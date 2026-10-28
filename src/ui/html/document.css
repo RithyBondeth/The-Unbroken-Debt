@@ -1,59 +1,50 @@
 .document-reader {
   position: fixed;
+  z-index: var(--ui-z-panel);
   inset: auto 50% 9% auto;
   transform: translateX(50%);
   box-sizing: border-box;
-  width: min(38rem, calc(100vw - 32px));
-  max-height: 80vh;
+  width: min(42rem, calc(100vw - 2 * var(--ui-safe-x)));
+  max-height: 80dvh;
   overflow: auto;
-  padding: clamp(1.3rem, 4vw, 2.5rem);
-  background: #d9c9a6;
-  background-image: linear-gradient(95deg, #6c4a2720, transparent 12%, #fff5 53%, #64432715);
-  color: #30291e;
-  border: 1px solid #756246;
-  box-shadow: 0 12px 65px #000b;
-  font:
-    1.2rem/1.65 "Ubuntu",
-    sans-serif;
-  z-index: 20;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--ui-paper-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-paper);
+  color: var(--ui-ink);
+  box-shadow: var(--ui-shadow);
+  font-size: var(--ui-reading);
 }
 .document-reader[hidden] {
   display: none;
 }
 .document-reader small {
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  color: var(--ui-paper-muted);
+  font-size: var(--ui-caption);
+  letter-spacing: 0.06em;
 }
 .document-reader h2 {
-  font:
-    2rem/1.15 "Patrick Hand",
-    cursive;
-  margin: 0.8rem 0;
+  margin: var(--ui-space-4) 0 var(--ui-space-6);
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 .document-reader p {
-  margin: 1.1rem 0 1.8rem;
+  max-width: 65ch;
+  margin: var(--ui-space-4) 0 var(--ui-space-8);
+  text-wrap: pretty;
 }
 .document-reader footer {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--ui-space-2);
   align-items: center;
   flex-wrap: wrap;
+  padding-top: var(--ui-space-4);
+  border-top: 1px solid var(--ui-paper-border);
 }
 .document-reader footer span {
   margin-right: auto;
-  font-size: 0.85rem;
-}
-.document-reader button {
-  border: 1px solid #776246;
-  background: #e7d8b9;
-  color: inherit;
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-  font:
-    0.9rem "Ubuntu",
-    sans-serif;
-}
-.document-reader button:focus-visible {
-  outline: 2px solid #403522;
-  outline-offset: 3px;
+  color: var(--ui-paper-muted);
+  font-size: var(--ui-caption);
+  font-variant-numeric: tabular-nums;
 }

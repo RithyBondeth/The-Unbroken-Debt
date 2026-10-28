@@ -1,0 +1,9 @@
+Source hook/handle contact gap: 0.000033617 m.
+Book/candlestick horizontal separation: 0.206288 m.
+Nine book titles converted to exportable mesh geometry.
+Lantern anchor and pickup hierarchy preserved.
+Browser: illustration completes, physical ray focuses interact_lamp, E collects lamp.
+Browser console errors: [].
+Prologue phone/sound tests: 17 passed across 2 files.
+Targeted ESLint, TypeScript and production build: passed.
+Native renderer captures: lantern-hook.png, books-and-candle.png.

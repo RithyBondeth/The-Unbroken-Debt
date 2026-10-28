@@ -26,7 +26,7 @@ The approach presence patrols the cleared path. Sustained unobstructed sight bui
 
 ## Verification
 
-`npm run check`: TypeScript, ESLint, all 355 unit tests, and production build pass.
+`npm run check`: TypeScript, ESLint, all 356 unit tests, and production build pass.
 
 Browser fixtures use separate QA databases and never modify the normal `boon-sop` save:
 
