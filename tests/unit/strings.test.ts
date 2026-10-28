@@ -4,7 +4,7 @@ import km from "../../src/data/strings/km.json";
 import { chooseLanguage, lookup, type StringKey } from "../../src/data/strings";
 
 /** Keys and controls a hint names, which a translation must keep exactly. */
-const CONTROLS = /\b(?:W A S D|Tab|Esc|CP\d|[EFQC])\b|←|→/g;
+const CONTROLS = /\b(?:W A S D|Enter|Tab|Esc|CP\d|[EFQC])\b|←|→/g;
 const controls = (text: string) => (text.match(CONTROLS) ?? []).sort();
 
 describe("string tables", () => {
@@ -29,8 +29,8 @@ describe("string tables", () => {
   });
 
   it("falls back to English for a missing entry", () => {
-    expect(lookup({}, "start.click")).toBe(en["start.click"]);
-    expect(lookup(km, "start.click")).toBe(km["start.click"]);
+    expect(lookup({}, "start.enter")).toBe(en["start.enter"]);
+    expect(lookup(km, "start.enter")).toBe(km["start.enter"]);
   });
 
   it("offers the Khmer draft only to development builds", () => {

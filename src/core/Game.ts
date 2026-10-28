@@ -1,3 +1,8 @@
+import { loadNotebookPortraits } from "../ui/notebook/NotebookPortraits";
+import {
+  notebookContent as buildNotebookContent,
+  type NotebookSnapshot,
+} from "../ui/notebook/NotebookContent";
 import { FirstPersonHands } from "../player/FirstPersonHands";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { Scene } from "@babylonjs/core/scene";
@@ -149,7 +154,9 @@ export class Game {
     this.camera.maxZ = 60;
     this.scene.activeCamera = this.camera;
     this.hands = new FirstPersonHands(this.scene, this.camera);
-    this.input = new KeyboardMouseInput(engine.getRenderingCanvas() as HTMLCanvasElement, 0.0022);
+    const canvas = engine.getRenderingCanvas() as HTMLCanvasElement;
+    canvas.tabIndex = 0;
+    this.input = new KeyboardMouseInput(canvas, 0.0022);
     this.gated = new GatedInput(this.input);
     this.interaction = new Interaction(this.scene, this.camera, this.bus);
     this.notebook = new NotebookReader(this);
@@ -192,6 +199,7 @@ export class Game {
     await section.load();
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
     this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
+    await loadNotebookPortraits();
     this.createSketchbook();
     if (section.warmup) {
       await this.fade.to(1, 0);
@@ -295,7 +303,9 @@ export class Game {
   /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
   private createSketchbook(): void {
     const height = this.preset.name === "low" ? 1024 : 1536;
-    const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera);
+    const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera, (written) =>
+      this.notebookContent(written),
+    );
     this.sketchbook = sketchbook;
     const written = this.flags.get<string>("sketchbook.written", "");
     if (written) sketchbook.restore(written.split(","));
@@ -303,10 +313,10 @@ export class Game {
     sketchbook.book.setRenderingGroup(1);
     this.scene.setRenderingAutoClearDepthStencil(1, true, true, true);
     // The room's lights would blow the paper out at 30 cm (S5): one soft light of its own.
-    const reading = new PointLight("reading_light", new Vector3(-0.3, -0.12, 0.12), this.scene);
+    const reading = new PointLight("reading_light", new Vector3(-0.06, 0.1, 0.08), this.scene);
     reading.parent = this.camera;
     reading.diffuse = new Color3(1, 0.84, 0.64);
-    reading.intensity = 0.26;
+    reading.intensity = 0.22;
     reading.includedOnlyMeshes = sketchbook.book.meshes;
     for (const light of this.scene.lights)
       if (light !== reading) light.excludedMeshes.push(...sketchbook.book.meshes);
@@ -320,7 +330,10 @@ export class Game {
     )
       this.notebook.close();
     const book = this.sketchbook;
+    if ((this.threatActive || this.hiding || this.satchel.isOpen) && book?.isRaised)
+      this.closeSketchbook();
     book?.update(this.deltaSeconds);
+    this.notebook.update(this.deltaSeconds);
     if (book?.isOpen || book?.isBusy) this.stopInspecting();
     this.holdResolution(book?.isOpen || book?.isBusy || this.inspecting ? 0.85 : null);
     const distance = this.inspection
@@ -341,16 +354,17 @@ export class Game {
         )
       : this.normalFov;
     this.camera.fov += (fov - this.camera.fov) * (1 - Math.exp(-this.deltaSeconds * 8));
-    this.gated.reading = this.notebook.isOpen || ((book?.isOpen || book?.isBusy) ?? false);
+    this.gated.reading = this.notebook.isOpen || ((book?.isVisible || book?.isBusy) ?? false);
     this.interaction.active =
       !this.cutscene && !this.hiding && !this.gated.reading && !this.satchel.isOpen;
     this.interaction.update();
     const documentOpen = !!document.querySelector(".document-reader:not([hidden])");
     this.hands.update(
       this.deltaSeconds,
-      this.cutscene || this.hiding || this.satchel.isOpen || documentOpen,
+      this.cutscene || this.hiding || this.satchel.isOpen || documentOpen || this.notebook.isOpen,
       book?.book.root ?? null,
       this.player?.speed ?? 0,
+      book?.turnState ?? null,
     );
   }
 
@@ -377,8 +391,22 @@ export class Game {
     const book = this.sketchbook;
     if (e.code === "KeyE" && this.interaction.use()) this.hints.performed("hint.use");
     if (e.code === "Tab") this.toggleSatchel();
-    if (e.code === "KeyQ") this.toggleSketchbook();
-    if (!book?.isOpen) return;
+    if (e.code === "KeyQ") {
+      e.preventDefault();
+      this.toggleSketchbook();
+      return;
+    }
+    if (e.code === "Escape" && book?.isVisible) {
+      e.preventDefault();
+      this.closeSketchbook(true);
+      return;
+    }
+    if (e.code === "KeyR" && book?.isRaised) {
+      e.preventDefault();
+      this.notebook.show();
+      return;
+    }
+    if (!book?.isRaised) return;
     if (e.code === "KeyA" || e.code === "KeyD") book.turn(e.code === "KeyD" ? 1 : -1);
     const digit = Number(e.code.replace("Digit", ""));
     if (e.code.startsWith("Digit") && digit >= 1 && digit <= SECTIONS.length)
@@ -388,13 +416,16 @@ export class Game {
   toggleSatchel(): void {
     if (this.cutscene || this.threatActive || this.hiding || !this.inventory.has("satchel")) return;
     this.hints.performed("hint.satchel");
-    this.notebook.close();
+    this.closeSketchbook();
     if (this.satchel.isOpen) return this.satchel.close();
-    if (this.sketchbook?.isOpen) this.sketchbook.toggle();
     this.satchel.open(this.satchelEntries());
   }
 
   toggleSketchbook(): void {
+    if (this.sketchbook?.isRaised || this.notebook.isOpen) {
+      this.closeSketchbook(true);
+      return;
+    }
     if (
       this.cutscene ||
       this.threatActive ||
@@ -405,11 +436,36 @@ export class Game {
       return;
     this.hints.performed("hint.sketchbook");
     this.satchel.close();
-    if (this.notebook.isOpen) this.notebook.close();
-    else {
-      if (!this.sketchbook.isOpen && !this.sketchbook.isBusy) this.sketchbook.toggle();
-      this.notebook.show();
-    }
+    this.input.clear();
+    this.sketchbook.open("now");
+    document.exitPointerLock();
+  }
+
+  closeSketchbook(relock = false): void {
+    this.notebook.back();
+    this.sketchbook?.close(this.threatActive || this.hiding || this.cutscene);
+    this.input.clear();
+    this.gated.notebook = false;
+    const canvas = this.engine.getRenderingCanvas();
+    canvas?.focus({ preventScroll: true });
+    if (relock && !this.cutscene && !this.hiding && !this.threatActive && !this.satchel.isOpen)
+      void this.input.lockPointer();
+  }
+
+  notebookContent(
+    written: ReadonlySet<string> = this.sketchbook?.written ?? new Set<string>(),
+  ): NotebookSnapshot {
+    const last = this.checkpoints.last;
+    const checkpoint = last
+      ? `Last checkpoint: ${String(last.flags["checkpoint.location"] ?? last.checkpoint)} · ${last.clock}`
+      : "Your first checkpoint will be recorded at the writing desk.";
+    return buildNotebookContent(
+      this.flags,
+      this.inventory,
+      written,
+      this.player?.feet ?? Vector3.Zero(),
+      checkpoint,
+    );
   }
 
   private satchelEntries(): SatchelEntry[] {

@@ -1,0 +1,40 @@
+/* Development-only gallery; all UI samples use production components and styles. */
+#game {
+  background:
+    linear-gradient(rgb(9 13 12 / 0.12), rgb(9 13 12 / 0.22)),
+    url("/assets/ui/welcome-house.jpg") 65% center / cover;
+}
+.text-preview-controls {
+  position: fixed;
+  z-index: 2000;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: min(70vw, 54rem);
+}
+.text-preview-controls a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font: 500 var(--ui-caption) / 1.4 var(--ui-font-body);
+  text-decoration: none;
+}
+.text-preview-controls a[aria-current="page"] {
+  border-color: var(--ui-accent-bright);
+  color: var(--ui-accent-bright);
+}
+.text-preview-controls a:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+}
+
+.text-preview-controls[hidden] {
+  display: none;
+}

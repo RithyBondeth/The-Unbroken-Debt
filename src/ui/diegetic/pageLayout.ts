@@ -27,6 +27,7 @@ export type Block =
 export interface LayoutEntry {
   id: string;
   blocks: Block[];
+  pageBreakBefore?: boolean;
 }
 
 export interface PlacedBlock {
@@ -117,6 +118,10 @@ export function layoutPages(
     const parts = placed(entry);
     const total = parts.reduce((sum, p) => sum + p.height, 0);
     const page = () => pages[pages.length - 1];
+    if (entry.pageBreakBefore && page().blocks.length > 0) {
+      pages.push({ blocks: [] });
+      y = margin.top;
+    }
     if (page().blocks.length > 0 && y + spec.gap + total > bottom) {
       pages.push({ blocks: [] });
       y = margin.top;

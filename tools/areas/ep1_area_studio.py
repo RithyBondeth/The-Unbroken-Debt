@@ -223,13 +223,16 @@ def build():
     for x in (sx0 + 0.1, sx1 - 0.1):
         box(f"shelf_bracket_{x:.1f}", area, x - 0.02, x + 0.02, D - 0.25, D, 1.12, 1.3, m["wood"])
     collider("shelf", area, sx0, sx1, D - 0.3, D, 1.1, 1.34)
-    stick = import_model(area, "wooden_candlestick", (3.45, D - 0.15, 1.34), 0, collide=False)
-    empty("light_flame_candle", area, (3.45, D - 0.15, top_of(stick) + 0.025), radius=3.0, intensity=2.0)
+    stick = import_model(area, "wooden_candlestick", (3.62, D - 0.18, 1.34), 0, collide=False)
+    candle_top = top_of(stick)
+    cylinder("shelf_candle_wax", area, 3.62, D - 0.18, candle_top - 0.008, candle_top + 0.07, 0.015, m["candle"], verts=32, radius_top=0.013)
+    cylinder("shelf_candle_wick", area, 3.62, D - 0.18, candle_top + 0.07, candle_top + 0.081, 0.0015, m["iron"], verts=8)
+    empty("light_flame_candle", area, (3.62, D - 0.18, candle_top + 0.091), radius=3.0, intensity=0.85)
     satchel = empty("interact_satchel", area, (2.55, D - 0.16, 1.34), action="pickup", item="satchel")
     for name, a in [("body", (-0.17, 0.17, -0.07, 0.07, 0, 0.25)), ("flap", (-0.175, 0.175, -0.075, 0.02, 0.12, 0.26))]:
         part = box(f"satchel_{name}", area, *a, m["leather"], edge=0.015)
         part.parent = satchel
-    import_model(area, "book_encyclopedia_set_01", (3.05, D - 0.15, 1.34), 0, collide=False)
+    build_shelf_books(area, m)
     import_model(area, "chinese_cabinet", (0.75, D - 0.3, 0), 0)
     import_model(area, "vintage_oil_lamp", (0.75, D - 0.3, 1.21), 0, collide=False)
     # Over the bed: one of her own drawings, framed.
@@ -244,8 +247,7 @@ def build():
     box("pillow", area, 5.45, 5.85, D - 0.9, D - 0.2, 0.56, 0.66, m["linen"], edge=0.04)
     box("krama_folded", area, 4.15, 4.6, D - 0.95, D - 0.15, 0.56, 0.58, m["krama"], edge=0.008)
     # Tied up above the bed: a gathered bundle of net hanging from a hook.
-    cylinder("mosquito_net", area, 4.95, D - 0.55, 2.05, H - 0.2, 0.16, m["net"], verts=18, radius_top=0.05)
-    cylinder("mosquito_net_knot", area, 4.95, D - 0.55, 2.0, 2.12, 0.07, m["linen"], verts=12)
+    build_gathered_net(area, m)
     import_model(area, "vintage_suitcase", (3.75, D - 0.35, 0), 90, collide=False)
 
     # ---- Tea corner by the window: armchair, side table, jug and pot; rug; plant.
@@ -286,8 +288,20 @@ def build():
     mouth.parent = phone
     ear = cylinder("telephone_earpiece", area, -0.12, 0.13, -0.08, 0.06, 0.02, m["iron"], verts=12)
     ear.parent = phone
-    box("coat_hook", area, W - 0.06, W, 1.55, 1.6, 1.82, 1.86, m["brass"])
-    import_model(area, "Lantern_01", (W - 0.18, 1.575, 1.5), 0, name="interact_lamp", collide=False, action="pickup", item="lamp")
+    lantern = import_model(area, "Lantern_01", (W - 0.18, 1.575, 1.5), 0, name="interact_lamp", collide=False, action="pickup", item="lamp")
+    # Locate the bail's actual highest vertices, rather than guessing from the model origin.
+    bail = np.array([tuple(o.matrix_world @ v.co) for o in lantern.children_recursive if o.type == "MESH" for v in o.data.vertices])
+    top = float(bail[:, 2].max())
+    contact = bail[bail[:, 2] > top - 0.003].mean(axis=0)
+    hx, hy = float(contact[0]), float(contact[1])
+    box("coat_hook_backplate", area, W - 0.016, W + 0.001, hy - 0.032, hy + 0.032, top - 0.035, top + 0.115, m["brass"], edge=0.009)
+    path = [(W - 0.018, hy, top + 0.064), (W - 0.085, hy, top + 0.064), (hx - 0.022, hy, top + 0.049)]
+    path += [(hx + math.cos(a) * 0.022, hy, top + 0.016 + math.sin(a) * 0.022) for a in np.linspace(math.pi, 2 * math.pi, 13)]
+    path.append((hx + 0.022, hy, top + 0.042))
+    tube("coat_hook_curved_arm", area, path, 0.006, m["brass"], sides=12)
+    for k, z in enumerate((top - 0.019, top + 0.097)):
+        screw = cylinder(f"coat_hook_screw_{k}", area, W - 0.018, hy, z - 0.002, z + 0.002, 0.006, m["iron"], verts=16)
+        screw.rotation_euler.y = math.pi / 2
 
     # ---- 1930s ceiling fan (brass and dark wood), still tonight.
     cylinder("fan_rod", area, 3.0, 2.5, H - 0.5, H - 0.2, 0.012, m["brass"], verts=8)
@@ -309,6 +323,91 @@ def build():
 
 
 # ------------------------------------------------------------------- the working studio
+
+def build_gathered_net(area, m):
+    """An open, folded gauze bundle tied above the bed, with no solid end caps."""
+    n = 512
+    yy, xx = np.mgrid[:n, :n]
+    thread = ((xx % 8) < 1) | ((yy % 8) < 1)
+    rgba = np.empty((n, n, 4), dtype=np.float32)
+    rgba[:, :, :3] = (0.80, 0.77, 0.66)
+    rgba[:, :, 3] = np.where(thread, 0.70, 0.045)
+    image = bpy.data.images.new("T_studio_net_weave_BC", width=n, height=n, alpha=True)
+    image.pixels.foreach_set(rgba.ravel())
+    image.filepath_raw = os.path.join(TEXTURES, "T_studio_net_weave_BC.png")
+    image.file_format = "PNG"; image.save()
+    mat = m["net"]; mat.use_backface_culling = False
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    tex = nodes.new("ShaderNodeTexImage"); tex.image = image
+    bsdf = nodes.get("Principled BSDF")
+    links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
+    bsdf.inputs["Roughness"].default_value = 0.95
+    rows, sides = 48, 96
+    vertices, faces, uvs = [], [], []
+    for j in range(rows + 1):
+        t = j / rows
+        # Gather at the ceiling, loosen into folds, cinch at the tie, then drape below it.
+        radius = float(np.interp(t, [0, .10, .46, .66, .76, 1], [.018, .10, .16, .055, .10, .23]))
+        for i in range(sides + 1):
+            a = i / sides * math.tau
+            pleat = 1 + .19 * math.sin(a * 13 + t * 2) + .07 * math.sin(a * 23 - t * 3)
+            r = radius * pleat
+            vertices.append((4.95 + .055 * math.sin(t * 2.5) + math.cos(a) * r,
+                             4.45 + .045 * t + math.sin(a) * r * .72,
+                             3.06 - t * 1.11 + .028 * t**5 * math.sin(a * 7)))
+    for j in range(rows):
+        for i in range(sides):
+            a = j * (sides + 1) + i
+            faces.append((a, a + sides + 1, a + sides + 2, a + 1))
+            uvs += [(i / sides * 4, j / rows * 8), (i / sides * 4, (j + 1) / rows * 8),
+                    ((i + 1) / sides * 4, (j + 1) / rows * 8), ((i + 1) / sides * 4, j / rows * 8)]
+    mesh_object("mosquito_net_folded_gauze", area, vertices, faces, mat, uvs=uvs, smooth=True)
+    # A stitched hem follows the irregular open edge rather than a flat cylinder cap.
+    hem = vertices[-(sides + 1):]
+    tube("mosquito_net_stitched_hem", area, hem, .002, m["linen"], sides=5)
+    seam = [vertices[j * (sides + 1)] for j in range(rows + 1)]
+    tube("mosquito_net_edge_seam", area, seam, .0016, m["linen"], sides=5)
+    tie_z = 3.06 - .66 * 1.11
+    tie_x = 4.95 + .055 * math.sin(.66 * 2.5)
+    for dz in [-.008, .008]:
+        points = [(tie_x + math.cos(a) * .063, 4.48 + math.sin(a) * .046, tie_z + dz) for a in np.linspace(0, math.tau, 49)]
+        tube("mosquito_net_cotton_tie", area, points, .005, m["krama"], sides=6)
+    tube("mosquito_net_tie_ends", area, [(tie_x, 4.428, tie_z), (tie_x + .055, 4.41, tie_z - .045), (tie_x + .04, 4.405, tie_z - .13)], .008, m["krama"], sides=6)
+    tube("mosquito_net_hanging_loop", area, [(4.95, 4.45, 3.055), (4.94, 4.45, 3.13), (4.96, 4.45, 3.16), (4.98, 4.45, 3.13), (4.95, 4.45, 3.055)], .003, m["linen"], sides=6)
+    tube("mosquito_net_ceiling_hook", area, [(4.95, 4.45, 3.2), (4.95, 4.45, 3.15), (4.96, 4.45, 3.145), (4.97, 4.45, 3.155)], .004, m["brass"], sides=8)
+
+def build_shelf_books(area, m):
+    """Individual clothbound study volumes, clear of the satchel and candle."""
+    covers = [(0.12, 0.20, 0.17), (0.24, 0.11, 0.07), (0.10, 0.15, 0.23), (0.30, 0.24, 0.14)]
+    titles = ["STUDIES", "BOTANY", "FIGURES", "PERSPECTIVE", "KHMER", "ORNAMENT", "INK", "LETTERS", "PLANTS"]
+    widths = [0.055, 0.059, 0.048, 0.064, 0.051, 0.058, 0.046, 0.060, 0.052]
+    heights = [0.264, 0.285, 0.248, 0.308, 0.277, 0.292, 0.255, 0.281, 0.268]
+    gilt = plain("M_studio_book_stamping", (0.50, 0.37, 0.18), rough=0.85)
+    x = 2.84
+    def lettering(name, body, at, size):
+        text = bpy.data.curves.new(name, "FONT")
+        text.body = body; text.size = size; text.align_x = "CENTER"; text.align_y = "CENTER"
+        text.space_line = 0.9; text.extrude = 0.0001
+        obj = bpy.data.objects.new(name, text); area.objects.link(obj)
+        obj.location = at; obj.rotation_euler.x = math.pi / 2
+        text.materials.append(gilt)
+        bpy.ops.object.select_all(action="DESELECT"); obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.convert(target="MESH")
+    for i, (width, height, title) in enumerate(zip(widths, heights, titles)):
+        cover = library_material("rough_linen", f"M_studio_book_cloth_{i}", tint=covers[i % len(covers)], tile=0.16)
+        front = 4.724 + (i % 3) * 0.009; back = 4.954 - (i % 2) * 0.015
+        bottom = 1.341; top = bottom + height
+        box(f"shelf_book_pages_{i}", area, x + 0.004, x + width - 0.004, front + 0.009, back - 0.004, bottom + 0.006, top - 0.006, m["paper"], edge=0.001)
+        for side in (x, x + width - 0.003):
+            box(f"shelf_book_board_{i}", area, side, side + 0.003, front, back, bottom, top, cover, edge=0.001)
+        box(f"shelf_book_spine_{i}", area, x, x + width, front - 0.003, front + 0.007, bottom, top, cover, edge=0.003)
+        for z in (bottom + 0.022, top - 0.024):
+            box(f"shelf_book_binding_{i}", area, x + 0.004, x + width - 0.004, front - 0.004, front - 0.003, z, z + 0.002, gilt)
+        lettering(f"shelf_book_title_{i}", "\n".join(title), (x + width / 2, front - 0.0045, bottom + height * 0.57), 0.010)
+        lettering(f"shelf_book_volume_{i}", str(i + 1), (x + width / 2, front - 0.0045, bottom + 0.048), 0.013)
+        x += width + 0.004
 
 
 def crumpled_sheet(name, coll, x, y, radius, mat):

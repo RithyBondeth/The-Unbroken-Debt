@@ -1,5 +1,5 @@
 // Textures for the Episode 1 village (Beat Sheet 4.2–4.4) that no library has:
-// Uncle Sok's portrait printed from a 1921 archive photograph, banana and palm
+// Uncle Sok's original identity-matched funeral portrait, banana and palm
 // leaves, the white crocodile flag that marks a house in mourning, the coffin's
 // gilt panels, a woven reed mat, the tent's scalloped valance and banana stems.
 // Each paints a <canvas> in headless Chrome (render.mjs); `alpha` textures keep
@@ -93,140 +93,18 @@ const DATA = ${JSON.stringify(data)};
 
 // ------------------------------------------------------------------ portrait
 
-/**
- * Uncle Sok's funeral portrait: the seated man from Léon Busy's 1921 autochrome
- * "Un fonctionnaire cambodgien et sa famille" (CC0), printed as a 1920s
- * studio portrait: a vignetted oval on a cream mount, toned silver print with
- * orthochromatic contrast (reds dark), soft focus, grain, foxing and wear.
- * Act II (A2-09) will need a second print with the eyes turned to Sora.
- */
-function paintPortrait(ctx, W, H, data) {
-  const img = new Image();
-  img.onload = () => {
-    const r = rng(1921);
-    // The mount: cream card, darker with age at the edges.
-    ctx.fillStyle = "#d8ccb1";
-    ctx.fillRect(0, 0, W, H);
-    mottle(ctx, W, H, 90, 7, 0.16);
-    // The print window, with a bevelled embossed border pressed into the card.
-    const px = Math.round(W * 0.1),
-      py = Math.round(H * 0.08),
-      pw = Math.round(W * 0.8),
-      ph = Math.round(H * 0.74);
-    ctx.strokeStyle = "rgba(90,70,45,0.45)";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(px - 16, py - 16, pw + 32, ph + 32);
-    ctx.strokeStyle = "rgba(255,248,230,0.55)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px - 12, py - 12, pw + 26, ph + 26);
-
-    // The photograph: crop, monochrome with an orthochromatic response, tone curve.
-    const off = document.createElement("canvas");
-    off.width = pw;
-    off.height = ph;
-    const o = off.getContext("2d", { willReadFrequently: true });
-    o.filter = "blur(1.1px)";
-    const [cx, cy, cw, ch] = data.crop;
-    o.drawImage(img, cx, cy, cw, ch, 0, 0, pw, ph);
-    o.filter = "none";
-    const photo = o.getImageData(0, 0, pw, ph),
-      p = photo.data;
-    const grain = noise(pw, ph, 1.5, 3, 2);
-    const blotch = noise(pw, ph, 140, 5, 3);
-    const dark = [34, 22, 15],
-      mid = [128, 92, 60],
-      light = [236, 219, 186];
-    for (let y = 0; y < ph; y++) {
-      for (let x = 0; x < pw; x++) {
-        const i = (y * pw + x) * 4;
-        // Orthochromatic film: blind to red, so skin and lips print darker.
-        let L = (0.12 * p[i] + 0.52 * p[i + 1] + 0.36 * p[i + 2]) / 255;
-        L = clamp((L - 0.1) / 0.82);
-        L = L < 0.5 ? 2 * L * L : 1 - 2 * (1 - L) * (1 - L); // contrast
-        L = lerp(L, Math.pow(L, 0.9), 0.5) * 0.92 + 0.04;
-        L += (grain[y * pw + x] - 0.5) * 0.16 + (blotch[y * pw + x] - 0.5) * 0.06;
-        // Oval vignette: the print fades into the paper like a studio portrait.
-        const dx = (x - pw / 2) / (pw * 0.43),
-          dy = (y - ph * 0.47) / (ph * 0.47);
-        const v = smooth(0.82, 1.05, Math.sqrt(dx * dx + dy * dy));
-        L = lerp(L, 0.93, v);
-        const c = L < 0.5 ? mix3(dark, mid, L / 0.5) : mix3(mid, light, (L - 0.5) / 0.5);
-        p[i] = c[0];
-        p[i + 1] = c[1];
-        p[i + 2] = c[2];
-        p[i + 3] = 255;
-      }
-    }
-    o.putImageData(photo, 0, 0);
-    // Silvering: a faint blue-grey sheen where the dark tones met the air.
-    o.globalCompositeOperation = "soft-light";
-    const sheen = o.createRadialGradient(pw / 2, ph * 0.47, pw * 0.3, pw / 2, ph * 0.47, pw * 0.48);
-    sheen.addColorStop(0, "rgba(0,0,0,0)");
-    sheen.addColorStop(1, "rgba(150,165,180,0.35)");
-    o.fillStyle = sheen;
-    o.fillRect(0, 0, pw, ph);
-    o.globalCompositeOperation = "source-over";
-    ctx.drawImage(off, px, py);
-
-    // Wear: foxing spots, a crease and fine scratches across print and mount.
-    for (let k = 0; k < 26; k++) {
-      const x = r(0, W),
-        y = r(0, H),
-        s = r(1.5, 7);
-      const g = ctx.createRadialGradient(x, y, 0, x, y, s * 2);
-      g.addColorStop(0, "rgba(120,80,40,0.45)");
-      g.addColorStop(1, "rgba(120,80,40,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(x - s * 2, y - s * 2, s * 4, s * 4);
-    }
-    ctx.strokeStyle = "rgba(250,242,222,0.35)";
-    for (let k = 0; k < 9; k++) {
-      ctx.lineWidth = r(0.5, 1.4);
-      ctx.beginPath();
-      const x = r(px, px + pw),
-        y = r(py, py + ph),
-        a = r(-0.4, 0.4) + Math.PI / 2,
-        l = r(30, 160);
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(70,50,30,0.18)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(W * 0.02, H * 0.88);
-    ctx.bezierCurveTo(W * 0.3, H * 0.84, W * 0.6, H * 0.93, W * 0.98, H * 0.9);
-    ctx.stroke();
-    // The studio's blind stamp on the mount.
-    ctx.font = "600 " + Math.round(W * 0.026) + "px Georgia, serif";
-    ctx.textAlign = "center";
-    ctx.letterSpacing = "6px";
-    ctx.fillStyle = "rgba(255,248,232,0.5)";
-    ctx.fillText("PHOTOGRAPHIE · BATTAMBANG", W / 2 + 1, H * 0.905 + 1);
-    ctx.fillStyle = "rgba(95,72,45,0.55)";
-    ctx.fillText("PHOTOGRAPHIE · BATTAMBANG", W / 2, H * 0.905);
-    // Age: the whole card yellows and darkens towards its edges.
-    const edge = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.85);
-    edge.addColorStop(0, "rgba(0,0,0,0)");
-    edge.addColorStop(1, "rgba(90,60,25,0.35)");
-    ctx.fillStyle = edge;
-    ctx.fillRect(0, 0, W, H);
-  };
-  img.src = data.src;
-}
-
+/** Identity-matched original funeral photograph; the family archive prints stay separate. */
 function portrait() {
-  const file = join(ARCHIVE, "Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg");
-  const src = `data:image/jpeg;base64,${readFileSync(file).toString("base64")}`;
-  // Head and shoulders of the seated man (pixels in the 2560 x 1898 original).
-  return canvasPage(768, 1024, paintPortrait, { src, crop: [1474, 668, 292, 392] });
+  // Original Sok identity, shared with the sketchbook, already mounted and aged.
+  const file = join("art-source", "textures", "ep1", "notebook", "sok-funeral-photo.png");
+  return `<img width="768" height="1024" src="data:image/png;base64,${readFileSync(file).toString("base64")}">`;
 }
 
 /**
  * The family's photographs on the hall wall, three prints side by side in one
  * map (the group on the left half, a quarter each for the others): the whole
  * family before their house, the mother,
- * and the eldest daughter, from the same 1921 Busy autochrome as Sok's portrait.
+ * and the eldest daughter, from the 1921 Busy family autochrome.
  * Cheaper prints than his and older, faded to the colour of weak tea, the
  * group one water-stained where the roof leaked onto the wall.
  */

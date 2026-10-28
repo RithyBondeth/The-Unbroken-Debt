@@ -41,6 +41,37 @@ export class HandRig {
   ): void {
     if (this.manager) return;
     const mirror = -this.side;
+    // Widen the forearm around its anatomical centreline, leaving the palm,
+    // fingers and tool contact points untouched in every authored pose.
+    const fullerForearm = (array: Float32Array) => {
+      const result = array.slice();
+      const sections = [
+        [-0.03, 0.00085, 0.00028],
+        [-0.07, 0.0011, 0.01052],
+        [-0.12, 0.00122, 0.0255],
+        [-0.17, 0.00483, 0.04031],
+        [-0.24, 0.01045, 0.05174],
+      ];
+      for (let i = 0; i < result.length; i += 3) {
+        const y = result[i + 1];
+        if (y >= -0.012) continue;
+        const amount = Math.min(1, (-y - 0.012) / 0.17);
+        const fullness = 1 + 0.6 * amount * (2 - amount);
+        let section = 0;
+        while (section < sections.length - 2 && y < sections[section + 1][0]) section++;
+        const a = sections[section],
+          b = sections[section + 1];
+        const blend = Math.max(0, Math.min(1, (y - a[0]) / (b[0] - a[0])));
+        for (const [axis, component] of [
+          [0, 1],
+          [2, 2],
+        ]) {
+          const centre = a[component] + (b[component] - a[component]) * blend;
+          result[i + axis] = centre + (result[i + axis] - centre) * fullness;
+        }
+      }
+      return result;
+    };
     const mirrored = (array: Float32Array) => {
       const result = array.slice();
       for (let i = 0; i < result.length; i += 3) result[i] *= mirror;
@@ -53,8 +84,14 @@ export class HandRig {
     const mesh = new Mesh(`${this.root.name}_skin`, this.scene);
     mesh.parent = this.root;
     const data = new VertexData();
-    data.positions = mirrored(asset.poses.relaxed.positions);
-    data.normals = mirrored(asset.poses.relaxed.normals);
+    const shaped = HAND_GRIPS.map((grip) => {
+      const positions = mirrored(fullerForearm(asset.poses[grip].positions));
+      const normals = new Float32Array(positions.length);
+      VertexData.ComputeNormals(positions, index, normals);
+      return { positions, normals };
+    });
+    data.positions = shaped[0].positions;
+    data.normals = shaped[0].normals;
     data.uvs = asset.uvs;
     data.indices = index;
     data.applyToMesh(mesh);
@@ -82,8 +119,8 @@ export class HandRig {
     manager.enableUVMorphing = false;
     for (const [i, name] of HAND_GRIPS.entries()) {
       const target = new MorphTarget(name, this.weights[i], this.scene);
-      target.setPositions(mirrored(asset.poses[name].positions));
-      target.setNormals(mirrored(asset.poses[name].normals));
+      target.setPositions(shaped[i].positions);
+      target.setNormals(shaped[i].normals);
       manager.addTarget(target);
     }
     manager.areUpdatesFrozen = false;
@@ -91,13 +128,12 @@ export class HandRig {
     this.manager = manager;
     this.skin = mesh;
     this.meshes.push(mesh);
-    this.makeSleeve(asset, mirror);
+    this.makeSleeve(shaped[0].positions);
   }
-  private makeSleeve(asset: HandAsset, mirror: number): void {
+  private makeSleeve(reference: Float32Array): void {
     const p: number[] = [],
       indices: number[] = [],
       normals: number[] = [];
-    const reference = asset.poses.relaxed.positions;
     const section = (y: number) => {
       let minX = Infinity,
         maxX = -Infinity,
@@ -105,7 +141,7 @@ export class HandRig {
         maxZ = -Infinity;
       for (let i = 0; i < reference.length; i += 3)
         if (Math.abs(reference[i + 1] - y) < 0.012) {
-          const x = reference[i] * mirror,
+          const x = reference[i],
             z = reference[i + 2];
           minX = Math.min(minX, x);
           maxX = Math.max(maxX, x);
@@ -116,17 +152,22 @@ export class HandRig {
       return [
         (minX + maxX) / 2,
         (minZ + maxZ) / 2,
-        (maxX - minX) / 2 + 0.003,
-        (maxZ - minZ) / 2 + 0.003,
+        (maxX - minX) / 2 + 0.009,
+        (maxZ - minZ) / 2 + 0.009,
       ];
     };
-    const rows = [-0.9, -0.5, -0.235, -0.2, -0.175, -0.167];
+    const rows = [-0.9, -0.7, -0.5, -0.36, -0.28, -0.235, -0.2, -0.183, -0.175, -0.167];
     for (const y of rows) {
       const [cx, cz, rx, rz] = section(Math.max(-0.22, y));
+      // A sleeve broadens towards the elbow instead of extending the wrist
+      // cross-section into a long, thin tube.
+      const upperArm = Math.max(0, Math.min(1, (-y - 0.2) / 0.5));
+      const width = rx * (1 + 0.55 * upperArm);
+      const depth = rz * (1 + 0.38 * upperArm);
       for (let i = 0; i <= 32; i++) {
         const a = (i / 32) * Math.PI * 2,
-          fold = 1 + 0.025 * Math.sin(i * 2.7 + y * 130);
-        p.push(cx + Math.cos(a) * rx * fold, y, cz + Math.sin(a) * rz * fold);
+          fold = 1 + 0.045 * Math.sin(i * 2.7 + y * 130);
+        p.push(cx + Math.cos(a) * width * fold, y, cz + Math.sin(a) * depth * fold);
       }
     }
     for (let r = 0; r < rows.length - 1; r++)
@@ -146,6 +187,8 @@ export class HandRig {
     cloth.albedoColor.set(0.22, 0.205, 0.17);
     cloth.metallic = 0;
     cloth.roughness = 0.95;
+    cloth.backFaceCulling = false;
+    cloth.twoSidedLighting = true;
     cloth.maxSimultaneousLights = 8;
     this.materials.push(cloth);
     sleeve.material = cloth;
@@ -153,9 +196,12 @@ export class HandRig {
   }
   update(dt: number, grip: HandGrip): void {
     this.current = grip;
+    this.blend(dt, { [grip]: 1 });
+  }
+  blend(dt: number, poses: Partial<Record<HandGrip, number>>): void {
     const k = 1 - Math.exp(-Math.min(dt, 0.1) * 14);
     for (const [i, name] of HAND_GRIPS.entries()) {
-      this.weights[i] += ((name === grip ? 1 : 0) - this.weights[i]) * k;
+      this.weights[i] += ((poses[name] ?? 0) - this.weights[i]) * k;
       if (this.manager) this.manager.getTarget(i).influence = this.weights[i];
     }
   }

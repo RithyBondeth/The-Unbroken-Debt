@@ -265,7 +265,7 @@ export class ActOne {
 
     game.cutscene = true;
     await game.fade.to(1, 0);
-    await game.fade.waitForClick(() => {
+    await game.fade.waitForEnter(() => {
       void game.input.lockPointer();
       void game.audio?.unlock();
     });

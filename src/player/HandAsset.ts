@@ -1,4 +1,12 @@
-export const HAND_GRIPS = ["relaxed", "lamp", "phone", "journal", "pinch", "reach"] as const;
+export const HAND_GRIPS = [
+  "relaxed",
+  "lamp",
+  "phone",
+  "journal",
+  "pinch",
+  "reach",
+  "drawing",
+] as const;
 export type HandGrip = (typeof HAND_GRIPS)[number];
 export interface HandPose {
   positions: Float32Array;

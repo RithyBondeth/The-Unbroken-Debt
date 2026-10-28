@@ -6,7 +6,8 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { drawingFrame } from "../../src/player/DrawingPose";
+import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { FirstPersonHands } from "../../src/player/FirstPersonHands";
 const asset = decodeHandAsset(
   new Uint8Array(readFileSync("public/assets/shared/sora_hand.mesh")).buffer,
@@ -75,10 +76,30 @@ it("puts away the lamp for calls and restores it when the call ends", () => {
   expect(hands.right.isEnabled()).toBe(true);
   expect(hands.left.isEnabled()).toBe(false);
   expect(lamp.isEnabled()).toBe(false);
+  expect(hands.phoneCordPoint).not.toBeNull();
   hands.holdPhone(false);
   hands.update(0.016, false, null, 0);
   expect(lamp.isEnabled()).toBe(true);
   expect(hands.right.isEnabled()).toBe(false);
+  expect(hands.phoneCordPoint).toBeNull();
+});
+it("raises the receiver upright with the ear cup above the gripping hand", () => {
+  const { hands, scene } = setup();
+  hands.holdPhone(true);
+  hands.update(0.15, true, null, 0);
+  const startingHeight = hands.right.position.y;
+  for (let i = 0; i < 60; i++) hands.update(1 / 60, true, null, 0);
+  const receiver = scene.getTransformNodeByName("sora_held_receiver")!;
+  const matrix = receiver.computeWorldMatrix(true);
+  const ear = Vector3.TransformCoordinates(new Vector3(0, 0.092, 0), matrix);
+  const grip = Vector3.TransformCoordinates(Vector3.Zero(), matrix);
+  const cord = hands.phoneCordPoint!;
+  // A phone must be carried ear-end up; the previous sideways presentation
+  // looked like Sora was displaying it in front of the wall rather than answering.
+  expect(ear.y - grip.y).toBeGreaterThan(0.05);
+  expect(grip.y - cord.y).toBeGreaterThan(0.06);
+  expect(hands.right.position.y - startingHeight).toBeGreaterThan(0.2);
+  expect(grip.x).toBeGreaterThan(0.05);
 });
 it("supports the book and hides hands and lamp during hiding or overlays", () => {
   const { hands, lamp, scene } = setup();
@@ -116,7 +137,7 @@ it("blends authored anatomical poses on the GPU without rebuilding meshes", () =
   expect(rig.poseWeights[2]).toBeLessThan(0.01);
   expect(rig.poseWeights.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
   expect(scene.meshes.length).toBe(count);
-  expect(rig.skin.morphTargetManager?.numTargets).toBe(6);
+  expect(rig.skin.morphTargetManager?.numTargets).toBe(7);
 });
 it("follows lamp raising without turning the hand around with the gauge", () => {
   const { hands, lamp } = setup();
@@ -151,7 +172,7 @@ it("keeps skin surface winding aligned with its lighting normals", () => {
 it("ships a textured anatomical mesh and rejects incomplete asset data", () => {
   expect(asset.vertexCount).toBeGreaterThan(5000);
   expect(asset.uvs.length).toBe(asset.vertexCount * 2);
-  expect(Object.keys(asset.poses)).toHaveLength(6);
+  expect(Object.keys(asset.poses)).toHaveLength(7);
   expect(asset.poses.phone.positions).not.toEqual(asset.poses.journal.positions);
   expect(() => decodeHandAsset(new ArrayBuffer(12))).toThrow("Invalid Sora");
 });
@@ -167,4 +188,87 @@ it("closes the lamp grip instead of retaining the open hand's finger and thumb s
     return max - min;
   };
   expect(span(asset.poses.lamp.positions)).toBeLessThan(span(asset.poses.reach.positions) * 0.72);
+});
+
+it("shows the drawing grip during a cutscene and restores normal hand ownership afterward", () => {
+  const { hands, scene, camera, lamp } = setup();
+  const pen = new TransformNode("drawing_pen", scene);
+  hands.animate("reach");
+  hands.holdDrawing(pen);
+  hands.update(0.2, true, null, 0);
+  expect(hands.right.parent).toBe(pen);
+  expect(hands.right.isEnabled()).toBe(true);
+  expect(hands.rightRig.grip).toBe("drawing");
+  expect(hands.left.isEnabled()).toBe(false);
+  expect(lamp.isEnabled()).toBe(false);
+  hands.holdDrawing(null);
+  pen.dispose();
+  hands.update(0.016, false, null, 0);
+  expect(hands.right.parent).toBe(camera);
+  expect(hands.right.isDisposed()).toBe(false);
+  expect(hands.right.isEnabled()).toBe(false);
+  expect(lamp.isEnabled()).toBe(true);
+});
+
+it("aligns the tripod's authored contact with the pencil shaft", () => {
+  const { hands, scene } = setup();
+  const pen = new TransformNode("tripod_pencil", scene);
+  pen.position.set(3, 1, -2);
+  pen.rotation.set(0.1, -0.3, 0.7);
+  hands.holdDrawing(pen);
+  hands.update(0.016, true, null, 0);
+  const padContact = Vector3.TransformCoordinates(
+    new Vector3(-0.025, 0.095, 0.028),
+    hands.right.computeWorldMatrix(true),
+  );
+  const shaftContact = Vector3.TransformCoordinates(
+    new Vector3(0, 0.03, 0),
+    pen.computeWorldMatrix(true),
+  );
+  expect(Vector3.Distance(padContact, shaftContact)).toBeLessThan(0.00001);
+  expect(asset.poses.drawing.positions).not.toEqual(asset.poses.lamp.positions);
+  hands.holdDrawing(null);
+  expect(hands.right.rotationQuaternion).toBeNull();
+});
+
+it("keeps the writing palm down, thumb towards the player, and pencil upright", () => {
+  const frame = drawingFrame();
+  const pen = Matrix.Compose(Vector3.One(), frame.pen, Vector3.Zero());
+  const hand = Matrix.Compose(new Vector3(-0.85, 0.85, 0.85), frame.hand, Vector3.Zero()).multiply(
+    pen,
+  );
+  const palm = Vector3.TransformNormal(new Vector3(0, 0, 1), hand).normalize();
+  const thumb = Vector3.TransformNormal(new Vector3(-1, 0, 0), hand).normalize();
+  const shaft = Vector3.TransformNormal(Vector3.Up(), pen).normalize();
+  expect(palm.y).toBeLessThan(-0.9);
+  expect(thumb.z).toBeLessThan(-0.5);
+  expect(shaft.y).toBeGreaterThan(0.8);
+});
+
+it("keeps one hand supporting the cover while the other carries a page in either direction", () => {
+  const { hands, scene, camera } = setup();
+  const book = new TransformNode("held_book", scene);
+  book.parent = camera;
+  book.position.set(0, -0.005, 0.35);
+  book.rotation.x = -Math.PI / 2 + 0.29;
+  hands.update(0.1, false, book, 0);
+  const leftRest = hands.left.position.clone(),
+    rightRest = hands.right.position.clone();
+  for (const direction of [-1, 1] as const) {
+    for (let i = 0; i < 15; i++)
+      hands.update(1 / 60, false, book, 0, { progress: 0.48, direction });
+    const moving = direction > 0 ? hands.right : hands.left;
+    const support = direction > 0 ? hands.left : hands.right;
+    const movingRest = direction > 0 ? rightRest : leftRest;
+    const supportRest = direction > 0 ? leftRest : rightRest;
+    expect(Vector3.Distance(moving.position, movingRest)).toBeGreaterThan(0.07);
+    expect(Vector3.Distance(support.position, supportRest)).toBeLessThan(0.004);
+    const weights = direction > 0 ? hands.rightRig.poseWeights : hands.leftRig.poseWeights;
+    expect(weights[6]).toBeGreaterThan(0.8); // Opposed fingertip pads, rather than a rigid journal grip.
+    hands.update(0.1, false, book, 0);
+    expect(Vector3.Distance(hands.left.position, leftRest)).toBeLessThan(1e-6);
+    expect(Vector3.Distance(hands.right.position, rightRest)).toBeLessThan(1e-6);
+  }
+  hands.update(0.1, true, book, 0, { progress: 0.48, direction: 1 });
+  expect(hands.left.isEnabled() || hands.right.isEnabled()).toBe(false);
 });

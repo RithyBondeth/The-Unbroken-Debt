@@ -10,6 +10,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { MirrorTexture } from "@babylonjs/core/Materials/Textures/mirrorTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Plane } from "@babylonjs/core/Maths/math.plane";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -52,6 +53,7 @@ export class TaxiVisuals {
   private readonly dialTexture: DynamicTexture;
   private dialIn = 0;
   private readonly mirror: MirrorTexture;
+  private readonly waterRipples: Texture;
 
   private constructor(
     private readonly game: Game,
@@ -89,19 +91,44 @@ export class TaxiVisuals {
     this.flash.intensity = 0;
     this.sky = new StormSky(scene);
     const roadReflection = new MirrorTexture("taxi_standing_water_reflection", 256, scene, false);
-    roadReflection.mirrorPlane = new Plane(0, 1, 0, 0.111);
+    roadReflection.mirrorPlane = new Plane(0, 1, 0, 0.058);
     roadReflection.refreshRate = 3;
-    roadReflection.level = 0.4;
+    roadReflection.level = 0.6;
     roadReflection.blurKernel = 8;
     roadReflection.renderParticles = false;
     roadReflection.renderList = [
       ...landscape.filter((m) => m.material?.name !== "M_puddle"),
       this.sky.dome,
     ];
+    const size = 128,
+      normals = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        const a = ((x * 4 + y * 3) / size) * Math.PI * 2,
+          b = ((-x * 5 + y * 7) / size) * Math.PI * 2,
+          nx = -(Math.cos(a) * 4 - Math.cos(b) * 2.5) * 0.035,
+          ny = -(Math.cos(a) * 3 + Math.cos(b) * 3.5) * 0.035,
+          length = Math.hypot(nx, ny, 1),
+          i = (y * size + x) * 4;
+        normals.set(
+          [
+            127.5 + (nx / length) * 127.5,
+            127.5 + (ny / length) * 127.5,
+            127.5 + 127.5 / length,
+            255,
+          ],
+          i,
+        );
+      }
+    this.waterRipples = RawTexture.CreateRGBATexture(normals, size, size, scene, true, false);
+    this.waterRipples.name = "taxi_shallow_water_ripples";
+    this.waterRipples.level = 0.2;
     for (const mesh of landscape)
       if (mesh.material instanceof PBRMaterial && mesh.material.name === "M_puddle") {
         mesh.material.reflectionTexture = roadReflection;
-        mesh.material.roughness = 0.09;
+        mesh.material.bumpTexture = this.waterRipples;
+        mesh.material.albedoColor.set(0.055, 0.075, 0.085);
+        mesh.material.roughness = 0.16;
       }
     this.glass = new TaxiRain(scene);
     const sideGlass = scene.materials.find((m) => m.name === "M_taxi_window_glass");
@@ -325,6 +352,8 @@ export class TaxiVisuals {
     this.sky.update(flash, g.pipeline.main.imageProcessing.exposure, dt);
     for (const wiper of this.wipers) wiper.rotation.z = angle;
     this.glass.update(dt, angle, flash);
+    this.waterRipples.uOffset = t * 0.009;
+    this.waterRipples.vOffset = t * 0.006;
     this.rain.update(t, speed, flash);
     for (const wind of this.wind) wind.seconds = t;
     this.watcher.root.setEnabled(t > 35.8 && t < 39.0);

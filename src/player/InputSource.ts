@@ -95,7 +95,7 @@ export class KeyboardMouseInput implements InputSource {
     if (this.pointerLocked && e.code !== "Escape") e.preventDefault();
   }
 
-  /** Mouse look needs pointer lock; browsers allow it only from a click. */
+  /** Mouse look needs pointer lock, requested from a player activation gesture. */
   async lockPointer(): Promise<void> {
     if (this.pointerLocked) return;
     try {
