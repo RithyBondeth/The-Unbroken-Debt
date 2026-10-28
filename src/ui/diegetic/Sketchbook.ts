@@ -1,3 +1,5 @@
+import { bookTurnFrame, readingFrame, type BookTurnState } from "./BookMotion";
+import type { NotebookSnapshot } from "../notebook/NotebookContent";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Node } from "@babylonjs/core/node";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -6,7 +8,7 @@ import { PagePainter } from "./PagePainter";
 import type { SectionId, SketchbookData } from "./sketchbookContent";
 
 const OPEN_SECONDS = 0.6;
-const FLIP_SECONDS = 0.55;
+const FLIP_SECONDS = 1.05;
 const WRITE_SECONDS = 1.6;
 
 /** Held pose relative to the camera: lowered at the hip (closed) and raised to read (open). */
@@ -42,23 +44,39 @@ export class Sketchbook {
   lastTurnMs = 0;
 
   private opening = 0;
+  private age = 0;
+  private insets = { top: 64, bottom: 80 };
   private wantOpen = false;
   private flip: Flip | null = null;
   private readonly queue: number[] = [];
   private writing: { entryId: string; t: number } | null = null;
   private newest: string | null = null;
+  private snapshot: NotebookSnapshot | null = null;
+  private presentationHidden = false;
 
   constructor(
     scene: Scene,
     private readonly data: SketchbookData,
     textureHeight: number,
     holder: Node,
+    private readonly content?: (written: ReadonlySet<string>) => NotebookSnapshot,
   ) {
     this.painter = new PagePainter(data, textureHeight);
     this.book = new BookModel(scene, this.painter.textureWidth, textureHeight);
     this.book.root.parent = holder;
+    this.syncContent();
     this.painter.layout(this.written);
     this.applyPose();
+  }
+
+  get turnState(): BookTurnState | null {
+    return this.flip
+      ? { progress: this.flip.t, direction: this.flip.to > this.flip.from ? 1 : -1 }
+      : null;
+  }
+
+  setViewportInsets(top: number, bottom: number): void {
+    this.insets = { top, bottom };
   }
 
   get isOpen(): boolean {
@@ -83,17 +101,49 @@ export class Sketchbook {
   restore(ids: readonly string[]): void {
     for (const id of ids) this.written.add(id);
     this.newest = ids.at(-1) ?? null;
+    this.syncContent();
     this.painter.layout(this.written);
     this.spread = this.painter.spreadOf(this.newest);
     this.paintSpread();
   }
 
-  /** Q: opens at the newest entry, or closes. */
+  /** Whether the notebook is requested open, including its raising animation. */
+  get isRaised(): boolean {
+    return this.wantOpen;
+  }
+  get isVisible(): boolean {
+    return this.wantOpen || this.opening > 0;
+  }
+
+  setPresentationHidden(hidden: boolean): void {
+    this.presentationHidden = hidden;
+    this.applyPose();
+  }
+
+  open(section?: SectionId): void {
+    this.refreshContent();
+    if (this.wantOpen) {
+      if (section) this.goToSection(section);
+      return;
+    }
+    this.wantOpen = true;
+    this.spread = section
+      ? this.painter.sectionSpread(section)
+      : this.painter.spreadOf(this.newest);
+    this.paintSpread();
+  }
+
+  /** Standalone fixtures retain newest-entry opening; gameplay opens the objective. */
   toggle(): void {
-    this.wantOpen = !this.wantOpen;
-    // Closing midway through writing or a page turn must not leave a hidden,
-    // permanently busy book blocking world interaction and object inspection.
-    if (!this.wantOpen && (this.writing || this.flip || this.queue.length)) {
+    if (this.wantOpen) this.close();
+    else this.open();
+  }
+
+  /** Closing during a turn or discovery never leaves an invisible input gate. */
+  close(immediate = false): void {
+    this.wantOpen = false;
+    this.presentationHidden = false;
+    if (this.writing || this.flip || this.queue.length) {
       this.writing = null;
       this.flip = null;
       this.queue.length = 0;
@@ -101,15 +151,34 @@ export class Sketchbook {
       this.spread = this.painter.spreadOf(this.newest);
       this.paintSpread();
     }
-    if (this.wantOpen && !this.flip) {
-      this.spread = this.painter.spreadOf(this.newest);
-      this.paintSpread();
+    if (immediate) {
+      this.opening = 0;
+      this.applyPose();
     }
   }
 
-  /** Close safely even during an opening or a queued writing animation. */
-  close(): void {
-    if (this.wantOpen) this.toggle();
+  /** Live changes preserve the current entry/section, and wait for page animations. */
+  refreshContent(): boolean {
+    if (!this.content || this.flip || this.writing || this.queue.length) return false;
+    const next = this.content(this.written);
+    if (next.signature === this.snapshot?.signature) return false;
+    const section = this.section;
+    const anchor = this.painter.pages[this.spread * 2]?.layout.blocks[0]?.entryId;
+    this.snapshot = next;
+    this.painter.setNotebook(next);
+    this.painter.layout(this.written);
+    this.spread =
+      anchor && this.painter.pages.some((p) => p.layout.blocks.some((b) => b.entryId === anchor))
+        ? this.painter.spreadOf(anchor)
+        : this.painter.sectionSpread(section);
+    this.paintSpread();
+    return true;
+  }
+
+  private syncContent(): void {
+    if (!this.content) return;
+    this.snapshot = this.content(this.written);
+    this.painter.setNotebook(this.snapshot);
   }
 
   /** A / D: one spread back or forward. */
@@ -125,11 +194,26 @@ export class Sketchbook {
     if (to !== (this.queue.at(-1) ?? this.flip?.to ?? this.spread)) this.queue.push(to);
   }
 
+  /** Return from the clear reader to the chosen section without stale queued turns. */
+  showSection(section: SectionId): void {
+    this.flip = null;
+    this.queue.length = 0;
+    this.writing = null;
+    this.book.setFlip(null);
+    this.syncContent();
+    this.painter.layout(this.written);
+    this.spread = this.painter.sectionSpread(section);
+    this.paintSpread();
+  }
+
   /** Writes a new entry: the book turns to it and Sora's hand writes it in. */
   write(entryId: string): void {
     if (this.written.has(entryId)) return;
     this.written.add(entryId);
     this.newest = entryId;
+    this.flip = null;
+    this.queue.length = 0;
+    this.book.setFlip(null);
     this.relayout();
     this.wantOpen = true;
     const to = this.painter.spreadOf(entryId);
@@ -152,6 +236,7 @@ export class Sketchbook {
   }
 
   update(dt: number): void {
+    this.age += dt;
     this.opening = Math.min(
       1,
       Math.max(0, this.opening + (this.wantOpen ? dt : -dt) / OPEN_SECONDS),
@@ -162,8 +247,7 @@ export class Sketchbook {
       this.startFlip(this.queue.shift() as number);
     if (this.flip) {
       this.flip.t = Math.min(1, this.flip.t + dt / FLIP_SECONDS);
-      const forward = this.flip.to > this.flip.from;
-      this.book.setFlip(forward ? this.flip.t : 1 - this.flip.t);
+      this.book.setFlip(bookTurnFrame(this.turnState!).pageProgress);
       if (this.flip.t >= 1) {
         this.spread = this.flip.to;
         this.flip = null;
@@ -189,6 +273,7 @@ export class Sketchbook {
 
   private relayout(): void {
     const section = this.section;
+    this.syncContent();
     this.painter.layout(this.written);
     this.spread = Math.min(this.painter.sectionSpread(section), this.painter.spreadCount - 1);
     this.paintSpread();
@@ -236,15 +321,38 @@ export class Sketchbook {
     const hinge = smooth((this.opening - 0.2) / 0.6);
     const root = this.book.root;
     Vector3.LerpToRef(POSE.closed.position, POSE.open.position, raise, root.position);
+    // Leave the bottom lines clear of the unified notebook's control strip.
+    if (this.content) root.position.y += 0.04 * raise;
     // A narrow game pane needs the book closer; landscape framing keeps the S5 pose.
     const engine = root.getScene().getEngine();
     const aspect = engine.getRenderWidth() / engine.getRenderHeight();
-    const readingZ = POSE.open.position.z * Math.max(0.78, Math.min(1, aspect / 1.4));
+    let readingZ = POSE.open.position.z * Math.max(0.78, Math.min(1, aspect / 1.4));
+    if (this.content) {
+      const canvas = engine.getRenderingCanvas();
+      const height = canvas?.clientHeight || engine.getRenderHeight();
+      const camera = root.getScene().activeCamera;
+      const frame = readingFrame(
+        aspect,
+        camera?.fov ?? 1.309,
+        camera?.fovMode === 1,
+        this.insets.top / height,
+        this.insets.bottom / height,
+      );
+      readingZ = frame.z;
+      root.position.y = POSE.closed.position.y + (frame.y - POSE.closed.position.y) * raise;
+      root.position.y += Math.sin(this.age * 1.4) * 0.0004 * raise;
+    }
     root.position.z = POSE.closed.position.z + (readingZ - POSE.closed.position.z) * raise;
     const tilt = POSE.closed.tilt + (POSE.open.tilt - POSE.closed.tilt) * raise;
     // Page normal (local +y) towards the eye, the top of the page tipped away.
     root.rotation.set(-Math.PI / 2 + tilt, -0.025 * raise, 0.025 * raise);
+    if (this.turnState) {
+      const motion = bookTurnFrame(this.turnState);
+      root.rotation.z -= this.turnState.direction * motion.settle * 0.014;
+      root.rotation.y += this.turnState.direction * motion.settle * 0.012;
+      root.position.y -= motion.settle * 0.002;
+    }
     this.book.setOpen(hinge);
-    root.setEnabled(this.opening > 0);
+    root.setEnabled(this.opening > 0 && !this.presentationHidden);
   }
 }

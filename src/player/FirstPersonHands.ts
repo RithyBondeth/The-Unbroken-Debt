@@ -1,10 +1,14 @@
+import { bookTurnFrame, type BookTurnState } from "../ui/diegetic/BookMotion";
+import handContact from "../../art-source/characters/sora/sora-hands.drawing.json";
+import { createTelephoneReceiver } from "./TelephoneReceiver";
 import { decodeHandAsset, type HandAsset } from "./HandAsset";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
+import { drawingFrame } from "./DrawingPose";
 import { HandRig, type HandGrip } from "./HandRig";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
-import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
+import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
@@ -26,6 +30,8 @@ export class FirstPersonHands {
   private readonly receiver: TransformNode;
   private lamp: TransformNode | null = null;
   private lampVisible: () => boolean = () => false;
+  private drawing: TransformNode | null = null;
+  private readonly drawingContact = new Vector3();
   private phone = false;
   private phoneAge = 0;
   private action: "reach" | "strike" | "pour" = "reach";
@@ -74,22 +80,14 @@ export class FirstPersonHands {
     this.flame.position.set(-0.04, 0.074, 0.044);
     this.flame.parent = this.right;
     this.flame.material = fire;
-    this.receiver = new TransformNode("sora_held_receiver", scene);
+    this.receiver = createTelephoneReceiver(scene, "sora_held_receiver");
     this.receiver.parent = this.right;
-    this.receiver.rotation.y = Math.PI / 2;
-    const black = material("sora_receiver", "#20231e");
-    for (const [z, width, height] of [
-      [0, 0.045, 0.045],
-      [-0.13, 0.095, 0.085],
-      [0.13, 0.095, 0.085],
-    ]) {
-      const mesh = CreateSphere("sora_receiver_part", { diameter: 1, segments: 10 }, scene);
-      mesh.scaling.set(width, height, z === 0 ? 0.27 : 0.09);
-      mesh.position.set(0, 0.052, z + 0.025);
-      mesh.parent = this.receiver;
-      mesh.material = black;
-      this.meshes.push(mesh);
-    }
+    // Match the authored phone pose in sora_grip.py: seat the 26 mm barrel
+    // against the palm and follow the natural stagger of the knuckles.
+    this.receiver.position.set(0, 0.06, 0.02);
+    this.receiver.rotation.y = 0;
+    this.receiver.rotation.z = Math.PI / 2 - 0.15;
+    this.meshes.push(...this.receiver.getChildMeshes<Mesh>());
     this.meshes.push(this.match, this.flame);
     for (const mesh of this.meshes) {
       mesh.isPickable = false;
@@ -146,6 +144,30 @@ export class FirstPersonHands {
     this.lampVisible = visible;
     root.setEnabled(false);
   }
+  /** Cord exits below the grip; the world cord follows this point during calls. */
+  get phoneCordPoint(): Vector3 | null {
+    if (!this.phone) return null;
+    return Vector3.TransformCoordinates(
+      new Vector3(0, -0.116, 0),
+      this.receiver.computeWorldMatrix(true),
+    );
+  }
+  /** The opening uses the anatomical tripod grip in the paper's own space. */
+  holdDrawing(pen: TransformNode | null): void {
+    this.drawing = pen;
+    this.duration = 0;
+    this.elapsed = 0;
+    this.right.parent = pen ?? this.camera;
+    this.right.scaling.setAll(0.85);
+    if (pen) {
+      // The glTF paper's reflected parent would otherwise turn the right hand
+      // into a left hand and hide the thumb behind the shaft.
+      this.right.scaling.x = -0.85;
+      const frame = drawingFrame();
+      this.drawingContact.copyFrom(frame.contact);
+      this.right.rotationQuaternion = frame.hand;
+    } else this.right.rotationQuaternion = null;
+  }
   holdPhone(active: boolean): void {
     this.phone = active;
     if (active) this.phoneAge = 0;
@@ -157,8 +179,33 @@ export class FirstPersonHands {
     this.elapsed = 0;
     this.duration = action === "strike" ? 0.85 : action === "pour" ? 1.1 : 0.55;
   }
-  update(dt: number, hidden: boolean, book: TransformNode | null, speed: number): void {
+  update(
+    dt: number,
+    hidden: boolean,
+    book: TransformNode | null,
+    speed: number,
+    turn: BookTurnState | null = null,
+  ): void {
     this.time += dt;
+    // Bring out fingertip contact and the photographic knuckle detail while
+    // drawing. This light affects the hand meshes only and eases back afterward.
+    this.fill.intensity +=
+      ((this.drawing ? 0.85 : 0.32) - this.fill.intensity) * (1 - Math.exp(-dt * 8));
+    if (this.drawing) {
+      this.left.setEnabled(false);
+      this.right.setEnabled(true);
+      this.match.setEnabled(false);
+      this.flame.setEnabled(false);
+      this.receiver.setEnabled(false);
+      if (this.lamp) this.lamp.setEnabled(false);
+      this.rightRig.update(dt, "drawing");
+      this.right.position.set(
+        -this.drawingContact.x,
+        0.03 - this.drawingContact.y,
+        -this.drawingContact.z,
+      );
+      return;
+    }
     this.elapsed = Math.min(this.duration, this.elapsed + dt);
     const active = this.elapsed < this.duration;
     const reading = book?.isEnabled() ?? false;
@@ -180,8 +227,10 @@ export class FirstPersonHands {
           : active
             ? "reach"
             : "relaxed";
-    if (this.left.isEnabled()) this.leftRig.update(dt, leftGrip);
-    if (this.right.isEnabled()) this.rightRig.update(dt, rightGrip);
+    if (this.left.isEnabled() && !(reading && turn?.direction === -1))
+      this.leftRig.update(dt, leftGrip);
+    if (this.right.isEnabled() && !(reading && turn?.direction === 1))
+      this.rightRig.update(dt, rightGrip);
     this.left.rotation.set(0, 0, -0.12);
     this.right.rotation.set(0, 0, 0.1);
     this.camera.computeWorldMatrix();
@@ -189,17 +238,55 @@ export class FirstPersonHands {
     if (reading && book) {
       book.computeWorldMatrix(true);
       for (const [hand, x] of [
-        [this.left, -0.16],
-        [this.right, 0.16],
+        [this.left, -0.178],
+        [this.right, 0.178],
       ] as const) {
-        hand.rotation.y = hand === this.left ? 1.15 : -1.15;
-        hand.rotation.z = hand === this.left ? -0.15 : 0.15;
-        Vector3.TransformCoordinatesToRef(
-          new Vector3(x, 0.012, -0.11),
-          book.getWorldMatrix(),
-          this.grip,
-        );
+        const side = hand === this.left ? -1 : 1;
+        hand.rotation.y = -side * 1.05;
+        hand.rotation.z = side * 0.28;
+        const anchor = new Vector3(x, 0.004, -0.128);
+        if (turn) {
+          const motion = bookTurnFrame(turn);
+          if (side === turn.direction) {
+            hand.rotation.y += side * motion.curl * motion.carry * 0.65;
+            hand.rotation.x -= motion.curl * motion.carry * 0.45;
+            hand.rotation.z -= side * motion.carry * 0.35;
+            const rig = side < 0 ? this.leftRig : this.rightRig;
+            rig.blend(dt, {
+              journal: 1 - motion.carry,
+              drawing: motion.pinch,
+              reach: Math.max(0, motion.carry - motion.pinch),
+            });
+          } else {
+            anchor.y -= motion.settle * 0.002;
+            hand.rotation.z += side * motion.settle * 0.035;
+          }
+        }
+        Vector3.TransformCoordinatesToRef(anchor, book.getWorldMatrix(), this.grip);
         Vector3.TransformCoordinatesToRef(this.grip, this.inverse, hand.position);
+        if (turn?.direction === side) {
+          const motion = bookTurnFrame(turn);
+          const pageContact = Vector3.TransformCoordinates(
+            Vector3.FromArray(motion.contact),
+            book.getWorldMatrix(),
+          );
+          const cameraContact = Vector3.TransformCoordinates(pageContact, this.inverse);
+          // Reuse the opposed fingertip pads, without its pencil. Seat that contact,
+          // rather than guessing a wrist offset that leaves fingers floating apart.
+          const pads = Vector3.FromArray(handContact.contact);
+          pads.x *= -side;
+          pads.scaleInPlace(hand.scaling.x);
+          const offset = Vector3.TransformNormal(
+            pads,
+            Matrix.RotationYawPitchRoll(hand.rotation.y, hand.rotation.x, hand.rotation.z),
+          );
+          Vector3.LerpToRef(
+            hand.position,
+            cameraContact.subtract(offset),
+            motion.carry,
+            hand.position,
+          );
+        }
       }
       return;
     }
@@ -219,13 +306,15 @@ export class FirstPersonHands {
     if (this.phone) {
       this.left.setEnabled(false);
       this.phoneAge += dt;
-      const t = Math.min(1, this.phoneAge / 0.32);
+      const t = Math.min(1, this.phoneAge / 0.65);
       const lift = t * t * (3 - 2 * t);
-      this.right.position.set(0.21, -0.35 + 0.29 * lift, 0.46);
+      // Turn the palm toward Sora and bring the ear cup above the thumb.
+      // The elbow stays outside the right edge instead of rising from the chest.
+      this.right.position.set(0.13, -0.35 + 0.325 * lift, 0.46 - 0.06 * lift);
       this.right.rotation.set(
-        0.15 * lift + Math.sin(this.time * 1.2) * 0.006,
-        -0.2 * lift,
-        -0.35 * lift,
+        0.08 * lift + Math.sin(this.time * 1.2) * 0.004,
+        Math.PI + 0.15 * lift,
+        -1.0 * lift,
       );
     } else {
       const p = this.duration ? this.elapsed / this.duration : 1;

@@ -35,7 +35,7 @@ async function review(): Promise<void> {
   });
   game.flags.set("ep1.arrival.road", true);
   game.flags.set("ep1.arrival.courtyard", true);
-  game.fade.waitForClick = async () => {};
+  game.fade.waitForEnter = async () => {};
   await game.start({ audio: false });
   const act = (window as unknown as { act: ActOne }).act;
   while (game.cutscene) await new Promise((resolve) => setTimeout(resolve, 100));

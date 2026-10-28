@@ -1,13 +1,13 @@
 .welcome {
-  --title-bone: #e5dfd2;
-  --title-red: #ae4640;
+  --title-bone: var(--ui-text);
+  --title-red: var(--ui-accent);
   position: fixed;
-  z-index: 40;
+  z-index: var(--ui-z-menu);
   inset: 0;
   min-height: 100dvh;
   overflow: auto;
   color: var(--title-bone);
-  background: #080b0a;
+  background: var(--ui-bg);
   isolation: isolate;
 }
 
@@ -119,7 +119,7 @@
   gap: 24px;
 }
 .welcome-footer button[data-action="ambience"] {
-  color: #c6b5a0;
+  color: var(--ui-muted);
 }
 @keyframes welcome-rain-fall {
   from {
@@ -179,8 +179,8 @@
 }
 .welcome-khmer {
   font-family: "Preah Vihear", sans-serif;
-  font-size: 14px;
-  color: #b8b4a8;
+  font-size: var(--ui-body);
+  color: var(--ui-muted);
   margin: 0 0 10px;
 }
 .welcome-brand h1 {
@@ -196,8 +196,8 @@
 .welcome-series {
   text-transform: uppercase;
   letter-spacing: 0.42em;
-  font-size: 11px;
-  color: #aaa99c;
+  font-size: var(--ui-caption);
+  color: var(--ui-subtle);
   margin: 16px 0 0;
 }
 .welcome-menu {
@@ -211,20 +211,23 @@
   cursor: pointer;
   border: 0;
   background: none;
+  transition:
+    color var(--ui-motion-fast) ease,
+    transform var(--ui-motion-fast) ease;
 }
 .welcome-menu button {
   position: relative;
   min-height: 43px;
   padding: 8px 20px 8px 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(17px, 1.5vw, 23px);
-  text-transform: uppercase;
-  letter-spacing: 0.055em;
+  font-family: var(--ui-font-display);
+  font-size: clamp(1.25rem, 1.7vw, 1.5rem);
+  text-transform: none;
+  letter-spacing: -0.015em;
   text-align: left;
   transition:
-    color 0.2s,
-    transform 0.2s,
-    text-shadow 0.2s;
+    color var(--ui-motion-fast),
+    transform var(--ui-motion-fast),
+    text-shadow var(--ui-motion-fast);
 }
 .welcome-menu button::before {
   content: "";
@@ -235,13 +238,11 @@
   left: -36px;
   top: 50%;
   opacity: 0;
-  box-shadow: 0 0 14px #8e302c;
 }
 .welcome-menu button:enabled:hover,
 .welcome-menu button:focus-visible {
-  color: #e99b90;
+  color: var(--ui-accent-bright);
   transform: translateX(6px);
-  text-shadow: 0 0 22px #8e302c;
 }
 .welcome-menu button:enabled:hover::before,
 .welcome-menu button:focus-visible::before {
@@ -249,7 +250,7 @@
 }
 .welcome button:focus-visible,
 .welcome input:focus-visible {
-  outline: 1px solid #d89082;
+  outline: 2px solid var(--ui-focus);
   outline-offset: 5px;
 }
 .welcome-menu button:disabled {
@@ -259,9 +260,9 @@
 .welcome-status {
   max-width: 360px;
   margin: 22px 0 0 36px;
-  font-size: 12px;
+  font-size: var(--ui-small);
   line-height: 1.7;
-  color: #a6aaa0;
+  color: var(--ui-subtle);
 }
 .welcome-footer {
   display: flex;
@@ -269,15 +270,15 @@
   justify-content: space-between;
   gap: 20px;
   padding: 15px clamp(30px, 5vw, 85px);
-  font-size: 11px;
+  font-size: var(--ui-caption);
   letter-spacing: 0.08em;
-  color: #b4b6ab;
+  color: var(--ui-muted);
 }
 .welcome-footer p {
   margin: 0;
 }
 .welcome-footer span {
-  color: #c47668;
+  color: var(--ui-accent-bright);
   margin-right: 18px;
   text-transform: uppercase;
   letter-spacing: 0.2em;
@@ -292,11 +293,11 @@
   width: min(480px, calc(100vw - 40px));
   max-height: calc(100dvh - 40px);
   padding: clamp(24px, 4vw, 40px);
-  border: 1px solid #484239;
-  border-top: 2px solid #8e302c;
-  background: #121714;
+  border: 1px solid var(--ui-border);
+  border-top: 1px solid var(--ui-accent);
+  background: var(--ui-surface);
   color: var(--title-bone);
-  box-shadow: 0 25px 100px #000;
+  box-shadow: var(--ui-shadow);
   line-height: 1.7;
 }
 .welcome-dialog::backdrop {
@@ -304,23 +305,32 @@
 }
 .welcome-dialog h2 {
   margin: 0 0 24px;
-  font:
-    26px Georgia,
-    serif;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 .welcome-dialog p {
-  font-size: 14px;
+  font-size: var(--ui-body);
 }
 .welcome-dialog .welcome-note {
-  color: #afb3a7;
-  font-size: 12px;
+  color: var(--ui-muted);
+  font-size: var(--ui-small);
 }
-.welcome-dialog button {
+.welcome .welcome-dialog button {
   min-height: 44px;
-  padding: 8px 0;
-  color: #e7a296;
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  font: 500 var(--ui-small) / 1.4 var(--ui-font-body);
+}
+.welcome .welcome-dialog button:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-muted);
+}
+.welcome button:enabled:active {
+  transform: translateY(1px);
 }
 .welcome-dialog form {
   margin-top: 24px;
@@ -331,10 +341,10 @@
   justify-content: space-between;
   gap: 20px;
   margin: 20px 0 10px;
-  font-size: 14px;
+  font-size: var(--ui-body);
 }
 .welcome-dialog input {
-  accent-color: #b85b50;
+  accent-color: var(--ui-accent);
 }
 .welcome-dialog input[type="range"] {
   width: 100%;
@@ -348,10 +358,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--ui-body);
 }
 .welcome-controls dt {
-  color: #dba395;
+  color: var(--ui-accent-bright);
 }
 .welcome-controls dd {
   margin: 0;
@@ -369,13 +379,7 @@
   max-width: 440px;
 }
 .welcome-error h1 {
-  font:
-    32px Georgia,
-    serif;
-}
-.welcome-error button {
-  padding: 15px 0;
-  color: #e7a296;
+  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
 }
 @keyframes welcome-arrive {
   from {

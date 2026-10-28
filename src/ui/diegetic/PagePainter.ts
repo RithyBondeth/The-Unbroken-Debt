@@ -1,3 +1,6 @@
+import { paintNotebookPortrait } from "../notebook/NotebookPortraits";
+import type { NotebookSnapshot } from "../notebook/NotebookContent";
+import { paintNotebookMap } from "../notebook/NotebookMap";
 import { drawHousePlan, drawNightCircles, drawSketch, INK, seeded, type Pen } from "./drawings";
 import {
   layoutPages,
@@ -65,6 +68,14 @@ export class PagePainter {
   pages: BookPage[] = [];
   nights: NightMark[] = Array<NightMark>(7).fill("empty");
   private paper: HTMLCanvasElement | null = null;
+  private notebook: NotebookSnapshot | null = null;
+
+  setNotebook(content: NotebookSnapshot): void {
+    this.notebook = content;
+  }
+  private get effectiveScale(): number {
+    return this.textScale * (this.notebook ? 0.82 : 1);
+  }
   private readonly measureCtx: CanvasRenderingContext2D;
   private readonly measure: Measure;
 
@@ -78,7 +89,7 @@ export class PagePainter {
     this.measureCtx = scratch.getContext("2d") as CanvasRenderingContext2D;
     // Measure at a fixed 10 px per mm, then convert back to millimetres.
     this.measure = (text, role) => {
-      this.measureCtx.font = canvasFont(role, fontSizes(this.textScale)[role].size * 10);
+      this.measureCtx.font = canvasFont(role, fontSizes(this.effectiveScale)[role].size * 10);
       return this.measureCtx.measureText(text).width / 10;
     };
   }
@@ -93,7 +104,7 @@ export class PagePainter {
   }
 
   get bodyFontMm(): number {
-    return fontSizes(this.textScale).body.size;
+    return fontSizes(this.effectiveScale).body.size;
   }
 
   get spreadCount(): number {
@@ -102,7 +113,7 @@ export class PagePainter {
 
   /** Rebuilds every page from the entries written so far. */
   layout(written: ReadonlySet<string>): void {
-    const sizes = fontSizes(this.textScale);
+    const sizes = fontSizes(this.effectiveScale);
     const spec: PageSpec = {
       ...PAGE_MM,
       margin: { top: 24, right: 14, bottom: 14 + TAB_ROW, left: 16 },
@@ -114,19 +125,25 @@ export class PagePainter {
       },
       gap: 9,
     };
-    const entries = this.data.entries.filter((e) => written.has(e.id));
-    this.nights = Array<NightMark>(7).fill("empty");
-    for (const e of entries) if (e.nights) this.nights = [...e.nights];
+    const entries = this.notebook?.entries ?? this.data.entries.filter((e) => written.has(e.id));
+    this.nights = this.notebook?.nights ?? Array<NightMark>(7).fill("empty");
+    if (!this.notebook) for (const e of entries) if (e.nights) this.nights = [...e.nights];
 
     const pages: BookPage[] = [];
     for (const { id: section } of SECTIONS) {
       const own = entries.filter((e) => e.section === section).map(toLayoutEntry);
+      if (section === "map" && this.notebook) {
+        const anchor = { blocks: layoutPages(own, spec, this.measure).flatMap((p) => p.blocks) };
+        pages.push({ section, kind: "map", layout: anchor, first: true });
+        pages.push({ section, kind: "map", layout: { blocks: [] }, first: false });
+        continue;
+      }
       const start = pages.length;
       if (section === "map") {
         // The map page leads the section; notes about the nights follow it.
         pages.push({ section, kind: "map", layout: { blocks: [] }, first: true });
       }
-      if (section === "lore") {
+      if (section === "lore" && !this.notebook) {
         pages.push({ section, kind: "lore", layout: { blocks: [] }, first: true });
       } else if (own.length > 0 || section !== "map") {
         const layouts = own.length > 0 ? layoutPages(own, spec, this.measure) : [{ blocks: [] }];
@@ -178,16 +195,23 @@ export class PagePainter {
 
     if (page) {
       const pen: Pen = { ctx, mm, rand: seeded(`${page.section}${index}`) };
+      if (page.kind === "map" && this.notebook) {
+        this.paintMapSpread(pen, right);
+        ctx.restore();
+        return;
+      }
       if (page.first) {
         const label = SECTIONS.find((s) => s.id === page.section)?.label ?? "";
-        ctx.font = canvasFont("heading", fontSizes(this.textScale).heading.size * mm);
+        ctx.font = canvasFont("heading", fontSizes(this.effectiveScale).heading.size * mm);
         ctx.fillStyle = TEXT_INK;
         ctx.fillText(label, 16 * mm, 16 * mm);
       }
       if (page.kind === "map") this.paintMap(pen);
       if (page.kind === "lore") this.paintLore(pen);
       for (const placed of page.layout.blocks) {
-        const entry = this.data.entries.find((e) => e.id === placed.entryId);
+        const entry = (this.notebook?.entries ?? this.data.entries).find(
+          (e) => e.id === placed.entryId,
+        );
         const amount =
           reveal && reveal.entryId === placed.entryId
             ? this.revealFor(entry, placed, reveal.progress)
@@ -197,14 +221,24 @@ export class PagePainter {
           ctx.save();
           ctx.globalAlpha = amount;
           const pageWidth = PAGE_MM.width - 30;
-          drawSketch(
-            { ...pen, rand: seeded(placed.entryId) },
-            placed.block.id,
-            placed.x,
-            placed.y,
-            pageWidth,
-            placed.height,
-          );
+          if (placed.block.id === "portrait") {
+            paintNotebookPortrait(
+              ctx,
+              placed.entryId,
+              placed.x * mm,
+              placed.y * mm,
+              pageWidth * mm,
+              placed.height * mm,
+            );
+          } else
+            drawSketch(
+              { ...pen, rand: seeded(placed.entryId) },
+              placed.block.id,
+              placed.x,
+              placed.y,
+              pageWidth,
+              placed.height,
+            );
           ctx.restore();
         } else {
           this.paintLines(
@@ -233,7 +267,7 @@ export class PagePainter {
     amount: number,
   ): void {
     const mm = this.mm;
-    const { size, line } = fontSizes(this.textScale)[role];
+    const { size, line } = fontSizes(this.effectiveScale)[role];
     const graphemes = new Intl.Segmenter("km", { granularity: "grapheme" });
     const total = lines.reduce((n, l) => n + [...graphemes.segment(l)].length, 0);
     let budget = Math.ceil(total * amount);
@@ -272,16 +306,61 @@ export class PagePainter {
     return Math.min(1, Math.max(0, (progress - i * share) / share));
   }
 
+  /** One continuous plan across both leaves; the paper crease remains physical. */
+  private paintMapSpread(pen: Pen, right: boolean): void {
+    const { ctx, mm } = pen;
+    const model = this.notebook!;
+    ctx.save();
+    ctx.scale(mm, mm);
+    ctx.translate(right ? -PAGE_MM.width : 0, 0);
+    ctx.fillStyle = TEXT_INK;
+    ctx.font = canvasFont("heading", 7);
+    ctx.fillText(right ? "Location plan" : model.map.title, right ? 164 : 14, 17);
+    ctx.strokeStyle = "#756c5b";
+    ctx.lineWidth = 0.2;
+    ctx.beginPath();
+    ctx.moveTo(14, 22);
+    ctx.lineTo(282, 22);
+    ctx.stroke();
+    paintNotebookMap(ctx, model.map, 12 + model.map.bindingOffset, 28, 272, 148);
+    ctx.font = canvasFont("small", 5.5);
+    ctx.fillStyle = TEXT_INK;
+    ctx.fillText("Seven nights", 16, 183);
+    ctx.restore();
+    // Draw on the same spread coordinate system to avoid shrinking seven circles above the plan.
+    ctx.save();
+    ctx.translate(right ? -PAGE_MM.width * mm : 0, 0);
+    drawNightCircles(pen, this.nights, 16, 186, 112);
+    ctx.font = canvasFont("small", 5.5 * mm);
+    ctx.fillStyle = TEXT_INK;
+    const nightNote = model.entries
+      .filter((entry) => entry.section === "map" && !entry.id.startsWith("live:"))
+      .at(-1)?.text;
+    if (nightNote) {
+      ctx.save();
+      ctx.font = canvasFont("small", 5.2 * mm);
+      ctx.fillText(nightNote, 164 * mm, 177 * mm, 118 * mm);
+      ctx.restore();
+    }
+    ctx.fillText("Red mark: you   ·   Blue: window", 164 * mm, 186 * mm);
+    ctx.fillText("Orientation sketch · not to scale", 164 * mm, 195 * mm);
+    ctx.restore();
+  }
+
   private paintMap(pen: Pen): void {
     const { ctx, mm } = pen;
     drawNightCircles(pen, this.nights, 20, 24, 108);
+    if (this.notebook) {
+      paintNotebookMap(ctx, this.notebook.map, 12 * mm, 48 * mm, 124 * mm, 128 * mm);
+      return;
+    }
     drawHousePlan(pen, 22, 56, 104, 92);
     for (const label of this.data.mapLabels) {
-      ctx.font = canvasFont("small", fontSizes(this.textScale).small.size * mm);
+      ctx.font = canvasFont("small", fontSizes(this.effectiveScale).small.size * mm);
       ctx.fillStyle = TEXT_INK;
       ctx.fillText(label.text, label.x * mm, label.y * mm);
       if (label.khmer) {
-        ctx.font = canvasFont("khmer", fontSizes(this.textScale).small.size * 1.15 * mm);
+        ctx.font = canvasFont("khmer", fontSizes(this.effectiveScale).small.size * 1.15 * mm);
         ctx.fillText(label.khmer, label.x * mm, (label.y + 8 * this.textScale) * mm);
       }
     }
@@ -363,7 +442,15 @@ function toLayoutEntry(entry: SketchEntry): LayoutEntry {
     : [];
   const drawing = entry.drawing ? [{ kind: "drawing" as const, ...entry.drawing }] : [];
   // Portraits come first on the People page; elsewhere the note comes first.
+  const heading = entry.heading
+    ? [{ kind: "text" as const, font: "heading" as const, text: entry.heading }]
+    : [];
+  const small = entry.smallText
+    ? [{ kind: "text" as const, font: "small" as const, text: entry.smallText }]
+    : [];
   const blocks =
-    entry.section === "people" ? [...drawing, ...text, ...khmer] : [...text, ...khmer, ...drawing];
-  return { id: entry.id, blocks };
+    entry.section === "people"
+      ? [...heading, ...drawing, ...text, ...khmer, ...small]
+      : [...heading, ...text, ...khmer, ...drawing, ...small];
+  return { id: entry.id, blocks, pageBreakBefore: entry.pageBreakBefore };
 }

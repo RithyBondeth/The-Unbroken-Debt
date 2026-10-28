@@ -1,3 +1,4 @@
+import { setControlText } from "../../../ui/html/controlText";
 import type { Game } from "../../../core/Game";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { newGameSave, type SaveData } from "../../../systems/saves/SaveData";
@@ -43,7 +44,7 @@ export class TaxiRide {
     this.visuals.configure();
     this.visuals.update(0, this.elapsed, 0);
     await g.fade.to(1, 0);
-    await g.fade.waitForClick(() => {
+    await g.fade.waitForEnter(() => {
       void g.input.lockPointer();
       void g.audio?.unlock();
     });
@@ -54,10 +55,8 @@ export class TaxiRide {
     try {
       if (localStorage.getItem("boon-sop.taxi.seen") === "1") {
         this.skip = document.createElement("button");
-        this.skip.textContent = "Skip journey · Enter";
+        setControlText(this.skip, "Skip journey · Enter");
         this.skip.className = "taxi-skip";
-        this.skip.style.cssText =
-          "position:fixed;right:24px;bottom:30px;z-index:30;padding:12px 18px;background:#171f21;color:#e5dcc5;border:1px solid #657172;cursor:pointer";
         this.skip.onclick = () => void this.finish();
         document.body.append(this.skip);
         window.addEventListener("keydown", (e) => {

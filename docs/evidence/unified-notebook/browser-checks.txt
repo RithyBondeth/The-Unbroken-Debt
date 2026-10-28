@@ -1,0 +1,23 @@
+Production browser checks passed:
+- Q opens the physical notebook only, on the current objective.
+- R opens Read clearly and hides the physical book and hands.
+- Returning preserves the selected section; Q/Esc closes either mode.
+- 1–5 selects sections; A/D turns physical pages.
+- Closing during raising, page turning and a discovery releases input.
+- An active threat dismisses the notebook immediately and prevents reopening.
+- Story discoveries open on their physical notes page.
+- IndexedDB save/load restores inventory, tasks, known people, clues and lore together.
+- Matchbox collection updates the displayed checklist in both views.
+- The physical and readable map use the same position and night-circle data.
+- Narrow-pane review confirmed usable controls and readable-mode scrolling.
+QA storage: boon-sop-unified-notebook-qa; player saves are not modified.
+
+2026-10-28 portrait/map revision:
+- People: distinct graphite portraits, one person per physical page; no page overflow.
+- Map: two facing map pages, rotated village geometry and marker, larger clear-mode view.
+- Studio, village and approach plans visually checked; position marks remain readable.
+- Portraits verified in physical and Read clearly modes; Vuthy is still undiscovered in studio.
+- Existing interaction/save/threat verification reports PASS; console errors: none.
+- Final unit run: 70 files / 369 tests passed with --maxWorkers=1, preview closed.
+- Build and scoped lint pass. CPU-heavy audio/asset tests timed out during a concurrent
+  scene render; the serial run passed using the unchanged default test timeout.

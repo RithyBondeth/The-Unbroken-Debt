@@ -85,7 +85,7 @@ export class AudioSystem {
     const engine = await CreateAudioEngineAsync({
       ...(audioContext ? { audioContext: audioContext as AudioContext } : {}),
       listenerEnabled: true,
-      // The game unlocks sound with its own "Click to begin".
+      // The game unlocks sound with its own "Press Enter to begin".
       disableDefaultUI: hideUnmuteButton,
     });
     const names: BusName[] = ["ambience", "room", "sfx", "threat", "voice", "music", "ui"];

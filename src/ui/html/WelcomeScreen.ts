@@ -2,6 +2,7 @@ import { SaveStore } from "../../systems/saves/SaveStore";
 import { checkpointName } from "../../systems/saves/Checkpoints";
 import { WelcomeAmbience } from "../../audio/WelcomeAmbience";
 import "./welcome.css";
+import { setControlText } from "./controlText";
 
 export interface WelcomeSettings {
   sound: boolean;
@@ -139,6 +140,9 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
     };
     const open = (title: string, body: string) => {
       dialog.innerHTML = `<h2 id="welcome-dialog-title">${title}</h2>${body}<form method="dialog"><button class="welcome-back">Back</button></form>`;
+      for (const control of dialog.querySelectorAll<HTMLElement>(".welcome-controls dt")) {
+        setControlText(control, control.textContent ?? "");
+      }
       dialog.showModal();
     };
     root.addEventListener(
@@ -252,7 +256,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
 
 export function showBootError(root: HTMLElement): void {
   root.hidden = false;
-  root.innerHTML = `<main class="welcome welcome-error"><section><h1>The house could not be reached.</h1><p>The game could not finish loading. Reload to try again.</p><button type="button">Return to title</button></section></main>`;
+  root.innerHTML = `<main class="welcome welcome-error"><section><h1>The house could not be reached.</h1><p>The game could not finish loading. Reload to try again.</p><button class="ui-button" type="button">Return to title</button></section></main>`;
   const button = root.querySelector("button")!;
   button.addEventListener("click", () => {
     const url = new URL(location.href);

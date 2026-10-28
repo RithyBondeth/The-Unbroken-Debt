@@ -1,0 +1,275 @@
+/* Shared screen typography. Handwriting belongs to the physical sketchbook. */
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Regular.ttf");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Medium.ttf");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ubuntu";
+  src: url("/fonts/Ubuntu-Bold.ttf");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Preah Vihear";
+  src: url("/fonts/Preahvihear-Regular.ttf");
+  font-display: swap;
+  unicode-range: U+1780-17FF, U+19E0-19FF;
+}
+
+:root {
+  --ui-font-body: "Ubuntu", "Preah Vihear", sans-serif;
+  --ui-font-display: Georgia, "Preah Vihear", serif;
+  --ui-bg: #090d0c;
+  --ui-surface: #141a17;
+  --ui-surface-hover: #263029;
+  --ui-text: #e5dfd2;
+  --ui-muted: #b7bbae;
+  --ui-subtle: #a4aaa1;
+  --ui-border: #536052;
+  --ui-accent: #b8786b;
+  --ui-accent-bright: #e0aa99;
+  --ui-paper: #e8dfcb;
+  --ui-ink: #30291f;
+  --ui-paper-muted: #685a45;
+  --ui-paper-border: #b5a588;
+  --ui-paper-accent: #7d3f35;
+  --ui-focus: #c8ccbb;
+  --ui-caption: 0.8125rem;
+  --ui-small: 0.875rem;
+  --ui-body: 1rem;
+  --ui-reading: 1.125rem;
+  --ui-subtitle: clamp(1.125rem, 1.6vw, 1.375rem);
+  --ui-section: clamp(1.375rem, 2.2vw, 1.75rem);
+  --ui-heading: clamp(1.75rem, 3vw, 2.5rem);
+  --ui-display: clamp(2.4rem, 5vw, 3.9rem);
+  --ui-leading: 1.65;
+  --ui-heading-leading: 1.16;
+  --ui-space-1: 0.25rem;
+  --ui-space-2: 0.5rem;
+  --ui-space-3: 0.75rem;
+  --ui-space-4: 1rem;
+  --ui-space-6: 1.5rem;
+  --ui-space-8: 2rem;
+  --ui-space-12: 3rem;
+  --ui-radius: 3px;
+  --ui-safe-x: clamp(1rem, 3vw, 3rem);
+  --ui-safe-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  --ui-motion-fast: 180ms;
+  --ui-motion-fade: 650ms;
+  --ui-shadow: 0 18px 64px rgb(3 6 4 / 0.5);
+  --ui-z-hud: 10;
+  --ui-z-panel: 20;
+  --ui-z-caught: 30;
+  --ui-z-fade: 35;
+  --ui-z-menu: 40;
+  --ui-z-entry: 50;
+  --ui-z-resolution: 1500;
+  --ui-z-book-controls: 1700;
+  --ui-z-reader: 1800;
+}
+
+/* Opt-in surface scope keeps developer overlays and physical page textures independent. */
+:where(
+  .welcome,
+  .story-card,
+  .story-hint,
+  .road-stealth-status,
+  .story-subtitles,
+  .story-saving,
+  .story-satchel,
+  .document-reader,
+  .notebook-reader,
+  .notebook-controls,
+  .resolution,
+  .walker-caught,
+  .requirements,
+  .render-stall,
+  .taxi-skip
+) {
+  font-family: var(--ui-font-body);
+  font-size: var(--ui-body);
+  line-height: var(--ui-leading);
+  letter-spacing: 0.01em;
+  overflow-wrap: break-word;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border) transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(
+  .welcome,
+  .story-card,
+  .story-hint,
+  .road-stealth-status,
+  .story-subtitles,
+  .story-saving,
+  .story-satchel,
+  .document-reader,
+  .notebook-reader,
+  .notebook-controls,
+  .resolution,
+  .requirements,
+  .render-stall
+)::selection,
+:where(
+    .welcome,
+    .story-card,
+    .story-hint,
+    .road-stealth-status,
+    .story-subtitles,
+    .story-satchel,
+    .document-reader,
+    .notebook-reader,
+    .resolution,
+    .requirements,
+    .render-stall
+  )
+  ::selection {
+  color: var(--ui-bg);
+  background: var(--ui-accent-bright);
+}
+
+:where(
+    .welcome-dialog,
+    .story-card,
+    .story-satchel,
+    .resolution,
+    .document-reader,
+    .notebook-reader,
+    .notebook-controls
+  )
+  button,
+.taxi-skip,
+.welcome .ui-button,
+.ui-button {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  font: 500 var(--ui-small) / 1.4 var(--ui-font-body);
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background-color var(--ui-motion-fast) ease,
+    border-color var(--ui-motion-fast) ease,
+    color var(--ui-motion-fast) ease,
+    transform var(--ui-motion-fast) ease;
+}
+
+:where(
+    .welcome-dialog,
+    .story-card,
+    .story-satchel,
+    .resolution,
+    .document-reader,
+    .notebook-reader,
+    .notebook-controls
+  )
+  button:enabled:hover,
+.taxi-skip:enabled:hover,
+.ui-button:enabled:hover {
+  background: var(--ui-surface-hover);
+  border-color: var(--ui-muted);
+}
+
+:where(
+    .welcome-dialog,
+    .story-card,
+    .story-satchel,
+    .resolution,
+    .document-reader,
+    .notebook-reader,
+    .notebook-controls
+  )
+  button:enabled:active,
+.taxi-skip:enabled:active,
+.ui-button:enabled:active {
+  transform: translateY(1px);
+}
+
+:where(
+    .welcome,
+    .story-card,
+    .story-satchel,
+    .resolution,
+    .document-reader,
+    .notebook-reader,
+    .notebook-controls
+  )
+  :is(button, input, [tabindex]):focus-visible,
+.taxi-skip:focus-visible,
+.ui-button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 4px;
+}
+
+:where(
+    .welcome,
+    .story-card,
+    .story-satchel,
+    .resolution,
+    .document-reader,
+    .notebook-reader,
+    .notebook-controls
+  )
+  button:disabled,
+.ui-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+:where(.document-reader, .notebook-reader, .resolution-paper) {
+  --ui-focus: var(--ui-paper-accent);
+  --ui-border: var(--ui-paper-border);
+  --ui-surface: #ded3ba;
+  --ui-surface-hover: #d4c6aa;
+  --ui-text: var(--ui-ink);
+  --ui-muted: var(--ui-paper-muted);
+  scrollbar-color: var(--ui-paper-border) transparent;
+}
+
+:where(
+    .welcome,
+    .story-hint,
+    .road-stealth-status,
+    .story-card,
+    .story-satchel,
+    .notebook-controls,
+    .document-reader,
+    .notebook-reader,
+    .resolution,
+    .taxi-skip
+  )
+  kbd {
+  display: inline-block;
+  min-width: 1.2em;
+  padding: 0.12em 0.45em;
+  border: 1px solid var(--ui-border);
+  border-bottom-width: 2px;
+  border-radius: var(--ui-radius);
+  color: inherit;
+  font: 500 0.8em / 1.45 var(--ui-font-body);
+  letter-spacing: 0.03em;
+  text-align: center;
+  vertical-align: 0.04em;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-motion-fast: 0ms;
+    --ui-motion-fade: 0ms;
+  }
+}

@@ -52,6 +52,25 @@ describe("layoutPages", () => {
     gap: 3,
   };
 
+  it("puts a checklist on its facing page without creating a blank leading page", () => {
+    const entries = [
+      {
+        id: "overview",
+        blocks: [{ kind: "text" as const, font: "body" as const, text: "Pack for home" }],
+      },
+      {
+        id: "checklist",
+        pageBreakBefore: true,
+        blocks: [{ kind: "text" as const, font: "body" as const, text: "Take the lamp" }],
+      },
+    ];
+    const pages = layoutPages(entries, spec, measure);
+    expect(pages).toHaveLength(2);
+    expect(pages[0].blocks[0].entryId).toBe("overview");
+    expect(pages[1].blocks[0]).toMatchObject({ entryId: "checklist", y: 5 });
+    expect(layoutPages([entries[1]], spec, measure)).toHaveLength(1);
+  });
+
   it("keeps an entry together and moves it to the next page when it does not fit", () => {
     const pages = layoutPages(
       [

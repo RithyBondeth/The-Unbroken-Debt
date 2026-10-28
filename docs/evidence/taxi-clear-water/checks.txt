@@ -1,0 +1,10 @@
+Road width: 4.4 m -> 5.6 m.
+Full low vegetation footprints clear a 3.4 m centreline offset; road half-width is 2.8 m.
+Exported geometry regression checks grass, shrubs, ferns, bamboo and trees below 2.8 m.
+Standing water: 218 patches, including 48 broad flooded pools; elevation -0.058 m above mud crown.
+Matching reflection plane and drifting water surface normals.
+Roadside GLB: 11,578,352 bytes (within 12 MiB).
+Tests: 356 passed across 69 files with two workers; 17 taxi checks passed across 3 files.
+ESLint, TypeScript and production build: passed.
+Moving browser scene inspected; console errors: [].
+Native 1600 x 1000 renderer capture: road.png.

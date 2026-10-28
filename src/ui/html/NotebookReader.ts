@@ -1,213 +1,242 @@
+import { PORTRAIT_ATLAS, PORTRAIT_CELLS } from "../notebook/NotebookPortraits";
 import type { Game } from "../../core/Game";
-import { currentObjective, notebookClues } from "../../episodes/ep1/data/notebook";
+import { SECTIONS, type SectionId } from "../diegetic/sketchbookContent";
+import { mapSvg } from "../notebook/NotebookMap";
 import "./notebook.css";
-import { PATH } from "../../episodes/ep1/data/forestBorder";
-import { ROAD_COVER } from "../../episodes/ep1/act1/EarlyStealthBrain";
+import { setControlText } from "./controlText";
 
-type Tab = "now" | "map" | "notes" | "people";
-const TABS: [Tab, string][] = [
-  ["now", "Current objective"],
-  ["map", "Map"],
-  ["notes", "Clues & notes"],
-  ["people", "People"],
-];
-
-/** A close reading view of the notebook, with selectable text and a genuine location plan. */
+/** Optional readable presentation of the physical sketchbook, using identical content. */
 export class NotebookReader {
   private readonly panel = document.createElement("section");
   private readonly content = document.createElement("div");
-  private tab: Tab = "now";
-  private previousFocus: HTMLElement | null = null;
+  private readonly controls = document.createElement("nav");
+  private readonly status = document.createElement("span");
+  private tab: SectionId = "now";
+  private wasRaised = false;
+  private lastSignature = "";
+  private refreshAge = 0;
   constructor(private readonly game: Game) {
     this.panel.className = "notebook-reader";
     this.panel.hidden = true;
     this.panel.setAttribute("role", "dialog");
     this.panel.setAttribute("aria-modal", "true");
-    this.panel.setAttribute("aria-label", "Sora’s notebook");
+    this.panel.setAttribute("aria-label", "Sora’s notebook · Read clearly");
     const book = document.createElement("article"),
       header = document.createElement("header"),
       nav = document.createElement("nav");
-    header.innerHTML = "<div><small>SORA’S NOTEBOOK</small><h1>A record of this night</h1></div>";
-    const close = document.createElement("button");
-    close.textContent = "Close · Q / Esc";
-    close.onclick = () => this.close(true);
-    header.append(close);
+    header.innerHTML =
+      "<div><small>SORA’S NOTEBOOK · READ CLEARLY</small><h1>A record of this night</h1></div>";
+    const actions = document.createElement("div");
+    actions.className = "notebook-reader-actions";
+    actions.append(
+      this.button("Back to sketchbook · R", () => this.back(true)),
+      this.button("Close · Q / Esc", () => game.closeSketchbook(true)),
+    );
+    header.append(actions);
     nav.setAttribute("aria-label", "Notebook sections");
-    for (const [id, name] of TABS) {
-      const b = document.createElement("button");
-      b.textContent = name;
+    SECTIONS.forEach(({ id, label }) => {
+      const b = this.button(label, () => this.select(id));
       b.dataset.tab = id;
-      b.onclick = () => {
-        this.tab = id;
-        this.paint();
-      };
       nav.append(b);
-    }
+    });
     this.content.className = "notebook-content";
+    this.content.tabIndex = 0;
     book.append(header, nav, this.content);
     this.panel.append(book);
     document.body.append(this.panel);
+    this.controls.className = "notebook-controls";
+    this.controls.setAttribute("aria-label", "Sketchbook controls");
+    this.controls.hidden = true;
+    const sections = document.createElement("div");
+    sections.className = "notebook-section-controls";
+    SECTIONS.forEach(({ id, label }, index) => {
+      const b = this.button(`${index + 1} · ${label}`, () => this.select(id));
+      b.dataset.section = id;
+      sections.append(b);
+    });
+    const tools = document.createElement("div");
+    tools.className = "notebook-page-controls";
+    tools.append(
+      this.button("← Previous · A", () => game.sketchbook?.turn(-1)),
+      this.status,
+      this.button("Next · D →", () => game.sketchbook?.turn(1)),
+      this.button("Read clearly · R", () => this.show()),
+      this.button("Close · Q / Esc", () => game.closeSketchbook(true)),
+    );
+    this.status.setAttribute("aria-live", "polite");
+    this.status.className = "notebook-page-status";
+    this.controls.append(sections, tools);
+    document.body.append(this.controls);
+    const fitControls = () => {
+      if (this.controls.hidden) return;
+      const top = sections.getBoundingClientRect().bottom + 12;
+      const bottom = window.innerHeight - tools.getBoundingClientRect().top + 12;
+      game.sketchbook?.setViewportInsets(top, bottom);
+    };
+    const resize = new ResizeObserver(fitControls);
+    resize.observe(sections);
+    resize.observe(tools);
+    resize.observe(this.controls);
+    window.addEventListener("resize", fitControls);
     window.addEventListener(
       "keydown",
       (e) => {
-        if (!this.isOpen) return;
+        if (!this.isOpen) {
+          if (game.sketchbook?.isRaised && e.code === "Tab") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const buttons = [...this.controls.querySelectorAll<HTMLButtonElement>("button")];
+            const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+            buttons[(index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
+          }
+          return;
+        }
         e.stopImmediatePropagation();
         if (e.code === "Tab") {
           e.preventDefault();
-          const buttons = [...this.panel.querySelectorAll<HTMLButtonElement>("button")];
-          const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-          buttons[(index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus();
-          return;
-        }
-        if (["KeyQ", "Escape"].includes(e.code)) {
+          const focusable = [...this.panel.querySelectorAll<HTMLElement>("button, [tabindex='0']")];
+          const index = focusable.indexOf(document.activeElement as HTMLElement);
+          focusable[(index + (e.shiftKey ? -1 : 1) + focusable.length) % focusable.length].focus();
+        } else if (!e.repeat && ["KeyQ", "Escape"].includes(e.code)) {
           e.preventDefault();
-          if (!e.repeat) this.close(true);
-        }
-        const index = Number(e.code.replace("Digit", "")) - 1;
-        if (!e.repeat && index >= 0 && index < TABS.length) {
-          this.tab = TABS[index][0];
-          this.paint();
+          game.closeSketchbook(true);
+        } else if (!e.repeat && e.code === "KeyR") {
+          e.preventDefault();
+          this.back(true);
+        } else if (!e.repeat && /^Digit[1-5]$/.test(e.code)) {
+          e.preventDefault();
+          this.select(SECTIONS[Number(e.code.slice(-1)) - 1].id);
         }
       },
       { capture: true },
     );
   }
+  private button(label: string, action: () => void): HTMLButtonElement {
+    const b = document.createElement("button");
+    b.type = "button";
+    setControlText(b, label);
+    b.onclick = action;
+    return b;
+  }
   get isOpen(): boolean {
     return !this.panel.hidden;
   }
+
   show(): void {
-    this.game.input.clear();
-    this.previousFocus =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const g = this.game,
+      book = g.sketchbook;
+    if (!book?.isRaised || g.cutscene || g.threatActive || g.hiding) return;
+    g.input.clear();
+    book.refreshContent();
+    this.tab = book.section;
     this.panel.hidden = false;
-    this.tab = "now";
-    this.game.gated.notebook = true;
-    this.game.stopInspecting();
-    this.game.satchel.close();
+    this.controls.hidden = true;
+    book.setPresentationHidden(true);
+    g.gated.notebook = true;
+    g.stopInspecting();
+    g.satchel.close();
     document.exitPointerLock();
     this.paint();
     this.panel.querySelector<HTMLButtonElement>("button")?.focus();
   }
-  close(relock = false): void {
+  /** Hide the reading overlay without closing the notebook. */
+  back(focus = false): void {
     if (!this.isOpen) return;
     this.panel.hidden = true;
-    this.game.gated.notebook = false;
+    this.game.sketchbook?.showSection(this.tab);
+    this.game.sketchbook?.setPresentationHidden(false);
     this.game.input.clear();
-    this.game.sketchbook?.close();
-    this.previousFocus?.focus({ preventScroll: true });
-    if (relock && !this.game.cutscene && !this.game.satchel.isOpen)
-      void this.game.input.lockPointer();
+    this.controls.hidden = !this.game.sketchbook?.isRaised;
+    if (focus)
+      this.controls.querySelector<HTMLButtonElement>(`[data-section="${this.tab}"]`)?.focus();
   }
-  private paragraph(text: string, parent: HTMLElement = this.content): void {
-    const p = document.createElement("p");
-    p.textContent = text;
-    parent.append(p);
+  /** Compatibility for callers closing all menus. */
+  close(relock = false): void {
+    if (this.isOpen || this.game.sketchbook?.isVisible) this.game.closeSketchbook(relock);
   }
-  private heading(text: string): void {
-    const h = document.createElement("h2");
-    h.textContent = text;
-    this.content.append(h);
+
+  select(section: SectionId): void {
+    const book = this.game.sketchbook;
+    if (!book?.isRaised) return;
+    book.goToSection(section);
+    if (this.isOpen) {
+      this.tab = section;
+      this.paint();
+    }
   }
-  private paint(): void {
+
+  /** Covers manual openings and automatic story discoveries. No permanent reading preference. */
+  update(dt: number): void {
+    const g = this.game,
+      book = g.sketchbook;
+    const raised = book?.isRaised ?? false;
+    if (!raised && this.isOpen) this.back();
+    g.gated.notebook = book?.isVisible ?? false;
+    const available = raised && !g.cutscene && !g.threatActive && !g.hiding && !g.satchel.isOpen;
+    this.controls.hidden = !available || this.isOpen;
+    if (raised && !this.wasRaised) g.input.clear();
+    this.wasRaised = raised;
+    this.refreshAge += dt;
+    if (raised && this.refreshAge >= 0.25) {
+      this.refreshAge = 0;
+      book?.refreshContent();
+      if (this.isOpen) {
+        const signature = g.notebookContent().signature;
+        if (signature !== this.lastSignature) this.paint(false);
+      }
+    }
+    if (!book || !raised) return;
+    for (const b of this.controls.querySelectorAll<HTMLButtonElement>("[data-section]"))
+      b.setAttribute("aria-pressed", String(b.dataset.section === book.section));
+    const label = SECTIONS.find((s) => s.id === book.section)?.label ?? "Notebook";
+    const next = `${label} · ${book.spread + 1} / ${book.painter.spreadCount}`;
+    if (next !== this.status.textContent) this.status.textContent = next;
+  }
+  private paint(resetScroll = true): void {
+    const scrollTop = resetScroll ? 0 : this.content.scrollTop;
+    const model = this.game.notebookContent();
+    this.lastSignature = model.signature;
     this.content.replaceChildren();
     for (const b of this.panel.querySelectorAll<HTMLButtonElement>("nav button"))
       b.setAttribute("aria-pressed", String(b.dataset.tab === this.tab));
-    const g = this.game,
-      f = g.flags;
-    if (this.tab === "now") {
-      const o = currentObjective(f, g.inventory);
-      this.heading(o.title);
-      this.paragraph(o.detail);
-      const list = document.createElement("ul");
-      list.className = "notebook-tasks";
-      for (const task of o.tasks) {
-        const li = document.createElement("li");
-        li.textContent = `${task.done ? "✓" : "○"} ${task.text}`;
-        li.classList.toggle("done", task.done);
-        list.append(li);
-      }
-      this.content.append(list);
-      const last = g.checkpoints.last;
-      this.paragraph(
-        last
-          ? `Last checkpoint: ${String(last.flags["checkpoint.location"] ?? last.checkpoint)} · ${last.clock}`
-          : "Your first checkpoint will be recorded at the writing desk.",
-      );
-    } else if (this.tab === "map") this.map();
-    else if (this.tab === "notes") {
-      this.heading("What I know");
-      const clues = notebookClues(g.sketchbook?.written ?? new Set());
-      if (!clues.length)
-        this.paragraph(
-          "No clues recorded yet. Documents and discoveries will be written here when you find them.",
-        );
-      for (const clue of clues) {
-        const article = document.createElement("article");
-        const h = document.createElement("h3");
-        h.textContent = clue.title;
-        article.append(h);
-        this.paragraph(clue.text, article);
-        this.content.append(article);
-      }
-    } else {
-      this.heading("People I know");
-      for (const [name, description] of [
-        ["Sora", "An illustrator returning to her family’s village."],
-        [
-          "Yay Mey / Mak Yey",
-          "My grandmother. She called from home; she knows the funeral duties.",
-        ],
-        ["Uncle Sok", "His death brought me home. His house is the centre of tonight’s vigil."],
-        [
-          "Vuthy",
-          "My cousin. He has taken Grandmother somewhere she can rest and promises to return at dawn.",
-        ],
-      ]) {
-        if (name === "Vuthy" && !f.get("ep1.arrival.callComplete", false)) continue;
-        const h = document.createElement("h3");
-        h.textContent = name;
-        this.content.append(h);
-        this.paragraph(description);
-      }
-    }
-  }
-  private map(): void {
-    const g = this.game,
-      studio = g.flags.get("ep1.checkpoint", "CP0") === "CP0";
-    this.heading(studio ? "Studio · Phnom Penh" : "Village · House of mourning");
-    const holder = document.createElement("div");
-    holder.className = "notebook-map";
-    const at = g.player.feet;
-    if (!studio && at.z > 15) {
-      holder.classList.add("approach-map");
-      // Rotate the long approach into landscape so labels remain readable.
-      holder.innerHTML = `<svg viewBox="-9 -10 80 22" role="img" aria-label="Approach path: funeral courtyard on the left, three solid carts for cover, taxi on the right"><path d="${PATH.map(([x, z], i) => `${i ? "L" : "M"}${z} ${-x}`).join(" ")}" class="path"/><rect x="-1" y="-4" width="7" height="8" class="walls"/><text x="3" y="-7.5">Funeral courtyard</text><text x="3" y="8">Safe checkpoint</text>${ROAD_COVER.map((r, i) => `<rect x="${r.minZ}" y="${-r.maxX}" width="${r.maxZ - r.minZ}" height="${r.maxX - r.minX}"/><text x="${(r.minZ + r.maxZ) / 2}" y="-6">Cover ${3 - i}</text>`).join("")}<text x="60" y="-6">Taxi</text><text x="58" y="8">Flooded road</text><circle cx="${at.z}" cy="${-at.x}" r=".55" class="you"/></svg>`;
+    if (this.tab === "map") {
+      const title = document.createElement("h2");
+      title.textContent = model.map.title;
+      this.content.append(title);
+      const holder = document.createElement("div");
+      holder.className = "notebook-map";
+      holder.innerHTML = mapSvg(model.map);
       this.content.append(holder);
-      this.paragraph(
-        "● You · Solid rectangles are carts you can crouch behind. Follow the path left toward the funeral courtyard. The map does not show the presence’s position.",
-      );
-      return;
+      const nights = document.createElement("p");
+      nights.textContent = `Night circles: ${model.nights.map((mark, i) => `${i + 1} ${mark === "empty" ? "unmarked" : mark === "pencil" ? "pencilled" : "inked"}`).join("; ")}.`;
+      this.content.append(nights);
     }
-    // The plans use the actual Babylon world x/z coordinates and preserve their scale.
-    const base = studio
-      ? `<svg viewBox="-6.5 -5.5 7 6" role="img" aria-label="Studio floor plan: drawing table by south window, writing desk east, door and phone west"><rect x="-6" y="-5" width="6" height="5" class="walls"/><path d="M-6 -3 L-6 -2" class="door"/><rect x="-3.65" y="-1.1" width="1.3" height=".76"/><text x="-3" y="-.65">Drawing table</text><rect x="-.68" y="-3.25" width=".66" height="1.5"/><text x="-1.12" y="-2.5">Desk / drawer</text><rect x="-5.9" y="-4.88" width="1.9" height=".86"/><text x="-4.95" y="-4.45">Bed</text><text x="-5.1" y="-3.55">Phone</text><text x="-5.15" y="-2.5">Exit →</text><text x="-2.9" y="-4.75">Shelf / satchel</text><path d="M-3.75 0 H-2.25" class="window"/>`
-      : `<svg viewBox="-11 -24 22 40" role="img" aria-label="Village floor plan with house, stairs, funeral tent and courtyard save point"><rect x="-6" y="-19" width="12" height="8" class="walls"/><text x="0" y="-20">HOUSE · upper floor</text><path d="M-1 -19 V-11 M-6 -13.5 H6"/><text x="2.4" y="-16.6">Hall</text><text x="2.4" y="-15.2">Phone</text><text x="-3.5" y="-16.6">${g.flags.get("ep1.act2.started", false) ? "Sok’s" : "Locked"}</text><text x="-3.5" y="-15.2">room</text><text x="0" y="-11.6">Stairs ↓</text><rect x="-4" y="-7" width="8" height="6" class="walls"/><text x="0" y="-5.4">FUNERAL TENT</text><text x="0" y="-3.4">Coffin / burner</text><text x="-5.1" y="1.4">✦ Safe desk</text><text x="0" y="5">Courtyard</text><path d="M0 6 L0 15" class="path"/><text x="0" y="12">Path to taxi ↓</text>`;
-    const marker =
-      studio || (at.z <= 15 && at.z >= -23)
-        ? `<circle cx="${at.x}" cy="${at.z}" r="${studio ? 0.1 : 0.3}" class="you"/>`
-        : "";
-    holder.innerHTML = `${base}${marker}</svg>`;
-    this.content.append(holder);
-    this.paragraph(
-      "● You     ✦ Safe place     Blue line: window / entrance. Labels describe the real room layout.",
-    );
-    if (!studio && at.z > 15)
-      this.paragraph(
-        `You are on the approach path. The courtyard is approximately ${Math.round(at.z)} metres ahead, toward the house.`,
-      );
-    if (!studio && at.y < 1.5)
-      this.paragraph(
-        "The house plan shows the upper floor. Its stairs are on the courtyard side; storage and water jars are beneath it.",
-      );
+    for (const entry of model.entries.filter((e) => e.section === this.tab)) {
+      const article = document.createElement("article");
+      if (entry.heading && !(this.tab === "map" && entry.id === "live:map")) {
+        const h = document.createElement("h2");
+        h.textContent = entry.heading;
+        article.append(h);
+      }
+      if (entry.section === "people" && PORTRAIT_CELLS[entry.id]) {
+        const [column, row] = PORTRAIT_CELLS[entry.id];
+        const portrait = document.createElement("div");
+        portrait.className = "notebook-portrait";
+        portrait.setAttribute("role", "img");
+        portrait.setAttribute("aria-label", `Graphite portrait of ${entry.heading}`);
+        portrait.style.backgroundImage = `url("${PORTRAIT_ATLAS}")`;
+        portrait.style.backgroundPosition = `${column * 100}% ${row * 100}%`;
+        article.append(portrait);
+      }
+      for (const text of [entry.text, entry.smallText, entry.khmer]) {
+        if (!text) continue;
+        const p = document.createElement("p");
+        p.textContent = text;
+        if (text.startsWith("✓")) p.className = "notebook-task-done";
+        article.append(p);
+      }
+      this.content.append(article);
+    }
+    this.content.scrollTop = scrollTop;
   }
 }

@@ -1,4 +1,6 @@
 import "./story.css";
+import { setControlText } from "./controlText";
+import "./entry.css";
 import { t, type StringKey } from "../../data/strings";
 
 export { t, type StringKey };
@@ -16,7 +18,7 @@ function element<K extends keyof HTMLElementTagNameMap>(
 const after = (seconds: number) => new Promise<void>((done) => setTimeout(done, seconds * 1000));
 
 /**
- * Control hints as faint pencil text that fades: shown the first time an action
+ * Control hints with shared type and keycaps that fade: shown the first time an action
  * is needed, never again once the player has done it (Controls and Interface, 6.3).
  */
 export class Hints {
@@ -28,7 +30,7 @@ export class Hints {
   show(key: StringKey, seconds = 7): void {
     if (this.performedKeys.has(key)) return;
     this.current = key;
-    this.node.textContent = t(key);
+    setControlText(this.node, t(key));
     this.node.classList.add("shown");
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.hide(), seconds * 1000);
@@ -70,6 +72,7 @@ export class Subtitles {
   constructor() {
     this.node.hidden = true;
     this.node.setAttribute("aria-live", "polite");
+    this.node.setAttribute("aria-atomic", "true");
   }
 
   private render(speaker: string, text: string): void {
@@ -104,7 +107,7 @@ export class Subtitles {
   }
 }
 
-/** Black fades, the click that starts the game, and title cards. */
+/** Black fades, the keyboard entry screen, and title cards. */
 export class ScreenFade {
   private readonly node = element("div", "story-fade");
   private readonly card = document.createElement("div");
@@ -145,8 +148,9 @@ export class ScreenFade {
     this.card.classList.add("shown");
     if (!parts.button) return;
     const button = document.createElement("button");
-    button.textContent = parts.button;
+    setControlText(button, parts.button);
     this.card.appendChild(button);
+    button.focus({ preventScroll: true });
     await new Promise<void>((done) =>
       button.addEventListener("click", () => done(), { once: true }),
     );
@@ -156,22 +160,87 @@ export class ScreenFade {
     this.card.classList.remove("shown");
   }
 
-  /** Browsers start sound and pointer lock only from a click: wait for one on the black. */
-  async waitForClick(onClick: () => void): Promise<void> {
+  /** Keep audio unlock and pointer capture in the player's activation gesture. */
+  async waitForEnter(onEnter: () => void): Promise<void> {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    this.card.replaceChildren();
+    this.card.classList.add("story-entry");
+    const label = document.createElement("p");
+    label.className = "entry-eyebrow";
+    label.textContent = t("start.before");
+    const icon = document.createElement("div");
+    icon.className = "entry-headphones";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = `<svg viewBox="0 0 80 80" fill="none"><path d="M16 45v-9a24 24 0 0 1 48 0v9M22 32v-2a18 18 0 0 1 36 0v2"/><rect x="12" y="40" width="14" height="23" rx="5"/><rect x="54" y="40" width="14" height="23" rx="5"/><path d="M19 47v9M61 47v9"/></svg>`;
+    const title = document.createElement("h1");
+    title.id = "entry-title";
+    title.textContent = t("start.listen");
+    const recommendation = document.createElement("p");
+    recommendation.className = "entry-recommendation";
+    recommendation.textContent = t("start.note");
+    const detail = document.createElement("p");
+    detail.className = "entry-detail";
+    detail.id = "entry-detail";
+    detail.textContent = t("start.detail");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "entry-begin";
+    button.setAttribute("aria-label", t("start.enter"));
+    button.setAttribute("aria-keyshortcuts", "Enter");
+    const key = document.createElement("kbd");
+    key.textContent = "Enter";
+    const action = document.createElement("span");
+    action.textContent = t("start.begin");
+    button.append(key, action);
+    this.card.append(label, icon, title, recommendation, detail, button);
+    this.card.setAttribute("role", "region");
+    this.card.setAttribute("aria-labelledby", title.id);
+    this.card.setAttribute("aria-describedby", detail.id);
     this.node.classList.add("waiting");
-    void this.show({ title: t("start.click"), body: t("start.note") });
-    await new Promise<void>((done) =>
-      this.node.addEventListener(
-        "click",
-        () => {
-          onClick();
-          done();
+    this.card.classList.add("shown");
+    button.focus({ preventScroll: true });
+    const abort = new AbortController();
+    let entering = false;
+    await new Promise<void>((done) => {
+      const begin = () => {
+        if (entering) return;
+        entering = true;
+        button.disabled = true;
+        onEnter();
+        this.node.classList.add("entering");
+        this.hideCard();
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        setTimeout(done, reducedMotion ? 0 : 650);
+      };
+      window.addEventListener(
+        "keydown",
+        (event) => {
+          if (
+            event.key !== "Enter" ||
+            event.isComposing ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey
+          )
+            return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (!event.repeat) begin();
         },
-        { once: true },
-      ),
-    );
+        { capture: true, signal: abort.signal },
+      );
+      button.addEventListener("click", begin, { signal: abort.signal });
+    });
+    abort.abort();
     this.node.classList.remove("waiting");
-    this.hideCard();
+    this.node.classList.remove("entering");
+    this.card.classList.remove("story-entry");
+    this.card.removeAttribute("role");
+    this.card.removeAttribute("aria-labelledby");
+    this.card.removeAttribute("aria-describedby");
+    this.card.replaceChildren();
+    const canvas = document.getElementById("game");
+    (canvas ?? previousFocus)?.focus({ preventScroll: true });
   }
 }
 
@@ -238,7 +307,7 @@ export class SatchelPanel {
     this.node.append(title, list);
     if (this.action) {
       const button = document.createElement("button");
-      button.textContent = this.action.label;
+      setControlText(button, this.action.label);
       button.disabled = !this.action.enabled;
       button.onclick = () => this.action?.enabled && this.action.perform();
       this.node.append(button);

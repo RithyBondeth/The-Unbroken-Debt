@@ -1,5 +1,14 @@
 # Episode 1 browser verification
 
+## Unified notebook
+
+Open `/tests/browser/notebook.html` and click to begin. **Verify flows** exercises
+the actual Q/R controls, physical-book opening, page turns, readable mode,
+automatic discoveries, rapid closing and restoration from an isolated IndexedDB
+save. **Collect matchbox** updates the checklist in both presentations. Q opens
+the physical book; R is the optional **Read clearly** view; Q/Esc closes either.
+Use 1–5 for sections and A/D for physical page turns.
+
 ## New opening and safe checkpoints
 
 `/tests/browser/opening.html?stage=taxi` previews the rainy journey. Use
@@ -15,7 +24,7 @@ and recorded evidence are in `docs/production/opening-survival-checkpoints.md`.
 ## Studio and matchbox
 
 Open `/tests/browser/studio.html` for the actual studio's room, telephone, desk,
-drawer, matchbox, window and bed views. Click to begin. The preview auto-inks the
+drawer, matchbox, window and bed views. Press Enter to begin. The preview auto-inks the
 first illustration and uses an isolated database. E still uses real interaction
 targets; movement keys leave close-up inspection. The detail pass and browser
 pickup evidence are in `docs/production/studio-detail-pass.md`.
@@ -40,7 +49,7 @@ uses `tools/areas/rebuild-house-forest.py` and the forest merge tool.
 
 Run `npm run dev`, then open
 `http://localhost:5173/tests/browser/act1.html?start=act1` in a WebGPU browser and
-click to begin. The page uses a separate IndexedDB database (`boon-sop-act1-verification`),
+press Enter to begin. The page uses a separate IndexedDB database (`boon-sop-act1-verification`),
 so it does not overwrite player saves.
 
 The scenario uses the actual village GLB, sound cues, puzzle handlers and Havok
@@ -56,7 +65,7 @@ plays at normal speed. Assertions appear over the game:
 - A Havok ray passes through Sok's opened doorway.
 - The transition does not add an incense-neglect penalty.
 
-After `TRANSITION PASSED`, use **Verify checkpoint restoration** and click to begin
+After `TRANSITION PASSED`, use **Verify checkpoint restoration** and press Enter to begin
 again. The second scenario checks the CP2 spawn, opened door, extinguished lamps,
 collected lore, sketchbook objective and unchanged blessed-match count.
 
@@ -72,7 +81,7 @@ does not write checkpoints.
 
 ## Sok’s room investigation
 
-Open `/tests/browser/act2.html?start=act1`, then click to begin. This scenario
+Open `/tests/browser/act2.html?start=act1`, then press Enter to begin. This scenario
 starts at the Act II handover and uses the separate database
 `boon-sop-act2-verification`. It checks actual interaction rays for the wall board
 and exposed papers, journal reading, and partial governor tuning. Follow the
@@ -184,7 +193,7 @@ save download. Vuthy's returning figure and dawn birds use procedural stand-ins.
 
 Open `/tests/browser/episode.html` without `continue` to start a clean test run.
 This uses `boon-sop-full-journey`, earns the story state from the prologue and
-reloads the actual checkpoint saves. Click to begin after each reload. It tests
+reloads the actual checkpoint saves. Press Enter to begin after each reload. It tests
 CP1 storage rejection/retry, CP3 catch/restore and H1, the altar/desk/CP4 flow,
 CP5 immediate-loot retention on catch, chest discoveries, and CP6 failures,
 spares, interrupted hold and completion through credits. Scripted movement,
@@ -197,7 +206,7 @@ The latest run and its limits are recorded in
 
 ## Straw guardian visual review
 
-Open `/tests/browser/guardians.html?start=act1` and click to begin. The buttons
+Open `/tests/browser/guardians.html?start=act1` and press Enter to begin. The buttons
 show the actual village guardians from the front, side, road distance and with
 raised arms, using the production player lamp and colour grade. **Save screenshot**
 writes the current view to `debug-shots/guardian-<view>.png`. The fixture uses
@@ -255,7 +264,7 @@ object transforms before saving the Blender scene.
 
 ### Modern funeral ensemble
 
-Open `/tests/browser/funeral.html?start=act1` and click to begin. The six views
+Open `/tests/browser/funeral.html?start=act1` and press Enter to begin. The six views
 cover the pavilion, altar, flowers, coffin and monks' seating under the actual
 game lamp and colour grade. The fixture restores the pavilion lamps for a quiet
 visual review and uses the separate `boon-sop-funeral-review` save database.
@@ -331,3 +340,11 @@ the road, dashboard, driver, passenger window and rear cabin. Review loops the
 ride; omit `review` to verify normal arrival at CP1. The fixture uses the separate
 `boon-sop-opening-qa` database. **Hide review overlays** produces a clean view.
 See `docs/production/taxi-realism.md` for asset sources and rebuild commands.
+
+## Listening screen
+
+Open `/tests/browser/entry.html` for an isolated preview of the headphone recommendation and Enter prompt. It uses the real entry screen, audio activation and pointer-capture code without loading the game or touching saves. Press Enter; the result verifies single activation, focus restoration and listener cleanup, then shows a normal story card. Use **Preview again** to repeat.
+
+## Shared text system
+
+Open `/tests/browser/text-system.html` to review production typography and controls across gameplay, stealth, story cards, subtitles, hints, save status, satchel, document and notebook readers, ending, menu and error screens. It does not initialize the game or write player saves. The fixture uses title artwork behind UI samples. `?view=document&clean` selects a capture without gallery controls. See `DESIGN.md` for the shared tokens and usage rules.

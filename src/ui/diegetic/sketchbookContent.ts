@@ -25,6 +25,11 @@ export interface SketchEntry {
   section: SectionId;
   /** Sora's note in English (the master text). */
   text?: string;
+  /** Live notebook headings and compact checklist/checkpoint text. */
+  heading?: string;
+  smallText?: string;
+  /** Keep a live checklist on the facing page of its objective. */
+  pageBreakBefore?: boolean;
   /** A line in Khmer script, written by a native speaker. */
   khmer?: string;
   /** A small drawing beside the note, drawn by `drawings.ts`. */

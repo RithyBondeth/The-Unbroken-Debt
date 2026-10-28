@@ -1,3 +1,4 @@
+import { setControlText } from "../../../ui/html/controlText";
 import type { Game } from "../../../core/Game";
 import type { Vigil } from "./Vigil";
 import type { SaveData } from "../../../systems/saves/SaveData";
@@ -34,8 +35,6 @@ export class EarlyStealth {
     this.hud.className = "road-stealth-status";
     this.hud.hidden = true;
     this.hud.setAttribute("role", "status");
-    this.hud.style.cssText =
-      "position:fixed;bottom:9%;left:50%;transform:translateX(-50%);width:min(620px,86vw);padding:12px 18px;text-align:center;white-space:pre-line;font:16px/1.55 Georgia,serif;color:#f0e6cf;background:#101614dc;border:1px solid #8b8a7155;pointer-events:none;z-index:12";
     document.body.append(this.hud);
     const previous = game.interaction.allow;
     game.interaction.allow = (id) => previous(id) && !this.active;
@@ -137,7 +136,7 @@ export class EarlyStealth {
   private message(text: string): void {
     if (text === this.lastMessage) return;
     this.lastMessage = text;
-    this.hud.textContent = text;
+    setControlText(this.hud, text);
   }
   private async finish(): Promise<void> {
     if (this.finishing) return;

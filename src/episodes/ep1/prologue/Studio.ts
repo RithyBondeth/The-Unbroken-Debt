@@ -19,17 +19,23 @@ import { useSoftFalloff } from "../../../render/softLampFalloff";
  * The candle can be put out (P05).
  */
 export class StudioLights {
+  /** Soft falloff caps the close wall; this level keeps cloth and paper readable. */
+  private readonly candlePower = 3.2;
   readonly deskLamp: PointLight;
   readonly candle: PointLight;
   readonly lightning: SpotLight;
   readonly writingLight: PointLight;
   private readonly candleFlame: Mesh;
+  private readonly candleBounce: PointLight;
   private readonly windowGlass: PBRMaterial | null;
   private candleLit = true;
   private readonly storm = new Lightning();
   private time = 0;
 
   constructor(scene: Scene, area: Area, preset: QualityPreset) {
+    // Imported materials must include the shelf candle as well as the other room lights.
+    for (const material of scene.materials)
+      if (material instanceof PBRMaterial) material.maxSimultaneousLights = 8;
     const { markers, flames } = area.level;
     const at = (m: { position: Vector3 } | undefined, fallback: Vector3) =>
       m?.position.clone() ?? fallback;
@@ -52,7 +58,9 @@ export class StudioLights {
         m.isVisible &&
         m.visibility > 0 &&
         m.renderingGroupId === 0 &&
-        !m.name.startsWith("desk_lamp"),
+        !m.name.startsWith("desk_lamp") &&
+        m.name !== "ink_line" &&
+        m.name !== "ink_blot",
     );
     this.deskLamp = lamp.light;
     // An electric bulb under green glass: warmer than daylight, cooler than a flame.
@@ -86,18 +94,32 @@ export class StudioLights {
     this.candle = new PointLight("candle", at(candleAt, new Vector3(-2.33, 1.53, -4.83)), scene);
     this.candle.diffuse = FLAME_COLOR.clone();
     this.candle.range = Number(candleAt?.extras.radius) || 3;
-    this.candle.intensity = Number(candleAt?.extras.intensity) || 2;
+    this.candle.intensity = this.candlePower;
+    useSoftFalloff(this.candle);
     this.candleFlame = CreateSphere(
       "candle_flame",
-      { diameterX: 0.02, diameterY: 0.045, segments: 8 },
+      { diameterX: 0.012, diameterY: 0.03, diameterZ: 0.012, segments: 12 },
       scene,
     );
     this.candleFlame.position.copyFrom(this.candle.position);
     const flameMat = new PBRMaterial("M_candle_flame", scene);
-    flameMat.emissiveColor = FLAME_COLOR.scale(4);
+    flameMat.emissiveColor = FLAME_COLOR.scale(2);
     flameMat.albedoColor = Color3.Black();
     flameMat.disableLighting = true;
     this.candleFlame.material = flameMat;
+    // Light returning from the wall and ledge reaches the forward-facing cloth spines.
+    this.candleBounce = new PointLight(
+      "shelf_candle_bounce",
+      new Vector3(-3.2, 1.63, -4.44),
+      scene,
+    );
+    this.candleBounce.diffuse = FLAME_COLOR.clone();
+    this.candleBounce.range = 1.4;
+    this.candleBounce.intensity = 1.6;
+    this.candleBounce.includedOnlyMeshes = scene.meshes.filter((mesh) =>
+      mesh.material?.name.startsWith("M_studio_book_"),
+    );
+    useSoftFalloff(this.candleBounce);
 
     const outside = at(markers.get("lightning"), new Vector3(-3, 2.4, 1.5));
     this.lightning = new SpotLight("lightning", outside, new Vector3(0, -0.35, -1), 1.3, 2, scene);
@@ -122,6 +144,7 @@ export class StudioLights {
     this.candleLit = false;
     this.candle.setEnabled(false);
     this.candleFlame.setEnabled(false);
+    this.candleBounce.setEnabled(false);
   }
 
   /** Light reaching Sora's eyes for eye adaptation (1 = her lamp at arm's length). */
@@ -140,7 +163,9 @@ export class StudioLights {
     // Candle: never steady (Art Bible), out of phase with everything else.
     if (this.candleLit) {
       const t = this.time;
-      this.candle.intensity = 2 * (0.88 + 0.07 * Math.sin(t * 9.1) + 0.05 * Math.sin(t * 17.3 + 1));
+      this.candle.intensity =
+        this.candlePower * (0.88 + 0.07 * Math.sin(t * 9.1) + 0.05 * Math.sin(t * 17.3 + 1));
+      this.candleBounce.intensity = this.candle.intensity * 0.5;
     }
     const level = this.storm.update(dt);
     this.lightning.intensity = level * 60;

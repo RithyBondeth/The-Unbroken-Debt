@@ -1,0 +1,9 @@
+Mosquito net: open gathered gauze mesh, continuous folds, weave alpha texture, stitched open hem, edge seam, cotton tie and ceiling hook.
+Telephone: same single-ear receiver geometry on the hook and in the hand; shaped ebonite grip, ear shell, rolled rim, collars, perforations and cord socket.
+Cord follows the held receiver's world endpoint during calls and returns to the hanging receiver afterward.
+Held presentation stays in the first-person rendering group; world cord remains outside picking.
+Targeted hand/phone tests: 19 passed across 2 files.
+TypeScript, targeted ESLint, production build and diff whitespace checks: passed.
+Browser: gathered net and held receiver visually checked; receiver stows back to its hook after preview.
+Browser console errors: [].
+Native 1600 x 1000 captures: gathered-net.png, held-receiver.png, receiver-on-hook.png.

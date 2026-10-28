@@ -1,0 +1,25 @@
+Book handling and Sok photo revision · 2026-10-28
+
+Browser:
+- Production notebook flow verification PASS, including projected footer clearance.
+- Clear lower pages reviewed at 1920x1080 and 878x1080 game panes.
+- Sections above book; action bar below; larger map footer labels.
+- Forward turn inspected with the authoring fixture held at mid-turn: opposed
+  fingertip pads track the leaf corner, opposite hand continues to support cover.
+- Read clearly hides both hands/book; returning cancels the held review turn.
+- Close-mid-turn, automatic discovery, rapid Q, threat dismissal, input release,
+  and IndexedDB restoration pass. Player saves remain separate from QA storage.
+- Funeral portrait viewed on production altar through the village tour.
+- Console errors: none in either review scene.
+
+Assets:
+- Embedded village PNG equals standalone runtime funeral photo byte for byte.
+- PNG texture source and every binary/compressed buffer range validated.
+- Packed Blender photo updated, source image and drawing generator retained.
+
+Validation:
+- npm test -- --maxWorkers=1: 71 files / 372 tests passed.
+- Scoped ESLint, production build, git diff --check passed.
+- Reading-frustum unit cases: 1920x1080, 2560x1080, 878x1080, 390x700.
+- Unit motion checks cover both page directions, support-hand stability,
+  gesture return, and hidden reading presentations.
