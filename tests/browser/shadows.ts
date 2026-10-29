@@ -12,7 +12,18 @@ import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
 async function review(): Promise<void> {
   if (!import.meta.env.DEV) return;
   const status = document.getElementById("review-status")!;
-  const engine = await createEngine(document.getElementById("game") as HTMLCanvasElement);
+  const canvas = document.getElementById("game") as HTMLCanvasElement;
+  if (new URLSearchParams(location.search).has("landscape")) {
+    Object.assign(canvas.style, {
+      position: "fixed",
+      width: "100vw",
+      height: "62.5vw",
+      top: "50%",
+      bottom: "auto",
+      transform: "translateY(-50%)",
+    });
+  }
+  const engine = await createEngine(canvas);
   if (!engine) throw new Error("WebGPU is required");
   useLocalDecoders();
   const game = new Game(engine, await detectDevice());
@@ -23,6 +34,12 @@ async function review(): Promise<void> {
   game.flags.set("ep1.arrival.courtyard", true);
   game.flags.set("ep1.act2.started", true);
   game.fade.waitForEnter = async () => {};
+  const warmup = ShadowFigure.warmup.bind(ShadowFigure);
+  ShadowFigure.warmup = async (scene) => {
+    status.textContent = "Preparing spirit materials…";
+    await warmup(scene);
+    status.textContent = "Preparing village views…";
+  };
   await game.start({ audio: false });
   const act = (window as unknown as { act: ActOne }).act;
   while (game.cutscene) await new Promise((resolve) => setTimeout(resolve, 100));
@@ -35,6 +52,8 @@ async function review(): Promise<void> {
   game.scene.onBeforeRenderObservable.add(() => {
     seconds += game.deltaSeconds;
     forest.animate(seconds);
+    if (view === "mask" || view === "hall")
+      act.walker.models.pose(new Vector3(-1.65, 2.5, -13.8), new Vector3(0, 0, -1), seconds);
     const glow = game.scene.getLightByName("neakta_glow");
     if (glow) {
       glow.setEnabled(true);
@@ -77,6 +96,7 @@ async function review(): Promise<void> {
       void show(which);
     });
   document.getElementById("capture")!.addEventListener("click", () => {
+    engine.setSize(1600, 1000);
     void saveShot(engine, game.camera, `shadow-${view}`).then(() => {
       status.textContent = `Saved debug-shots/shadow-${view}.png`;
     });

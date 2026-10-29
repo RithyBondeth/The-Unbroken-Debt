@@ -8,13 +8,14 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { BoundingInfo } from "@babylonjs/core/Culling/boundingInfo";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DitheredTileFadeMaterialPlugin } from "@babylonjs/core/Materials/ditheredTileFadeMaterialPlugin";
+import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
 import { realiseInstances } from "../../../core/AreaLoader";
 
 const templates = new WeakMap<Scene, AssetContainer>();
 const loading = new WeakMap<Scene, Promise<void>>();
 const forms = new WeakMap<Scene, Set<ShadowFigure>>();
 /** Multiplies the pale painted map down to near-black (linear). */
-const BLACK_PAINT = new Color3(0.07, 0.066, 0.062);
+const BLACK_PAINT = new Color3(0.14, 0.125, 0.105);
 
 /** The shrine's ancestral effigy seen upright in the forest and house.
  * Baked anatomical geometry, inset eyes, weathered paint and woven cotton are
@@ -25,6 +26,7 @@ export class ShadowFigure {
   readonly meshes: Mesh[];
   private readonly posture: TransformNode;
   private readonly fades: { mesh: Mesh; plugin: DitheredTileFadeMaterialPlugin }[] = [];
+  private readonly gestures = new Map<string, MorphTarget[]>();
 
   /** Load once before constructing the three encounter forms. Clones share GPU assets. */
   static async prepare(scene: Scene): Promise<void> {
@@ -46,9 +48,18 @@ export class ShadowFigure {
             // The apparition is the black Neak Ta: the shrine statues' mineral paint
             // darkened to soot-black lacquer, its mottling and relief kept, with a
             // dull sheen so the lamp still finds the face. The chalk eyes stay pale.
-            if (material.name === "M_ancestor_painted_mineral") {
+            if (/^M_(ancestor_painted_mineral|neakta_worn_skin)$/.test(material.name)) {
               material.albedoColor = BLACK_PAINT.clone();
-              material.roughness = 0.58;
+              material.roughness = 0.72;
+              if (material.bumpTexture) material.bumpTexture.level = 1.05;
+            }
+            if (material.name === "M_ancestor_chalk_eye") {
+              material.albedoColor = new Color3(0.21, 0.19, 0.13);
+              material.roughness = 0.32;
+            }
+            if (/cotton/.test(material.name)) {
+              material.albedoColor = new Color3(0.55, 0.5, 0.43);
+              material.roughness = 0.88;
             }
             // Coverage changes stay opaque and keep depth / prepass outputs coherent.
             // The plugin uses per-mesh uniforms, so the three forms remain independent.
@@ -97,6 +108,18 @@ export class ShadowFigure {
     for (const mesh of this.meshes) {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
+      const manager = mesh.morphTargetManager;
+      if (manager) {
+        // Reserve all five influences during loading: a head turn must never
+        // trigger shader compilation in the middle of an encounter.
+        manager.numMaxInfluencers = 5;
+        for (let i = 0; i < manager.numTargets; i++) {
+          const target = manager.getTarget(i);
+          const targets = this.gestures.get(target.name) ?? [];
+          targets.push(target);
+          this.gestures.set(target.name, targets);
+        }
+      }
       if (mesh.getTotalVertices() > 0 && mesh.material instanceof PBRMaterial)
         this.fades.push({
           mesh,
@@ -122,10 +145,22 @@ export class ShadowFigure {
     for (const { mesh, plugin } of this.fades) plugin.setFadeBounds(mesh, 0, coverage);
   }
 
-  /** A nearly still, weighted lean. The effigy never floats above its foot pivot. */
-  animate(seconds: number, travel = 0): void {
-    this.posture.rotation.z = Math.sin(seconds * 0.29 + 0.8) * (0.002 + travel * 0.003);
-    this.posture.rotation.x = Math.sin(seconds * 0.37) * 0.002;
+  /** Grounded weight shifts, opposed arms and a delayed, half-finished head turn. */
+  animate(seconds: number, travel = 0, attention = 0): void {
+    const moving = Math.max(0, Math.min(1, travel));
+    const stride = seconds * 3.7;
+    this.posture.rotation.z = Math.sin(stride) * moving * 0.012;
+    this.posture.rotation.x = 0.014 * moving + Math.sin(seconds * 1.6) * 0.003;
+    this.posture.position.y = -Math.abs(Math.sin(stride)) * moving * 0.009;
+    const weights: Record<string, number> = {
+      inhale: 0.5 + 0.5 * Math.sin(seconds * 1.55),
+      head_turn: Math.max(-1, Math.min(1, attention + Math.sin(seconds * 0.43) * 0.35)),
+      stride_left: Math.max(0, Math.sin(stride)) * moving,
+      stride_right: Math.max(0, -Math.sin(stride)) * moving,
+      clutch: (0.5 + 0.5 * Math.sin(seconds * 0.71 + 1.8)) * (moving ? 0.35 : 0.8),
+    };
+    for (const [name, targets] of this.gestures)
+      for (const target of targets) target.influence = weights[name] ?? 0;
   }
 
   dispose(): void {

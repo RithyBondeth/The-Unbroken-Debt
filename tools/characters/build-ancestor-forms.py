@@ -7,11 +7,15 @@ from mathutils import Vector
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'tools/characters'))
 from ancestor_forms import build_effigy
+from ancestor_motion import prepare_standing, standing_surface
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 sets={}
 for name,seated,variant in [('ancestor_shadow',False,0),('ancestor_seated_a',True,0),('ancestor_seated_b',True,1)]:
     before=set(bpy.data.objects)
     parts=build_effigy(name,seated,variant)
+    if not seated:
+        prepare_standing(parts)
+        standing_surface(parts)
     coll=bpy.data.collections.new(name);bpy.context.scene.collection.children.link(coll)
     for o in parts:
         for c in list(o.users_collection):c.objects.unlink(o)
@@ -27,7 +31,7 @@ for name,parts in sets.items():
     bpy.ops.object.select_all(action='DESELECT')
     for o in parts:o.select_set(True)
     out=ROOT/'art-export/ep1/neakta_shadow.glb' if name=='ancestor_shadow' else ROOT/f'art-export/{name}.glb'
-    bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',use_selection=True,export_yup=True,export_apply=True,export_extras=True,export_cameras=False,export_lights=False)
+    bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',use_selection=True,export_yup=True,export_apply=name!='ancestor_shadow',export_extras=True,export_cameras=False,export_lights=False)
 # Neutral, well-lit inspection exposes any modelling problems before night grading.
 for o in bpy.data.objects:
     if o.type=='MESH':o.hide_render=o not in sets['ancestor_shadow']

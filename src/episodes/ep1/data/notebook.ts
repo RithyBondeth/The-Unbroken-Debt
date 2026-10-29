@@ -57,10 +57,10 @@ export function currentObjective(f: Flags, items: Inventory): Objective {
       tasks,
     );
   }
-  if (yes("ep1.early.required") && !yes("ep1.early.complete"))
+  if (yes("ep1.early.started") && !yes("ep1.early.complete") && !yes("ep1.act2.started"))
     return objective(
-      "Reach the funeral courtyard",
-      "A figure patrols the path. Crouch with C, stay behind solid cover and put out the lamp with F if it sees the light. Wait for its footsteps to move away.",
+      "Keep the vigil in darkness",
+      "A listening figure is crossing the gate. Put out the lamp with F, crouch with C and let its footsteps pass. If it notices you, break its view behind the pavilion.",
     );
   if (yes("ep1.seal1.broken"))
     return objective(

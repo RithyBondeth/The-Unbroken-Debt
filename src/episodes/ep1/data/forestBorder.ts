@@ -1,4 +1,5 @@
 import { seededRandom } from "../../../audio/synth";
+import { inSaveShrineClearing } from "./saveShrine";
 
 /**
  * The forest round the village's authored ground, and where Sora's walk ends.
@@ -321,6 +322,7 @@ export function inBelt(x: number, z: number): boolean {
 
 /** Fixed clearances every layout respects: the yard, path, pond and wells. */
 export function openGround(x: number, z: number, radius: number): boolean {
+  if (inSaveShrineClearing(x, z, radius)) return false;
   if (inside(YARD, x, z, -(1.2 + radius))) return false;
   if (pathDistance(x, z) < 2.2 + radius) return false;
   if (

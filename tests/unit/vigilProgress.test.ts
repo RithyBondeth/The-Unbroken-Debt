@@ -15,6 +15,8 @@ describe("Act I handover", () => {
     flags.set("ep1.betel.done", true);
     expect(progress.ready(false, true)).toBe(false);
     expect(progress.ready(true, false)).toBe(false);
+    expect(progress.ready(true, true)).toBe(false);
+    flags.set("ep1.early.complete", true);
     expect(progress.ready(true, true)).toBe(true);
     flags.set("ep1.act2.started", true);
     expect(progress.ready(true, true)).toBe(false);
@@ -24,6 +26,7 @@ describe("Act I handover", () => {
     const flags = new Flags();
     flags.set("ep1.vigil.started", true);
     flags.set("ep1.betel.done", true);
+    flags.set("ep1.early.complete", true);
     const progress = new VigilProgress(flags, 660);
     const incense = new Upkeep("incense", { duration: 660, warnings: [0.25, 0.1] });
     for (let k = 0; k < 3; k++) {

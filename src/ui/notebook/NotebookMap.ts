@@ -1,5 +1,5 @@
+import { SAVE_SHRINE_POSITION, SAVE_SHRINE_ROUTE } from "../../episodes/ep1/data/saveShrine";
 import { PATH } from "../../episodes/ep1/data/forestBorder";
-import { ROAD_COVER } from "../../episodes/ep1/act1/EarlyStealthBrain";
 
 export type MapShape =
   | { kind: "rect"; x: number; y: number; w: number; h: number; walls?: boolean; detail?: boolean }
@@ -158,21 +158,36 @@ export function notebookMap(
     );
     rect(-1, -4, 7, 8, true);
     label(3, -7.5, "Courtyard");
-    label(3, 8, "Safe checkpoint");
-    ROAD_COVER.forEach((r, i) => {
-      rect(r.minZ, -r.maxX, r.maxZ - r.minZ, r.maxX - r.minX);
-      label((r.minZ + r.maxZ) / 2, -6, `Cover ${3 - i}`);
-    });
+    label(3, 8, "House & save shrine");
+    label(37, -6, "Wayside shrine");
     label(60, -6, "Taxi");
     label(58, 8, "Flooded road");
     shapes.push({ kind: "you", x: at.z, y: -at.x || 0, r: 0.55 });
     description =
-      "Follow the path left toward the funeral courtyard. Solid rectangles are carts you can crouch behind. The red dot is you; the presence is not shown.";
+      "Follow the path past the wayside shrine toward the lit funeral courtyard. The red dot marks your position; the phra phum beyond the front-right corner of the compound fence lets you save progress.";
   } else {
-    bounds = [-16, -11, 40, 22];
+    bounds = [-16, -18, 40, 34];
     bindingOffset = -24;
     labelSize = 0.95;
     title = "Village · House of mourning";
+    for (const points of [
+      [
+        [-13, 3],
+        [-1.6, 3],
+      ],
+      [
+        [1.6, 3],
+        [13, 3],
+      ],
+      [
+        [-13, 3],
+        [-13, -22],
+        [13, -22],
+        [13, 3],
+      ],
+    ])
+      path(points, "detail");
+    path([[0, 3], ...SAVE_SHRINE_ROUTE.map((at) => [at.x, at.z])], "path");
     rect(-6, -19, 12, 8, true);
     label(0, -21, "HOUSE · upper floor");
     path([
@@ -190,7 +205,7 @@ export function notebookMap(
     rect(-4, -7, 8, 6, true);
     label(0, -5.4, "FUNERAL TENT");
     label(0, -3.4, "Coffin / burner");
-    label(-5.1, 1.4, "✦ Safe desk");
+    label(SAVE_SHRINE_POSITION.x, SAVE_SHRINE_POSITION.z, "✦ Spirit house");
     label(0, 5, "Courtyard");
     path(
       [
@@ -234,11 +249,11 @@ export function notebookMap(
     label(10.5, 2.5, "Stairs");
     label(4, -5.3, "FUNERAL TENT");
     label(4, 2.8, "Coffin / burner");
-    label(-1.4, -7.4, "✦ Safe desk");
+    label(-SAVE_SHRINE_POSITION.z, SAVE_SHRINE_POSITION.x - 1.3, "✦ Spirit house");
     label(-5, -2.8, "Courtyard");
     label(-9, 3.3, "← Path to taxi");
     description =
-      "The house is on the right; the path to the taxi is on the left. The red dot is you; a star marks the safe desk. The house plan shows the upper floor. Stairs face the courtyard; storage and water jars are beneath the house.";
+      "The house is on the right; the path to the taxi is on the left. The red dot is you; a star marks the save shrine beyond the front-right corner of the compound fence. Leave through the front gate and follow the fence outside to the right. The house plan shows the upper floor. Stairs face the courtyard; storage and water jars are beneath the house.";
   }
   return { title, bounds, labelSize, bindingOffset, shapes, description };
 }

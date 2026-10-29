@@ -6,22 +6,16 @@ export interface CoverRect {
   minZ: number;
   maxZ: number;
 }
-export const ROAD_COVER: readonly CoverRect[] = [
-  { minX: -3.6, maxX: -1.7, minZ: 48, maxZ: 49.3 },
-  { minX: -0.25, maxX: 1.7, minZ: 37.7, maxZ: 39 },
-  { minX: 0.1, maxX: 1.9, minZ: 28.7, maxZ: 30 },
-];
 const PATROL = [
-  new Vector3(-0.3, 0, 44),
-  new Vector3(-0.6, 0, 46.2),
-  new Vector3(2.9, 0, 35.8),
-  new Vector3(2.3, 0, 23),
-  new Vector3(-0.8, 0, 35),
+  new Vector3(-1.8, 0, 22),
+  new Vector3(-1.8, 0, 12),
+  new Vector3(2.8, 0, 12),
+  new Vector3(2.8, 0, 24),
 ];
 
 /** Visibility graph around solid cover. Every returned segment clears the actor's capsule. */
 export class RoadNavigation {
-  constructor(readonly obstacles: readonly CoverRect[] = ROAD_COVER) {}
+  constructor(readonly obstacles: readonly CoverRect[] = []) {}
   clear(a: Vector3, b: Vector3): boolean {
     const steps = Math.max(1, Math.ceil(Vector3.Distance(a, b) / 0.1));
     for (let i = 0; i <= steps; i++) {
@@ -84,9 +78,8 @@ export class RoadNavigation {
 }
 
 export class EarlyStealthBrain {
-  readonly position = PATROL[0].clone();
+  readonly position: Vector3;
   readonly direction = new Vector3(0, 0, 1);
-  readonly navigation = new RoadNavigation();
   state: "patrol" | "investigate" | "chase" | "search" | "caught" = "patrol";
   suspicion = 0;
   elapsed = 0;
@@ -96,6 +89,13 @@ export class EarlyStealthBrain {
   private routeIn = 0;
   private route: Vector3[] = [];
   private readonly lastKnown = new Vector3();
+
+  constructor(
+    private readonly patrolPoints: readonly Vector3[] = PATROL,
+    readonly navigation = new RoadNavigation(),
+  ) {
+    this.position = patrolPoints[0].clone();
+  }
 
   hear(at: Vector3, loudness: number): void {
     if (
@@ -163,12 +163,12 @@ export class EarlyStealthBrain {
         return;
       }
     }
-    const target = this.state === "patrol" ? PATROL[this.patrol] : this.lastKnown;
+    const target = this.state === "patrol" ? this.patrolPoints[this.patrol] : this.lastKnown;
     if (Vector3.Distance(this.position, target) < 0.3) {
       if (this.state === "patrol") {
         this.wait -= dt;
         if (this.wait <= 0) {
-          this.patrol = (this.patrol + 1) % PATROL.length;
+          this.patrol = (this.patrol + 1) % this.patrolPoints.length;
           this.wait = 1.8;
           this.routeIn = 0;
         }

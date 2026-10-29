@@ -181,7 +181,7 @@ export async function showWelcomeScreen(root: HTMLElement): Promise<WelcomeSetti
           case "controls":
             open(
               "How to play",
-              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / record at a safe writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape releases it.</p>`,
+              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / save at a spirit house or writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape releases it.</p>`,
             );
             break;
           case "credits":

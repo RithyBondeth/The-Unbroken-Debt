@@ -458,7 +458,9 @@ export class Game {
     const last = this.checkpoints.last;
     const checkpoint = last
       ? `Last checkpoint: ${String(last.flags["checkpoint.location"] ?? last.checkpoint)} · ${last.clock}`
-      : "Your first checkpoint will be recorded at the writing desk.";
+      : this.flags.get("ep1.checkpoint", "CP0") === "CP0"
+        ? "Your first checkpoint will be recorded at the writing desk."
+        : "Save at the spirit house beyond the front-right corner of the compound fence. Reach it from the front gate.";
     return buildNotebookContent(
       this.flags,
       this.inventory,

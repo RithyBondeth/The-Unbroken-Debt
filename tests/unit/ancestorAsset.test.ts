@@ -30,7 +30,7 @@ describe("authored ancestral effigy asset", () => {
     expect(primitive.getAttribute("NORMAL")).toBeTruthy();
     expect(primitive.getAttribute("TEXCOORD_0")).toBeTruthy();
     const mats = asset.getRoot().listMaterials();
-    for (const pattern of [/painted_mineral/, /saffron_cotton/, /earth_cotton/]) {
+    for (const pattern of [/worn_skin/, /saffron_cotton/, /earth_cotton/]) {
       const mat = mats.find((m) => pattern.test(m.getName()))!;
       expect(mat.getBaseColorTexture()).toBeTruthy();
       expect(mat.getNormalTexture()).toBeTruthy();
@@ -42,7 +42,31 @@ describe("authored ancestral effigy asset", () => {
         .filter((n) => n.getName().includes("inset_eye")),
     ).toHaveLength(2);
   });
-  it("uses baked poses and cloth without live skeleton or cloth simulation", () => {
+  it("has bounded articulated gestures on the body, cloth and inset eyes", () => {
+    for (const mesh of asset.getRoot().listMeshes()) {
+      const names = mesh.getExtras().targetNames as string[];
+      expect(names).toEqual(["inhale", "head_turn", "stride_left", "stride_right", "clutch"]);
+      for (const primitive of mesh.listPrimitives()) {
+        expect(primitive.listTargets()).toHaveLength(5);
+        for (const target of primitive.listTargets()) {
+          const positions = target.getAttribute("POSITION")!;
+          const delta: number[] = [];
+          let finite = true,
+            maxDisplacement = 0;
+          for (let i = 0; i < positions.getCount(); i++) {
+            positions.getElement(i, delta);
+            for (const component of delta) {
+              finite &&= Number.isFinite(component);
+              maxDisplacement = Math.max(maxDisplacement, Math.abs(component));
+            }
+          }
+          expect(finite).toBe(true);
+          expect(maxDisplacement).toBeLessThan(0.25);
+        }
+      }
+    }
+  });
+  it("uses baked gestures and cloth without live skeleton or cloth simulation", () => {
     expect(asset.getRoot().listSkins()).toHaveLength(0);
     expect(asset.getRoot().listAnimations()).toHaveLength(0);
     expect(asset.getRoot().listMeshes().length).toBeLessThan(14);

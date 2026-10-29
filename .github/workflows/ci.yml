@@ -21,7 +21,7 @@ jobs:
           lfs: false
 
       - name: Fetch character and taxi geometry for asset regression tests
-        run: git lfs pull --include="public/assets/ep1/sok_corpse.glb,public/assets/ep1/neakta_shadow.glb,public/assets/ep1/ep1_taxi_cabin.glb,public/assets/ep1/ep1_taxi_roadside.glb" --exclude=""
+        run: git lfs pull --include="public/assets/ep1/sok_corpse.glb,public/assets/ep1/neakta_shadow.glb,public/assets/ep1/phra_phum_effigy.glb,public/assets/ep1/ep1_taxi_cabin.glb,public/assets/ep1/ep1_taxi_roadside.glb" --exclude=""
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
