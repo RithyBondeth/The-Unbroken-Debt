@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { EarlyStealthBrain, RoadNavigation } from "../../src/episodes/ep1/act1/EarlyStealthBrain";
-describe("roadside stealth", () => {
+describe("listening presence and navigation", () => {
   it("requires both real line of sight and sustained exposure; cover blocks a catch", () => {
     const b = new EarlyStealthBrain(),
       player = b.position.add(new Vector3(0, 0, 3));
@@ -39,8 +39,8 @@ describe("roadside stealth", () => {
     for (let i = 0; i < 400; i++) b.update(0.025, player, false, true, false);
     expect(b.state).toBe("patrol");
   });
-  it("routes around the same solid cart bounds that block Sora", () => {
-    const n = new RoadNavigation(),
+  it("routes around supplied solid cover bounds", () => {
+    const n = new RoadNavigation([{ minX: -3.6, maxX: -1.7, minZ: 48, maxZ: 49.3 }]),
       from = new Vector3(-2.6, 0, 51),
       to = new Vector3(-2.6, 0, 46);
     expect(n.clear(from, to)).toBe(false);
@@ -52,5 +52,15 @@ describe("roadside stealth", () => {
       last = next;
     }
     expect(last.equals(to)).toBe(true);
+  });
+  it("keeps the later patrol on the open gate path without phantom cart colliders", () => {
+    const b = new EarlyStealthBrain();
+    for (let i = 0; i < 1500; i++) {
+      b.update(0.025, new Vector3(0, 0, -2), false, true, true);
+      expect(b.position.z).toBeGreaterThanOrEqual(11.7);
+      expect(b.position.z).toBeLessThanOrEqual(24.3);
+      expect(b.state).toBe("patrol");
+    }
+    expect(b.navigation.obstacles).toHaveLength(0);
   });
 });

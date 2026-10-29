@@ -76,7 +76,7 @@ export class StalkerVoice {
    * Keeps its breath on it while it is out (`feet`), quickening and louder as
    * `urgency` goes from 0 (walking) to 1 (chasing); null stops it.
    */
-  breathe(feet: Vector3 | null, urgency = 0): void {
+  breathe(feet: Vector3 | null, urgency = 0, presence = 1): void {
     const breath = this.breath;
     if (!breath) return;
     if (!feet) {
@@ -85,7 +85,7 @@ export class StalkerVoice {
       return;
     }
     breath.spatial.position = feet.add(new Vector3(0, HEAD, 0));
-    breath.volume = this.volume * (0.7 + 0.5 * urgency);
+    breath.volume = this.volume * (0.7 + 0.5 * urgency) * Math.max(0, Math.min(1, presence));
     breath.playbackRate = 1 + 0.35 * urgency;
     if (!this.breathing) breath.play();
     this.breathing = true;

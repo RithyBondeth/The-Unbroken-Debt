@@ -159,13 +159,10 @@ async function preview(): Promise<void> {
       status.setAttribute("role", "status");
       setControlText(
         status,
-        "Reach the lit funeral courtyard.\nHold C to crouch behind the carts. F puts out your lamp. Avoid its gaze.",
+        "Footsteps at the gate. F puts out the lamp.\nStay beneath the pavilion. Hold C and let it pass.",
       );
       document.body.append(status);
-      new Subtitles().show(
-        "Sora",
-        "Someone’s on the path. I can get past while it’s looking away.",
-      );
+      new Subtitles().show("Sora", "Those footsteps… Keep the lamp out. Let it pass.");
       break;
     }
     default: {

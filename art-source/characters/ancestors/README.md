@@ -1,16 +1,17 @@
 # Ancestral guardian forms
 
-Original forms guided by the four village-shrine photographs supplied by the user: aged seated human figures, faded green mineral paint, charcoal facial details, saffron cotton and accumulated weathering. The standing apparition shares the same sculpted face and material treatment as the seated shrine figures. The primary face has a contracted lower brow, firm jaw and downturned mouth; it is an angry, still effigy.
+Original forms guided by the four village-shrine photographs supplied by the user: aged seated human figures, faded green mineral paint, charcoal facial details, saffron cotton and accumulated weathering. The standing apparition keeps their facial identity, with hollow cheeks and temples, aged skin under worn pigment, a contracted brow and downturned mouth.
 
 - Editable source: `ancestor-forms.blend`, with packed maps and three named collections.
 - Runtime standing form: `public/assets/ep1/neakta_shadow.glb`, foot origin, facing +Z in Babylon, height 2.5 metres. The encounter scales it to 2.3 / 1.87 metres where required.
 - Seated forms: appended from this source by `tools/areas/shrine.py` into the authored village. The larger statue retains `neakta_stone_watch` and its offscreen turning behaviour.
 - Anatomical face, ears, hands and fingers are modelled geometry. The eyes are inset behind eyelids. Mineral paint and fine surface relief are image-backed. Lap cloth is settled against anatomical collision geometry and a stone-seat support, then baked; the game runs no cloth or skeleton simulation.
-- Three encounters share one loaded asset and its GPU geometry/materials. All forms remain non-pickable.
+- Four encounter forms share one loaded asset and its GPU geometry/materials. Morph managers are independent per form. All forms remain non-pickable.
 - The standing apparition is the **black Neak Ta** (user direction, 26 October 2026). `ShadowFigure.prepare`
-  multiplies the shared mineral paint down to soot-black lacquer, keeping its mottling and relief, with a dull
-  sheen so the lamp still finds the face. The chalk eyes and the cotton are unchanged. The seated shrine
+  darkens its dedicated worn-skin material to soot black, keeping aged skin, pores, forehead creases and
+  worn pigment legible in the lamp. Inset eyes have a muted yellow cast and dull wet reflection; the cotton is damp and darkened. The seated shrine
   statues in the village keep their pale paint, because only the encounter asset is darkened.
+- Five authored morphs move the chest, head, arms, feet and cloth: `inhale`, `head_turn`, `stride_left`, `stride_right`, `clutch`. They retain a foot pivot and bounded displacement without a live skeleton or cloth simulation. The gate encounter eases body turns and stops stepping sounds when movement stops. The shrine manifestation has time to resolve and make a slow head turn before receding.
 
 ## Rebuild
 
@@ -26,6 +27,8 @@ node tools/areas/update-shrine-glb.mjs public/assets/ep1/ep1_area_village.glb /t
 For a production asset pass, compress the focused shrine export before merging, using the same KTX2/meshopt steps as `tools/build-assets.mjs`. The merge preserves unrelated village geometry and compressed materials. The full village builder calls the same shrine functions.
 
 Paint maps are cached in this directory. Delete `effigy-painted-BC.png` and `effigy-painted-N.png` before rebuilding if editing the spatial paint recipe. The build writes neutral inspection renders to `/tmp/ancestor-standing-inspection.png` and `/tmp/ancestor-seated-inspection.png`.
+
+For a focused upgrade of an older source, run Blender with `ancestor-forms.blend` and `-P tools/characters/upgrade-neakta.py`, then `npm run assets -- ep1/neakta_shadow.glb`. `ancestor_motion.py` supplies the same sculpt, morphs and skin baking to both builds. `neakta-skin-BC.png` and `neakta-skin-N.png` are packed into the source and exported asset. The focused upgrade is idempotent; changes to the sculpt or skin recipe should be regenerated with the full build.
 
 ## Provenance
 

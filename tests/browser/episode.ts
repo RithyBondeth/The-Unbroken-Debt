@@ -274,47 +274,7 @@ async function run() {
   assert(act.vigil.lamp.oil >= 0.49, `${cp} guarantees half a tank on reload`);
   if (step === "act1") {
     assert(cp === "CP1" && game.inventory.count("matches") === 10, "CP1 retains the prologue kit");
-    if (act.early.required) {
-      await wait(() => act.early.active, "early encounter begins");
-      if (!sessionStorage.getItem("journey-road-caught")) {
-        game.inventory.add("qa_transient");
-        game.flags.set("qa.afterCheckpoint", true);
-        game.player.teleport(
-          act.early.brain.position.add(act.early.brain.direction.scale(0.6)),
-          Math.PI,
-        );
-        await wait(() => act.early.brain.state === "caught", "road watcher sees and catches Sora");
-        sessionStorage.setItem("journey-road-caught", "1");
-        await button("Retry checkpoint");
-        return;
-      }
-      assert(
-        !game.inventory.has("qa_transient") && !game.flags.get("qa.afterCheckpoint", false),
-        "death restores the road snapshot without post-save changes",
-      );
-      assert(
-        game.flags.get("ep1.travel.complete", false) &&
-          !game.flags.get("ep1.travel.pending", false),
-        "road death does not replay the taxi",
-      );
-      game.player.teleport(new Vector3(-2.65, 0, 50.1), Math.PI);
-      key("KeyC");
-      await wait(
-        () => game.player.stance === "crouch" && !act.early.canSeeSora(),
-        "crouched cover blocks real sight ray",
-      );
-      report("PASS crouching behind the solid cart blocks the watcher’s sight");
-      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" }));
-      game.player.teleport(new Vector3(0, 0, 6), Math.PI);
-      await wait(
-        () => game.flags.get("ep1.early.complete", false) && !act.early.active,
-        "courtyard checkpoint",
-      );
-      assert(
-        game.checkpoints.last?.flags["ep1.early.complete"] === true,
-        "safe courtyard saves encounter completion",
-      );
-    }
+    assert(!act.early.active && !game.threatActive, "arrival has no chase or cart obstacle");
     await new SaveStore(undefined, "boon-sop-journey-CP1").save("slot1", game.resumedSave!);
     key("KeyF");
     await wait(() => act.vigil.lamp.burning, "first lamp match");
@@ -378,6 +338,16 @@ async function run() {
     act.beats.progress.update(660);
     await free();
     game.player.teleport(new Vector3(0, 0, -2), Math.PI);
+    await wait(() => act.early.active, "listening passage after the vigil");
+    if (act.vigil.lamp.burning) key("KeyF");
+    key("KeyC");
+    await wait(
+      () => game.flags.get("ep1.early.complete", false) && !act.early.active,
+      "presence passes the gate",
+      60000,
+    );
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" }));
+    assert(game.checkpoints.last?.flags["ep1.early.complete"] === true, "passage completion saved");
     await wait(() => game.flags.get("ep1.sok.unlocked", false) && !game.cutscene, "Act II opening");
     await checkpoint("CP2", "investigate");
     return;

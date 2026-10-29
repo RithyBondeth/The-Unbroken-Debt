@@ -301,6 +301,11 @@ The figure is authored in `art-source/characters/ancestors/ancestor-forms.blend`
 see its README for sources and rebuild commands. The shrine review also has an
 **Ancestral figures** view.
 
+The standing form has five independent gesture morphs, aged skin beneath dark pigment,
+and damp cotton. The face view animates the same head, chest and arm poses used
+by the encounters. Add `&landscape` for a landscape review in a narrow panel;
+the capture button saves at 1600 × 1000.
+
 The figure has a foot origin and faces +Z. Walker and roamer navigation retain
 their existing roots; the forest form fixes its facing when it appears. Only
 the projected lightning shadow uses an alpha image. Regenerate it with
@@ -344,6 +349,17 @@ See `docs/production/taxi-realism.md` for asset sources and rebuild commands.
 ## Listening screen
 
 Open `/tests/browser/entry.html` for an isolated preview of the headphone recommendation and Enter prompt. It uses the real entry screen, audio activation and pointer-capture code without loading the game or touching saves. Press Enter; the result verifies single activation, focus restoration and listener cleanup, then shows a normal story card. Use **Preview again** to repeat.
+
+## Phra phum save point
+
+For the shrine outside the front-right compound fence, open `/tests/browser/save-shrine.html?start=act1`.
+The view starts silently; **Listen with sound** loads the normal audio entry
+screen. **Pay respects · Save** uses the real interaction ray. **Roof & carvings** inspects the solid shingles and chisel relief. **Walk from
+gate** uses the real controller to check the outside approach. **Verify save
+safety** walks that route and checks saving, threat blocking, a rejected write and retry. **Reload
+checkpoint** checks the saved location and spawn. Writes use the isolated
+`boon-sop-phra-phum-review` database. Captures go to
+`debug-shots/phra-phum-<view>.png` at 1600 × 1000.
 
 ## Shared text system
 

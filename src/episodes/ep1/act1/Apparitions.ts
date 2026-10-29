@@ -19,6 +19,7 @@ import type { VillageLights } from "./VillageLights";
 import type { Vigil } from "./Vigil";
 import { ShadowFigure } from "../entities/ShadowFigure";
 import { SpiritPresence } from "../entities/SpiritPresence";
+import { StalkerVoice } from "../audio/StalkerVoice";
 
 /** Blender (x east, y north, z up) to Babylon. */
 const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
@@ -103,6 +104,8 @@ export class Apparitions {
   private readonly figure: Mesh;
   private readonly form: ShadowFigure;
   private readonly presence = new SpiritPresence();
+  private readonly voice = new StalkerVoice(0.32);
+  private attention = 0;
   private shrineGlow = false;
   private readonly glow: PointLight;
   private readonly cloth: Mesh;
@@ -205,8 +208,9 @@ export class Apparitions {
     const audio = this.game.audio;
     if (!audio) return;
     const rate = audio.context.sampleRate;
+    await this.voice.load(audio, "shrine_presence", 2260);
     const one = (name: string, samples: Float32Array, minDistance: number) =>
-      audio.spatialSound(name, audio.buffer(samples, rate), "sfx", Vector3.Zero(), {
+      audio.spatialSound(name, audio.buffer(samples, rate), "threat", Vector3.Zero(), {
         minDistance,
         maxDistance: 50,
       });
@@ -252,14 +256,26 @@ export class Apparitions {
       this.vanish(true);
       this.cloth.setEnabled(false);
       this.follower = null;
+      this.voice.stop();
       return;
     }
     this.time += dt;
-    this.form.animate(this.time);
     const t = this.time;
     const camera = this.game.camera;
     this.eye.copyFrom(camera.globalPosition);
     camera.getDirectionToRef(Axis.Z, this.forward);
+    if (this.standing) {
+      const want = Math.atan2(
+        this.eye.x - this.figure.position.x,
+        this.eye.z - this.figure.position.z,
+      );
+      const error = Math.atan2(
+        Math.sin(want - this.figure.rotation.y),
+        Math.cos(want - this.figure.rotation.y),
+      );
+      this.attention += (-error / 0.32 - this.attention) * (1 - Math.exp(-dt * 1.4));
+    }
+    this.form.animate(this.time, 0, this.attention);
     const bx = -this.eye.x,
       by = -this.eye.z;
 
@@ -283,6 +299,7 @@ export class Apparitions {
     this.presence.update(dt);
     this.form.setPresence(this.presence.value);
     this.figure.setEnabled(this.presence.visible);
+    this.voice.breathe(this.presence.visible ? this.figure.position : null, 0, this.presence.value);
     this.glow.intensity = this.shrineGlow ? 4 * this.presence.value : 0;
     if (this.follower && (t > this.follower.until || t - this.follower.lastStep > 0.7)) {
       // She has stopped: one more step behind her, then nothing.
@@ -308,9 +325,9 @@ export class Apparitions {
 
   private startShrine(): void {
     this.stand(SHRINE_SPOT, {
-      lookFor: 0.35,
+      lookFor: 1.8,
       inView: false,
-      near: 5,
+      near: 3.8,
       wait: 40,
       sound: this.sounds.vanish,
       scare: true,
@@ -325,9 +342,9 @@ export class Apparitions {
     const spot = at(0.9, -9.5);
     if (Vector3.Distance(spot, this.eye) < 9) return;
     this.stand(spot, {
-      lookFor: 2,
+      lookFor: 3.2,
       inView: true,
-      near: 7,
+      near: 5.5,
       wait: 25,
       sound: this.sounds.breath,
       scare: false,
@@ -338,7 +355,8 @@ export class Apparitions {
   private stand(spot: Vector3, how: Omit<Standing, "start" | "seenFor">): void {
     spot.y = this.ground();
     this.figure.position.copyFrom(spot);
-    this.figure.rotation.y = Math.atan2(this.eye.x - spot.x, this.eye.z - spot.z);
+    this.figure.rotation.y = Math.atan2(this.eye.x - spot.x, this.eye.z - spot.z) + 0.24;
+    this.attention = 0;
     this.shrineGlow = false;
     this.presence.show();
     this.form.setPresence(0);
@@ -478,6 +496,7 @@ export class Apparitions {
   }
 
   dispose(): void {
+    this.voice.stop();
     this.form.dispose();
     this.cloth.dispose(false, true);
     this.glow.dispose();
