@@ -142,11 +142,16 @@ export class Vigil {
 
   update(dt: number): void {
     const game = this.game;
+    // A1-11b prevents tending the burners. Its forced waiting time must not
+    // consume the player's incense grace period or create a respect penalty.
+    const passage =
+      game.flags.get("ep1.early.started", false) && !game.flags.get("ep1.early.complete", false);
     this.time += dt;
     this.lamp.update(dt);
     if (!this.lamp.burning) this.raising = false;
     if (
       game.flags.get("ep1.vigil.started", false) &&
+      !passage &&
       !game.flags.get("ep1.ritual.tokenPlaced", false)
     )
       this.incense.update(dt);
@@ -178,6 +183,7 @@ export class Vigil {
     if (this.whisper) this.whisper.volume = [0, 0.2, 0.45, 0.8][warning];
     if (
       !this.incense.alive &&
+      !passage &&
       !game.flags.get("ep1.ritual.tokenPlaced", false) &&
       !game.flags.get("ep1.incense.scripted", false) &&
       this.incense.outFor >= NEGLECT_SECONDS &&

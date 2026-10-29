@@ -68,11 +68,13 @@ export class NightLife {
   private readonly bats: Bat[] = [];
   private time = 0;
   private nextCall = 6;
+  private presenceQuiet = 0;
   private readonly rand = seededRandom(1932);
 
   constructor(
     private readonly game: Game,
     private readonly area: Area,
+    private readonly localSilence: () => number = () => 0,
   ) {
     const scene = game.scene;
     this.makeBats(scene);
@@ -180,7 +182,13 @@ export class NightLife {
     this.time += dt;
     const t = this.time;
     const volumes = [0.35, 0.35, 0.2, 0.2, 0.2];
-    this.loops.forEach((sound, i) => (sound.volume = volumes[i] * (1 - this.threatSilence)));
+    this.presenceQuiet +=
+      ((this.game.threatActive ? 0.88 : this.localSilence() * 0.85) - this.presenceQuiet) *
+      (1 - Math.exp(-dt / 1.2));
+    this.loops.forEach(
+      (sound, i) =>
+        (sound.volume = volumes[i] * (1 - Math.max(this.threatSilence, this.presenceQuiet))),
+    );
     for (const bat of this.bats) {
       const a = t * bat.speed + bat.phase;
       bat.node.position.set(
@@ -193,7 +201,13 @@ export class NightLife {
       bat.wings[0].rotation.z = flap;
       bat.wings[1].rotation.z = -flap;
     }
-    if (this.threatSilence === 0 && t >= this.nextCall && this.calls.length) {
+    if (
+      this.threatSilence === 0 &&
+      !this.game.threatActive &&
+      this.localSilence() < 0.1 &&
+      t >= this.nextCall &&
+      this.calls.length
+    ) {
       const call = this.calls[Math.floor(this.rand() * this.calls.length)];
       call.sound.spatial.position = call.near[Math.floor(this.rand() * call.near.length)].clone();
       call.sound.play();

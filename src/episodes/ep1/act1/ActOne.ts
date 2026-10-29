@@ -43,6 +43,13 @@ import { CorpseModels } from "../act3/CorpseModels";
 import { ChestInvestigation } from "../act3/ChestInvestigation";
 import { EarlyStealth } from "./EarlyStealth";
 import { SavePoint } from "../../../systems/saves/SavePoint";
+import { PhraPhum } from "./PhraPhum";
+import { ShrineEffigy } from "./ShrineEffigy";
+import {
+  SAVE_SHRINE_POSITION,
+  SAVE_SHRINE_LOCATION,
+  inSaveShrineClearing,
+} from "../data/saveShrine";
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
@@ -73,6 +80,7 @@ export class ActOne {
   ritual!: FinalRitual;
   resolution!: DawnResolution;
   early!: EarlyStealth;
+  saveShrine!: PhraPhum;
   private resolutionDelay = 0;
   private running = false;
   private readonly rainAt = new Vector3();
@@ -107,11 +115,26 @@ export class ActOne {
       // The forest's plants are everywhere: batch them in large cells.
       coarse: { pattern: PLANTS, cellSize: 24 },
       // The forest round the village grows from copies of its own plants.
-      beforeBatch: (container) => this.border.capture(container),
+      beforeBatch: (container) => {
+        this.border.capture(container);
+        // Authored low plants predate the shrine. Keep their leaf crowns out
+        // of the roof and the approach, just as the generated forest does.
+        for (const mesh of container.meshes) {
+          if (!/^(banana_\d+|fern_|shrub_|grass_)/.test(mesh.name)) continue;
+          mesh.computeWorldMatrix(true);
+          const box = mesh.getBoundingInfo().boundingBox;
+          const centre = box.centerWorld;
+          const radius = Math.min(2.5, Math.max(box.extendSizeWorld.x, box.extendSizeWorld.z));
+          if (!inSaveShrineClearing(centre.x, centre.z, radius)) continue;
+          mesh.isVisible = false;
+          mesh.isPickable = false;
+          mesh.setEnabled(false);
+        }
+      },
     });
     this.border.build();
     game.fallGuard.bounds = PLAY;
-    await ShadowFigure.prepare(game.scene);
+    await Promise.all([ShadowFigure.prepare(game.scene), ShrineEffigy.prepare(game.scene)]);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
@@ -180,7 +203,7 @@ export class ActOne {
     }
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
-    this.night = new NightLife(game, this.area);
+    this.night = new NightLife(game, this.area, () => this.saveShrine?.silence ?? 0);
     this.soundscape = new Soundscape(game, () => this.night.threatSilence);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
     this.betel = new BetelOffering(game, this.area, offeringModels);
@@ -218,10 +241,11 @@ export class ActOne {
     );
     this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
     this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress());
+    this.saveShrine = new PhraPhum(game, SAVE_SHRINE_POSITION);
     new SavePoint(
       game,
       "interact_save_courtyard",
-      new Vector3(-4.9, 0, 1.4),
+      SAVE_SHRINE_POSITION,
       "COURTYARD",
       async () => {
         const data = this.beats.captureProgress(),
@@ -233,9 +257,10 @@ export class ActOne {
           "checkpoint.spawn.z": feet.z,
           "checkpoint.spawn.yaw": game.player.yaw,
         });
-        await game.checkpoints.mark(data, "Village · Courtyard writing desk");
+        await game.checkpoints.mark(data, SAVE_SHRINE_LOCATION);
       },
-      () => !this.early.required && !game.hiding && !game.flags.get("ep1.seal1.broken", false),
+      () => !this.early.active && !game.hiding && !game.flags.get("ep1.seal1.broken", false),
+      this.saveShrine,
     );
   }
 
@@ -274,7 +299,6 @@ export class ActOne {
     game.cutscene = false;
     this.running = true;
     this.vigil.begin();
-    await this.early.begin();
     await this.beats.begin();
   }
 
@@ -296,6 +320,10 @@ export class ActOne {
         { eye: new Vector3(0, 1.58, 46), target: new Vector3(5, 1.25, 37.2) },
         { eye: new Vector3(0, 1.58, 24), target: new Vector3(0, 1.3, 6) },
         { eye: new Vector3(0, 1.58, 8), target: new Vector3(0, 1.3, -10) },
+        {
+          eye: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.58, 3)),
+          target: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.6, 0)),
+        },
         { eye: new Vector3(0, 1.58, -2), target: new Vector3(0, 1.3, -12) },
         { eye: new Vector3(-1.65, 4.08, -17.05), target: new Vector3(-1.65, 3.65, -13.8) },
         { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
@@ -327,9 +355,9 @@ export class ActOne {
     }
     this.vigil.update(dt);
     this.early.update(dt);
+    this.soundscape.update(dt);
+    this.night.update(dt);
     if (!this.early.active) {
-      this.night.update(dt);
-      this.soundscape.update(dt);
       this.apparitions.update(dt);
       this.betel.update(dt);
       this.beats.update(dt);
@@ -433,5 +461,7 @@ export class ActOne {
     await this.hunt.makeSounds();
     await this.chest.makeSounds();
     await this.ritual.makeSounds();
+    await this.early.makeSounds();
+    await this.saveShrine.makeSounds();
   }
 }

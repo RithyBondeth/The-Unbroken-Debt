@@ -45,6 +45,7 @@ describe("phone arrival", () => {
     const arrival = new ArrivalProgress(flags);
     arrival.finishCall();
     flags.set("ep1.betel.done", true);
+    flags.set("ep1.early.complete", true);
     const vigil = new VigilProgress(flags, 660);
     vigil.update(660);
     expect(vigil.ready(true, true)).toBe(false);
@@ -61,6 +62,8 @@ describe("phone arrival", () => {
     expect(arrival.takeMatches()).toBe(false);
     const vigil = new VigilProgress(flags, 660);
     vigil.update(660);
+    expect(vigil.ready(true, true)).toBe(false);
+    flags.set("ep1.early.complete", true);
     expect(vigil.ready(true, true)).toBe(true);
   });
 });

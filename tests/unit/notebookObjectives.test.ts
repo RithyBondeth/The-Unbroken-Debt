@@ -31,10 +31,12 @@ it("does not confuse placed tray with collected ingredients and transcribes the 
   const notes = notebookClues(new Set(["SB-03b"]));
   expect(notes[0].text).toContain("back: candle");
 });
-it("shows the stealth task only for a new opening until the courtyard is reached", () => {
+it("leaves arrival peaceful and shows the listening passage only after it starts", () => {
   const { flags, items } = setup();
   flags.load({ "ep1.checkpoint": "CP1", "ep1.early.required": true });
-  expect(currentObjective(flags, items).title).toBe("Reach the funeral courtyard");
+  expect(currentObjective(flags, items).title).toBe("Find Mak Yey’s instructions");
+  flags.set("ep1.early.started", true);
+  expect(currentObjective(flags, items).title).toBe("Keep the vigil in darkness");
   flags.set("ep1.early.complete", true);
   expect(currentObjective(flags, items).title).toBe("Find Mak Yey’s instructions");
 });

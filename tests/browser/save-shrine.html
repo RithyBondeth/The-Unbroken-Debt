@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phra phum · Save shrine review</title>
+    <style>
+      .perf-overlay {
+        display: none;
+      }
+    </style>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Phra phum save shrine"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      "
+    >
+      <button id="front">Spirit house</button>
+      <button id="dark">Lamp out</button>
+      <button id="detail">Doorway detail</button>
+      <button id="roof">Roof & carvings</button>
+      <button id="save">Pay respects · Save</button>
+      <button id="walk">Walk from gate</button>
+      <button id="verify">Verify save safety</button>
+      <button id="capture">Save screenshot</button>
+      <a href="?continue">Reload checkpoint</a>
+      <a href="?start=act1&listen">Listen with sound</a>
+    </nav>
+    <output
+      id="results"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 1000;
+        color: #eee;
+        background: #111d;
+        padding: 10px;
+        white-space: pre-wrap;
+      "
+      >Preparing spirit house…</output
+    >
+    <script type="module" src="./save-shrine.ts"></script>
+  </body>
+</html>

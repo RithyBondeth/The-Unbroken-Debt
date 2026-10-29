@@ -38,6 +38,7 @@
   "save.saved": "Progress saved",
   "save.failed": "Progress could not be saved",
   "hint.savePoint": "E to record progress at this safe place",
+  "hint.saveShrine": "E to pay respects at the spirit house and save progress",
   "note.checkpointSaved": "Checkpoint saved. You can return here if you are caught.",
   "hint.lamp": "F to light the lamp (it costs a match)",
   "hint.refill": "Left mouse to pour oil into the lamp",

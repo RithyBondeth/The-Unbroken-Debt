@@ -9,6 +9,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
 import { saveShot } from "../../src/debug/saveShot";
 import type { TaxiRide } from "../../src/episodes/ep1/travel/TaxiRide";
+import { SAVE_SHRINE_POSITION, SAVE_SHRINE_APPROACH } from "../../src/episodes/ep1/data/saveShrine";
 const output = document.getElementById("results")!,
   nav = document.getElementById("controls")!;
 const button = (label: string, action: () => void) => {
@@ -124,12 +125,19 @@ async function boot() {
   button("Reload saved game", () => location.reload());
   const act = (window as unknown as { act?: ActOne }).act;
   if (act) {
-    button("Approach cover", () => {
-      game.player.teleport(new Vector3(-2.65, 0, 50.1), Math.PI);
+    button("Keep the vigil (later obstacle)", () => {
+      for (const flag of [
+        "ep1.vigil.started",
+        "ep1.betel.done",
+        "ep1.incense.cyclePassed",
+        "ep1.arrival.matchesTaken",
+      ])
+        game.flags.set(flag, true);
+      game.player.teleport(new Vector3(0, 0, -2), 0);
       game.player.pitch = 0.05;
     });
     button("Ghost view", () => {
-      game.player.teleport(new Vector3(-0.4, 0, 51), Math.PI);
+      game.player.teleport(new Vector3(0, 0, 17), Math.PI);
       game.player.pitch = 0.02;
     });
     button("Trigger a real catch", () => {
@@ -146,11 +154,11 @@ async function boot() {
       game.gated.holdStill = false;
       game.player.teleport(new Vector3(0, 0, 6), Math.PI);
     });
-    button("Aim safe writing desk", () => {
+    button("Aim phra phum save shrine", () => {
       game.notebook.close();
-      game.player.teleport(new Vector3(-4.9, 0, 2.3), Math.PI);
+      game.player.teleport(SAVE_SHRINE_APPROACH, Math.PI);
       game.scene.onAfterRenderObservable.addOnce(() =>
-        game.inspectObject(new Vector3(-4.9, 0.8, 1.4), 0.25),
+        game.inspectObject(SAVE_SHRINE_POSITION.add(new Vector3(0, 1.55, 0.3)), 0.9),
       );
     });
   }
@@ -158,7 +166,7 @@ async function boot() {
     const feet = game.player.feet,
       last = game.checkpoints.last;
     const road = taxi ? game.scene.meshes.find((m) => m.material?.name === "M_wet_mud") : null;
-    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Early required=${act.early.required} active=${act.early.active} brain=${act.early.brain.state} at=${act.early.brain.position.toString()} time=${act.early.brain.elapsed.toFixed(1)} threat=${game.threatActive} sight=${act.early.canSeeSora()} suspicion=${act.early.brain.suspicion.toFixed(2)} · courtyard=${game.flags.get("ep1.early.complete", false)}` : ""}`;
+    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Passage required=${act.early.required} active=${act.early.active} brain=${act.early.brain.state} at=${act.early.brain.position.toString()} time=${act.early.brain.elapsed.toFixed(1)} threat=${game.threatActive} sight=${act.early.canSeeSora()} suspicion=${act.early.brain.suspicion.toFixed(2)} · passage survived=${game.flags.get("ep1.early.complete", false)}` : ""}`;
     const spoken = document.querySelector(".story-subtitles:not([hidden])")?.textContent?.trim();
     if (taxi && spoken && !conversationTrace.some((line) => line.endsWith(spoken))) {
       conversationTrace.push(`${taxi.elapsed.toFixed(1)}s ${spoken}`);
