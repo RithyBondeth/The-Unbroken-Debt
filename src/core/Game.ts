@@ -6,6 +6,7 @@ import {
 import { FirstPersonHands } from "../player/FirstPersonHands";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { Scene } from "@babylonjs/core/scene";
+import { keepSurfaceDetail } from "../render/SurfaceDetail";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { Camera } from "@babylonjs/core/Cameras/camera";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
@@ -143,6 +144,7 @@ export class Game {
     // Before any material compiles: the falloff Sora's lamp uses (VillageLights).
     installSoftLampFalloff();
     this.scene = new Scene(engine);
+    keepSurfaceDetail(this.scene, device.quality);
     this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
     this.scene.skipPointerMovePicking = true;
     keepLightBudgets(this.scene);

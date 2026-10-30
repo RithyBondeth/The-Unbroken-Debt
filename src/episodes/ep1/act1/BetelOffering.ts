@@ -70,8 +70,10 @@ export class BetelOffering {
     this.ring = new DynamicTexture("T_offering_focus_ring", 128, game.scene, true);
     const ctx = this.ring.getContext();
     ctx.clearRect(0, 0, 128, 128);
-    ctx.strokeStyle = "#d5bea1";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#e0cfa9";
+    ctx.shadowColor = "rgba(224, 207, 169, 0.6)";
+    ctx.shadowBlur = 6;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(64, 64, 59, 0, Math.PI * 2);
     ctx.stroke();
@@ -144,7 +146,11 @@ export class BetelOffering {
     const game = this.game;
     const eye = game.camera.globalPosition;
     for (const [slot, disc] of this.slotDiscs) {
-      if (disc.material) disc.material.alpha = game.interaction.focus === slotId(slot) ? 0.5 : 0;
+      if (!disc.material) continue;
+      const target = game.interaction.focus === slotId(slot) ? 0.85 : 0;
+      const snap =
+        typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      disc.material.alpha += (target - disc.material.alpha) * (snap ? 1 : 1 - Math.exp(-dt / 0.06));
     }
     // One entry at a time: the book turns to each and Sora's hand writes it in.
     const book = game.sketchbook;
@@ -226,11 +232,12 @@ export class BetelOffering {
       mat.diffuseTexture = this.ring;
       mat.useAlphaFromDiffuseTexture = true;
       mat.diffuseColor = Color3.Black();
-      mat.emissiveColor = new Color3(0.05, 0.035, 0.025);
+      mat.emissiveTexture = this.ring;
+      mat.emissiveColor = new Color3(0.82, 0.74, 0.57);
       mat.alpha = 0;
       disc.material = mat;
       this.slotDiscs.set(slot, disc);
-      game.interaction.add(slotId(slot), [disc], { outline: false });
+      game.interaction.add(slotId(slot), [disc]);
     }
     if (!restoring) game.hints.show("hint.tray", 8);
     if (!restoring) this.inspectTray();
@@ -283,7 +290,7 @@ export class BetelOffering {
       }
     }
     // The offering is part of its place, so looking at it still focuses the place.
-    game.interaction.add(slotId(slot), meshes, { outline: false });
+    game.interaction.add(slotId(slot), meshes);
   }
 
   /** Sora checks a full tray against Kanha’s drawing. */
@@ -346,9 +353,7 @@ export class BetelOffering {
     const altar = this.marker("interact_altar")?.node.getChildMeshes<Mesh>(false) ?? [];
     const tray = this.sources.get("betel_tray")?.getChildMeshes<Mesh>(false) ?? [];
     const offerings = [...this.shown.values()].flatMap((node) => node.getChildMeshes<Mesh>(false));
-    this.game.interaction.add("interact_altar", [...altar, ...tray, ...offerings], {
-      outline: false,
-    });
+    this.game.interaction.add("interact_altar", [...altar, ...tray, ...offerings]);
   }
 
   private blackenLeaves(): void {

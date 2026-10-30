@@ -5,10 +5,7 @@ import { assertSave, SAVE_VERSION, SaveError, type SaveData } from "./SaveData";
  * Document, section 13). Version 1 is the first, so the list starts empty; add
  * an entry whenever `SAVE_VERSION` goes up, and never change an old one.
  */
-export const MIGRATIONS: Record<
-  number,
-  (save: Record<string, unknown>) => Record<string, unknown>
-> = {};
+const MIGRATIONS: Record<number, (save: Record<string, unknown>) => Record<string, unknown>> = {};
 
 /**
  * Upgrades any older save to the current version and checks it. Saves from a

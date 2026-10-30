@@ -28,15 +28,14 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Kirill Sannikov | CC0 1.0 | [Chinese Armchair](https://polyhaven.com/a/chinese_armchair) (V1-060), [Chinese Cabinet](https://polyhaven.com/a/chinese_cabinet) (V1-061), [Chinese Console Table](https://polyhaven.com/a/chinese_console_table) (V1-062), [Chinese Stool](https://polyhaven.com/a/chinese_stool) (V1-063) |
 | Kless Gyzen | CC0 1.0 | [Rock Moss Set 01](https://polyhaven.com/a/rock_moss_set_01) (V1-132) |
 | Kuutti Siitonen | CC0 1.0 | [Jug 01](https://polyhaven.com/a/jug_01) (V1-073), [Pot Enamel 01](https://polyhaven.com/a/pot_enamel_01) (V1-074), [Wicker Basket 01](https://polyhaven.com/a/wicker_basket_01) (V1-078), [Wicker Basket 02](https://polyhaven.com/a/wicker_basket_02) (V1-096) |
-| Léon Busy (Archives de la Planète, Musée départemental Albert-Kahn) | CC0 1.0 | [Uncle Sok's funeral portrait (source photograph)](https://commons.wikimedia.org/wiki/File:Un_fonctionnaire_cambodgien_et_sa_famille_m%C3%AAlant_les_styles_de_v%C3%AAtements_traditionnels_(sampot)_et_occidentaux_-_A36130.jpg) (V1-113) |
 | Luca B | CC0 1.0 | [Old Bed Frame](https://polyhaven.com/a/old_bed_frame) (V1-065) |
 | Maximilian Schuster | CC0 1.0 | [Vintage Suitcase](https://polyhaven.com/a/vintage_suitcase) (V1-067) |
 | Microsoft (synthetic voice) | Unclear for commercial release | Sok's Khmer gramophone recording (A2-05), four paragraphs (S1-040) |
 | Monsta3D | CC0 1.0 | [Vintage Oil Lamp](https://polyhaven.com/a/vintage_oil_lamp) (V1-066) |
 | Oliver Harries | CC0 1.0 | [Wooden Bowl 01](https://polyhaven.com/a/wooden_bowl_01) (V1-093) |
-| OpenAI image generation (directed by Rithy Bondeth) | Output owned by the project (OpenAI terms of use) | Welcome screen title logo and house artwork (V1-154) |
 | Patrick Wagesreiter | SIL OFL 1.1 | [Sora's English handwriting (sketchbook, hints)](https://fonts.google.com/specimen/Patrick+Hand) (V1-052) |
 | Project (from Léon Busy, 1921, A36130 and A35898) | CC0 1.0 (source photograph) | Photographs on the hall wall (family group, mother, eldest daughter; a young monk at Angkor Wat) (V1-140) |
+| Project (imagegen original) | Original AI-generated artwork | Uncle Sok funeral photograph matching notebook identity (V1-113) |
 | Project / MakeHuman Community | Project / CC0 1.0 (base mesh) | First-person hands (Sora) (V1-041), Uncle Sok's corpse (5 poses) (V1-048) |
 | Project / MakeHuman Community | Project / CC0 1.0 | Angry ancestral guardian apparition (V1-049), Ancestral effigy: hallway and under-house forms (V1-050) |
 | Rajil Jose Macatangay | CC0 1.0 | [Lantern 01](https://polyhaven.com/a/Lantern_01) (V1-059) |
@@ -54,7 +53,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 
 | Package | Licence |
 |---|---|
-| Babylon.js (`@babylonjs/core`, `gui`, `loaders`, `ktx2decoder`) | Apache 2.0 |
+| Babylon.js (`@babylonjs/core`, `loaders`, `ktx2decoder`) | Apache 2.0 |
 | Havok Physics for Babylon.js (`@babylonjs/havok`) | MIT |
 | idb-keyval | Apache 2.0 |
 | meshoptimizer decoder | MIT |

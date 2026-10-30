@@ -23,7 +23,9 @@ Patrick Hand and Freehand are reserved for Sora’s physical, canvas-rendered sk
 
 ## Color and surfaces
 
-Bone `--ui-text` sits on charcoal green `--ui-bg` or `--ui-surface`. Secondary copy uses `--ui-muted` or `--ui-subtle`; it should remain readable instead of being faded with opacity. Muted red `--ui-accent` marks selection and small rules. Use `--ui-accent-bright` for readable text accents on dark surfaces.
+Bone `--ui-text` sits on warm near-black `--ui-bg` (`rgb(11 10 9)`) or warm charcoal `--ui-surface` (`#181613`). Hover states use `--ui-surface-hover` (`#28241f`); borders, secondary copy and focus rings use warm ash tones. Secondary copy uses `--ui-muted` or `--ui-subtle`; it should remain readable instead of being faded with opacity. Muted rust `--ui-accent` marks selection and small rules. Use `--ui-accent-bright` for readable text accents on dark surfaces.
+
+Welcome, entry, dialogs, inventory and error panels share this palette. Welcome artwork, lamplight and entry decoration retain their atmosphere, while text, controls and focus states consume the shared tokens. Use `--ui-hud-bg` for hints and save status, `--ui-overlay-bg` for subtitles, stealth guidance and caught screens, and `--ui-backdrop` for modal dimming. These translucent surfaces derive from `--ui-bg-rgb`, so they remain in the same charcoal family. Avoid hardcoded green or cool-black panel backgrounds.
 
 Transcripts, the notebook reader and ending documents use `--ui-paper` with `--ui-ink`, `--ui-paper-muted` and `--ui-paper-accent`. The shared rules remap control tokens locally so the same button pattern works on paper. Warm paper remains a meaningful document surface; it is not another UI theme.
 
@@ -35,6 +37,12 @@ Dialogue is bottom centre with a separate speaker label and a dark backing. It n
 
 Use `--ui-space-*` for repeated spacing, `--ui-safe-*` for screen edges and named `--ui-z-*` layers. Do not place a permanent dashboard over gameplay. Developer performance and verification overlays are outside this system.
 
+Document dialogs use a centred paper panel over `--ui-backdrop`. The reading area scrolls independently so the footer stays visible. Preserve paragraph breaks, use the paper accent for Next/Finish, and keep supporting actions quiet. Hide pagination for single-page notes; disable Previous on the first page of longer documents. Keyboard focus skips unavailable actions and includes the reading area when it overflows.
+
+Settings, How to play, Credits and the new-game confirmation use the shared dark surface. The notebook and ending panels use the same paper treatment as document dialogs. All use `--ui-panel-padding`, the shared border/radius/shadow, and `--ui-backdrop` for modal dimming. Their content scrolls independently of the action row, including at short landscape heights. Use `ui-button ui-button-primary` for the main action; its colors automatically follow the enclosing dark or paper surface. Notebook section selection uses that same accent treatment. Supporting actions use standard buttons. Keep focus within dialogs and allow keyboard scrolling of overflowing content; Escape closes dismissible readers and menu dialogs, while ending choices retain their required story actions.
+
+Requirements, loading errors and rendering warnings share the dark panel styling and readable overflow. The satchel and ordinary story cards use the shared primary action. The listening threshold and title menu retain their authored presentation; they are not standard dialog variants. Maps and physical sketchbook illustrations retain their own drawing colors.
+
 ## Motion and accessibility
 
 Use `--ui-motion-fast` for controls and `--ui-motion-fade` for brief departures. Animate transforms and opacity, not layout dimensions. Reduced-motion preferences zero these shared durations; the entry gate also skips its departure delay. Black scene fades remain black for story transitions.
@@ -44,3 +52,7 @@ Focus, text selection and scrollbars belong to the palette. Use tabular numerals
 ## Review
 
 Open `/tests/browser/text-system.html` during development. It uses production components without graphics initialization or writes to player saves. Views cover gameplay, stealth, story titles, the satchel, transcripts, notebook, ending, caught text, entry, main menu, requirements and load errors. Add `&clean` for captures without the fixture navigation. The background is title artwork used only to demonstrate contrast; it is not a gameplay screenshot.
+
+Use `?view=document&note=arrival&clean` to review Mak Yey’s actual note, including the single-page controls and long-text layout. The default document sample has two pages for checking navigation and disabled states.
+
+Use `?view=menu&saved&clean` for the new-game confirmation with a simulated saved game. The menu preview supplies an in-memory save reader, so it never reads or replaces player saves. Settings, How to play and Credits open from the menu. Ending variants use `view=ending`, `view=map`, `view=summary` and `view=choice`; `view=stall` previews the rendering warning. Review at desktop, 320 × 568, and 844 × 390, checking that actions stay visible, text remains scrollable, keyboard focus stays inside, and controls retain their 44px minimum height.

@@ -13,6 +13,7 @@ import type { Game } from "../../../core/Game";
 import type { Area } from "../../../core/AreaLoader";
 import { extrasOf } from "../../../core/LevelBuilder";
 import { seededRandom } from "../../../audio/synth";
+import type { DreadScore } from "../audio/DreadScore";
 import { breathOut, branchSnap, shadowVanish } from "../audio/nightSounds";
 import { limitLightToRange } from "../../../render/RenderSetup";
 import type { VillageLights } from "./VillageLights";
@@ -100,6 +101,11 @@ interface Passing {
  *   turn to face her while she isn't looking.
  */
 export class Apparitions {
+  /** Environmental false alarms must not compete with an authored presence. */
+  get active(): boolean {
+    return !!this.passing || !!this.standing || this.presence.visible || !!this.follower;
+  }
+
   private time = 0;
   private readonly figure: Mesh;
   private readonly form: ShadowFigure;
@@ -202,6 +208,14 @@ export class Apparitions {
       this.form.setPresence(0);
       this.figure.setEnabled(false);
     };
+  }
+
+  /** The act's stingers, once they are made (ActOne). */
+  score: DreadScore | null = null;
+
+  /** 0–1: how strongly the Neak Ta is showing itself right now. */
+  get dread(): number {
+    return this.presence.value;
   }
 
   async makeSounds(): Promise<void> {
@@ -362,6 +376,8 @@ export class Apparitions {
     this.form.setPresence(0);
     this.figure.setEnabled(true);
     this.standing = { ...how, start: this.time, seenFor: 0 };
+    // The one that waits in plain view is felt before it is seen.
+    if (how.inView) this.score?.sting("swell", 0.6);
   }
 
   /** `by` is how far north Sora is (Blender y). */
@@ -383,6 +399,8 @@ export class Apparitions {
     if (distance < s.near || s.seenFor > s.lookFor || this.vigil.lampRaised) {
       // A short recession into darkness keeps the exit sharp without a one-frame pop.
       this.play(s.sound, this.figure.position);
+      // Close and looked at, it is gone in a shriek; further off, a blow of pressure.
+      this.score?.sting(s.scare ? "shock" : "drop", s.scare ? 0.9 : 0.6);
       if (s.scare) this.game.atmosphere.scare();
       this.vanish();
     } else if (this.time - s.start > s.wait || (s.scare && by > -28))
@@ -405,6 +423,7 @@ export class Apparitions {
     const y = -6.92;
     this.cloth.rotation.y = 0;
     this.lights.storm.strike();
+    this.score?.sting("shock", 0.8);
     this.pass(this.cloth, new Vector3(-3.4, 1.35, y), new Vector3(3.4, 1.35, y), 2.4);
     for (let k = 0; k < 4; k++)
       setTimeout(() => this.playStep(0, at(3.4 - k * 2, 7.6)), 400 + k * 550);

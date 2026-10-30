@@ -31,10 +31,9 @@ export class ChestInvestigation {
       this.progress.taken(id),
     );
     this.coffin = new CoffinEncounter(game, body, saveProgress);
-    game.interaction.add("interact_loose_planks", models.planks, { outline: false });
-    game.interaction.add("interact_hidden_chest", models.chest, { outline: false });
-    for (const id of CHEST_ITEMS)
-      game.interaction.add(`interact_chest_${id}`, models.pickups[id], { outline: false });
+    game.interaction.add("interact_loose_planks", models.planks);
+    game.interaction.add("interact_hidden_chest", models.chest);
+    for (const id of CHEST_ITEMS) game.interaction.add(`interact_chest_${id}`, models.pickups[id]);
     game.bus.on("interact:use", ({ id }) => this.use(id));
     game.bus.on("interact:focus", ({ id }) => {
       if (!this.progress.available || !this.handsFree) return;

@@ -1,0 +1,23 @@
+30 October 2026 — localhost production audio review
+Fixture: /tests/browser/atmosphere.html, Medium
+Enabled actual AudioSystem, NightLife, ForestAtmosphere and Soundscape via user-gesture button.
+
+Verify turn response (fixture phase trace, elapsed game seconds):
+hush@119.0s (presence false, threat false, hidden false)
+movement@122.2s (presence false, threat false, hidden false)
+listening@122.2s (presence false, threat false, hidden false)
+recover@124.8s (presence false, threat false, hidden false)
+waiting@129.8s (presence false, threat false, hidden false)
+Movement-to-listening occurred on the next update after the fixture aimed at the fixed world source.
+
+Dialogue interruption:
+hush@199.9s -> waiting@200.8s, dialogue true, silence faded down.
+
+Paused input interruption:
+hush@233.1s -> waiting@234.0s, pointer input false, silence faded down.
+
+No new browser rendering/audio errors. Existing loader warnings about hide_ nodes and asset hierarchy remained.
+Medium final shader and Low particle fallback were visually checked with mist on/off.
+Low paddy: 128 draw calls with mist, 127 without. This is not a full-episode performance measurement.
+Full suite: 412/416 pass; four failures in concurrent telephone-cord mocks and rural asset work.
+Focused atmosphere/night/house audio: 38/38 pass. Typecheck, ESLint, build pass.

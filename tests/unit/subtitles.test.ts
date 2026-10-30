@@ -3,7 +3,8 @@ import { subtitleChunks } from "../../src/ui/html/StoryUi";
 
 describe("subtitleChunks", () => {
   it("keeps a short line whole", () => {
-    expect(subtitleChunks("…Not tonight, Yay.")).toEqual(["…Not tonight, Yay."]);
+    const line = "Grandma's letters… I can't read them tonight.";
+    expect(subtitleChunks(line)).toEqual([line]);
   });
 
   it("splits a long line at its pauses, keeping every word", () => {

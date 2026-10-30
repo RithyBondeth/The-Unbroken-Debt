@@ -23,14 +23,14 @@ export interface Look {
 
 export const NIGHT_LOOK: Look = {
   baseExposure: 1.45,
-  maxExposure: 2.25,
-  nightSightIntensity: 2.0,
-  nightSightRange: 2.8,
-  fogDensity: 0.031,
-  fogAmbient: [0.0075, 0.0105, 0.0165],
-  clearColor: [0.007, 0.008, 0.012],
-  skyIntensity: 0.25,
-  moonIntensity: 0.24,
+  maxExposure: 2.1,
+  nightSightIntensity: 1.4,
+  nightSightRange: 2.6,
+  fogDensity: 0.019,
+  fogAmbient: [0.006, 0.009, 0.014],
+  clearColor: [0.006, 0.007, 0.01],
+  skyIntensity: 0.22,
+  moonIntensity: 0.2,
 };
 
 export const DAWN_LOOK: Look = {

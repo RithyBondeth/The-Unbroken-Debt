@@ -1,7 +1,7 @@
 import type { Flags } from "../../../core/Flags";
 
-export const CORPSE_POSES = 5;
-export const CORPSE_LOOK_AWAY_SECONDS = 4;
+const CORPSE_POSES = 5;
+const CORPSE_LOOK_AWAY_SECONDS = 4;
 
 /** A3-02. Each pose must be seen before the next can replace it; changes are instantaneous offscreen. */
 export class CorpseProgress {

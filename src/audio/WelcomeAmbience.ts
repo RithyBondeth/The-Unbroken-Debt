@@ -1,16 +1,23 @@
 import { seededRandom } from "./synth";
+import { loadDread, type DreadBank, type Stinger } from "./welcomeDread";
 
-/** Quiet rain, a low beating drone and a slowly breathing wind; no downloaded audio. */
+/**
+ * A wrong funeral chant over faint bells, whispers and creaks under rain, timber
+ * and wind, plus stingers cued by the apparitions; gesture-activated.
+ */
 export class WelcomeAmbience {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private readonly sources: AudioScheduledSourceNode[] = [];
+  private readonly cues = new Set<AudioBufferSourceNode>();
+  private stingers: Partial<Record<Stinger, AudioBuffer>> = {};
   private disposed = false;
   private visible = true;
 
   constructor(
     private enabled: boolean,
     private readonly createContext = () => new AudioContext(),
+    private readonly loadBank: (rate: number) => Promise<DreadBank> = loadDread,
   ) {}
 
   get started(): boolean {
@@ -31,6 +38,23 @@ export class WelcomeAmbience {
       // The game remains playable when a browser or output device denies audio.
       return false;
     }
+  }
+
+  /**
+   * Plays a stinger now; its hit lands STINGER_HIT seconds later. Silent until
+   * unlocked and synthesised.
+   */
+  cue(kind: Stinger): void {
+    const context = this.context;
+    const buffer = this.stingers[kind];
+    if (!context || !this.master || !buffer || !this.started || !this.enabled || !this.visible)
+      return;
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.master);
+    source.onended = () => this.cues.delete(source);
+    this.cues.add(source);
+    source.start();
   }
 
   setEnabled(enabled: boolean): void {
@@ -73,7 +97,9 @@ export class WelcomeAmbience {
     rainFilter.type = "lowpass";
     rainFilter.frequency.value = 1800;
     rainFilter.Q.value = 0.45;
-    rain.connect(rainFilter).connect(master);
+    const rainGain = context.createGain();
+    rainGain.gain.value = 0.5;
+    rain.connect(rainFilter).connect(rainGain).connect(master);
     this.sources.push(rain);
     rain.start();
 
@@ -107,6 +133,44 @@ export class WelcomeAmbience {
     breath.connect(depth).connect(windGain.gain);
     this.sources.push(breath);
     breath.start();
+
+    void this.loadBank(Math.min(24000, context.sampleRate)).then((bank) =>
+      this.attach(context, master, bank),
+    );
+  }
+
+  /** The chant, whispers and bells join once synthesised, under the same gain and lifecycle. */
+  private attach(context: AudioContext, master: GainNode, bank: DreadBank): void {
+    if (this.disposed || this.context !== context) return;
+    const loop = (buffer: AudioBuffer, level: number) => {
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const gain = context.createGain();
+      gain.gain.value = level;
+      source.connect(gain).connect(master);
+      this.sources.push(source);
+      source.start();
+    };
+    const theme = context.createBuffer(1, bank.theme.length, bank.rate);
+    theme.getChannelData(0).set(bank.theme);
+    // The bells sit far behind the chant; chant and whispers loop at different lengths.
+    loop(theme, 0.45);
+    loop(this.stereoBuffer(context, bank.rate, bank.chant), 1);
+    loop(this.stereoBuffer(context, bank.rate, bank.bed), 1);
+    for (const kind of ["appear", "near", "vanish"] as const)
+      this.stingers[kind] = this.stereoBuffer(context, bank.rate, bank.stingers[kind]);
+  }
+
+  private stereoBuffer(
+    context: AudioContext,
+    rate: number,
+    [left, right]: [Float32Array, Float32Array],
+  ): AudioBuffer {
+    const buffer = context.createBuffer(2, left.length, rate);
+    buffer.getChannelData(0).set(left);
+    buffer.getChannelData(1).set(right);
+    return buffer;
   }
 
   /** Fade away before gameplay and release the menu's entire audio graph. */
@@ -119,8 +183,9 @@ export class WelcomeAmbience {
     this.master?.gain.cancelScheduledValues(now);
     this.master?.gain.setValueAtTime(this.master.gain.value, now);
     this.master?.gain.linearRampToValueAtTime(0, now + 0.22);
-    for (const source of this.sources) source.stop(now + 0.24);
+    for (const source of [...this.sources, ...this.cues]) source.stop(now + 0.24);
     this.sources.length = 0;
+    this.cues.clear();
     this.context = null;
     this.master = null;
     setTimeout(() => {
