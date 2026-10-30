@@ -27,21 +27,29 @@
 :root {
   --ui-font-body: "Ubuntu", "Preah Vihear", sans-serif;
   --ui-font-display: Georgia, "Preah Vihear", serif;
-  --ui-bg: #090d0c;
-  --ui-surface: #141a17;
-  --ui-surface-hover: #263029;
-  --ui-text: #e5dfd2;
-  --ui-muted: #b7bbae;
-  --ui-subtle: #a4aaa1;
-  --ui-border: #536052;
-  --ui-accent: #b8786b;
-  --ui-accent-bright: #e0aa99;
+  /* Screen UI shares the title screen: cold black, bone text, blood red only as paint. */
+  --ui-bg-rgb: 5 6 6;
+  --ui-bg: rgb(var(--ui-bg-rgb));
+  --ui-surface: #0c0d0d;
+  --ui-surface-hover: #191a19;
+  --ui-text: #d9d6cc;
+  --ui-muted: #aeaba2;
+  --ui-subtle: #94918a;
+  --ui-border: #3b3a37;
+  --ui-accent: #a3150f;
+  /* The red lifted far enough to be read as small text. */
+  --ui-accent-bright: #e05a4a;
+  --ui-primary-bg: rgb(163 21 15 / 0.22);
+  --ui-primary-border: var(--ui-accent);
+  --ui-primary-text: var(--ui-text);
+  --ui-primary-hover: var(--ui-accent);
   --ui-paper: #e8dfcb;
   --ui-ink: #30291f;
   --ui-paper-muted: #685a45;
   --ui-paper-border: #b5a588;
   --ui-paper-accent: #7d3f35;
-  --ui-focus: #c8ccbb;
+  --ui-paper-success: #59634e;
+  --ui-focus: var(--ui-text);
   --ui-caption: 0.8125rem;
   --ui-small: 0.875rem;
   --ui-body: 1rem;
@@ -50,6 +58,10 @@
   --ui-section: clamp(1.375rem, 2.2vw, 1.75rem);
   --ui-heading: clamp(1.75rem, 3vw, 2.5rem);
   --ui-display: clamp(2.4rem, 5vw, 3.9rem);
+  /* Spaced capitals, as on the title menu. */
+  --ui-title: clamp(1.125rem, 1.8vw, 1.375rem);
+  --ui-title-tracking: 0.22em;
+  --ui-label-tracking: 0.14em;
   --ui-leading: 1.65;
   --ui-heading-leading: 1.16;
   --ui-space-1: 0.25rem;
@@ -59,12 +71,16 @@
   --ui-space-6: 1.5rem;
   --ui-space-8: 2rem;
   --ui-space-12: 3rem;
-  --ui-radius: 3px;
+  --ui-panel-padding: clamp(var(--ui-space-6), 4vw, var(--ui-space-8));
+  --ui-radius: 1px;
   --ui-safe-x: clamp(1rem, 3vw, 3rem);
   --ui-safe-bottom: max(1.25rem, env(safe-area-inset-bottom));
   --ui-motion-fast: 180ms;
   --ui-motion-fade: 650ms;
-  --ui-shadow: 0 18px 64px rgb(3 6 4 / 0.5);
+  --ui-shadow: 0 18px 64px rgb(5 4 3 / 0.5);
+  --ui-backdrop: rgb(var(--ui-bg-rgb) / 0.85);
+  --ui-hud-bg: rgb(var(--ui-bg-rgb) / 0.9);
+  --ui-overlay-bg: rgb(var(--ui-bg-rgb) / 0.94);
   --ui-z-hud: 10;
   --ui-z-panel: 20;
   --ui-z-caught: 30;
@@ -75,10 +91,16 @@
   --ui-z-book-controls: 1700;
   --ui-z-reader: 1800;
 }
+/* Letter spacing breaks Khmer shaping. */
+:root:lang(km) {
+  --ui-title-tracking: 0;
+  --ui-label-tracking: 0;
+}
 
 /* Opt-in surface scope keeps developer overlays and physical page textures independent. */
 :where(
   .welcome,
+  .welcome-dialog,
   .story-card,
   .story-hint,
   .road-stealth-status,
@@ -155,10 +177,11 @@
   padding: var(--ui-space-3) var(--ui-space-4);
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
-  background: var(--ui-surface);
+  background: var(--ui-control-bg, var(--ui-surface));
   color: var(--ui-text);
-  font: 500 var(--ui-small) / 1.4 var(--ui-font-body);
-  letter-spacing: 0.025em;
+  font: 500 var(--ui-caption) / 1.4 var(--ui-font-body);
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: uppercase;
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -237,7 +260,50 @@
   --ui-surface-hover: #d4c6aa;
   --ui-text: var(--ui-ink);
   --ui-muted: var(--ui-paper-muted);
+  --ui-control-bg: transparent;
+  --ui-primary-bg: var(--ui-paper-accent);
+  --ui-primary-border: var(--ui-paper-accent);
+  --ui-primary-text: var(--ui-paper);
+  --ui-primary-hover: var(--ui-ink);
+  --ui-primary-hover-text: var(--ui-paper);
   scrollbar-color: var(--ui-paper-border) transparent;
+}
+
+/* One primary action treatment, remapped by the paper surface above. */
+.ui-button.ui-button-primary {
+  border-color: var(--ui-primary-border);
+  background: var(--ui-primary-bg);
+  color: var(--ui-primary-text);
+}
+.ui-button.ui-button-primary:enabled:hover {
+  border-color: var(--ui-primary-hover);
+  background: var(--ui-primary-hover);
+  color: var(--ui-primary-hover-text, var(--ui-primary-text));
+}
+
+/* Screen headings: spaced capitals over a short smear of red, never a serif. */
+.welcome-dialog h2,
+.welcome-error h1,
+.story-satchel h2,
+.requirements h1,
+.render-stall h1 {
+  margin: 0 0 var(--ui-space-6);
+  font: 500 var(--ui-title) / 1.4 var(--ui-font-body);
+  letter-spacing: var(--ui-title-tracking);
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.welcome-dialog h2::after,
+.welcome-error h1::after,
+.story-satchel h2::after,
+.requirements h1::after,
+.render-stall h1::after {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 2px;
+  margin-top: var(--ui-space-3);
+  background: linear-gradient(90deg, var(--ui-accent), transparent);
 }
 
 :where(
@@ -257,7 +323,7 @@
   min-width: 1.2em;
   padding: 0.12em 0.45em;
   border: 1px solid var(--ui-border);
-  border-bottom-width: 2px;
+  border-bottom: 2px solid var(--ui-accent);
   border-radius: var(--ui-radius);
   color: inherit;
   font: 500 0.8em / 1.45 var(--ui-font-body);

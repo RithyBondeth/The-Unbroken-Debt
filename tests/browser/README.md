@@ -1,5 +1,11 @@
 # Episode 1 browser verification
 
+## Sound audition
+
+Open `/tests/browser/sound-audition.html` to play each Act 0 and Act 1 dread
+sound, the rebuilt taxi engine and wipers, stereo village rain and the three
+thunder rolls on their own. See `docs/production/act0-act1-dread-audio.md`.
+
 ## Unified notebook
 
 Open `/tests/browser/notebook.html` and click to begin. **Verify flows** exercises
@@ -28,6 +34,10 @@ drawer, matchbox, window and bed views. Press Enter to begin. The preview auto-i
 first illustration and uses an isolated database. E still uses real interaction
 targets; movement keys leave close-up inspection. The detail pass and browser
 pickup evidence are in `docs/production/studio-detail-pass.md`.
+Use **Drawer hint** to focus the closed drawer and inspect the shared warm rim,
+ivory contour and focus fade; **Telephone** and **Lantern hook** cover rounded
+geometry and the lantern's invisible pickup volume. **Open drawer** checks the
+transition to the matchbox hint. These views use the production interaction ray.
 
 The fresh `/tests/browser/episode.html` route now verifies that opening the drawer
 focuses the matchbox and E collects ten matches without precision aiming. It also
@@ -364,3 +374,13 @@ checkpoint** checks the saved location and spawn. Writes use the isolated
 ## Shared text system
 
 Open `/tests/browser/text-system.html` to review production typography and controls across gameplay, stealth, story cards, subtitles, hints, save status, satchel, document and notebook readers, ending, menu and error screens. It does not initialize the game or write player saves. The fixture uses title artwork behind UI samples. `?view=document&clean` selects a capture without gallery controls. See `DESIGN.md` for the shared tokens and usage rules.
+
+## Ground mist and forest sound
+
+Open `/tests/browser/atmosphere.html` for production mist, forest rustles and zoned
+ambience. **Enable atmosphere sound** starts audio after a click. **Verify turn
+response** rehearses a cue and turns toward its fixed source; the status trace
+records every phase. Dialogue and paused-input controls check interruption.
+**Toggle mist** compares the local pockets; `?quality=low` checks the particle
+fallback. Saves use the isolated `boon-sop-atmosphere-review` database, and captures
+go to `debug-shots/atmosphere-*.png`. See `docs/production/episode-1-atmosphere.md`.

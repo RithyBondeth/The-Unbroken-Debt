@@ -14,7 +14,7 @@
   z-index: var(--ui-z-caught);
   display: grid;
   place-items: center;
-  background: rgb(9 13 12 / 0.94);
+  background: var(--ui-overlay-bg);
   color: var(--ui-text);
   pointer-events: none;
 }
@@ -23,8 +23,9 @@
   width: min(36rem, calc(100vw - 2 * var(--ui-safe-x)));
   margin: 0;
   padding: var(--ui-space-8);
-  font: 400 var(--ui-heading) / 1.45 var(--ui-font-display);
-  letter-spacing: -0.025em;
+  font: 500 var(--ui-title) / 1.6 var(--ui-font-body);
+  letter-spacing: var(--ui-title-tracking);
+  text-transform: uppercase;
   text-align: center;
   white-space: pre-line;
   text-wrap: balance;

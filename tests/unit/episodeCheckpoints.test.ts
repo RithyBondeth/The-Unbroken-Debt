@@ -3,6 +3,7 @@ import { Flags } from "../../src/core/Flags";
 import { Inventory } from "../../src/systems/inventory/Inventory";
 import { ActOneBeats } from "../../src/episodes/ep1/act1/ActOneBeats";
 import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
+import { DreadScore } from "../../src/episodes/ep1/audio/DreadScore";
 it("captures Act I as CP1 at 23:30 and Act II as CP2 at 01:00 when old saves lack metadata flags", () => {
   const flags = new Flags();
   const state = {
@@ -49,6 +50,7 @@ it("retries the departure checkpoint before navigating into the taxi journey", a
     play: vi.fn(),
     wait: vi.fn(),
     loops: [],
+    score: new DreadScore(null),
     playTime: 15,
   };
   try {

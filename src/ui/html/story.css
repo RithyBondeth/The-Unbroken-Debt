@@ -10,7 +10,7 @@
   max-width: calc(100vw - 2 * var(--ui-safe-x));
   padding: var(--ui-space-2) var(--ui-space-4);
   border-radius: var(--ui-radius);
-  background: rgb(9 13 12 / 0.9);
+  background: var(--ui-hud-bg);
   color: var(--ui-text);
   font-size: var(--ui-body);
   line-height: 1.7;
@@ -25,7 +25,7 @@
 }
 .story-hint kbd {
   margin-inline: 0.12em;
-  color: var(--ui-accent-bright);
+  color: var(--ui-text);
 }
 .road-stealth-status {
   position: fixed;
@@ -38,7 +38,7 @@
   padding: var(--ui-space-3) var(--ui-space-6);
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
-  background: rgb(9 13 12 / 0.94);
+  background: var(--ui-overlay-bg);
   color: var(--ui-text);
   font-size: var(--ui-body);
   text-align: center;
@@ -50,7 +50,7 @@
   display: none;
 }
 .road-stealth-status kbd {
-  color: var(--ui-accent-bright);
+  color: var(--ui-text);
 }
 .story-subtitles {
   position: fixed;
@@ -62,9 +62,10 @@
   width: max-content;
   max-width: min(54rem, calc(100vw - 2 * var(--ui-safe-x)));
   padding: var(--ui-space-3) var(--ui-space-6);
-  border: 1px solid rgb(229 223 210 / 0.14);
+  border: 1px solid rgb(217 214 204 / 0.12);
+  border-bottom-color: rgb(163 21 15 / 0.55);
   border-radius: var(--ui-radius);
-  background: rgb(9 13 12 / 0.94);
+  background: var(--ui-overlay-bg);
   color: var(--ui-text);
   font-size: var(--ui-subtitle);
   line-height: 1.5;
@@ -75,14 +76,25 @@
 .story-subtitles[hidden] {
   display: none;
 }
+/* The speaker, set like the title screen's chapter line. */
 .story-subtitles b {
   display: block;
   margin-bottom: var(--ui-space-1);
-  color: var(--ui-accent-bright);
+  color: var(--ui-muted);
   font-size: var(--ui-caption);
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: uppercase;
+}
+.story-subtitles b::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  margin-right: var(--ui-space-2);
+  background: var(--ui-accent);
+  vertical-align: 0.3em;
 }
 .story-fade {
   position: fixed;
@@ -109,11 +121,24 @@
 .story-card.shown {
   opacity: 1;
 }
+/* Title cards echo the title screen: spaced bone capitals over a red brush rule. */
 .story-card h1 {
   margin: 0;
-  font: 400 var(--ui-display) / var(--ui-heading-leading) var(--ui-font-display);
-  letter-spacing: -0.035em;
+  padding-left: var(--ui-title-tracking);
+  font: 500 clamp(1.75rem, 3.4vw, 2.75rem) / 1.25 var(--ui-font-body);
+  letter-spacing: var(--ui-title-tracking);
+  text-transform: uppercase;
   text-wrap: balance;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.6);
+}
+.story-card h1::after {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 3px;
+  margin: var(--ui-space-6) auto 0;
+  background: var(--ui-accent);
+  clip-path: polygon(0 40%, 18% 10%, 55% 0, 100% 30%, 92% 80%, 60% 100%, 22% 85%, 4% 100%);
 }
 .story-card p {
   max-width: 60ch;
@@ -123,9 +148,16 @@
   text-wrap: pretty;
 }
 .story-card .khmer {
+  color: var(--ui-accent-bright);
   font-family: "Preah Vihear", sans-serif;
   font-size: var(--ui-reading);
   line-height: 1.9;
+}
+.story-card .khmer + p {
+  margin-top: var(--ui-space-2);
+  font-size: var(--ui-caption);
+  letter-spacing: var(--ui-title-tracking);
+  text-transform: uppercase;
 }
 .story-card button {
   margin-top: var(--ui-space-8);
@@ -151,11 +183,6 @@
 }
 .story-satchel[hidden] {
   display: none;
-}
-.story-satchel h2 {
-  margin: 0 0 var(--ui-space-6);
-  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
-  letter-spacing: -0.025em;
 }
 .story-satchel ul {
   padding: 0;
@@ -196,7 +223,7 @@
   max-width: calc(100vw - 2 * var(--ui-safe-x));
   padding: var(--ui-space-2) var(--ui-space-3);
   border-radius: var(--ui-radius);
-  background: rgb(9 13 12 / 0.9);
+  background: var(--ui-hud-bg);
   color: var(--ui-muted);
   font-size: var(--ui-caption);
   pointer-events: none;

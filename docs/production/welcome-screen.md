@@ -1,15 +1,39 @@
 # Welcome screen and title identity
 
-The welcome screen takes its sparse navigation, dark interior framing and restrained red selection treatment from the user-selected Home Sweet Home reference. The artwork, title lettering and thread motif are original to The Unbroken Debt. Cambodian architecture, Khmer title and the existing Episode I identity are preserved. The serif title is an intentional departure from the earlier Ubuntu Bold art-bible direction, requested by the user.
+The welcome screen follows the user-selected Home Sweet Home reference for mood only: a realistic, dim interior rendered from the game itself, hand-smeared red title lettering, film grain and a sparse text menu with a red selection mark. The scene, lettering and behaviour are original to The Unbroken Debt. The Cambodian house, Khmer title and Episode I identity are preserved.
 
 Reference: https://www.mobygames.com/game/96548/home-sweet-home/screenshots/windows/960273/
 
 ## Assets
 
-- `public/assets/ui/unbroken-debt-logo.png`: transparent title lockup, including the red binding-thread motif.
-- `public/assets/ui/welcome-house.jpg`: illustrated title background, converted to JPEG for delivery.
+The title scene is key art, not the Episode 1 layout: the village house hall seen from the front door, dressed for a binding ritual. The camera's lens shift puts the hall in the right of the frame and leaves the dark left side for the menu. Blood-soaked red cords web the right half of the room from the family altar, with hanks of black hair knotted to them and cloth effigies hanging from them by the neck. Uncle Sok's coffin lies open inside a circle of floor candles and a sigil that catches the moonlight like chalk, under incense smoke, something has been dragged from it out of the back door, and paper charms with red brush marks (abstract, not writing) are pinned to the walls. The black Neak Ta has glowing eyes.
 
-Both assets were created with the built-in OpenAI image generation tool. The background uses an illustration with a brief arrival fade rather than the live funeral-tent scene proposed in the original interface document. Reduced-motion preferences remove the fade.
+The coffin lid is rebuilt for the title: black lacquer gone to craquelure, flaking to dark teak, with worn gilt mouldings and a medallion on the foot. The red cords that tied it shut have snapped and their frayed ends hang; three more still tether it to the roof and the altar. Bloody handprints are dragged down its foot and across its slope, beside fingernail gouges down to pale wood. Nails torn up along the rim are bent outward, the funeral flowers on it have blackened, and long black hair spills out of the gap and down the foot of the coffin.
+
+- `public/assets/ui/welcome-hall.webp`: the empty hall.
+- `public/assets/ui/welcome-hall-far.webp` and `welcome-hall-near.webp`: the same frame with the Neak Ta beside the altar, and beside the open coffin. They are full plates shown over the empty hall.
+- `public/assets/ui/welcome-cords.webp`, `welcome-cords-far.webp` and `welcome-cords-near.webp`: the cords, their dolls and hair alone on transparency, with the room (and the Neak Ta, where it stands) cut out of them. The plates leave the cords out but keep their shadows.
+- `src/ui/html/welcomeCordPaths.ts`: the cords projected into the frame, for the blood beads.
+- `public/assets/ui/welcome-title.webp`: “THE UNBROKEN DEBT” painted as wet red brush strokes. No font is used: each letter is a stroke skeleton dragged with a simulated bristle brush that runs dry, followed by drips and splatter.
+
+Everything is rendered in Blender Cycles from `ep1_area_village.blend` with the game's own geometry, coffin and Neak Ta, at 1920×1080 from one camera and seed, and graded cold and desaturated with only the lamps, candles and red paint keeping their colour.
+
+Rebuild from the repository root (the .blend is never saved):
+
+```sh
+B=art-source/blender/ep1/ep1_area_village.blend
+for m in empty far near; do
+  blender -b $B -P tools/ui/render-title-scene.py -- /tmp/hall-$m.png $m 1920 128
+  blender -b -P tools/ui/grade-title-scene.py -- /tmp/hall-$m.png /tmp/hall-$m-graded.png
+  blender -b $B -P tools/ui/render-title-scene.py -- /tmp/cords-$m.png threads-$m 1920 128
+  blender -b -P tools/ui/grade-title-scene.py -- /tmp/cords-$m.png /tmp/cords-$m-graded.png cords
+done
+blender -b $B -P tools/ui/render-title-scene.py -- src/ui/html/welcomeCordPaths.ts threads-data
+npx prettier --write src/ui/html/welcomeCordPaths.ts
+blender -b -P tools/ui/paint-title.py -- /tmp/title.png 31
+```
+
+Encode with sharp: the three plates at WebP quality 90, the cord layers at 88 with alpha, the title resized to 1600 px wide at 88 with alpha. The script also has an animated `loop` mode and transparent `figure-far|figure-near` layers; they were tried for the title and set aside in favour of the still plates.
 
 ## Behavior
 
@@ -19,23 +43,22 @@ Existing `?start=act1`, `?continue` and recognized spike URLs retain their direc
 
 ## Listening screen
 
-After the scene loads, a dedicated listening screen replaces the old click-to-begin card. It uses a charcoal green background, a fine headphone illustration, a serif “Listen closely.” heading and a visible Enter key. The copy explains that directional sound helps locate things in the darkness. Enter starts the scene from anywhere on the screen; the focused button also supports pointer activation. Clicking the background does not start play.
+After the scene loads, a dedicated listening screen replaces the old click-to-begin card. It shares the title screen palette: a cold black doorway with moonlight and red binding threads, a fine headphone illustration, “Listen closely.” in spaced bone capitals and a visible Enter key marked with a red paint smear. The copy explains that directional sound helps locate things in the darkness. Enter starts the scene from anywhere on the screen; the focused button also supports pointer activation. Clicking the background does not start play.
 
 Audio unlock and pointer capture run synchronously inside the activation gesture. Repeated, composing and modified Enter presses do not start play, and activation is guarded during the 650 ms departure fade. The listener is removed and focus returns to the canvas before the scene continues. Reduced-motion preferences skip the departure delay. Entry styling is removed before ordinary story cards are displayed.
 
 `/tests/browser/entry.html` previews the real screen without touching saves or loading the game. Press Enter to verify activation, audio unlock, focus restoration, listener removal and ordinary story-card styling; pointer capture is reported separately because embedded browsers may reject it. Preview again repeats the check.
 
+## In-game text
+
+Subtitles, hints, dialogs, story cards and the listening screen share the title screen's look through the tokens in `src/ui/html/design-system.css`: cold black, bone text and blood red used as paint (heading rules, button smears, keycap underlines, speaker marks). Screen headings are spaced Ubuntu capitals, not a serif; letter spacing is dropped for Khmer. Physical paper (documents, the notebook, the ending pages) keeps its own palette and Georgia headings.
+
 ## Living atmosphere
 
-Two translucent rain layers fall through the open doorway, clipped to the exterior. A low-opacity glow and flame highlight flicker independently over the lamp. Both effects track the image's cover crop. Reduced-motion preferences hide moving rain and hold the lamplight steady. Hidden tabs pause the visual loops.
+The scene fades up from black and creeps slowly inward. Dust turns in the back-door moonlight and animated grain covers the frame. All layers track the image's cover crop.
 
-The welcome screen synthesizes stereo rain, a quiet low beating drone, and slowly modulated wind using Web Audio. Audio is created only after a player gesture, respects the shared sound setting, and has a visible ambience toggle in the footer. Hidden tabs are muted. Starting or continuing fades out every source and closes the menu audio context, so the soundscape cannot continue under gameplay. No external sound files or downloads are required.
+The cords are alive (`src/ui/html/welcomeCords.ts`). A small WebGL pass draws the cord layer displaced by a slow sway and a fine tremble, held still near the coffin lid and the left edge, so their ends stay tied. A dull red pulse runs outward from the altar along them, like something feeding. Blood beads slide along each cord to its lowest point, swell there and drip. When the Neak Ta appears beside the coffin, every cord thrashes in travelling waves and the beads run; smaller shudders mark its other moves. The pass runs at about 30 fps and stops in hidden tabs. Without WebGL, or with reduced motion, the static cord layer is shown instead.
 
-## Final background prompt
+The Neak Ta haunts the room in a cycle. It stands by the altar when the menu appears; after 9–14 seconds the lamps gutter to near-black and it is gone. 5–9 seconds later they gutter again and it is suddenly beside the open coffin, close: the frame jolts and the edges bleed red. About two seconds later it is gone, and after another 5–9 seconds it is back by the altar. Every change is timed to a stinger whose hit lands on the darkest frame. Hidden tabs postpone the cycle and pause the visual loops. Reduced-motion preferences show the figure by the altar, with no flicker, jolt, grain or drift.
 
-Use case: historical-scene. Final production background artwork for a full-screen horror game main menu, 16:9 wide landscape. Game: The Unbroken Debt, 1932 rural Cambodia. Cinematic grounded Southeast Asian psychological survival horror. View from within a decaying dark teak house toward a distant open doorway on RIGHT HALF, old wooden plank floor, woven bamboo walls, humid mist, monsoon streaks beyond doorway, pale desaturated green-grey moonlight barely revealing depth. A length of plain faded red binding thread draped from a foreground beam on the extreme right, with a small exhausted kerosene lamp below casting a faint rusty glow. Dread and claustrophobia. Deep green-black shadows, dirty bone-white highlights, extremely restrained oxblood red, dusty photographic grain, realistic materials, moody high-end game environment key art. LEFT HALF almost black with only faint wall texture, ample negative space for menu and logo added separately. Right half doorway, depth and objects clearly readable but dark. No modern electric fittings, no Thai lettering or symbols, no sacred iconography, no people, no ghosts, no monsters. NO TEXT, NO LOGO, NO UI, NO WATERMARK. Original composition.
-
-## Final logo prompt
-
-Use case: logo-brand. Create a final isolated transparent-background game title wordmark for THE UNBROKEN DEBT, original Southeast Asian psychological survival horror identity. Exact text only: small 'THE' above a large condensed 'UNBROKEN' and large 'DEBT' underneath. Centered compact stacked title lockup, wider than tall. Highly readable tall narrow sharp serif lettering with subtly irregular hand-cut edges, aged bone-white pigment, light scratched and chipped screenprint texture. DEBT in muted dried oxblood red #8e302c, other letters bone-white #e5dfd2. A single fine red thread extends horizontally underneath and curls back into a tight binding knot at center, minimal abstract and secular, no religious characters. The negative spaces of letters remain transparent. Atmospheric terrifying elegant restrained horror title, professional AAA game logo finish, excellent at menu size, no excessive drips, no fake alphabet, no Thai motifs, no skulls, no symbol above title, no glow, no shadows, no surrounding background, no other text. Truly transparent background.
-
+The welcome screen synthesizes all of its sound with Web Audio (`src/audio/welcomeDread.ts`); nothing is downloaded. The background is a funeral chant gone wrong: six low male voices recite rhythmic, wordless syllables in unison, each phrase ending on a long hum that sags flat, with one voice a semitone low and one an octave below, in a reverberant hall. Under it: the original bell motif far away, a whisper bed with creaking boards and three slow knocks, quiet rain and wind. Stingers mark the Neak Ta: a sub drop and cracked bell as it returns, the same with a shrieking string cluster and a whisper when it is close, and an inhale and thud when it vanishes. Synthesis runs in a worker after the first gesture, so the menu never stalls; rain and wind start at once and the chant fades in a moment later. Audio is created only after a player gesture, respects the shared sound setting, and has a visible ambience toggle in the footer. Hidden tabs are muted. Starting or continuing fades out every source, including stingers, and closes the menu audio context, so the soundscape cannot continue under gameplay.
