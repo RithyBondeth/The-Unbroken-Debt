@@ -65,7 +65,7 @@ it("uses the shrine's real geometry and affordance, and confirms only a complete
       }),
   );
   const { state, appearance, bus, use } = setup(save);
-  expect(state.interaction.add).toHaveBeenCalledWith("save", appearance.root, { outline: false });
+  expect(state.interaction.add).toHaveBeenCalledWith("save", appearance.root);
   bus.emit("interact:focus", { id: "save" });
   expect(state.hints.show).toHaveBeenCalledWith("hint.saveShrine", 8);
   use();

@@ -20,7 +20,12 @@ export interface Line {
 
 /** Script lines, by their id in the Episode 1 Script. */
 export const LINES = {
-  letters: { id: "E1-P03-1", speaker: "Sora", text: "…Not tonight, Yay.", seconds: 2.6 },
+  letters: {
+    id: "E1-P03-1",
+    speaker: "Sora",
+    text: "Grandma's letters… I can't read them tonight.",
+    seconds: 4.2,
+  },
   call1: {
     id: "E1-P06-1",
     speaker: "Yay Mey",

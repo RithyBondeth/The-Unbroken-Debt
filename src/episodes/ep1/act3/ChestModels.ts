@@ -5,7 +5,7 @@ import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { RelicCraft } from "./RelicCraft";
 import { CHEST_ITEMS, type ChestItem } from "./ChestProgress";
 
-export const CHEST_AT = [-4.5, 2.16, -12.52] as const;
+const CHEST_AT = [-4.5, 2.16, -12.52] as const;
 /** A shallow coffer between the joists, with an actual opening through the visible floor. */
 export class ChestModels {
   readonly craft: RelicCraft;

@@ -76,15 +76,11 @@ export class FinalRitual {
     this.fire.renderPriority = 9;
     for (const mesh of this.shadow.getChildMeshes()) mesh.isPickable = false;
     this.fire.intensity = 0;
-    game.interaction.add(
-      "interact_ritual_burner",
-      [
-        ...this.burner.getChildMeshes(),
-        ...area.container.meshes.filter((mesh) => /^main_burner/.test(mesh.name)),
-      ],
-      { outline: false },
-    );
-    game.interaction.add("interact_ritual_spare", this.spare, { outline: false });
+    game.interaction.add("interact_ritual_burner", [
+      ...this.burner.getChildMeshes(),
+      ...area.container.meshes.filter((mesh) => /^main_burner/.test(mesh.name)),
+    ]);
+    game.interaction.add("interact_ritual_spare", this.spare);
     game.bus.on("interact:use", ({ id }) => this.use(id));
     game.bus.on("interact:focus", ({ id }) => {
       if (!this.progress.ready || this.progress.broken || this.progress.active) return;

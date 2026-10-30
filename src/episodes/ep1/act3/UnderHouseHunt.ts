@@ -45,8 +45,8 @@ export class UnderHouseHunt {
     models.createPreview(game.camera);
     this.restoreModels();
     for (const jar of models.jars) {
-      game.interaction.add(`interact_jar_${jar.id}`, jar.root, { outline: false });
-      game.interaction.add(`interact_jar_contents_${jar.id}`, jar.contents, { outline: false });
+      game.interaction.add(`interact_jar_${jar.id}`, jar.root);
+      game.interaction.add(`interact_jar_contents_${jar.id}`, jar.contents);
     }
     game.bus.on("interact:use", ({ id }) => this.use(id));
     game.bus.on("interact:focus", ({ id }) => {

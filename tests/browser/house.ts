@@ -22,10 +22,18 @@ async function review(): Promise<void> {
       transform: "translateY(-50%)",
     });
   }
+  output.textContent = "Preparing WebGPU…";
   const engine = await createEngine(canvas);
   if (!engine) throw new Error("WebGPU is required");
   useLocalDecoders();
+  output.textContent = "Detecting graphics preset…";
   const game = new Game(engine, await detectDevice());
+  output.textContent = "Loading physics, fonts and hand models…";
+  let loadedMeshes = 0;
+  const loading = game.scene.onNewMeshAddedObservable.add(() => {
+    if (++loadedMeshes % 100 === 0)
+      output.textContent = `Loading village geometry… ${loadedMeshes} meshes`;
+  });
   Object.defineProperty(game, "saves", {
     value: new SaveStore(undefined, "boon-sop-house-placement-review"),
   });
@@ -38,6 +46,7 @@ async function review(): Promise<void> {
     game.flags.set(flag, true);
   game.fade.waitForEnter = async () => {};
   await game.start({ audio: false });
+  loading.remove();
   const act = (window as unknown as { act: ActOne }).act;
   while (game.cutscene) await new Promise((resolve) => setTimeout(resolve, 100));
   const checks: string[] = [];
@@ -54,6 +63,12 @@ async function review(): Promise<void> {
     checks.push(`PASS all four ${name.replaceAll("_", " ")} bases touch the floor`);
   }
   const views: Record<string, { feet: number[]; target: number[]; radius: number }> = {
+    "storage-wall": { feet: [-10.5, 0, -10.8], target: [-10.5, 1.2, -13.02], radius: 1.35 },
+    stairs: { feet: [-10.1, 0, -9.3], target: [-7.5, 1.6, -10.75], radius: 1.6 },
+    spade: { feet: [1.7, 0, -9], target: [2.85, 0.65, -10.15], radius: 0.85 },
+    traps: { feet: [3.2, 0, -16.6], target: [4.6, 1.65, -18.16], radius: 0.85 },
+    "ground-traps": { feet: [-1.5, 0, -15.7], target: [-2.6, 0.45, -17.1], radius: 0.9 },
+    umbrellas: { feet: [2.8, 0, 0.8], target: [3.85, 0.55, -0.8], radius: 0.85 },
     phone: { feet: [1.75, 2.5, -17.2], target: [2.7, 3.7, -17.2], radius: 0.35 },
     doorway: { feet: [1.8, 2.5, -15.6], target: [2.97, 3.7, -15.5], radius: 0.95 },
     kitchen: { feet: [4.8, 2.5, -13.1], target: [5.2, 3.2, -12.6], radius: 1.3 },
@@ -71,9 +86,19 @@ async function review(): Promise<void> {
     "hammock-knot": { feet: [4.8, 0, -10.5], target: [6, 1.36, -10.29], radius: 0.4 },
   };
   let view = new URLSearchParams(location.search).get("view") ?? "altar";
+  let phonePreview = false;
+  const previewReceiver = (active: boolean) => {
+    phonePreview = active;
+    game.hands.holdPhone(active);
+    game.scene.getTransformNodeByName("arrival_receiver")!.setEnabled(!active);
+    game.cutscene = active;
+    game.gated.holdStill = active;
+    document.getElementById("receiver")!.setAttribute("aria-pressed", String(active));
+  };
   if (!(view in views)) view = "altar";
   const show = async (name: string) => {
     view = name;
+    previewReceiver(false);
     game.sketchbook?.close();
     game.stopInspecting();
     const spec = views[name];
@@ -88,9 +113,35 @@ async function review(): Promise<void> {
   };
   for (const name of Object.keys(views))
     document.getElementById(name)!.onclick = () => void show(name);
+  document.getElementById("receiver")!.onclick = async () => {
+    if (view !== "phone") await show("phone");
+    previewReceiver(!phonePreview);
+    if (phonePreview) game.inspectObject(Vector3.FromArray(views.phone.target), 0.65);
+    output.textContent = `${checks.join("\n")}\n${phonePreview ? "Receiver lifted · cord follows the hand" : "Receiver returned · cord reconnects to the hook"}`;
+  };
+  let cordCheckAge = 0;
+  game.scene.onAfterRenderObservable.add(() => {
+    cordCheckAge += game.deltaSeconds;
+    if (view !== "phone" || cordCheckAge < 0.5) return;
+    cordCheckAge = 0;
+    const mesh = game.scene.getMeshByName("arrival_phone_cord")!;
+    const socket = game.scene.getTransformNodeByName("arrival_phone_cord_terminal")!;
+    const rest = game.scene.getTransformNodeByName("arrival_phone_cord_rest")!;
+    const end = game.hands.phoneCordPoint ?? rest.getAbsolutePosition();
+    const vertices = mesh.getVerticesData("position")!;
+    const distance = (at: Vector3) => {
+      let nearest = Infinity;
+      for (let i = 0; i < vertices.length; i += 3)
+        nearest = Math.min(nearest, Vector3.Distance(at, Vector3.FromArray(vertices, i)));
+      return nearest;
+    };
+    const error = Math.max(distance(socket.getAbsolutePosition()), distance(end));
+    output.textContent = `${checks.join("\n")}\n${error < 0.003 ? "PASS" : "FAIL"} telephone cord ${phonePreview ? "follows the held receiver" : "connects to the resting receiver"} · endpoint gap ${(error * 1000).toFixed(2)} mm`;
+  });
   document.getElementById("capture")!.onclick = () => {
-    void saveShot(engine, game.camera, `house-${view}`).then(() => {
-      output.textContent += `\nSaved debug-shots/house-${view}.png`;
+    const captureView = phonePreview ? "phone-held" : view;
+    void saveShot(engine, game.camera, `house-${captureView}`).then(() => {
+      output.textContent += `\nSaved debug-shots/house-${captureView}.png`;
     });
   };
   await show(view);

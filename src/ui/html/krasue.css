@@ -1,0 +1,19 @@
+.krasue-warning {
+  position: fixed;
+  bottom: max(7rem, 15vh);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(34rem, calc(100vw - 3rem));
+  color: #e8d7bf;
+  text-align: center;
+  text-shadow:
+    0 2px 8px #000,
+    0 0 24px #000;
+  font: 400 1rem / 1.6 var(--ui-font-body);
+  white-space: pre-line;
+  pointer-events: none;
+  z-index: var(--ui-z-caught);
+}
+.krasue-warning[hidden] {
+  display: none;
+}

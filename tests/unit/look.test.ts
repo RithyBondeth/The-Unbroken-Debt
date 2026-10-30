@@ -38,12 +38,14 @@ describe("grade", () => {
     expect(r).toBeGreaterThan(b);
   });
 
-  it("gives Episode 1 sepia mid-tones, cool shadows and deep blacks", () => {
+  it("gives Episode 1 warm mid-tones and cool shadows while retaining dark detail", () => {
     const mid = gradeColor([0.5, 0.5, 0.5], EP1_GRADE);
-    expect(mid[0]).toBeGreaterThan(mid[2] + 0.05);
+    expect(mid[0]).toBeGreaterThan(mid[2] + 0.02);
     const shadow = gradeColor([0.12, 0.12, 0.12], EP1_GRADE);
     expect(shadow[2]).toBeGreaterThan(shadow[0]);
-    expect(gradeColor([0.015, 0.015, 0.015], EP1_GRADE)).toEqual([0, 0, 0]);
+    const dark = gradeColor([0.015, 0.015, 0.015], EP1_GRADE);
+    expect(dark.every((channel) => channel > 0)).toBe(true);
+    expect(gradeColor([0, 0, 0], EP1_GRADE)).toEqual([0, 0, 0]);
   });
 
   it("desaturates", () => {
@@ -88,14 +90,20 @@ describe("lookValues", () => {
   const settings = { grain: true, aberration: true, brightness: 0 };
   const calm = { fear: 0, scare: 0, memory: false };
 
-  it("uses the Art Bible defaults when calm", () => {
-    expect(lookValues(calm, settings)).toEqual({ vignetteWeight: 1.5, grain: 9, aberration: 8 });
+  it("keeps film effects subtle during ordinary play", () => {
+    const v = lookValues(calm, settings);
+    expect(v.vignetteWeight).toBeLessThan(1);
+    expect(v.grain).toBeLessThan(2);
+    expect(v.aberration).toBeLessThan(0.5);
   });
 
   it("deepens the vignette with fear and spikes aberration on a scare", () => {
     const v = lookValues({ fear: 1, scare: 1, memory: false }, settings);
-    expect(v.vignetteWeight).toBe(4);
-    expect(v.aberration).toBe(32);
+    const base = lookValues(calm, settings);
+    expect(v.vignetteWeight).toBeGreaterThan(base.vignetteWeight);
+    expect(v.vignetteWeight).toBeLessThan(3);
+    expect(v.aberration).toBeGreaterThan(base.aberration * 4);
+    expect(v.aberration).toBeLessThan(4);
   });
 
   it("honours the settings toggles", () => {

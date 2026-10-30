@@ -1,8 +1,8 @@
 /* Development-only gallery; all UI samples use production components and styles. */
 #game {
   background:
-    linear-gradient(rgb(9 13 12 / 0.12), rgb(9 13 12 / 0.22)),
-    url("/assets/ui/welcome-house.jpg") 65% center / cover;
+    linear-gradient(rgb(var(--ui-bg-rgb) / 0.12), rgb(var(--ui-bg-rgb) / 0.22)),
+    url("/assets/ui/welcome-hall.webp") 65% center / cover;
 }
 .text-preview-controls {
   position: fixed;

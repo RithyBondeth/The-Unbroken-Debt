@@ -40,3 +40,7 @@ public/vendor/
 
 # Python bytecode from the Blender area scripts
 __pycache__/
+
+# Local scratch: image-generation and palette-review output, editor tool caches
+output/
+.impeccable/

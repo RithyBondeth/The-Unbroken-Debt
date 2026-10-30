@@ -23,8 +23,7 @@ export class WardrobeHiding {
     this.vignette.className = "wardrobe-vignette";
     this.vignette.hidden = true;
     document.body.append(this.vignette);
-    for (const w of models.wardrobes)
-      game.interaction.add(`interact_wardrobe_${w.id}`, w.root, { outline: false });
+    for (const w of models.wardrobes) game.interaction.add(`interact_wardrobe_${w.id}`, w.root);
     game.bus.on("interact:focus", ({ id }) => {
       if (id.startsWith("interact_wardrobe_") && !game.hiding)
         game.hints.show("hint.wardrobeEnter", 5);

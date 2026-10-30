@@ -9,6 +9,7 @@ import { Game } from "../../src/core/Game";
 import { createEngine } from "../../src/render/createEngine";
 import { detectDevice } from "../../src/render/detectDevice";
 import { useLocalDecoders } from "../../src/render/decoders";
+import { isQualityName } from "../../src/render/QualityPresets";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { saveShot } from "../../src/debug/saveShot";
 import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
@@ -99,16 +100,22 @@ async function tour(): Promise<void> {
   const engine = await createEngine(document.getElementById("game") as HTMLCanvasElement);
   if (!engine) throw new Error("WebGPU is required");
   useLocalDecoders();
-  const game = new Game(engine, await detectDevice());
+  const device = await detectDevice();
+  const quality = params.get("quality");
+  if (isQualityName(quality)) device.quality = quality;
+  const game = new Game(engine, device);
   Object.defineProperty(game, "saves", { value: new SaveStore(undefined, "boon-sop-tour") });
   if (!studio) {
     // Quiet vigil after the call: the house open, nothing hunting.
     for (const flag of ["ep1.arrival.road", "ep1.arrival.courtyard", "ep1.vigil.started"])
       game.flags.set(flag, true);
-    history.replaceState(null, "", `${location.pathname}?start=act1&${params}`);
+    params.set("start", "act1");
+    history.replaceState(null, "", `${location.pathname}?${params}`);
   }
   game.fade.waitForEnter = async () => {};
   await game.start({ audio: false });
+  // Game.update releases its reading-resolution floor each frame during play.
+  if (params.has("fixed")) game.scene.onBeforeRenderObservable.add(() => game.holdResolution(1));
   const deadline = performance.now() + 20000;
   while (game.cutscene && performance.now() < deadline)
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -147,12 +154,19 @@ async function tour(): Promise<void> {
   }
 
   const nav = document.getElementById("views")!;
+  let currentView = Object.keys(views)[0];
+  const prefix = params.get("capture") ?? "tour";
+  const captureName = (name: string) => {
+    const lit = studio || (window as unknown as { act: ActOne }).act.vigil.lamp.burning;
+    return `${prefix}-${name}${lit ? "" : "-unlit"}`;
+  };
   const show = async (name: string, save: boolean) => {
+    currentView = name;
     views[name]();
     // Let TAA, eye adaptation and fog settle before judging or saving.
     await frames(90);
-    if (save) await saveShot(engine, game.camera, `tour-${name}`);
-    output.textContent = `${name}${save ? ` → debug-shots/tour-${name}.png` : ""}`;
+    if (save) await saveShot(engine, game.camera, captureName(name));
+    output.textContent = `${name} · ${game.preset.name}${save ? ` → debug-shots/${prefix}-${name}.png` : ""}`;
   };
   for (const name of Object.keys(views)) {
     const button = document.createElement("button");
@@ -160,6 +174,25 @@ async function tour(): Promise<void> {
     button.onclick = () => void show(name, false);
     nav.append(button);
   }
+  if (!studio) {
+    const lamp = document.createElement("button");
+    lamp.textContent = "Toggle player lamp";
+    lamp.onclick = () => {
+      const act = (window as unknown as { act: ActOne }).act;
+      if (act.vigil.lamp.burning) act.vigil.lamp.putOut();
+      else act.vigil.lamp.light();
+    };
+    nav.append(lamp);
+  }
+  const capture = document.createElement("button");
+  capture.textContent = "Save screenshot";
+  capture.onclick = () => {
+    const name = captureName(currentView);
+    void saveShot(engine, game.camera, name).then(() => {
+      output.textContent = `Saved debug-shots/${name}.png`;
+    });
+  };
+  nav.append(capture);
   if (params.has("run")) {
     for (const name of Object.keys(views)) await show(name, true);
     output.textContent = `DONE ${Object.keys(views).length} views`;

@@ -1,14 +1,6 @@
 import type { Flags } from "../../../core/Flags";
 
-export const RESOLUTION_STAGES = [
-  "dawn",
-  "choice",
-  "slip",
-  "map",
-  "title",
-  "summary",
-  "credits",
-] as const;
+const RESOLUTION_STAGES = ["dawn", "choice", "slip", "map", "title", "summary", "credits"] as const;
 export type ResolutionStage = (typeof RESOLUTION_STAGES)[number];
 /** R01–R05: each reveal and the one-time respect award survive reloads. */
 export class ResolutionProgress {

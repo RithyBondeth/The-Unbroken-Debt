@@ -17,6 +17,7 @@ function courtyard() {
     gated,
     cutscene: false,
     player: { feet: { z: 8 } },
+    hands: { phoneCordPoint: null },
     bus: { emit: vi.fn() },
     sketchbook: null,
     satchel: { isOpen: false },
@@ -33,6 +34,7 @@ function courtyard() {
     sok: { update: vi.fn() },
     shed: { update: vi.fn() },
     progress: { update: vi.fn(), ready: () => false },
+    arrivalModels: { updateTelephoneCord: vi.fn() },
   }) as ActOneBeats;
   return { beats, game, gated };
 }

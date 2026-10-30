@@ -36,18 +36,18 @@ export class DeskInvestigation {
     const p = this.progress;
     models.restore(p.compartmentOpen, p.drawerOpen, p.portraitAwake, p.actThree);
     this.syncPickups();
-    game.interaction.add("interact_altar_key_panel", models.panel, { outline: false });
+    game.interaction.add("interact_altar_key_panel", models.panel);
     game.interaction.add("interact_desk_key", models.key);
-    game.interaction.add("interact_sok_desk", models.drawer, { outline: false });
-    game.interaction.add("interact_sok_journal_b", models.journal, { outline: false });
-    game.interaction.add("interact_portrait", models.portrait, { outline: false });
+    game.interaction.add("interact_sok_desk", models.drawer);
+    game.interaction.add("interact_sok_journal_b", models.journal);
+    game.interaction.add("interact_portrait", models.portrait);
     const thread = area.level.interactables.find((m) => m.name === "interact_thread");
     if (thread)
-      game.interaction.add(
-        "interact_thread",
-        [...thread.node.getChildMeshes(), ...models.intactThreadMeshes, ...models.threadMeshes],
-        { outline: false },
-      );
+      game.interaction.add("interact_thread", [
+        ...thread.node.getChildMeshes(),
+        ...models.intactThreadMeshes,
+        ...models.threadMeshes,
+      ]);
     this.updateLamps();
     game.bus.on("interact:use", ({ id }) => this.use(id));
     game.bus.on("interact:focus", ({ id }) => {

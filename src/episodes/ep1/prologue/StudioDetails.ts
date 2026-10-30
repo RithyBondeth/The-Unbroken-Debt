@@ -1,4 +1,5 @@
 import { createTelephoneReceiver } from "../../../player/TelephoneReceiver";
+import { TelephoneCord } from "../../../player/TelephoneCord";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -30,10 +31,9 @@ export class StudioDetails {
   private readonly ceramic: PBRMaterial;
   private readonly staticMeshes: Mesh[] = [];
   private batching = false;
-  private phoneCord: Mesh | null = null;
+  private phoneCord!: TelephoneCord;
   private phoneCordRest!: TransformNode;
   private phoneCordSocket!: TransformNode;
-  private readonly lastCordEnd = new Vector3(Infinity, Infinity, Infinity);
 
   constructor(
     private readonly scene: Scene,
@@ -531,36 +531,17 @@ export class StudioDetails {
     );
     hit.visibility = 0;
     this.batchParts(root, receiver);
-    this.updateTelephoneCord();
+    this.phoneCord = new TelephoneCord(
+      this.scene,
+      "studio_cloth_telephone_cord",
+      this.phoneCordSocket,
+      this.phoneCordRest,
+      this.black,
+    );
   }
 
   updateTelephoneCord(heldEnd: Vector3 | null = null): void {
-    const end = heldEnd ?? this.phoneCordRest.getAbsolutePosition();
-    if (Vector3.DistanceSquared(end, this.lastCordEnd) < 0.000001) return;
-    this.lastCordEnd.copyFrom(end);
-    const start = this.phoneCordSocket.getAbsolutePosition();
-    const sag = Math.min(0.3, Math.max(0.12, Vector3.Distance(start, end) * 0.22));
-    const path = Array.from({ length: 33 }, (_, i) => {
-      const t = i / 32,
-        p = Vector3.Lerp(start, end, t);
-      p.y -= Math.sin(t * Math.PI) * sag;
-      p.x += Math.sin(t * Math.PI) * 0.035;
-      return p;
-    });
-    this.phoneCord = CreateTube(
-      "studio_cloth_telephone_cord",
-      {
-        path,
-        radius: 0.0026,
-        tessellation: 8,
-        cap: Mesh.CAP_ALL,
-        updatable: true,
-        instance: this.phoneCord ?? undefined,
-      },
-      this.scene,
-    );
-    this.phoneCord.material = this.black;
-    this.phoneCord.isPickable = false;
+    this.phoneCord.update(heldEnd);
   }
 
   private buildDrawer(drawer: TransformNode): void {

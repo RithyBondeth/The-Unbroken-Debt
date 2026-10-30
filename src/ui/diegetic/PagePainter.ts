@@ -40,7 +40,7 @@ function fontFamily(role: FontRole): string {
   return role === "khmer" ? '"Freehand"' : '"Patrick Hand", "Freehand"';
 }
 
-export function canvasFont(role: FontRole, px: number): string {
+function canvasFont(role: FontRole, px: number): string {
   return `${px}px ${fontFamily(role)}`;
 }
 

@@ -1,35 +1,68 @@
 import type { ResolutionProgress } from "./ResolutionProgress";
 import "../../../ui/html/resolution.css";
+import { setControlText } from "../../../ui/html/controlText";
 /** Accessible paper overlays: translated slip, seal map, and Sora's closing spread. */
 export class ResolutionView {
+  private static nextId = 0;
   readonly panel = document.createElement("section");
+  private readonly content = document.createElement("div");
+  private previousFocus: HTMLElement | null = null;
   constructor() {
     this.panel.className = "resolution";
     this.panel.hidden = true;
     this.panel.setAttribute("aria-label", "Episode 1 resolution");
+    this.panel.setAttribute("role", "dialog");
+    this.panel.setAttribute("aria-modal", "true");
+    this.content.className = "resolution-content";
+    this.content.tabIndex = 0;
     document.body.append(this.panel);
+    this.panel.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab") return;
+      const focusable: HTMLElement[] = [
+        ...(this.content.scrollHeight > this.content.clientHeight ? [this.content] : []),
+        ...this.panel.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+      ];
+      if (!focusable.length) return;
+      event.preventDefault();
+      const current = focusable.indexOf(document.activeElement as HTMLElement);
+      const index =
+        current < 0
+          ? event.shiftKey
+            ? focusable.length - 1
+            : 0
+          : (current + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
+      focusable[index].focus();
+    });
   }
   async show(title: string, paragraphs: string[], buttons: string[]): Promise<number> {
+    if (this.panel.hidden)
+      this.previousFocus =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.panel.replaceChildren();
     this.panel.hidden = false;
     const paper = document.createElement("article");
     paper.className = "resolution-paper";
     const heading = document.createElement("h1");
+    heading.id = `resolution-title-${ResolutionView.nextId++}`;
+    this.panel.setAttribute("aria-labelledby", heading.id);
     heading.textContent = title;
-    paper.append(heading);
+    this.content.replaceChildren(heading);
     for (const text of paragraphs) {
       const p = document.createElement("p");
       p.textContent = text;
-      paper.append(p);
+      this.content.append(p);
     }
     const nav = document.createElement("nav");
     nav.setAttribute("aria-label", "Story actions");
-    paper.append(nav);
+    paper.append(this.content, nav);
     this.panel.append(paper);
+    this.content.scrollTop = 0;
     return new Promise((resolve) =>
       buttons.forEach((label, index) => {
         const button = document.createElement("button");
-        button.textContent = label;
+        button.type = "button";
+        button.className = index === 0 ? "ui-button ui-button-primary" : "ui-button";
+        setControlText(button, label);
         button.onclick = () => {
           nav.querySelectorAll("button").forEach((b) => (b.disabled = true));
           resolve(index);
@@ -57,7 +90,7 @@ export class ResolutionView {
     const sora = document.createElement("strong");
     sora.textContent = "Sora";
     names.append(sora);
-    this.panel.querySelector("nav")!.before(names);
+    this.content.append(names);
     await action;
   }
   async map(): Promise<void> {
@@ -77,7 +110,7 @@ export class ResolutionView {
     nights.setAttribute("aria-label", "Night 3 of 7");
     nights.textContent = "● ● ● ○ ○ ○ ○";
     map.append(nights);
-    this.panel.querySelector("nav")!.before(map);
+    this.content.append(map);
     await action;
   }
   summary(progress: ResolutionProgress): Promise<number> {
@@ -96,5 +129,6 @@ export class ResolutionView {
   }
   hide(): void {
     this.panel.hidden = true;
+    this.previousFocus?.focus({ preventScroll: true });
   }
 }

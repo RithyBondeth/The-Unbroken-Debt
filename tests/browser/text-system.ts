@@ -8,10 +8,14 @@ import {
 } from "../../src/ui/html/StoryUi";
 import { setControlText } from "../../src/ui/html/controlText";
 import { DocumentReader } from "../../src/ui/html/DocumentReader";
+import { ARRIVAL_NOTE } from "../../src/episodes/ep1/data/arrival";
 import { NotebookReader } from "../../src/ui/html/NotebookReader";
 import { ResolutionView } from "../../src/episodes/ep1/resolution/ResolutionView";
+import { ResolutionProgress } from "../../src/episodes/ep1/resolution/ResolutionProgress";
 import { showWelcomeScreen, showBootError } from "../../src/ui/html/WelcomeScreen";
 import { showRequirementsPage } from "../../src/ui/html/RequirementsPage";
+import { renderStallNotice } from "../../src/ui/html/RenderStallNotice";
+import { newGameSave } from "../../src/systems/saves/SaveData";
 import { Flags } from "../../src/core/Flags";
 import { Inventory } from "../../src/systems/inventory/Inventory";
 import { EventBus } from "../../src/core/EventBus";
@@ -33,11 +37,15 @@ async function preview(): Promise<void> {
     document: "Document",
     notebook: "Notebook",
     ending: "Ending",
+    map: "Ending map",
+    summary: "Ending summary",
+    choice: "Story choice",
     caught: "Caught",
     entry: "Entry",
     menu: "Main menu",
     requirements: "Requirements",
     error: "Load error",
+    stall: "Render warning",
   })) {
     const link = document.createElement("a");
     link.href = `?view=${id}`;
@@ -80,16 +88,22 @@ async function preview(): Promise<void> {
       break;
     }
     case "document": {
-      const reader = new DocumentReader([
-        {
-          title: "The fourth name",
-          text: "Sok’s folded slip. Three names crossed out. A fourth scraped away until the paper is thin.",
-        },
-        {
-          title: "The village pagoda",
-          text: "Blood seeps across the map. The first faint mark darkens: the village pagoda.",
-        },
-      ]);
+      const arrival = params.get("note") === "arrival";
+      const reader = new DocumentReader(
+        arrival
+          ? ARRIVAL_NOTE
+          : [
+              {
+                title: "The fourth name",
+                text: "Sok’s folded slip. Three names crossed out. A fourth scraped away until the paper is thin.",
+              },
+              {
+                title: "The village pagoda",
+                text: "Blood seeps across the map. The first faint mark darkens: the village pagoda.",
+              },
+            ],
+        arrival ? "Mak Yey’s instructions" : undefined,
+      );
       reader.show(0, () => {});
       break;
     }
@@ -128,8 +142,23 @@ async function preview(): Promise<void> {
       reader.show();
       break;
     }
-    case "ending": {
-      await new ResolutionView().slip();
+    case "ending":
+    case "map":
+    case "summary":
+    case "choice": {
+      const resolution = new ResolutionView();
+      if (view === "map") await resolution.map();
+      else if (view === "summary") {
+        const flags = new Flags();
+        flags.set("lore.ep1.L1", true);
+        await resolution.summary(new ResolutionProgress(flags));
+      } else if (view === "choice")
+        await resolution.show(
+          "Sok’s journal",
+          ["The journal is still in Sora’s hands. Vuthy waits beside the doorway."],
+          ["Show Vuthy", "Keep the journal"],
+        );
+      else await resolution.slip();
       break;
     }
     case "caught": {
@@ -142,7 +171,10 @@ async function preview(): Promise<void> {
       break;
     }
     case "menu": {
-      await showWelcomeScreen(overlay);
+      await showWelcomeScreen(overlay, {
+        load: () =>
+          Promise.resolve({ save: params.has("saved") ? newGameSave() : null, problem: null }),
+      });
       break;
     }
     case "requirements": {
@@ -151,6 +183,10 @@ async function preview(): Promise<void> {
     }
     case "error": {
       showBootError(overlay);
+      break;
+    }
+    case "stall": {
+      renderStallNotice.onStall?.(new Error("Preview of a recoverable rendering interruption."));
       break;
     }
     case "stealth": {

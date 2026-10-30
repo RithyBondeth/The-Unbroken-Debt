@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Krasue window encounter review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="Krasue window encounter"></canvas>
+    <div id="overlay"></div>
+    <nav
+      style="
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      "
+    >
+      <button id="west">Kitchen window</button>
+      <button id="south">Front window</button>
+      <button id="detail">Creature detail</button>
+      <button id="turntable">3D turntable</button>
+      <button id="scream">Scream detail</button>
+      <button id="rush">Scream and rush preview</button>
+      <button id="motion">Verify 3D hair and organs</button>
+      <button id="trail">Verify rush trail</button>
+      <button id="cover">Verify escape behind wall</button>
+      <button id="attack">Face the Krasue</button>
+      <button id="sound">Play positional sound</button>
+      <button id="capture">Save screenshot</button>
+    </nav>
+    <pre
+      id="results"
+      role="status"
+      style="
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        color: #ddd;
+        background: #111c;
+        padding: 8px;
+      "
+    >
+Loading village…</pre>
+    <script type="module" src="./krasue.ts"></script>
+  </body>
+</html>

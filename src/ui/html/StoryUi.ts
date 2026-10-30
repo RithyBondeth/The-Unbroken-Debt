@@ -3,7 +3,7 @@ import { setControlText } from "./controlText";
 import "./entry.css";
 import { t, type StringKey } from "../../data/strings";
 
-export { t, type StringKey };
+export type { StringKey };
 
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -68,6 +68,11 @@ export function subtitleChunks(text: string, max = SUBTITLE_CHARS): string[] {
 export class Subtitles {
   private readonly node = element("div", "story-subtitles");
   private sequence = 0;
+
+  /** Environmental cues yield while a story line is being presented. */
+  get active(): boolean {
+    return !this.node.hidden;
+  }
 
   constructor() {
     this.node.hidden = true;
@@ -148,6 +153,7 @@ export class ScreenFade {
     this.card.classList.add("shown");
     if (!parts.button) return;
     const button = document.createElement("button");
+    button.className = "ui-button ui-button-primary";
     setControlText(button, parts.button);
     this.card.appendChild(button);
     button.focus({ preventScroll: true });
@@ -165,6 +171,11 @@ export class ScreenFade {
     const previousFocus = document.activeElement as HTMLElement | null;
     this.card.replaceChildren();
     this.card.classList.add("story-entry");
+    const atmosphere = document.createElement("div");
+    atmosphere.className = "entry-atmosphere";
+    atmosphere.setAttribute("aria-hidden", "true");
+    atmosphere.innerHTML = '<div class="entry-door"></div><i></i><i></i>';
+    this.node.prepend(atmosphere);
     const label = document.createElement("p");
     label.className = "entry-eyebrow";
     label.textContent = t("start.before");
@@ -234,6 +245,7 @@ export class ScreenFade {
     abort.abort();
     this.node.classList.remove("waiting");
     this.node.classList.remove("entering");
+    atmosphere.remove();
     this.card.classList.remove("story-entry");
     this.card.removeAttribute("role");
     this.card.removeAttribute("aria-labelledby");
@@ -307,6 +319,7 @@ export class SatchelPanel {
     this.node.append(title, list);
     if (this.action) {
       const button = document.createElement("button");
+      button.className = "ui-button ui-button-primary";
       setControlText(button, this.action.label);
       button.disabled = !this.action.enabled;
       button.onclick = () => this.action?.enabled && this.action.perform();

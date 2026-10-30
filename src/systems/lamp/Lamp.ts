@@ -4,7 +4,7 @@ import type { GameEvents, LampState } from "../../core/events";
 /** Episode 1 Beat Sheet, section 5: "A full tank lasts ~12 min." */
 export const FULL_TANK_SECONDS = 12 * 60;
 /** Controls and Interface, section 6: "the flame shrinks and sputters below 25%". */
-export const SPUTTER_BELOW = 0.25;
+const SPUTTER_BELOW = 0.25;
 
 /**
  * Sora's hurricane lamp (TDD section 4, Lamp): open, shuttered or out, and the

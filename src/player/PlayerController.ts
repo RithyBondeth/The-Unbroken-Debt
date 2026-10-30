@@ -5,6 +5,7 @@ import {
 } from "@babylonjs/core/Physics/v2/characterController";
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
 import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
+import type { PhysicsShape } from "@babylonjs/core/Physics/v2/physicsShape";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import type { Scene } from "@babylonjs/core/scene";
@@ -117,6 +118,11 @@ export class PlayerController {
 
   get stance(): Stance {
     return this._stance;
+  }
+
+  /** Sight queries that hit Sora's capsule have reached her, not an obstruction. */
+  get collisionShape(): PhysicsShape {
+    return this.controller.shape;
   }
 
   get climbing(): boolean {

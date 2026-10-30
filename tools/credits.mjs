@@ -93,7 +93,7 @@ const md = [
   "",
   "| Package | Licence |",
   "|---|---|",
-  "| Babylon.js (`@babylonjs/core`, `gui`, `loaders`, `ktx2decoder`) | Apache 2.0 |",
+  "| Babylon.js (`@babylonjs/core`, `loaders`, `ktx2decoder`) | Apache 2.0 |",
   "| Havok Physics for Babylon.js (`@babylonjs/havok`) | MIT |",
   "| idb-keyval | Apache 2.0 |",
   "| meshoptimizer decoder | MIT |",

@@ -59,7 +59,7 @@ export class ActOneBeats {
     this.progress = new VigilProgress(game.flags, INCENSE_SECONDS);
     this.arrival = new ArrivalProgress(game.flags);
     game.interaction.add("interact_arrival_note", arrivalModels.note);
-    game.interaction.add("interact_arrival_phone", arrivalModels.phone, { outline: false });
+    game.interaction.add("interact_arrival_phone", arrivalModels.phone);
     if (this.arrival.taken) arrivalModels.matches.setEnabled(false);
     else game.interaction.add("interact_blessed_matches", arrivalModels.matches);
     const door = (id: string, collider: string, lock: string) => {
@@ -141,6 +141,7 @@ export class ActOneBeats {
     this.progress.update(dt);
     const game = this.game;
     const feet = game.player.feet;
+    this.arrivalModels.updateTelephoneCord(game.hands.phoneCordPoint);
     // A1-02: let the first view of the tent breathe without taking movement or look.
     if (
       !game.cutscene &&

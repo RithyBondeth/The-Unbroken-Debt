@@ -4,9 +4,9 @@ import { Scene } from "@babylonjs/core/scene";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { ShrineWoodwork } from "../../src/episodes/ep1/act1/ShrineWoodwork";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { RelicCraft } from "../../src/episodes/ep1/act3/RelicCraft";
 import { ShrineResponse } from "../../src/episodes/ep1/act1/ShrineResponse";
+import { mapShrineGrain, ShrineAgeing } from "../../src/episodes/ep1/act1/ShrineAgeing";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_APPROACH,
@@ -20,6 +20,62 @@ afterEach(() => {
   for (const e of engines.splice(0)) e.dispose();
 });
 
+it("keeps weathering and the plain timber support finite and within a small geometry budget", () => {
+  const engine = new NullEngine();
+  engines.push(engine);
+  const scene = new Scene(engine),
+    c = new RelicCraft(scene);
+  const root = new TransformNode("shrine", scene),
+    wood = new PBRMaterial("wood", scene);
+  const ageing = new ShrineAgeing(c, root);
+  ageing.pedestal(wood, wood, wood);
+  ageing.dress(wood, wood, wood, wood, wood);
+  let triangles = 0;
+  for (const [i, mesh] of c.meshes.entries()) {
+    mapShrineGrain(mesh, i);
+    triangles += mesh.getTotalIndices() / 3;
+    for (const kind of ["position", "normal", "uv"])
+      expect(mesh.getVerticesData(kind)?.every(Number.isFinite)).toBe(true);
+    mesh.computeWorldMatrix(true);
+    const bounds = mesh.getBoundingInfo().boundingBox;
+    expect(bounds.minimumWorld.y).toBeGreaterThan(0);
+    expect(bounds.maximumWorld.x).toBeLessThan(0.75);
+    expect(bounds.minimumWorld.x).toBeGreaterThan(-0.75);
+  }
+  expect(triangles).toBeLessThan(14000);
+});
+
+it("runs grain lengthwise on both upright posts and horizontal rails without stretching a full atlas onto each piece", () => {
+  const engine = new NullEngine();
+  engines.push(engine);
+  const scene = new Scene(engine),
+    c = new RelicCraft(scene);
+  const root = new TransformNode("shrine", scene),
+    wood = new PBRMaterial("wood", scene);
+  for (const [size, axis] of [
+    [[0.06, 0.72, 0.06], 1],
+    [[0.72, 0.06, 0.06], 0],
+  ] as const) {
+    const mesh = c.box(root, "timber", size, [0, 1, 0], wood);
+    mapShrineGrain(mesh, 1907);
+    const positions = mesh.getVerticesData("position")!,
+      normals = mesh.getVerticesData("normal")!,
+      uvs = mesh.getVerticesData("uv")!;
+    const front = Array.from({ length: positions.length / 3 }, (_, i) => i).filter(
+      (i) => Math.abs(normals[i * 3 + 2]) > 0.9,
+    );
+    const u = front.map((i) => uvs[i * 2]),
+      v = front.map((i) => uvs[i * 2 + 1]);
+    expect(Math.max(...u) - Math.min(...u)).toBeCloseTo(0.8);
+    expect(Math.max(...v) - Math.min(...v)).toBeCloseTo(0.06 / 0.9);
+    const bottom = front.reduce((a, b) =>
+      positions[a * 3 + axis] < positions[b * 3 + axis] ? a : b,
+    );
+    const top = front.reduce((a, b) => (positions[a * 3 + axis] > positions[b * 3 + axis] ? a : b));
+    expect(uvs[top * 2] - uvs[bottom * 2]).toBeCloseTo(0.8);
+  }
+});
+
 it("puts the whole shrine and its approach outside both front-right fence lines", () => {
   expect(SAVE_SHRINE_POSITION.x + 0.75).toBeLessThan(YARD.minX - 1);
   expect(SAVE_SHRINE_POSITION.z - 0.55).toBeGreaterThan(YARD.maxZ + 1);
@@ -30,7 +86,7 @@ it("puts the whole shrine and its approach outside both front-right fence lines"
   }
 });
 
-it("authors solid shingles and raised leaf relief with finite normals within a prop-sized budget", () => {
+it("builds a plain household roof with finite normals within a small geometry budget", () => {
   const engine = new NullEngine();
   engines.push(engine);
   const scene = new Scene(engine),
@@ -38,14 +94,11 @@ it("authors solid shingles and raised leaf relief with finite normals within a p
     root = new TransformNode("shrine", scene);
   const wood = new PBRMaterial("wood", scene);
   const details = new ShrineWoodwork(c, root);
-  details.roof(0.66, 1.04, 1.98, 0.62, wood, wood, wood, wood);
-  const tiles = c.meshes.filter((mesh) => mesh.name.includes("overlapping_roof_shingle"));
-  expect(tiles.length).toBe(120);
-  expect(c.meshes.filter((mesh) => mesh.name === "phra_phum_carved_flame_blade")).toHaveLength(5);
-  expect(c.meshes.some((mesh) => mesh.name === "phra_phum_solid_carved_pediment")).toBe(true);
-  const leaf = c.meshes.find((mesh) => mesh.name.includes("chiselled_leaf_relief"))!;
-  const leafDepth = leaf.getBoundingInfo().boundingBox.extendSize.z * 2;
-  expect(leafDepth).toBeGreaterThan(0.015);
+  details.household(wood, wood, wood);
+  for (const mesh of c.meshes) {
+    mesh.computeWorldMatrix(true);
+    expect(mesh.getBoundingInfo().boundingBox.maximumWorld.y).toBeLessThan(2.45);
+  }
   let triangles = 0,
     valid = true;
   for (const mesh of c.meshes) {
@@ -54,7 +107,7 @@ it("authors solid shingles and raised leaf relief with finite normals within a p
       for (const value of mesh.getVerticesData(kind) ?? []) valid &&= Number.isFinite(value);
   }
   expect(valid).toBe(true);
-  expect(triangles).toBeLessThan(30000);
+  expect(triangles).toBeLessThan(600);
 });
 
 it("plays each response cue once, turns the rigid head in darkness, and restores idle", () => {
@@ -92,26 +145,18 @@ it("failed writes and interrupted responses restore light and never emit later c
   expect(r.turn).toBe(0);
 });
 
-it("lights both mirrored front arch bands from outside the doorway", () => {
+it("faces the plain gable boards toward the approaching player", () => {
   const engine = new NullEngine();
   engines.push(engine);
   const scene = new Scene(engine),
     c = new RelicCraft(scene);
   const root = new TransformNode("shrine", scene),
     wood = new PBRMaterial("wood", scene);
-  new ShrineWoodwork(c, root).entrance(wood, wood, wood, wood);
-  const bands = c.meshes.filter((m) => m.name === "phra_phum_bevelled_timber_door_arch");
-  expect(bands).toHaveLength(2);
-  for (const band of bands) {
-    const p = band.getVerticesData("position")!,
-      indices = band.getIndices()!;
-    // The broad, flat front of the first arch segment, between profile points 2 and 3.
-    const i = 12;
-    const a = Vector3.FromArray(p, indices[i] * 3),
-      b = Vector3.FromArray(p, indices[i + 1] * 3),
-      d = Vector3.FromArray(p, indices[i + 2] * 3);
-    // Babylon computes left-handed surface normals from reversed cross products.
-    const n = Vector3.Cross(d.subtract(a), b.subtract(a)).normalize();
-    expect(n.z).toBeGreaterThan(0.99);
+  new ShrineWoodwork(c, root).household(wood, wood, wood);
+  const panels = c.meshes.filter((mesh) => mesh.name === "phra_phum_plain_gable_board");
+  expect(panels.length).toBeGreaterThan(0);
+  for (const panel of panels) {
+    const normals = panel.getVerticesData("normal")!;
+    for (let i = 2; i < normals.length; i += 3) expect(normals[i]).toBeGreaterThan(0.99);
   }
 });

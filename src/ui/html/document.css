@@ -1,13 +1,21 @@
-.document-reader {
+.document-reader-overlay {
   position: fixed;
   z-index: var(--ui-z-panel);
-  inset: auto 50% 9% auto;
-  transform: translateX(50%);
+  inset: 0;
+  display: grid;
+  place-items: center;
   box-sizing: border-box;
-  width: min(42rem, calc(100vw - 2 * var(--ui-safe-x)));
-  max-height: 80dvh;
-  overflow: auto;
-  padding: clamp(1.5rem, 4vw, 2.5rem);
+  padding: var(--ui-safe-bottom) var(--ui-safe-x);
+  background: var(--ui-backdrop);
+}
+.document-reader {
+  --document-padding: var(--ui-panel-padding);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(42rem, 100%);
+  max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
+  overflow: hidden;
   border: 1px solid var(--ui-paper-border);
   border-radius: var(--ui-radius);
   background: var(--ui-paper);
@@ -15,32 +23,64 @@
   box-shadow: var(--ui-shadow);
   font-size: var(--ui-reading);
 }
-.document-reader[hidden] {
+.document-reader-overlay[hidden],
+.document-reader[hidden],
+.document-reader [hidden] {
   display: none;
 }
+.document-reader-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--document-padding);
+  scrollbar-color: var(--ui-paper-border) transparent;
+  scrollbar-width: thin;
+}
+.document-reader-content:focus-visible {
+  outline-offset: -4px;
+}
 .document-reader small {
+  display: block;
   color: var(--ui-paper-muted);
   font-size: var(--ui-caption);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
 }
 .document-reader h2 {
-  margin: var(--ui-space-4) 0 var(--ui-space-6);
+  margin: var(--ui-space-3) 0 var(--ui-space-6);
   font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
 .document-reader p {
   max-width: 65ch;
-  margin: var(--ui-space-4) 0 var(--ui-space-8);
+  margin: 0;
+  white-space: pre-line;
   text-wrap: pretty;
 }
 .document-reader footer {
   display: flex;
+  flex-shrink: 0;
   gap: var(--ui-space-2);
   align-items: center;
   flex-wrap: wrap;
-  padding-top: var(--ui-space-4);
+  margin-inline: var(--document-padding);
+  padding-block: var(--ui-space-4) var(--ui-space-6);
   border-top: 1px solid var(--ui-paper-border);
+}
+.document-reader .document-reader-next {
+  margin-left: auto;
+}
+@media (max-width: 480px) {
+  .document-reader footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .document-reader footer span {
+    margin: 0;
+    text-align: right;
+  }
+  .document-reader .document-reader-next {
+    margin: 0;
+  }
 }
 .document-reader footer span {
   margin-right: auto;
