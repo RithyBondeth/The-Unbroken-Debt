@@ -26,10 +26,10 @@ export class SokInvestigation {
   ) {
     this.governor = new GramophoneGovernor(game.flags);
     game.interaction.remove("interact_gramophone");
-    game.interaction.add("interact_gramophone", models.gramophoneMeshes, { outline: false });
+    game.interaction.add("interact_gramophone", models.gramophoneMeshes);
     if (!game.flags.get("ep1.journal.plankOpen", false))
-      game.interaction.add("interact_sok_wall_plank", models.plank, { outline: false });
-    game.interaction.add("interact_sok_journal", models.papers, { outline: false });
+      game.interaction.add("interact_sok_wall_plank", models.plank);
+    game.interaction.add("interact_sok_journal", models.papers);
     models.update(
       0,
       this.governor.rpm,

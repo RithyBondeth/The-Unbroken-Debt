@@ -6,12 +6,16 @@ import { seededRandom } from "../../../audio/synth";
 import { thunder } from "../audio/prologueSounds";
 import { dawnBirds, villageRain } from "../audio/nightSounds";
 import { Soundscape } from "./Soundscape";
+import { DreadScore } from "../audio/DreadScore";
 import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
 import { ForestBorder } from "./ForestBorder";
 import { PLAY } from "../data/forestBorder";
 import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
+import { GROUND_MIST } from "../data/forestAtmosphere";
+import { ForestAtmosphere } from "./ForestAtmosphere";
+import { LowGroundMist } from "../../../render/LowGroundMist";
 import { EaveDrips } from "./EaveDrips";
 import { warmSceneViews } from "../../../render/warmSceneViews";
 import { Vigil } from "./Vigil";
@@ -45,6 +49,8 @@ import { EarlyStealth } from "./EarlyStealth";
 import { SavePoint } from "../../../systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
 import { ShrineEffigy } from "./ShrineEffigy";
+import { KrasueEncounter } from "../entities/KrasueEncounter";
+import { KrasueModel } from "../entities/KrasueModel";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_LOCATION,
@@ -81,11 +87,15 @@ export class ActOne {
   resolution!: DawnResolution;
   early!: EarlyStealth;
   saveShrine!: PhraPhum;
+  krasue!: KrasueEncounter;
   private resolutionDelay = 0;
   private running = false;
+  forest!: ForestAtmosphere;
+  private lowMist: LowGroundMist | null = null;
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
-  private thunderSound: StaticSound | null = null;
+  private readonly thunderSounds: StaticSound[] = [];
+  private score = new DreadScore(null);
   private soundscape!: Soundscape;
   private wasFlashing = false;
 
@@ -134,7 +144,11 @@ export class ActOne {
     });
     this.border.build();
     game.fallGuard.bounds = PLAY;
-    await Promise.all([ShadowFigure.prepare(game.scene), ShrineEffigy.prepare(game.scene)]);
+    await Promise.all([
+      ShadowFigure.prepare(game.scene),
+      ShrineEffigy.prepare(game.scene),
+      KrasueModel.prepare(game.scene),
+    ]);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
@@ -196,15 +210,17 @@ export class ActOne {
     }
     for (const { name, node } of this.area.level.interactables) {
       if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
-      else
-        game.interaction.add(name, node, {
-          outline: name !== "interact_altar" && !offeringModels.pickupIds.has(name),
-        });
+      else game.interaction.add(name, node);
     }
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
-    this.night = new NightLife(game, this.area, () => this.saveShrine?.silence ?? 0);
-    this.soundscape = new Soundscape(game, () => this.night.threatSilence);
+    this.night = new NightLife(game, this.area, () =>
+      Math.max(this.saveShrine?.silence ?? 0, this.forest?.silence ?? 0),
+    );
+    this.soundscape = new Soundscape(game, () =>
+      Math.max(this.night.threatSilence, this.forest?.silence ?? 0),
+    );
+    this.forest = new ForestAtmosphere(game);
     this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
@@ -241,6 +257,7 @@ export class ActOne {
     );
     this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
     this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress());
+    this.krasue = new KrasueEncounter(game, this.vigil, () => this.beats.captureProgress());
     this.saveShrine = new PhraPhum(game, SAVE_SHRINE_POSITION);
     new SavePoint(
       game,
@@ -284,6 +301,11 @@ export class ActOne {
       fog.density = NIGHT_LOOK.fogDensity;
       fog.heightFalloff = 0.25;
       fog.ambient.set(...NIGHT_LOOK.fogAmbient);
+      fog.setMistPockets(GROUND_MIST);
+    } else {
+      game.scene.fogDensity = NIGHT_LOOK.fogDensity;
+      game.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
+      this.lowMist = new LowGroundMist(game.scene, GROUND_MIST);
     }
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
@@ -355,8 +377,6 @@ export class ActOne {
     }
     this.vigil.update(dt);
     this.early.update(dt);
-    this.soundscape.update(dt);
-    this.night.update(dt);
     if (!this.early.active) {
       this.apparitions.update(dt);
       this.betel.update(dt);
@@ -368,6 +388,27 @@ export class ActOne {
       this.chest.update(dt);
       this.ritual.update(dt);
     }
+    this.krasue.update(dt, this.early.active || this.apparitions.active);
+    // Story scripts get first refusal on the soundscape every frame.
+    this.forest.update(
+      dt,
+      this.night.threatSilence > 0 || this.apparitions.active || this.early.active,
+    );
+    this.soundscape.update(dt);
+    // Act 1's dread swells under the silence and while the Neak Ta shows itself.
+    // The vigil passage keeps its own tension bed, so the score stays out of it.
+    this.score.pressure(
+      game.flags.get("ep1.act2.started", false) || this.early.active
+        ? 0
+        : Math.max(
+            this.apparitions.dread * 0.55,
+            this.night.threatSilence * 0.4,
+            (this.forest?.silence ?? 0) * 0.35,
+            (this.saveShrine?.silence ?? 0) * 0.4,
+          ),
+    );
+    this.score.update(dt);
+    this.night.update(dt);
     this.lights.lookingAt = game.interaction.distance;
     this.lights.update(dt);
     this.rainAt.set(eye.x, eye.y + 7, eye.z);
@@ -375,15 +416,24 @@ export class ActOne {
     this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.12, 0.25);
     this.drips.light(this.lights.storm.level);
     this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure, dt);
-    if (this.rainSound) this.rainSound.spatial.position = eye.clone();
     game.atmosphere.update(dt, this.lights.lightAtEye(eye));
     const flashing = this.lights.flashing;
     if (flashing && !this.wasFlashing)
       setTimeout(
         () => {
-          if (!this.thunderSound || this.resolution.active) return;
-          this.thunderSound.spatial.position = new Vector3(eye.x - 30, eye.y + 25, eye.z - 20);
-          this.thunderSound.play();
+          if (!this.thunderSounds.length || this.resolution.active) return;
+          // A different roll each time, from a different part of the sky:
+          // the far ones lower and longer, the near ones sharp.
+          const sound = this.thunderSounds[Math.floor(Math.random() * this.thunderSounds.length)];
+          const a = Math.random() * Math.PI * 2,
+            far = 25 + Math.random() * 55;
+          sound.spatial.position = new Vector3(
+            eye.x + Math.cos(a) * far,
+            eye.y + 20 + far * 0.3,
+            eye.z + Math.sin(a) * far,
+          );
+          sound.playbackRate = 1.1 - (far / 80) * 0.25;
+          sound.play();
         },
         1500 + Math.random() * 2500,
       );
@@ -394,17 +444,28 @@ export class ActOne {
     const g = this.game;
     this.rain.system.stop();
     this.rainSound?.stop();
-    this.thunderSound?.stop();
+    for (const sound of this.thunderSounds) sound.stop();
+    this.score.pressure(0);
     this.night.stopForDawn();
     this.soundscape.stop();
+    this.forest.stop();
+    this.krasue.stop();
+    this.lowMist?.stop();
     this.sky.dome.setEnabled(false);
     this.lights.dawn();
     g.scene.clearColor.set(...DAWN_LOOK.clearColor, 1);
     g.atmosphere.baseExposure = DAWN_LOOK.baseExposure;
+    g.atmosphere.maxExposure = DAWN_LOOK.maxExposure;
+    g.atmosphere.nightSightIntensity = DAWN_LOOK.nightSightIntensity;
+    g.atmosphere.nightSight.range = DAWN_LOOK.nightSightRange;
     g.pipeline.main.imageProcessing.exposure = DAWN_LOOK.baseExposure;
     if (g.pipeline.fog) {
+      g.pipeline.fog.mistStrength = 0;
       g.pipeline.fog.density = DAWN_LOOK.fogDensity;
       g.pipeline.fog.ambient.set(...DAWN_LOOK.fogAmbient);
+    } else {
+      g.scene.fogDensity = DAWN_LOOK.fogDensity;
+      g.scene.fogColor.set(...DAWN_LOOK.fogAmbient);
     }
     this.chest.body.pose(0);
     this.chest.body.setLid(0);
@@ -432,26 +493,33 @@ export class ActOne {
     }
     const rate = audio.context.sampleRate;
     const eye = this.game.camera.globalPosition;
-    this.rainSound = await audio.spatialSound(
+    // Two takes, one per ear: rain all round, not a point at the listener's head.
+    this.rainSound = await audio.sound(
       "rain",
-      audio.buffer(villageRain(rate, seededRandom(3)), rate),
+      audio.buffer([villageRain(rate, seededRandom(3)), villageRain(rate, seededRandom(5))], rate),
       "ambience",
-      eye,
       // Under everything else: the frogs, the chant and Sora's steps carry over it.
-      { loop: true, minDistance: 4, volume: 0.32 },
+      0.32,
     );
+    this.rainSound.loop = true;
     this.rainSound.play();
-    this.thunderSound = await audio.spatialSound(
-      "thunder",
-      audio.buffer(thunder(rate, seededRandom(4)), rate),
-      "ambience",
-      eye,
-      {
-        minDistance: 40,
-      },
-    );
+    for (const [k, seed] of [4, 8, 9].entries())
+      this.thunderSounds.push(
+        await audio.spatialSound(
+          `thunder_${k}`,
+          audio.buffer(thunder(rate, seededRandom(seed)), rate),
+          "ambience",
+          eye,
+          { minDistance: 40 },
+        ),
+      );
+    this.score = new DreadScore(audio);
+    await this.score.load();
+    this.apparitions.score = this.score;
+    this.saveShrine.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
+    await this.forest.makeSounds();
     await this.apparitions.makeSounds();
     await this.betel.makeSounds();
     await this.beats.makeSounds();
@@ -462,6 +530,7 @@ export class ActOne {
     await this.chest.makeSounds();
     await this.ritual.makeSounds();
     await this.early.makeSounds();
+    await this.krasue.makeSounds();
     await this.saveShrine.makeSounds();
   }
 }

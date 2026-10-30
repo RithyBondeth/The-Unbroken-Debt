@@ -9,6 +9,8 @@ import { useLocalDecoders } from "../../src/render/decoders";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { saveShot } from "../../src/debug/saveShot";
 import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import type { PointLight } from "@babylonjs/core/Lights/pointLight";
 
 import {
   SAVE_SHRINE_POSITION,
@@ -127,9 +129,9 @@ async function review(): Promise<void> {
     game.camera.getViewMatrix(true);
     game.inspectObject(
       SAVE_SHRINE_POSITION.add(
-        new Vector3(0, which === "roof" ? 2.78 : which === "detail" ? 1.6 : 1.95, 0.15),
+        new Vector3(0, which === "roof" ? 2.2 : which === "detail" ? 1.6 : 1.35, 0.15),
       ),
-      which === "roof" ? 1.18 : which === "detail" ? 0.49 : 2.4,
+      which === "roof" ? 0.95 : which === "detail" ? 0.49 : 1.8,
     );
     output.textContent = `${which} · production lighting · E pays respects and saves\n${lines.join("\n")}`;
   };
@@ -199,6 +201,14 @@ async function review(): Promise<void> {
   document.getElementById("verify")!.onclick = safe(async () => {
     await walkFromGate();
     await save();
+    const companion = game.scene.getLightByName("phra_phum_right_candle") as PointLight;
+    await wait(() => act.saveShrine.light.intensity < 0.025 && companion.intensity < 0.012, 8000);
+    report("PASS both candles dim during the wooden effigy's response");
+    await wait(() => !act.saveShrine.interacting, 8000);
+    assert(
+      act.saveShrine.light.intensity > 0.2 && companion.intensity > 0.09,
+      "both candle lights restore after paying respects",
+    );
     const initial = attempts;
     game.threatActive = true;
     await use();
@@ -221,6 +231,26 @@ async function review(): Promise<void> {
     report(`Saved debug-shots/phra-phum-${view}.png`);
   });
   const meshes = act.saveShrine.root.getChildMeshes();
+  const timber = game.scene.getMaterialByName("M_phra_phum_weathered_teak");
+  assert(timber instanceof PBRMaterial, "weathered timber replaces house planks");
+  if (timber instanceof PBRMaterial) {
+    await wait(() => timber.getActiveTextures().every((texture) => texture.isReady()));
+    assert(
+      timber.albedoTexture && timber.bumpTexture && timber.metallicTexture,
+      "photographed wood colour, normal and packed roughness maps loaded",
+    );
+  }
+  const casters = act.saveShrine.light.getShadowGenerator()?.getShadowMap()?.renderList;
+  if (game.preset.shadowedFlames > 0)
+    assert(
+      casters?.length && casters.every((mesh) => meshes.includes(mesh)),
+      "cached candle shadows are restricted to the shrine",
+    );
+  assert(
+    act.saveShrine.hintMeshes.length > 0 &&
+      act.saveShrine.hintMeshes.every((mesh) => mesh.material?.name.includes("offering_clay")),
+    "close-range interaction cue leaves carved wood and shadows visible",
+  );
   assert(
     !game.scene.getMeshByName("interact_save_courtyard_stand"),
     "old desk and placard removed",

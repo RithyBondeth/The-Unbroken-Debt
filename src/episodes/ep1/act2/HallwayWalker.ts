@@ -130,6 +130,7 @@ export class HallwayWalker {
       game.flags.get("ep1.gramophone.heard", false) &&
       !this.investigation.playingMessage &&
       !game.cutscene &&
+      !game.threatActive &&
       !game.sketchbook?.isBusy &&
       !game.sketchbook?.isOpen &&
       p.y > 2.2
@@ -141,6 +142,7 @@ export class HallwayWalker {
       this.brain.state === "idle" &&
       !this.investigation.playingMessage &&
       !game.cutscene &&
+      !game.threatActive &&
       !game.sketchbook?.isBusy &&
       !game.sketchbook?.isOpen &&
       p.y > 2.2 &&

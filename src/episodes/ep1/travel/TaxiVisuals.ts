@@ -27,8 +27,9 @@ import { buildTaxiRoadside } from "./TaxiRoadside";
 import { StormSky } from "../act1/StormSky";
 import { ShadowFigure } from "../entities/ShadowFigure";
 import { NIGHT_LOOK } from "../data/nightLook";
+import { applyRainWetness } from "../../../render/SurfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
-import { TaxiFoliageWind } from "./TaxiFoliageWind";
+import { FoliageWind } from "../../../render/FoliageWind";
 import { TaxiRain } from "./TaxiRain";
 import {
   taxiDistance,
@@ -42,7 +43,7 @@ import {
 /** Authored cabin, Act I foliage/materials, physical headlights and the same storm grade. */
 export class TaxiVisuals {
   private readonly route: TransformNode;
-  private readonly wind: TaxiFoliageWind[] = [];
+  private readonly wind: FoliageWind[] = [];
   private readonly routeChunks: { mesh: Mesh; minZ: number; maxZ: number; active: boolean }[] = [];
   private readonly wipers: TransformNode[] = [];
   private readonly sky: StormSky;
@@ -76,7 +77,7 @@ export class TaxiVisuals {
     const leafMaterials = new Set(landscape.map((mesh) => mesh.material));
     for (const material of leafMaterials)
       if (material instanceof PBRMaterial && /leaf|leaves|palm_fan/.test(material.name))
-        this.wind.push(new TaxiFoliageWind(material));
+        this.wind.push(new FoliageWind(material));
     const hemi = new HemisphericLight("taxi_storm_bounce", new Vector3(0.2, 1, -0.3), scene);
     hemi.diffuse.set(0.48, 0.56, 0.72);
     hemi.groundColor.set(0.13, 0.16, 0.2);
@@ -299,10 +300,7 @@ export class TaxiVisuals {
     for (const material of roadside.materials)
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
-        if (material.name.startsWith("M_wet_")) {
-          material.albedoColor.scaleInPlace(0.86);
-          material.roughness = 0.92;
-        }
+        applyRainWetness(material);
       }
     const { root: route, landscape } = buildTaxiRoadside(roadside, scene);
     const floor = CreateBox("taxi_seated_floor", { width: 1.7, height: 0.1, depth: 2.7 }, scene);
@@ -331,6 +329,9 @@ export class TaxiVisuals {
       g.pipeline.fog.density = NIGHT_LOOK.fogDensity;
       g.pipeline.fog.heightFalloff = 0.25;
       g.pipeline.fog.ambient.set(...NIGHT_LOOK.fogAmbient);
+    } else {
+      g.scene.fogDensity = NIGHT_LOOK.fogDensity;
+      g.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
     }
   }
   update(dt: number, t: number, flash: number): void {

@@ -7,6 +7,7 @@ import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPi
 import { ImageProcessingConfiguration } from "@babylonjs/core/Materials/imageProcessingConfiguration";
 import { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { Constants } from "@babylonjs/core/Engines/constants";
 import { Scene } from "@babylonjs/core/scene";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
@@ -15,6 +16,7 @@ import type { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import type { Material } from "@babylonjs/core/Materials/material";
 import type { QualityPreset } from "./QualityPresets";
 import { VolumetricFog } from "./VolumetricFog";
+import { LOOK } from "./look";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import "@babylonjs/core/Lights/Clustered/clusteredLightingSceneComponent";
 import "@babylonjs/core/Rendering/prePassRendererSceneComponent";
@@ -185,10 +187,13 @@ export function createPostPipeline(
       scene,
       { ssaoRatio: preset.ssaoRatio, blurRatio: 1 },
       [camera],
+      false,
+      Constants.TEXTURETYPE_HALF_FLOAT,
     );
     ssao.samples = preset.ssaoSamples;
-    ssao.radius = 1.2;
-    ssao.totalStrength = 1.1;
+    // Contact-scale occlusion: a metre-wide radius blackened entire fern beds.
+    ssao.radius = 0.45;
+    ssao.totalStrength = 0.65;
     ssao.maxZ = 40;
     ssao.expensiveBlur = preset.ssaoRatio >= 1;
     giveSsaoItsCamera(ssao, camera);
@@ -209,7 +214,9 @@ export function createPostPipeline(
 
   let taa: TAARenderingPipeline | null = null;
   if (preset.taa) {
-    taa = new TAARenderingPipeline("taa", scene, [camera]);
+    // These passes precede exposure/tone mapping. Their default 8-bit targets
+    // quantized dark foliage and clipped flame highlights before ACES saw them.
+    taa = new TAARenderingPipeline("taa", scene, [camera], Constants.TEXTURETYPE_HALF_FLOAT);
     taa.samples = 8;
     taa.reprojectHistory = true;
     taa.clampHistory = true;
@@ -222,28 +229,28 @@ export function createPostPipeline(
   // FXAA always: it is what smooths edges while TAA stands aside on camera moves.
   main.fxaaEnabled = true;
   // TAA softens the image: a light sharpen gives back the grain of wood and thatch.
-  main.sharpenEnabled = preset.taa;
-  main.sharpen.edgeAmount = 0.22;
+  main.sharpenEnabled = true;
+  main.sharpen.edgeAmount = 0.16;
   main.sharpen.colorAmount = 1;
   main.bloomEnabled = true;
-  main.bloomThreshold = 0.9;
-  main.bloomWeight = 0.35;
-  main.bloomKernel = 64;
+  main.bloomThreshold = 1.2;
+  main.bloomWeight = 0.16;
+  main.bloomKernel = 32;
   main.bloomScale = 0.5;
   main.chromaticAberrationEnabled = true;
-  main.chromaticAberration.aberrationAmount = 8;
-  main.chromaticAberration.radialIntensity = 0.6;
+  main.chromaticAberration.aberrationAmount = LOOK.aberration;
+  main.chromaticAberration.radialIntensity = 1;
   main.grainEnabled = true;
-  main.grain.intensity = 9;
-  main.grain.animated = true;
+  main.grain.intensity = LOOK.grain;
+  main.grain.animated = false;
 
   const ip = main.imageProcessing;
   ip.toneMappingEnabled = true;
   ip.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
   ip.exposure = 1.5;
-  ip.contrast = 1.15;
+  ip.contrast = 1.05;
   ip.vignetteEnabled = true;
-  ip.vignetteWeight = 2.2;
+  ip.vignetteWeight = LOOK.vignette;
   ip.vignetteColor.set(0.05, 0.03, 0.02, 0);
   // Warm, slightly desaturated 1930s grade (Art Bible, colour script).
   const curves = new ColorCurves();

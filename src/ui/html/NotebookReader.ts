@@ -9,6 +9,7 @@ import { setControlText } from "./controlText";
 export class NotebookReader {
   private readonly panel = document.createElement("section");
   private readonly content = document.createElement("div");
+  private readonly body = document.createElement("div");
   private readonly controls = document.createElement("nav");
   private readonly status = document.createElement("span");
   private tab: SectionId = "now";
@@ -32,7 +33,7 @@ export class NotebookReader {
       this.button("Back to sketchbook · R", () => this.back(true)),
       this.button("Close · Q / Esc", () => game.closeSketchbook(true)),
     );
-    header.append(actions);
+    actions.firstElementChild!.classList.add("ui-button-primary");
     nav.setAttribute("aria-label", "Notebook sections");
     SECTIONS.forEach(({ id, label }) => {
       const b = this.button(label, () => this.select(id));
@@ -41,7 +42,9 @@ export class NotebookReader {
     });
     this.content.className = "notebook-content";
     this.content.tabIndex = 0;
-    book.append(header, nav, this.content);
+    this.body.className = "notebook-reader-body";
+    this.body.append(header, nav, this.content);
+    book.append(this.body, actions);
     this.panel.append(book);
     document.body.append(this.panel);
     this.controls.className = "notebook-controls";
@@ -114,6 +117,7 @@ export class NotebookReader {
   private button(label: string, action: () => void): HTMLButtonElement {
     const b = document.createElement("button");
     b.type = "button";
+    b.className = "ui-button";
     setControlText(b, label);
     b.onclick = action;
     return b;
@@ -137,7 +141,7 @@ export class NotebookReader {
     g.satchel.close();
     document.exitPointerLock();
     this.paint();
-    this.panel.querySelector<HTMLButtonElement>("button")?.focus();
+    this.panel.querySelector<HTMLButtonElement>(".notebook-reader-actions button")?.focus();
   }
   /** Hide the reading overlay without closing the notebook. */
   back(focus = false): void {
@@ -193,12 +197,15 @@ export class NotebookReader {
     if (next !== this.status.textContent) this.status.textContent = next;
   }
   private paint(resetScroll = true): void {
-    const scrollTop = resetScroll ? 0 : this.content.scrollTop;
+    const scrollTop = resetScroll ? 0 : this.body.scrollTop;
     const model = this.game.notebookContent();
     this.lastSignature = model.signature;
     this.content.replaceChildren();
-    for (const b of this.panel.querySelectorAll<HTMLButtonElement>("nav button"))
-      b.setAttribute("aria-pressed", String(b.dataset.tab === this.tab));
+    for (const b of this.panel.querySelectorAll<HTMLButtonElement>("nav button")) {
+      const selected = b.dataset.tab === this.tab;
+      b.setAttribute("aria-pressed", String(selected));
+      b.classList.toggle("ui-button-primary", selected);
+    }
     if (this.tab === "map") {
       const title = document.createElement("h2");
       title.textContent = model.map.title;
@@ -237,6 +244,6 @@ export class NotebookReader {
       }
       this.content.append(article);
     }
-    this.content.scrollTop = scrollTop;
+    this.body.scrollTop = scrollTop;
   }
 }

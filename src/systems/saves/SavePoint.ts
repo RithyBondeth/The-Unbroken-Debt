@@ -11,10 +11,12 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { addStaticBox } from "../../core/Physics";
 import type { StringKey } from "../../ui/html/StoryUi";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
 export interface SavePointAppearance {
   readonly root: TransformNode;
   readonly hint: StringKey;
+  readonly hintMeshes?: readonly AbstractMesh[];
   readonly interacting?: boolean;
   saving(): void;
   settled(success: boolean): void;
@@ -105,7 +107,8 @@ export class SavePoint {
       candle.isPickable = false;
       flame.isPickable = false;
     }
-    game.interaction.add(id, root, { outline: false });
+    if (appearance?.hintMeshes) game.interaction.add(id, root, appearance.hintMeshes);
+    else game.interaction.add(id, root);
     game.bus.on("interact:focus", ({ id: focus }) => {
       if (focus === id && !game.threatActive && available())
         game.hints.show(appearance?.hint ?? "hint.savePoint", 8);

@@ -62,6 +62,12 @@ async function review() {
       currentView = label.toLowerCase().replaceAll(" ", "-");
       void view(feet, target, label === "Room" ? 2 : label === "Bed and shelf" ? 1.5 : 0.65);
     });
+  button("Drawer hint", () => {
+    const drawer = game.scene.getMeshByName("interact_drawer");
+    if (!drawer) return;
+    currentView = "drawer-hint";
+    void view([-1.5, 0, -2.5], drawer.getAbsolutePosition().asArray(), 0.4);
+  });
   button("Open drawer", () => {
     game.bus.emit("interact:use", { id: "interact_drawer" });
     void view([-1.5, 0, -2.5], [-0.88, 0.65, -2.6], 0.23);

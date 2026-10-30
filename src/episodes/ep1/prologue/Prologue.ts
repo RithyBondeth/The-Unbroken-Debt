@@ -9,6 +9,8 @@ import { meshesOf } from "../../../systems/interaction/Interaction";
 import type { BusName, SpatialOptions } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
 import * as sounds from "../audio/prologueSounds";
+import { DreadScore } from "../audio/DreadScore";
+import { studioRoom } from "../audio/dreadSounds";
 import { newGameSave } from "../../../systems/saves/SaveData";
 import { INK_BLOT_ENTRY, KIT, LINES, STARTING_MATCHES, TIMING, type Line } from "../data/prologue";
 import { StudioLights } from "./Studio";
@@ -54,6 +56,7 @@ export class Prologue {
   private readonly waiting = new Map<string, () => void>();
   private readonly loops: StaticSound[] = [];
   private sfx = new Map<string, StaticSound>();
+  private score = new DreadScore(null);
   private drawerOpen = false;
   private ringing = false;
   private playTime = 0;
@@ -123,8 +126,7 @@ export class Prologue {
     if (game.flags.get("ep1.studio.drawerOpen", false)) this.openDrawer(true);
 
     for (const { name, node } of this.area.level.interactables)
-      if (node.isEnabled())
-        game.interaction.add(name, node, { outline: name !== PHONE && name !== DRAWER });
+      if (node.isEnabled()) game.interaction.add(name, node);
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
     new SavePoint(game, "interact_save_studio", new Vector3(-0.18, 0.8, -3.12), "STUDIO", () =>
       game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
@@ -159,6 +161,7 @@ export class Prologue {
     this.details.updateTelephoneCord(game.hands.phoneCordPoint);
     this.rain?.update(dt, this.lights.lightning.intensity / 60);
     this.ink.update(dt);
+    this.score.update(dt);
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
     // Thunder follows each flash after a few seconds (sound travels about 1 km in 3 s).
     const flashing = this.lights.flashing;
@@ -204,7 +207,11 @@ export class Prologue {
     game.flags.set("ep1.kit.collected", true);
 
     if (!game.flags.has("ep1.clock.stopped")) {
-      await this.wait(TIMING.dreadDelay);
+      // The room closes in, then the clock and the candle die on the sting's hit.
+      this.score.pressure(0.3);
+      await this.wait(Math.max(0, TIMING.dreadDelay - this.score.lead("rise")));
+      this.score.sting("rise");
+      await this.wait(this.score.lead("rise"));
       this.lights.strike();
       void this.ink.spill(2.4);
       this.play("candle");
@@ -218,6 +225,7 @@ export class Prologue {
     } else void this.ink.spill(0.01);
     this.lights.snuffCandle();
     this.sfx.get("clock")?.stop();
+    this.score.pressure(0.45);
 
     // P06: the telephone rings until Sora answers.
     if (!game.flags.get("ep1.phone.answered", false)) {
@@ -227,6 +235,7 @@ export class Prologue {
       game.sketchbook?.close();
       game.satchel.close();
       this.ringing = true;
+      this.score.pressure(0.6);
       this.sfx.get("ring")?.play();
       setTimeout(() => {
         if (this.ringing) game.hints.show("hint.phone");
@@ -279,12 +288,18 @@ export class Prologue {
     const cutOff = this.say(LINES.call3);
     await this.wait(LINES.call3.seconds * 0.75);
     this.play("scream");
+    this.score.sting("shock", 0.75);
     this.lights.strike();
     await cutOff;
     await this.wait(1.6);
+    // The line dies: a blow of pressure, then nothing but her ears ringing.
     this.sfx.get("static")?.stop();
+    this.score.sting("drop");
+    this.score.ring();
+    this.score.pressure(0);
     await this.wait(0.9);
     await this.say(LINES.call4);
+    this.score.pressure(0.35);
     this.node("telephone_earpiece")?.setEnabled(true);
     game.hands.holdPhone(false);
     game.gated.holdStill = false;
@@ -298,8 +313,10 @@ export class Prologue {
     game.gated.holdStill = true;
     game.gated.holdLook = true;
     this.play("drawer");
+    this.score.pressure(0);
     await game.fade.to(1, 1.5);
     for (const sound of this.loops) sound.stop();
+    this.score.stop();
     game.flags.set("ep1.travel.pending", true);
     game.flags.set("ep1.opening.version", 2);
     game.flags.set("ep1.checkpoint", "CP0");
@@ -559,6 +576,18 @@ export class Prologue {
     // A small plastered room: Sora's own steps and the telephone ring in it.
     audio.setSpace("studio", 0);
     const sampleRate = audio.context.sampleRate;
+    // The room's own air, and Phnom Penh beyond the rain.
+    const room = await audio.sound(
+      "studio_room",
+      audio.buffer(studioRoom(sampleRate), sampleRate),
+      "room",
+      0.55,
+    );
+    room.loop = true;
+    room.play();
+    this.loops.push(room);
+    this.score = new DreadScore(audio);
+    await this.score.load();
     const made = await Promise.all(
       list.map(([name, make, bus, position, options], i) =>
         audio.spatialSound(

@@ -6,10 +6,11 @@ import { seededRandom } from "../../../audio/synth";
 import { thunder } from "../audio/prologueSounds";
 import { villageRain } from "../audio/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
+import { DreadScore } from "../audio/DreadScore";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { taxiConversationAt } from "./taxiConversation";
 
-export const TAXI_SECONDS = 72;
+const TAXI_SECONDS = 72;
 /** The playable journey between CP0 and CP1. Reload resumes the ride, never an empty studio. */
 export class TaxiRide {
   elapsed = 0;
@@ -21,7 +22,8 @@ export class TaxiRide {
   private readonly loops: StaticSound[] = [];
   private visuals!: TaxiVisuals;
   private thunder: StaticSound | null = null;
-  private pulse: StaticSound | null = null;
+  private score = new DreadScore(null);
+  private stung = false;
   private thunderPlayed = false;
   private skip: HTMLButtonElement | null = null;
 
@@ -79,10 +81,17 @@ export class TaxiRide {
         0.9 - Math.abs(t - 55.7) * 4,
       );
     this.visuals.update(dt, t, flash);
+    // The driver keeps looking into the forest; something is standing there at 37.8 s.
+    this.score.pressure(t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25);
+    this.score.update(dt);
+    if (t > 37.8 - this.score.lead("rise") && !this.stung) {
+      this.stung = true;
+      // A ride resumed past the figure does not replay its sting.
+      if (t < 37.8) this.score.sting("rise", 0.85);
+    }
     if (t > 37.8 && !this.thunderPlayed) {
       this.thunderPlayed = true;
       this.thunder?.play();
-      this.pulse?.play();
     }
     const line = taxiConversationAt(t);
     if ((line?.index ?? -1) !== this.dialogueIndex) {
@@ -127,6 +136,7 @@ export class TaxiRide {
     const g = this.game;
     await g.fade.to(1, 2);
     for (const sound of this.loops) sound.stop();
+    this.score.stop();
     await this.persisting;
     const save = this.capture();
     save.checkpoint = "CP1";
@@ -178,12 +188,7 @@ export class TaxiRide {
       "threat",
       0.65,
     );
-    this.pulse = await audio.sound(
-      "taxi_presence",
-      audio.buffer(taxiMotor(rate, seededRandom(214)), rate),
-      "threat",
-      0.6,
-    );
-    this.pulse.playbackRate = 0.45;
+    this.score = new DreadScore(audio);
+    await this.score.load();
   }
 }

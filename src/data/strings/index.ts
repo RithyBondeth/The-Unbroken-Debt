@@ -19,10 +19,7 @@ export function chooseLanguage(search: string, dev: boolean): Language {
   return dev && new URLSearchParams(search).get("lang") === "km" ? "km" : "en";
 }
 
-export const language: Language = chooseLanguage(
-  globalThis.location?.search ?? "",
-  import.meta.env.DEV,
-);
+const language: Language = chooseLanguage(globalThis.location?.search ?? "", import.meta.env.DEV);
 if (globalThis.document) document.documentElement.lang = language;
 
 /** The string in the current language; missing Khmer entries fall back to English. */

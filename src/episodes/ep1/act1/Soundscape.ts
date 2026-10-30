@@ -5,6 +5,7 @@ import type { SpaceName } from "../../../audio/acoustics";
 import { seededRandom } from "../../../audio/synth";
 import { floorDrips, houseSettle, roofRain, shutterWind } from "../audio/houseSounds";
 import { inHunt } from "../data/hunt";
+import { canopyWind, pavilionCloth } from "../audio/atmosphereSounds";
 
 /** The upper floor of the house, its boards at 2.5 m. */
 const inHouse = (feet: Vector3) =>
@@ -21,14 +22,14 @@ export function spaceAt(feet: Vector3): SpaceName {
   return "outdoors";
 }
 
-/** The zone layers' levels in each space: [roof rain, shutter wind, drips]. */
-const LAYERS: Record<SpaceName, [number, number, number]> = {
-  house: [0.3, 0.2, 0],
-  wardrobe: [0.15, 0.06, 0],
-  underHouse: [0.06, 0, 0.35],
-  tent: [0, 0, 0],
-  outdoors: [0, 0, 0],
-  studio: [0, 0, 0],
+/** [Roof rain, shutter wind, drips, canopy wind, pavilion cloth]. */
+const LAYERS: Record<SpaceName, [number, number, number, number, number]> = {
+  house: [0.3, 0.2, 0, 0, 0],
+  wardrobe: [0.15, 0.06, 0, 0, 0],
+  underHouse: [0.06, 0, 0.35, 0.025, 0],
+  tent: [0, 0, 0, 0, 0.085],
+  outdoors: [0, 0, 0, 0.065, 0],
+  studio: [0, 0, 0, 0, 0],
 };
 
 /**
@@ -43,8 +44,10 @@ export class Soundscape {
   private roof: StaticSound | null = null;
   private wind: StaticSound | null = null;
   private drips: StaticSound | null = null;
+  private canopy: StaticSound | null = null;
+  private cloth: StaticSound | null = null;
   private readonly settles: StaticSound[] = [];
-  private readonly levels = [0, 0, 0];
+  private readonly levels = [0, 0, 0, 0, 0];
   private nextSettle = 10;
   private stopped = false;
   private readonly rand = seededRandom(2501);
@@ -71,6 +74,11 @@ export class Soundscape {
     ]);
     this.wind = await bed("shutter_wind", shutterWind(rate, seededRandom(2513)));
     this.drips = await bed("floor_drips", floorDrips(rate, seededRandom(2514)));
+    this.canopy = await bed("canopy_wind", [
+      canopyWind(rate, seededRandom(2531)),
+      canopyWind(rate, seededRandom(2532)),
+    ]);
+    this.cloth = await bed("pavilion_cloth", pavilionCloth(rate, seededRandom(2533)));
     for (let k = 0; k < 4; k++)
       this.settles.push(
         await audio.spatialSound(
@@ -92,8 +100,9 @@ export class Soundscape {
     g.audio?.setSpace(space, space === "wardrobe" || where === "house" ? 0.6 : 2.5);
     const target = LAYERS[space];
     const k = Math.min(1, dt / 0.8);
-    [this.roof, this.wind, this.drips].forEach((sound, i) => {
-      this.levels[i] += (target[i] - this.levels[i]) * k;
+    [this.roof, this.wind, this.drips, this.canopy, this.cloth].forEach((sound, i) => {
+      const level = target[i] * (i >= 3 ? 1 - this.silence() * 0.75 : 1);
+      this.levels[i] += (level - this.levels[i]) * k;
       if (sound) sound.volume = this.levels[i];
     });
     this.nextSettle -= dt;
@@ -120,7 +129,15 @@ export class Soundscape {
   /** Dawn: the rain is over and the house is quiet. */
   stop(): void {
     this.stopped = true;
-    for (const sound of [this.roof, this.wind, this.drips, ...this.settles]) sound?.stop();
+    for (const sound of [
+      this.roof,
+      this.wind,
+      this.drips,
+      this.canopy,
+      this.cloth,
+      ...this.settles,
+    ])
+      sound?.stop();
     this.game.audio?.setSpace("outdoors");
   }
 }

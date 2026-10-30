@@ -53,7 +53,7 @@ npm run dev
 | `npm test` | Run the unit tests |
 | `npm run typecheck` | Type-check only |
 | `npm run lint` | Lint with ESLint |
-| `npm run check` | Everything CI runs: type-check, lint, tests, build |
+| `npm run check` | Everything CI runs: type-check, lint, formatting, tests, build |
 | `npm run format` | Format the code with Prettier |
 | `npm run export` | Export every `.blend` in `art-source/blender/` to `art-export/` (needs [Blender](https://www.blender.org)) |
 | `npm run assets` | Optimise Blender exports from `art-export/` into `public/assets/` (needs [KTX-Software](https://github.com/KhronosGroup/KTX-Software/releases) 4.4+) |

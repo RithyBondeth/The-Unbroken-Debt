@@ -6,11 +6,14 @@ import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { RelicCraft } from "../act3/RelicCraft";
 import { seededRandom } from "../../../audio/synth";
+import { TelephoneCord } from "../../../player/TelephoneCord";
+import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 /** Wall-mounted rotary phone. The front faces into the hall along negative X. */
 export class WallTelephone {
   readonly root: TransformNode;
   readonly receiver: TransformNode;
+  private readonly receiverCord: TelephoneCord;
 
   constructor(scene: Scene) {
     const c = new RelicCraft(scene);
@@ -191,18 +194,9 @@ export class WallTelephone {
       }
     }
     faceCylinder("telephone_cord_grommet", 0.023, 0.016, -0.005, -0.149, 0.092, black);
-    const path: [number, number, number][] = [];
-    for (let i = 0; i <= 96; i++) {
-      const t = i / 96;
-      // One cloth-covered U-shaped lead, with a shallow helical braid along its length.
-      const braid = Math.sin(Math.PI * t) * 0.0015;
-      path.push([
-        -0.103 + 0.098 * t + Math.cos(t * Math.PI * 72) * braid,
-        0.16 - 0.31 * t - Math.sin(Math.PI * t) * 0.3,
-        0.17 - 0.078 * t + Math.sin(t * Math.PI * 72) * braid,
-      ]);
-    }
-    c.tube(this.root, "arrival_phone_cord", path, 0.004, cord);
+    const terminal = c.root("arrival_phone_cord_terminal", [-0.005, -0.149, 0.092], this.root);
+    const rest = c.root("arrival_phone_cord_rest", [0, 0, 0.17], this.receiver);
+    this.receiverCord = new TelephoneCord(scene, "arrival_phone_cord", terminal, rest, cord, 0.004);
     c.tube(
       this.root,
       "telephone_line_wire",
@@ -214,6 +208,10 @@ export class WallTelephone {
       0.0025,
       cord,
     );
+  }
+
+  updateTelephoneCord(heldEnd: Vector3 | null = null): void {
+    this.receiverCord.update(heldEnd);
   }
 
   private housing(

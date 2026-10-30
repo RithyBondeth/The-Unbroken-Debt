@@ -31,7 +31,7 @@ import "@babylonjs/core/Particles/particleSystemComponent";
  * art-source/audio/ep1 (Cultural Guide: real chanting only with permission).
  * Without the files the pavilion plays a wordless placeholder drone.
  */
-export const SMOT_URLS = ["assets/ep1/audio/amb_ep1_smot.ogg", "assets/ep1/audio/amb_ep1_smot.m4a"];
+const SMOT_URLS = ["assets/ep1/audio/amb_ep1_smot.ogg", "assets/ep1/audio/amb_ep1_smot.m4a"];
 
 /** Seconds between the distant calls: a dog, the owl, crows, the gecko. */
 const CALL_GAP: [number, number] = [9, 22];

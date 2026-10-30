@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sound audition</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 2rem var(--ui-safe-x);
+        background: var(--ui-bg);
+        color: var(--ui-text);
+        font-family: var(--ui-font-body);
+      }
+      main {
+        max-width: 46rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font: 500 var(--ui-title) / 1.4 var(--ui-font-body);
+        letter-spacing: var(--ui-title-tracking);
+        text-transform: uppercase;
+      }
+      h2 {
+        margin-top: 2rem;
+        color: var(--ui-muted);
+        font: 500 var(--ui-caption) / 1.5 var(--ui-font-body);
+        letter-spacing: var(--ui-label-tracking);
+        text-transform: uppercase;
+      }
+      li {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--ui-border);
+      }
+      li p {
+        flex: 1;
+        margin: 0;
+        color: var(--ui-muted);
+        font-size: var(--ui-small);
+      }
+      li strong {
+        display: block;
+        color: var(--ui-text);
+        font-weight: 500;
+      }
+      ul {
+        padding: 0;
+        list-style: none;
+      }
+      #status {
+        color: var(--ui-subtle);
+        font-size: var(--ui-small);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Episode 1 sound audition</h1>
+      <p id="status">Headphones recommended. Each sound is synthesised when first played.</p>
+      <div id="list"></div>
+    </main>
+    <script type="module" src="./sound-audition.ts"></script>
+  </body>
+</html>

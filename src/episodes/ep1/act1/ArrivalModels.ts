@@ -1,6 +1,7 @@
 import type { Scene } from "@babylonjs/core/scene";
 import { RelicCraft } from "../act3/RelicCraft";
 import { WallTelephone } from "./WallTelephone";
+import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 /** The family have left: their note, a hall telephone and a prepared matchbox. */
 export class ArrivalModels {
@@ -8,6 +9,7 @@ export class ArrivalModels {
   readonly phone;
   readonly receiver;
   readonly matches;
+  private readonly telephone: WallTelephone;
   constructor(scene: Scene) {
     const c = new RelicCraft(scene);
     const wood = c.surface("arrival_table", "#493021", "wood");
@@ -28,7 +30,7 @@ export class ArrivalModels {
         [0, 0.003, -0.1 + i * 0.025],
         wood,
       );
-    const telephone = new WallTelephone(scene);
+    const telephone = (this.telephone = new WallTelephone(scene));
     this.phone = telephone.root;
     this.receiver = telephone.receiver;
     this.matches = c.root("arrival_blessed_matches", [-0.65, 3.614, -17.5]);
@@ -80,5 +82,9 @@ export class ArrivalModels {
         0.0005,
         thread,
       );
+  }
+
+  updateTelephoneCord(heldEnd: Vector3 | null): void {
+    this.telephone.updateTelephoneCord(heldEnd);
   }
 }

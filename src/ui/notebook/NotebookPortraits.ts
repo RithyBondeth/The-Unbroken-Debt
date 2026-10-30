@@ -1,5 +1,5 @@
 /** Four original graphite studies, arranged TL Sora, TR Yay Mey, BL Sok, BR Vuthy. */
-export const PORTRAIT_ATLAS = "/assets/ep1/notebook/people-graphite.png";
+export const PORTRAIT_ATLAS = `${import.meta.env.BASE_URL}assets/ep1/notebook/people-graphite.png`;
 export const PORTRAIT_CELLS: Readonly<Record<string, readonly [number, number]>> = {
   "P-SORA": [0, 0],
   "P-YAYMEY": [1, 0],

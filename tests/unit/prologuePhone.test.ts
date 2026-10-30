@@ -1,6 +1,7 @@
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
 import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
+import { DreadScore } from "../../src/episodes/ep1/audio/DreadScore";
 import { Flags } from "../../src/core/Flags";
 
 it.each([
@@ -57,6 +58,7 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     lights: { strike: vi.fn(), snuffCandle: vi.fn() },
     ink: { inkLine: vi.fn(), spill: vi.fn() },
     sfx: new Map(),
+    score: new DreadScore(null),
     ringing: false,
     makeSounds: vi.fn(),
     idleHints: vi.fn(),

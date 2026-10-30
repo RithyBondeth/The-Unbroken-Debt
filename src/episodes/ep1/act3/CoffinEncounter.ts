@@ -16,7 +16,7 @@ export class CoffinEncounter {
     private save: () => Promise<unknown>,
   ) {
     this.progress = new CoffinProgress(game.flags);
-    game.interaction.add("interact_coffin_close", body.closeGrip, { outline: false });
+    game.interaction.add("interact_coffin_close", body.closeGrip);
     this.apply();
   }
   get showingBody(): boolean {

@@ -9,6 +9,8 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Area } from "../../../core/AreaLoader";
 import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
 import { softFalloff, useSoftFalloff } from "../../../render/softLampFalloff";
+import { applyRainWetness } from "../../../render/SurfaceDetail";
+import { FoliageWind } from "../../../render/FoliageWind";
 import { Lightning } from "../Lightning";
 import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 
@@ -17,13 +19,13 @@ import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
  * funeral tent glowing from its hanging oil lamps and altar candles; lightning;
  * and Sora's hurricane lamp, the hero light, carried at her side.
  */
-/** Sora's lamp at full flame, as it was with plain physical falloff (this much at 1 m). */
-const PHYSICAL_INTENSITY = 10;
-const LAMP_RANGE = 9;
+/** Working light calibrated at 4 m, with a soft core to protect nearby skin and paper. */
+const PHYSICAL_INTENSITY = 22;
+const LAMP_RANGE = 11.5;
 /**
  * With the soft falloff (render/softLampFalloff.ts), the same light at Sora's
- * working distance, 4 m: everything from about 3 m out is lit as before, and
- * what she holds up close no longer burns to white.
+ * working distance, 4 m. The extended pool exposes the trail ahead while the
+ * soft core and inspection shade protect what she holds up close.
  */
 const LAMP_INTENSITY = PHYSICAL_INTENSITY / (16 * softFalloff(4, LAMP_RANGE));
 /**
@@ -55,6 +57,7 @@ export class VillageLights {
   private readonly flash: DirectionalLight;
   private time = 0;
   private readonly phases: number[] = [];
+  private readonly foliage: FoliageWind[] = [];
 
   constructor(scene: Scene, area: Area, camera: Camera) {
     // Rain-heavy sky with the moon somewhere behind the clouds: near black, the
@@ -100,7 +103,9 @@ export class VillageLights {
     this.lamp.range = LAMP_RANGE;
     useSoftFalloff(this.lamp);
     this.lamp.parent = camera;
-    this.lamp.diffuse = FLAME_COLOR.clone();
+    // The glass globe is warm white. Saturated orange lost the green channel
+    // needed to see living foliage, especially after the episode's warm grade.
+    this.lamp.diffuse = Color3.FromHexString("#FFD4A0");
     this.lamp.intensity = 6;
 
     // Materials take 4 lights by default. Sora's lamp always comes first, then the
@@ -118,14 +123,9 @@ export class VillageLights {
     for (const material of scene.materials)
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
-        // Rain-soaked outdoor surfaces (named M_wet_ in Blender): darker and a little
-        // glossier (Art Bible 6, wetness). The factor scales each texture's own
-        // roughness: much lower and the moon, low behind the clouds, turns mud and
-        // bark to crumpled foil.
-        if (material.name.startsWith("M_wet_")) {
-          material.albedoColor.scaleInPlace(0.86);
-          material.roughness = 0.92;
-        }
+        applyRainWetness(material);
+        if (/leaf|leaves|palm_fan|forest_grass/.test(material.name))
+          this.foliage.push(new FoliageWind(material));
       }
   }
 
@@ -144,6 +144,7 @@ export class VillageLights {
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
+    for (const wind of this.foliage) wind.seconds = t;
     // Flames are never steady (Art Bible); each one out of step with the others.
     this.flames.forEach((light, i) => {
       const p = this.phases[i];

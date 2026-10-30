@@ -1,6 +1,9 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import type { Material } from "@babylonjs/core/Materials/material";
+import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial";
+import { InteractionHint } from "./InteractionHint";
 import type { Node } from "@babylonjs/core/node";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
@@ -10,18 +13,19 @@ import type { EventBus } from "../../core/EventBus";
 import type { GameEvents } from "../../core/events";
 
 /** How far Sora can reach to use something, in metres. */
-export const REACH = 1.8;
+const REACH = 1.8;
 
-/** Pale graphite, like a line Sora is sketching around the object (Controls and Interface, 3). */
-const OUTLINE = new Color4(0.42, 0.4, 0.35, 1);
+/** Warm ivory complements the lamp and remains legible on dark wood. */
+const OUTLINE = new Color4(0.82, 0.74, 0.57, 0);
 /** Faces meeting at more than this angle's cosine apart draw a line (0.95: about 18°). */
 const EDGE_EPSILON = 0.95;
-const EDGE_WIDTH = 2;
+const EDGE_PIXELS = 1.35;
+const FADE_SECONDS = 0.14;
 
 interface Target {
   id: string;
   meshes: AbstractMesh[];
-  outline: boolean;
+  hintMeshes: AbstractMesh[];
 }
 
 /** Every mesh under `node`, and the node itself if it is one. */
@@ -32,7 +36,7 @@ export function meshesOf(node: Node): AbstractMesh[] {
 
 /**
  * The object at the centre of the view, within reach and not hidden behind a
- * wall, is focused: it gets a faint pencil outline and `interact:focus`. E uses
+ * wall, is focused: it gets a warm rim and ivory contour and `interact:focus`. E uses
  * it (`interact:use`). There is no crosshair (Controls and Interface, section 3).
  */
 export class Interaction {
@@ -46,6 +50,11 @@ export class Interaction {
   private readonly targets = new Map<string, Target>();
   private readonly byMesh = new Map<number, Target>();
   private focused: Target | null = null;
+  private readonly hintStrength = new Map<AbstractMesh, number>();
+  private readonly hintedMaterials = new WeakSet<Material>();
+  private readonly viewPosition = Vector3.Zero();
+  private readonly reducedMotion =
+    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
   private readonly ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
   constructor(
     private readonly scene: Scene,
@@ -57,20 +66,33 @@ export class Interaction {
     return this.focused?.id ?? null;
   }
 
-  /** Makes `node` (and everything under it) usable as `id`. */
-  add(id: string, node: Node | AbstractMesh[], options: { outline?: boolean } = {}): void {
+  /** Makes the whole node usable. Large props may limit the visual cue to a
+   * small detail without narrowing their reach or interaction ray. */
+  add(id: string, node: Node | AbstractMesh[], hintMeshes?: readonly AbstractMesh[]): void {
     this.remove(id);
     const meshes = Array.isArray(node) ? node : meshesOf(node);
-    const target = { id, meshes, outline: options.outline ?? true };
+    const target = {
+      id,
+      meshes,
+      hintMeshes: hintMeshes ? meshes.filter((m) => hintMeshes.includes(m)) : meshes,
+    };
     this.targets.set(id, target);
-    for (const mesh of meshes) this.byMesh.set(mesh.uniqueId, target);
+    for (const mesh of meshes) {
+      this.byMesh.set(mesh.uniqueId, target);
+    }
+    for (const mesh of target.hintMeshes) this.prepareMaterial(mesh.material);
   }
 
   remove(id: string): void {
     const target = this.targets.get(id);
     if (!target) return;
     if (this.focused === target) this.setFocus(null);
-    for (const mesh of target.meshes) this.byMesh.delete(mesh.uniqueId);
+    for (const mesh of target.meshes) {
+      if (this.byMesh.get(mesh.uniqueId) === target) {
+        this.byMesh.delete(mesh.uniqueId);
+        this.clearHint(mesh);
+      }
+    }
     this.targets.delete(id);
   }
 
@@ -78,6 +100,8 @@ export class Interaction {
     if (!this.active) {
       this.setFocus(null);
       this.distance = Infinity;
+      // Menus, books and cutscenes take over immediately, without a lingering cue.
+      for (const mesh of this.hintStrength.keys()) this.clearHint(mesh);
       return;
     }
     this.camera.getForwardRayToRef(this.ray, REACH);
@@ -89,6 +113,7 @@ export class Interaction {
     this.distance = hit?.pickedMesh ? hit.distance : Infinity;
     const target = hit?.pickedMesh ? this.byMesh.get(hit.pickedMesh.uniqueId) : undefined;
     this.setFocus(target && this.allow(target.id) ? target : null);
+    this.updateHints();
   }
 
   /** E: uses the focused object. Returns its id, or null if nothing is in focus. */
@@ -99,29 +124,68 @@ export class Interaction {
     return id;
   }
 
-  /**
-   * The pencil outline is the edges of the focused object, drawn as lines over it:
-   * its silhouette and sharp creases. (A stroke-only highlight layer paints its
-   * colour over the whole object and cuts the object back out with a stencil this
-   * render pipeline doesn't keep, washing it out; Babylon's outline renderer draws
-   * inside the geometry pre-pass, which blacks out the frame on WebGPU.) The lines
-   * are worked out the first time an object is focused, then kept.
-   */
+  private prepareMaterial(material: Material | null): void {
+    if (!material || this.hintedMaterials.has(material)) return;
+    this.hintedMaterials.add(material);
+    if (material instanceof MultiMaterial) {
+      material.subMaterials.forEach((part) => this.prepareMaterial(part));
+    } else if (
+      material.getClassName().startsWith("PBR") ||
+      material.getClassName() === "StandardMaterial"
+    ) {
+      new InteractionHint(material, (mesh) => this.hintStrength.get(mesh) ?? 0);
+    }
+  }
+
+  private clearHint(mesh: AbstractMesh): void {
+    if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = false;
+    this.hintStrength.delete(mesh);
+  }
+
+  /** All registered targets share the hint; invisible pickup volumes never draw. */
   private setFocus(target: Target | null): void {
     if (target === this.focused) return;
-    for (const mesh of this.focused?.meshes ?? [])
-      if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = false;
     this.focused = target;
-    for (const mesh of target?.outline ? target.meshes : []) {
-      // Invisible pickup volumes should be usable without drawing a box outline.
-      if (mesh.visibility === 0) continue;
-      if (!mesh.edgesRenderer) {
-        mesh.enableEdgesRendering(EDGE_EPSILON);
-        mesh.edgesWidth = EDGE_WIDTH;
-        mesh.edgesColor = OUTLINE;
-      }
+    for (const mesh of target?.hintMeshes ?? []) {
+      if (mesh.isDisposed() || !mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0)
+        continue;
+      // Texture-based offering slots already have a soft focus ring. Their
+      // transparent interaction patch must not acquire an opaque disc border.
+      if (mesh.material?.alpha === 0) continue;
+      this.prepareMaterial(mesh.material);
+      if (!mesh.edgesRenderer) mesh.enableEdgesRendering(EDGE_EPSILON);
+      mesh.edgesColor = OUTLINE.clone();
+      this.hintStrength.set(mesh, this.hintStrength.get(mesh) ?? 0);
       if (mesh.edgesRenderer) mesh.edgesRenderer.isEnabled = true;
     }
     if (target) this.bus.emit("interact:focus", { id: target.id });
+  }
+
+  private updateHints(): void {
+    const engine = this.scene.getEngine();
+    const step = this.reducedMotion?.matches
+      ? 1
+      : Math.min(engine.getDeltaTime() / 1000, 0.05) / FADE_SECONDS;
+    const height = engine.getRenderingCanvas()?.clientHeight || engine.getRenderHeight();
+    for (const [mesh, strength] of this.hintStrength) {
+      const visible =
+        !mesh.isDisposed() && mesh.isEnabled() && mesh.isVisible && mesh.visibility > 0;
+      const focused = visible && this.byMesh.get(mesh.uniqueId) === this.focused;
+      const next = focused ? Math.min(1, strength + step) : Math.max(0, strength - step);
+      if (!visible || (!focused && next === 0)) {
+        this.clearHint(mesh);
+        continue;
+      }
+      this.hintStrength.set(mesh, next);
+      // Match a CSS-pixel stroke at different distances and render resolutions.
+      Vector3.TransformCoordinatesToRef(
+        mesh.getBoundingInfo().boundingSphere.centerWorld,
+        this.camera.getViewMatrix(),
+        this.viewPosition,
+      );
+      mesh.edgesWidth =
+        (EDGE_PIXELS * 100 * Math.max(0.05, Math.abs(this.viewPosition.z))) / height;
+      mesh.edgesColor.a = next * 0.85;
+    }
   }
 }

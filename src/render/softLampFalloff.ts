@@ -8,7 +8,7 @@ import "@babylonjs/core/ShadersWGSL/ShadersInclude/pbrDirectLightingFalloffFunct
  * a frosted glass globe that spreads its light, not a point: within about this
  * distance of it, surfaces stop gaining light as fast as 1/d² says.
  */
-export const LAMP_SOFT_RADIUS = 1.1;
+const LAMP_SOFT_RADIUS = 1.1;
 
 const INCLUDE = "pbrDirectLightingFalloffFunctions";
 

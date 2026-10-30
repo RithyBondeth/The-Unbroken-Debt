@@ -22,9 +22,9 @@ export const PLAY: Rect = { minX: -35, maxX: 35, minZ: -35.5, maxZ: 88 };
 /** Centre of the road along the paddies (A1-01). */
 export const ROAD_Z = 63.5;
 /** The flooded rice fields between the road bank and the far bank. */
-export const PADDIES = { minZ: 60.5, maxZ: 86.5 };
+const PADDIES = { minZ: 60.5, maxZ: 86.5 };
 /** Raised bunds close the fields east and west, inside the walls' thicket. */
-export const BUND_X = 33.5;
+const BUND_X = 33.5;
 export const YARD: Rect = { minX: -13, maxX: 13, minZ: -22, maxZ: 3 };
 export const PATH: readonly (readonly [number, number])[] = [
   [-1.5, 60],
@@ -72,7 +72,7 @@ export function pathDistance(x: number, z: number): number {
   return best;
 }
 
-export function smoothstep(a: number, b: number, x: number): number {
+function smoothstep(a: number, b: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 }
@@ -163,7 +163,7 @@ export interface Card {
   yaw: number;
   height: number;
   width: number;
-  /** Cell in the painted atlas. */
+  /** Painted atlas cell: 0–3 broadleaf crowns, 4 sugar palm, 5 bamboo, 6 coconut, 7 dead tree. */
   variant: number;
 }
 
@@ -183,9 +183,6 @@ export interface BorderLayout {
   plants: Plant[];
   cards: Card[];
 }
-
-/** Painted atlas cells: 0–3 broadleaf crowns, 4 sugar palm, 5 bamboo, 6 coconut, 7 dead tree. */
-export const CARD_VARIANTS = 8;
 
 type Mix = readonly (readonly [Species, number])[];
 
@@ -302,7 +299,7 @@ function choose(mix: Mix, u: number): Species {
 }
 
 /** Ground the walls' thicket and the outer forest grow on. */
-export function inRing(x: number, z: number, nearDepth: number): boolean {
+function inRing(x: number, z: number, nearDepth: number): boolean {
   const d = outside(TERRAIN, x, z);
   if (outside(PLAY, x, z) < -2.5 || d > nearDepth) return false;
   if (onOuterRoad(x, z, 0.8)) return false;

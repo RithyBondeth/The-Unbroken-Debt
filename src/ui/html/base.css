@@ -12,7 +12,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--night);
+  background: var(--ui-bg);
   font-family: var(--ui-font-body);
 }
 
@@ -38,7 +38,7 @@ body {
 .render-stall {
   box-sizing: border-box;
   width: min(38rem, calc(100vw - 2 * var(--ui-safe-x)));
-  padding: clamp(1.5rem, 4vw, 2.5rem);
+  padding: var(--ui-panel-padding);
   border: 1px solid var(--ui-border);
   border-top-color: var(--ui-accent);
   border-radius: var(--ui-radius);
@@ -46,16 +46,10 @@ body {
   color: var(--ui-text);
   box-shadow: var(--ui-shadow);
 }
-.requirements {
+.requirements,
+.render-stall {
   max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
   overflow-y: auto;
-}
-.requirements h1,
-.render-stall h1 {
-  margin: 0 0 var(--ui-space-4);
-  font: 400 var(--ui-heading) / var(--ui-heading-leading) var(--ui-font-display);
-  letter-spacing: -0.025em;
-  text-wrap: balance;
 }
 .requirements p,
 .render-stall p {

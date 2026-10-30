@@ -23,7 +23,20 @@ Vuthy returns physically at dawn for the existing share/keep journal choice.
 Afterward he returns to Mak Yey. The closing reveals, summary, credits and
 Episode 2 completion archive retain their existing progression.
 
+The hall telephone uses the same moving cloth-lead implementation as the Phnom
+Penh studio. Its cable connects the wall terminal to the receiver socket on the
+hook, follows Sora’s held receiver during the call, and returns to the hook
+after hanging up. The separate wall line remains in place. The moving lead is
+not pickable and is kept separate from the hidden receiver and static geometry.
+`src/player/TelephoneCord.ts` supplies the shared sag and mesh updates.
+
 ## Verification
+
+- `tests/browser/house.html?start=act1&view=phone`: **Preview receiver** toggles
+  the real held-phone presentation without advancing story flags. The report
+  checks both cable endpoints while lifted and after returning to the hook.
+- `tests/unit/telephoneCord.test.ts`: transformed endpoints, lifted/hidden
+  receiver, hang-up, reused geometry and non-pickable cable.
 
 - `tests/browser/arrival.html?start=act1`: physical interaction rays for note,
   telephone and matchbox; follow each reload and click to begin. Uses the

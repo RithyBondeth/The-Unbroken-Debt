@@ -1382,6 +1382,8 @@ def build():
     house_details(m)
     from house_decay import house_decay
     house_decay(AREA, m)
+    from rural_detail import rural_details
+    rural_details(AREA)
     interiors(m)
     under_house(m)
     cooking_shelter(m)

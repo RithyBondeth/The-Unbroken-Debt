@@ -67,14 +67,14 @@ export interface LookValues {
   aberration: number;
 }
 
-/** Art Bible defaults: grain 8–12, vignette 1.5, aberration small and at the edges only. */
+/** Subtle film texture; the scare carries distortion without blurring ordinary play. */
 export const LOOK = {
-  grain: 9,
-  memoryGrain: 14,
-  vignette: 1.5,
-  fearVignette: 2.5,
-  aberration: 8,
-  scareAberration: 3,
+  grain: 1.6,
+  memoryGrain: 4,
+  vignette: 0.85,
+  fearVignette: 1.35,
+  aberration: 0.35,
+  scareAberration: 7,
 };
 
 export function lookValues(mood: Mood, settings: LookSettings): LookValues {
