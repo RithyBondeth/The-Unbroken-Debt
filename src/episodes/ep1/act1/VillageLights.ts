@@ -10,7 +10,6 @@ import type { Area } from "../../../core/AreaLoader";
 import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
 import { softFalloff, useSoftFalloff } from "../../../render/softLampFalloff";
 import { applyRainWetness } from "../../../render/SurfaceDetail";
-import { FoliageWind } from "../../../render/FoliageWind";
 import { Lightning } from "../Lightning";
 import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 
@@ -57,7 +56,6 @@ export class VillageLights {
   private readonly flash: DirectionalLight;
   private time = 0;
   private readonly phases: number[] = [];
-  private readonly foliage: FoliageWind[] = [];
 
   constructor(scene: Scene, area: Area, camera: Camera) {
     // Rain-heavy sky with the moon somewhere behind the clouds: near black, the
@@ -124,8 +122,6 @@ export class VillageLights {
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
         applyRainWetness(material);
-        if (/leaf|leaves|palm_fan|forest_grass/.test(material.name))
-          this.foliage.push(new FoliageWind(material));
       }
   }
 
@@ -144,7 +140,6 @@ export class VillageLights {
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
-    for (const wind of this.foliage) wind.seconds = t;
     // Flames are never steady (Art Bible); each one out of step with the others.
     this.flames.forEach((light, i) => {
       const p = this.phases[i];

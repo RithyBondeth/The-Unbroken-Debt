@@ -4,11 +4,13 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { realiseInstances } from "../../../core/AreaLoader";
 import { mergeStaticMeshes } from "../../../render/StaticBatcher";
+import { bakePlantHeights } from "../../../render/plantHeights";
 
 /** One continuous authored route. Plants never recycle through the camera's view. */
 export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
   realiseInstances(roadside);
   roadside.addAllToScene();
+  bakePlantHeights(roadside);
   const meshes = roadside.meshes.filter(
     (m): m is Mesh => m instanceof Mesh && m.getTotalVertices() > 0,
   );

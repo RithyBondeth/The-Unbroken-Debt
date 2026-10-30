@@ -22,13 +22,17 @@ export function spaceAt(feet: Vector3): SpaceName {
   return "outdoors";
 }
 
-/** [Roof rain, shutter wind, drips, canopy wind, pavilion cloth]. */
+/**
+ * [Roof rain, shutter wind, drips, canopy wind, pavilion cloth]. The open air's
+ * own wind is WindAudio's, heard through the walls (the ambience bus); these
+ * are the sounds the wind makes of the house, the boards and the cloth.
+ */
 const LAYERS: Record<SpaceName, [number, number, number, number, number]> = {
   house: [0.3, 0.2, 0, 0, 0],
   wardrobe: [0.15, 0.06, 0, 0, 0],
   underHouse: [0.06, 0, 0.35, 0.025, 0],
   tent: [0, 0, 0, 0, 0.085],
-  outdoors: [0, 0, 0, 0.065, 0],
+  outdoors: [0, 0, 0, 0, 0],
   studio: [0, 0, 0, 0, 0],
 };
 
@@ -100,8 +104,11 @@ export class Soundscape {
     g.audio?.setSpace(space, space === "wardrobe" || where === "house" ? 0.6 : 2.5);
     const target = LAYERS[space];
     const k = Math.min(1, dt / 0.8);
+    // Shutters, draughts and cloth answer the same gusts the trees do.
+    const gusts = 0.45 + 0.7 * Math.min(1.6, g.wind.at(feet.x, feet.z));
     [this.roof, this.wind, this.drips, this.canopy, this.cloth].forEach((sound, i) => {
-      const level = target[i] * (i >= 3 ? 1 - this.silence() * 0.75 : 1);
+      const level =
+        target[i] * (i >= 3 ? 1 - this.silence() * 0.75 : 1) * (i === 1 || i >= 3 ? gusts : 1);
       this.levels[i] += (level - this.levels[i]) * k;
       if (sound) sound.volume = this.levels[i];
     });

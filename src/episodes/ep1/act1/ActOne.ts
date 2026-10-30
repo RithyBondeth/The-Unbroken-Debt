@@ -11,6 +11,8 @@ import { RainStreaks } from "../Rain";
 import { VillageLights } from "./VillageLights";
 import { StormSky } from "./StormSky";
 import { ForestBorder } from "./ForestBorder";
+import { TallGrass } from "./TallGrass";
+import { TreeOmens } from "./TreeOmens";
 import { PLAY } from "../data/forestBorder";
 import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 import { GROUND_MIST } from "../data/forestAtmosphere";
@@ -18,6 +20,9 @@ import { ForestAtmosphere } from "./ForestAtmosphere";
 import { LowGroundMist } from "../../../render/LowGroundMist";
 import { EaveDrips } from "./EaveDrips";
 import { warmSceneViews } from "../../../render/warmSceneViews";
+import { applyFoliageWind } from "../../../render/FoliageWind";
+import { bakePlantHeights, type PlantSite } from "../../../render/plantHeights";
+import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
@@ -72,6 +77,8 @@ export class ActOne {
   private rain!: RainStreaks;
   private sky!: StormSky;
   border!: ForestBorder;
+  grass!: TallGrass;
+  omens!: TreeOmens;
   private drips!: EaveDrips;
   vigil!: Vigil;
   night!: NightLife;
@@ -97,6 +104,8 @@ export class ActOne {
   private readonly thunderSounds: StaticSound[] = [];
   private score = new DreadScore(null);
   private soundscape!: Soundscape;
+  private windAudio!: WindAudio;
+  private plantSites: PlantSite[] = [];
   private wasFlashing = false;
 
   constructor(private readonly game: Game) {}
@@ -127,6 +136,8 @@ export class ActOne {
       // The forest round the village grows from copies of its own plants.
       beforeBatch: (container) => {
         this.border.capture(container);
+        // Heights for the wind, before the plants are merged into batches.
+        this.plantSites = bakePlantHeights(container);
         // Authored low plants predate the shrine. Keep their leaf crowns out
         // of the roof and the approach, just as the generated forest does.
         for (const mesh of container.meshes) {
@@ -143,6 +154,15 @@ export class ActOne {
       },
     });
     this.border.build();
+    this.grass = new TallGrass(
+      game.scene,
+      game.preset,
+      game.wind,
+      (x, z) => this.border.groundAt(x, z),
+      (x, z, r) => this.border.clear(x, z, r),
+    );
+    this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
+    this.omens.build(this.plantSites);
     game.fallGuard.bounds = PLAY;
     await Promise.all([
       ShadowFigure.prepare(game.scene),
@@ -160,6 +180,11 @@ export class ActOne {
     const arrivalModels = new ArrivalModels(game.scene);
     this.sky = new StormSky(game.scene);
     this.lights = new VillageLights(game.scene, this.area, game.camera);
+    applyFoliageWind(game.scene.materials, game.wind);
+    this.windAudio = new WindAudio(game, game.wind, {
+      sites: [...this.plantSites, ...this.border.sites],
+      voices: game.preset.name === "low" ? 2 : 4,
+    });
     // Rain in a box round Sora, following her (moved each frame).
     this.rain = new RainStreaks(game.scene, 6000, 7000);
     this.rain.system.emitter = this.rainAt;
@@ -307,6 +332,8 @@ export class ActOne {
       game.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
       this.lowMist = new LowGroundMist(game.scene, GROUND_MIST);
     }
+    // A monsoon night: steady wind off the paddies, gusting through the forest.
+    game.wind.base = 0.55;
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
 
@@ -364,6 +391,8 @@ export class ActOne {
     if (!this.running) return;
     const game = this.game;
     const eye = game.camera.globalPosition;
+    this.windAudio.update(dt);
+    this.grass.update(dt, eye);
     if (this.resolution.active) {
       this.resolution.update(dt);
       return;
@@ -397,7 +426,7 @@ export class ActOne {
     this.soundscape.update(dt);
     // Act 1's dread swells under the silence and while the Neak Ta shows itself.
     // The vigil passage keeps its own tension bed, so the score stays out of it.
-    this.score.pressure(
+    const pressure =
       game.flags.get("ep1.act2.started", false) || this.early.active
         ? 0
         : Math.max(
@@ -405,13 +434,26 @@ export class ActOne {
             this.night.threatSilence * 0.4,
             (this.forest?.silence ?? 0) * 0.35,
             (this.saveShrine?.silence ?? 0) * 0.4,
-          ),
+          );
+    this.score.pressure(pressure);
+    // The forest holds its breath when the night falls silent for a threat, and
+    // gusts harder as the dread climbs.
+    game.wind.calm = Math.max(
+      this.night.threatSilence,
+      this.forest?.silence ?? 0,
+      this.saveShrine?.silence ?? 0,
     );
+    game.wind.tension = Math.max(pressure, this.apparitions.dread * 0.6);
     this.score.update(dt);
     this.night.update(dt);
     this.lights.lookingAt = game.interaction.distance;
     this.lights.update(dt);
-    this.rainAt.set(eye.x, eye.y + 7, eye.z);
+    // The rain slants with the wind; the box moves upwind so it still falls round her.
+    const wind = game.wind,
+      slant = wind.at(eye.x, eye.z) * 0.32;
+    this.rain.system.direction1.set(wind.dirX * slant - 0.05, -1, wind.dirZ * slant + 0.02);
+    this.rain.system.direction2.set(wind.dirX * slant + 0.01, -1, wind.dirZ * slant + 0.08);
+    this.rainAt.set(eye.x - wind.dirX * slant * 4, eye.y + 7, eye.z - wind.dirZ * slant * 4);
     // Unlit streaks: faint in the dark, warmed a little by the lamp, white in lightning.
     this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.12, 0.25);
     this.drips.light(this.lights.storm.level);
@@ -446,6 +488,10 @@ export class ActOne {
     this.rainSound?.stop();
     for (const sound of this.thunderSounds) sound.stop();
     this.score.pressure(0);
+    // The storm has blown itself out: a light morning air through the palms.
+    g.wind.base = 0.16;
+    g.wind.calm = 0;
+    g.wind.tension = 0;
     this.night.stopForDawn();
     this.soundscape.stop();
     this.forest.stop();
@@ -514,12 +560,15 @@ export class ActOne {
         ),
       );
     this.score = new DreadScore(audio);
+    this.score.onSting = (kind, volume) =>
+      stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
     this.apparitions.score = this.score;
     this.saveShrine.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
     await this.forest.makeSounds();
+    await this.windAudio.makeSounds();
     await this.apparitions.makeSounds();
     await this.betel.makeSounds();
     await this.beats.makeSounds();
