@@ -15,12 +15,12 @@ import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/v2/physicsShape";
 import { seededRandom } from "../../../audio/synth";
-import { FoliageWind } from "../../../render/FoliageWind";
+import { FoliageWind, type FoliageKind } from "../../../render/FoliageWind";
 import { trunkRadius, type PlantSite, type TrunkProfile } from "../../../render/plantHeights";
 import type { WindState } from "../../../render/wind";
 import { pathDistance } from "../data/forestBorder";
 import {
-  BOUNDARY_CORD,
+  CORD_WEB,
   DRESSED_TRUNKS,
   OMEN_FIG,
   type DressedTrunk,
@@ -116,6 +116,97 @@ function ribbon(out: Geo, top: Vector3, length: number, width: number, random: (
   }
 }
 
+/** A tuft of black hair knotted to a cord: a dozen strands that fall and swing. */
+function tassel(out: Geo, at: Vector3, random: () => number): void {
+  const strands = 10 + Math.floor(random() * 7);
+  const length = 0.16 + random() * 0.28;
+  const phase = random() * Math.PI * 2;
+  for (let k = 0; k < strands; k++) {
+    const a = random() * Math.PI * 2,
+      splay = 0.01 + random() * 0.035;
+    const l = length * (0.7 + 0.3 * random());
+    const path: Vector3[] = [];
+    for (let s = 0; s <= 5; s++) {
+      const t = s / 5;
+      path.push(
+        at.add(
+          new Vector3(
+            Math.cos(a) * splay * t + Math.sin(t * 7 + k) * 0.004,
+            -t * l,
+            Math.sin(a) * splay * t,
+          ),
+        ),
+      );
+    }
+    tube(
+      out,
+      path,
+      (s) => 0.0016 * (1 - s / 7),
+      3,
+      (s) => (s / 5) * l,
+      phase,
+      1,
+      1,
+    );
+  }
+  tube(
+    out,
+    [at.add(new Vector3(0, 0.012, 0)), at.add(new Vector3(0, -0.02, 0))],
+    () => 0.009,
+    6,
+    () => 0,
+    phase,
+  );
+}
+
+/**
+ * A cloth effigy hung by its head below `neck`: a bound bundle of a body, a
+ * round head, arms raised and legs hanging, as the title screen's figures.
+ * Every vertex carries how far below the tie it hangs, so it swings whole.
+ */
+export function effigy(
+  out: Geo,
+  neck: Vector3,
+  drop: number,
+  scale: number,
+  random: () => number,
+): void {
+  const yaw = random() * Math.PI * 2;
+  const phase = random() * Math.PI * 2;
+  const p = (x: number, y: number) =>
+    neck.add(new Vector3(Math.cos(yaw) * x * scale, y * scale, Math.sin(yaw) * x * scale));
+  const hang = (v: Vector3) => drop + (neck.y - v.y);
+  const limb = (path: Vector3[], r: (i: number) => number, sides = 5) =>
+    tube(out, path, r, sides, (i) => hang(path[i]), phase, 1, 2);
+  const head: Vector3[] = [];
+  for (let k = 0; k <= 6; k++) head.push(p(0, -0.01 + (k / 6) * 0.1));
+  limb(head, (k) => 0.004 + 0.044 * Math.sqrt(Math.sin((Math.PI * k) / 6)), 8);
+  const body: Vector3[] = [];
+  for (let k = 0; k <= 6; k++) body.push(p(Math.sin(k * 0.8) * 0.006, -0.03 - (k / 6) * 0.27));
+  limb(body, (k) => 0.03 + 0.022 * Math.sin((Math.PI * k) / 6), 8);
+  for (const side of [-1, 1]) {
+    const lift = 0.04 + random() * 0.05;
+    limb(
+      [p(side * 0.03, -0.07), p(side * 0.09, -0.02 + lift * 0.5), p(side * 0.14, 0.03 + lift)],
+      () => 0.012,
+    );
+    limb(
+      [p(side * 0.02, -0.28), p(side * 0.035, -0.37), p(side * 0.04, -0.45)],
+      (k) => 0.015 - k * 0.002,
+    );
+  }
+}
+
+/** The omens' materials, made once and shared by the web, the trunks and the fig. */
+interface Kit {
+  cord: Geo;
+  hair: Geo;
+  effigy: Geo;
+  tieRed: Material;
+  tieWhite: Material;
+  blood: Material;
+}
+
 /**
  * The forest marked by the living (data/treeOmens): cotton thread wound
  * tight round the trunks beside the path, its loose ends fluttering in the
@@ -129,6 +220,8 @@ export class TreeOmens {
   private readonly materials: Material[] = [];
   private readonly textures: DynamicTexture[] = [];
   private body: PhysicsBody | null = null;
+  /** Static boxes for the fig and the web's poles: [centre, size]. */
+  private readonly boxes: [Vector3, Vector3][] = [];
   private anchor: TransformNode | null = null;
   private readonly random = seededRandom(6242090);
   readonly stats = { trunks: 0, decals: 0 };
@@ -159,10 +252,36 @@ export class TreeOmens {
       }
       this.dress(site.trunk, dressed, threads);
     }
-    this.boundaryCord(threads);
-    this.fig(threads, thread.red);
+    const kit: Kit = {
+      cord: geo(),
+      hair: geo(),
+      effigy: geo(),
+      tieRed: this.clothMaterial("M_omen_tie_red", [128, 22, 16]),
+      tieWhite: this.clothMaterial("M_omen_tie_white", [176, 166, 140]),
+      blood: this.stainMaterial(
+        "M_omen_web_blood",
+        (ctx) => paintBlood(ctx, 256, 512, "hand", seededRandom(6242140)),
+        0.28,
+      ),
+    };
+    this.cordWeb(kit);
+    this.fig(threads, thread.red, kit);
     for (const colour of ["red", "white"] as const)
       this.mesh(`omen_thread_${colour}`, threads[colour], thread[colour]);
+    this.mesh(
+      "omen_cords",
+      kit.cord,
+      this.threadMaterial("M_omen_cord", new Color3(0.15, 0.009, 0.007)),
+    );
+    const hair = this.threadMaterial("M_omen_hair", new Color3(0.013, 0.01, 0.009));
+    hair.roughness = 0.42;
+    this.mesh("omen_hair", kit.hair, hair);
+    this.mesh(
+      "omen_effigies",
+      kit.effigy,
+      this.clothMaterial("M_omen_effigy", [150, 138, 112], "effigy", false),
+    );
+    this.buildColliders();
     console.info(
       `[TreeOmens] ${this.stats.trunks} trunks bound, ${this.stats.decals} stains, fig at ${OMEN_FIG.x}, ${OMEN_FIG.z}`,
     );
@@ -261,6 +380,7 @@ export class TreeOmens {
     turns: number,
     pitch: number,
     start: number,
+    thickness = 0.0042,
   ): Vector3 {
     const path: Vector3[] = [];
     const steps = Math.round(turns * 28);
@@ -277,7 +397,7 @@ export class TreeOmens {
     tube(
       out,
       path,
-      () => 0.0028,
+      () => thickness,
       4,
       () => 0,
       0,
@@ -290,7 +410,7 @@ export class TreeOmens {
   /** The knot and two loose ends falling from it, swinging in the wind. */
   private tails(out: Geo, knot: Vector3, outward: Vector3, random: () => number): void {
     for (let k = 0; k < 2; k++) {
-      const length = 0.18 + random() * 0.5;
+      const length = 0.3 + random() * 0.6;
       const path: Vector3[] = [];
       const phase = random() * Math.PI * 2;
       for (let s = 0; s <= 8; s++) {
@@ -308,7 +428,7 @@ export class TreeOmens {
       tube(
         out,
         path,
-        () => 0.0026,
+        () => 0.0038,
         4,
         (i) => (i / 8) * length,
         phase,
@@ -413,85 +533,148 @@ export class TreeOmens {
     this.stats.decals++;
   }
 
-  // ------------------------------------------------------------- the cord
+  // ------------------------------------------------------------- the web
 
-  /** Bamboo stakes either side of the path, the cord between them sagging, its ties hung along it. */
-  private boundaryCord(threads: Record<ThreadColour, Geo>): void {
+  /**
+   * The web over the path (data/treeOmens): bamboo poles lashed with cord,
+   * dark-red cords sagging between them overhead, hair tassels and red and
+   * white ties along them, cloth effigies hung below, and a bloody hand on the
+   * pole Sora passes first. The title screen's cords, in the forest.
+   */
+  private cordWeb(kit: Kit): void {
     const bamboo = this.scene.getMaterialByName("M_bamboo");
     if (!bamboo) return;
     const random = this.random;
-    const [ax, az] = BOUNDARY_CORD.from,
-      [bx, bz] = BOUNDARY_CORD.to;
-    const stakes = geo();
-    const tops: Vector3[] = [];
-    for (const [x, z] of [
-      [ax, az],
-      [bx, bz],
-    ]) {
-      const ground = this.groundAt(x, z);
-      const lean = new Vector3((random() - 0.5) * 0.12, 1, (random() - 0.5) * 0.12).normalize();
-      const height = BOUNDARY_CORD.height + 0.25;
-      const foot = new Vector3(x, ground - 0.2, z);
+    const poles = geo();
+    const feet: Vector3[] = [];
+    const leans: Vector3[] = [];
+    for (const [x, z, height] of CORD_WEB.poles) {
+      const foot = new Vector3(x, this.groundAt(x, z) - 0.25, z);
+      const lean = new Vector3((random() - 0.5) * 0.1, 1, (random() - 0.5) * 0.1).normalize();
+      feet.push(foot);
+      leans.push(lean);
       tube(
-        stakes,
-        [foot, foot.add(lean.scale(height + 0.2))],
-        () => 0.032,
-        7,
+        poles,
+        [foot, foot.add(lean.scale(height + 0.25))],
+        (i) => 0.045 - i * 0.012,
+        8,
         () => 0,
         0,
         1,
         1,
       );
-      tops.push(foot.add(lean.scale(BOUNDARY_CORD.height + 0.2)));
+      this.boxes.push([foot.add(lean.scale(1.2)), new Vector3(0.16, 2.4, 0.16)]);
     }
-    this.mesh("omen_cord_stakes", stakes, bamboo);
-    const [a, b] = tops;
-    const cord: Vector3[] = [];
-    const span = Vector3.Distance(a, b);
-    for (let i = 0; i <= 24; i++) {
-      const t = i / 24;
-      cord.push(Vector3.Lerp(a, b, t).addInPlaceFromFloats(0, -4 * 0.32 * t * (1 - t), 0));
-    }
-    // The cord swings a little at its middle, where it sags furthest.
-    tube(
-      threads.white,
-      cord,
-      () => 0.0035,
-      4,
-      (i) => 4 * 0.6 * (i / 24) * (1 - i / 24),
-      0.7,
-      1,
-      40,
-    );
+    const poleMesh = this.mesh("omen_web_poles", poles, bamboo);
+    const at = (pole: number, height: number) => feet[pole].add(leans[pole].scale(height + 0.25));
+    const spans = CORD_WEB.spans.map(([p, hp, q, hq, sag]) => {
+      const a = at(p, hp),
+        b = at(q, hq);
+      const points: Vector3[] = [];
+      for (let i = 0; i <= 28; i++) {
+        const t = i / 28;
+        points.push(Vector3.Lerp(a, b, t).addInPlaceFromFloats(0, -4 * sag * t * (1 - t), 0));
+      }
+      // Lashing where it is tied to each pole.
+      for (const [pole, end] of [
+        [p, a],
+        [q, b],
+      ] as const)
+        this.windThread(
+          kit.cord,
+          () => 0.05,
+          feet[pole].add(new Vector3(0, 0, 0)),
+          end.y - 0.03,
+          2.5,
+          0.06,
+          random() * 6,
+          0.004,
+        );
+      // The middle of a long cord swings furthest.
+      tube(
+        kit.cord,
+        points,
+        () => 0.006,
+        5,
+        (i) => 4 * sag * 1.4 * (i / 28) * (1 - i / 28),
+        random() * 6,
+        1,
+        30,
+      );
+      return { points, length: Vector3.Distance(a, b), sag };
+    });
     const ties = { red: geo(), white: geo() };
-    for (let d = 0.35; d < span - 0.3; d += 0.32 + random() * 0.25) {
-      const t = d / span;
-      const at = Vector3.Lerp(a, b, t).addInPlaceFromFloats(0, -4 * 0.32 * t * (1 - t) - 0.004, 0);
-      const colour: ThreadColour = random() < 0.6 ? "red" : "white";
-      ribbon(ties[colour], at, 0.12 + random() * 0.26, 0.018 + random() * 0.014, random);
+    for (const span of spans) {
+      const along = (d: number) => span.points[Math.min(28, Math.round((d / span.length) * 28))];
+      for (let d = 0.6 + random() * 0.6; d < span.length - 0.5; d += 0.9 + random() * 0.8)
+        tassel(kit.hair, along(d).addInPlaceFromFloats(0, -0.008, 0), random);
+      for (let d = 0.3 + random() * 0.3; d < span.length - 0.3; d += 0.45 + random() * 0.35) {
+        const colour: ThreadColour = random() < 0.65 ? "red" : "white";
+        ribbon(
+          ties[colour],
+          along(d).addInPlaceFromFloats(0, -0.006, 0),
+          0.18 + random() * 0.32,
+          0.026 + random() * 0.02,
+          random,
+        );
+      }
     }
-    this.mesh("omen_cord_ties_red", ties.red, this.clothMaterial("M_omen_tie_red", [128, 22, 16]));
-    this.mesh(
-      "omen_cord_ties_white",
-      ties.white,
-      this.clothMaterial("M_omen_tie_white", [176, 166, 140]),
-    );
+    for (const [index, t, drop] of CORD_WEB.effigies) {
+      const span = spans[index];
+      const from = span.points[Math.round(t * 28)];
+      tube(
+        kit.cord,
+        [from, from.add(new Vector3(0, -drop, 0))],
+        () => 0.003,
+        4,
+        (i) => i * drop,
+        0,
+        1,
+        30,
+      );
+      effigy(kit.effigy, from.add(new Vector3(0, -drop, 0)), drop, 1, random);
+    }
+    this.mesh("omen_web_ties_red", ties.red, kit.tieRed);
+    this.mesh("omen_web_ties_white", ties.white, kit.tieWhite);
+    // A hand pressed to the first pole, at the height of a hand, facing the path.
+    if (poleMesh) {
+      poleMesh.isPickable = true;
+      const [x, z] = CORD_WEB.poles[0];
+      const towards = Math.atan2(55.6 - z, -1.9 - x);
+      const profile: TrunkProfile = { x, z, from: 0, to: 2, radii: [] };
+      this.stain(
+        profile,
+        towards,
+        feet[0].y + 1.55,
+        new Vector3(0.22, 0.6, 0.4),
+        kit.blood,
+        poleMesh,
+      );
+      poleMesh.isPickable = false;
+    }
   }
 
-  private clothMaterial(name: string, colour: readonly [number, number, number]): PBRMaterial {
+  private clothMaterial(
+    name: string,
+    colour: readonly [number, number, number],
+    kind: FoliageKind = "cloth",
+    frayed = true,
+  ): PBRMaterial {
     const material = new PBRMaterial(name, this.scene);
     material.albedoTexture = this.texture(`T_${name}`, 256, 128, (ctx) =>
       paintCloth(ctx, 256, 128, colour, this.random),
     );
-    material.albedoTexture.hasAlpha = true;
-    material.useAlphaFromAlbedoTexture = true;
-    material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
-    material.alphaCutOff = 0.4;
+    if (frayed) {
+      material.albedoTexture.hasAlpha = true;
+      material.useAlphaFromAlbedoTexture = true;
+      material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+      material.alphaCutOff = 0.4;
+    }
     material.metallic = 0;
     material.roughness = 0.82;
     material.backFaceCulling = false;
     material.maxSimultaneousLights = 8;
-    new FoliageWind(material, this.wind, "cloth");
+    new FoliageWind(material, this.wind, kind);
     this.materials.push(material);
     return material;
   }
@@ -503,7 +686,7 @@ export class TreeOmens {
    * crown and have choked it, twisting round one another to a knot of trunk,
    * splaying into bare branches above, aerial roots hanging from them.
    */
-  private fig(threads: Record<ThreadColour, Geo>, red: Material): void {
+  private fig(threads: Record<ThreadColour, Geo>, red: Material, kit: Kit): void {
     const random = seededRandom(6242120);
     const bark = this.scene.getMaterialByName("M_wet_bark") ?? red;
     const ground = this.groundAt(OMEN_FIG.x, OMEN_FIG.z);
@@ -641,6 +824,31 @@ export class TreeOmens {
         1,
       );
     }
+    // Red cords hung from the branches over the path side, tasselled with hair, two dolls among them.
+    const hung = facing.length ? facing : tips;
+    for (let k = 0; k < 11; k++) {
+      const from = hung[Math.floor(random() * hung.length)];
+      const length = Math.min(from.y - ground - 0.7, 1.4 + random() * 2.2);
+      if (length < 0.5) continue;
+      const phase = random() * Math.PI * 2;
+      const path: Vector3[] = [];
+      for (let s = 0; s <= 12; s++) {
+        const t = s / 12;
+        path.push(from.add(new Vector3(Math.sin(t * 4 + phase) * 0.025, -t * length, 0)));
+      }
+      tube(
+        kit.cord,
+        path,
+        () => 0.0045,
+        4,
+        (s) => (s / 12) * length,
+        phase,
+        1,
+        30,
+      );
+      if (k % 2 === 0) tassel(kit.hair, path[12], random);
+      if (k === 3 || k === 8) effigy(kit.effigy, path[12], length, 1.1, random);
+    }
     const trunkMesh = this.mesh("omen_fig_trunk", trunk, bark);
     this.mesh("omen_fig_host", host, this.scene.getMaterialByName("M_wet_bark_dead") ?? bark);
     const rootMaterial = bark.clone("M_omen_fig_aerial_roots");
@@ -734,7 +942,7 @@ export class TreeOmens {
       );
       trunkMesh.isPickable = false;
     }
-    this.collider(c, 1.1);
+    this.boxes.push([new Vector3(c.x, c.y + 2, c.z), new Vector3(2.2, 4.5, 2.2)]);
   }
 
   private offerings(c: Vector3, random: () => number): void {
@@ -790,19 +998,14 @@ export class TreeOmens {
     this.mesh("omen_incense", incense, sticks);
   }
 
-  private collider(c: Vector3, half: number): void {
-    const anchor = new TransformNode("omen_fig_body", this.scene);
+  private buildColliders(): void {
+    if (!this.boxes.length) return;
+    const anchor = new TransformNode("omen_body", this.scene);
     anchor.metadata = { surface: "leaves" };
     const body = new PhysicsBody(anchor, PhysicsMotionType.STATIC, false, this.scene);
     const shape = new PhysicsShapeContainer(this.scene);
-    shape.addChild(
-      new PhysicsShapeBox(
-        new Vector3(c.x, c.y + 2, c.z),
-        Quaternion.Identity(),
-        new Vector3(half * 2, 4.5, half * 2),
-        this.scene,
-      ),
-    );
+    for (const [centre, size] of this.boxes)
+      shape.addChild(new PhysicsShapeBox(centre, Quaternion.Identity(), size, this.scene));
     body.shape = shape;
     this.body = body;
     this.anchor = anchor;

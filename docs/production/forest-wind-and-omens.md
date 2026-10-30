@@ -69,15 +69,19 @@ text, so nothing was added to the `KHMER` list.
 - **Thread.** Red and faded-white cotton thread is wound round five real trunks
   between the road and the compound, measured from their bark, as a kru binds
   what lives in a tree. The knotted ends hang loose and flutter.
-- **Boundary cord.** A cord is strung on bamboo stakes across the path where the
-  forest walk begins, hung with red and white ties.
+- **Cord web.** As on the title screen: four bamboo poles either side of the
+  path a few steps from where Sora arrives, eight dark-red cords sagging between
+  them overhead, black hair tassels and red and white ties along them, and three
+  cloth effigies with raised arms. The first hangs just above her head over the
+  path. A bloody hand is pressed to the first pole.
 - **Blood.** A dragged handprint (z ≈ 15) and a smear (z ≈ 37) are pressed into
   the bark, with rain-thinned runs below and spatter round them.
 - **Strangler fig (chrey).** At (8.5, 29), 18 roots wind both ways round a pale
   dead host. They crawl half-buried along the ground before rising. About 110
   aerial roots hang like hair and swing slowly. Faded red and white cloth bands
   and red thread are tied round the trunk. At its roots are a clay pot,
-  burnt-down incense, old betel-juice stains and a handprint.
+  burnt-down incense, old betel-juice stains and a handprint. Red cords with hair
+  tassels and two more effigies hang from its branches.
 
 ## Verification
 

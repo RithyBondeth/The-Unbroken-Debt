@@ -21,8 +21,8 @@ import { grassChance, layoutGrass } from "../../src/episodes/ep1/data/grass";
 import { PATH, ROAD_Z, pathDistance } from "../../src/episodes/ep1/data/forestBorder";
 import { SAVE_SHRINE_POSITION } from "../../src/episodes/ep1/data/saveShrine";
 import { grassClumpData } from "../../src/episodes/ep1/act1/TallGrass";
-import { tube } from "../../src/episodes/ep1/act1/TreeOmens";
-import { BOUNDARY_CORD, DRESSED_TRUNKS, OMEN_FIG } from "../../src/episodes/ep1/data/treeOmens";
+import { effigy, tube } from "../../src/episodes/ep1/act1/TreeOmens";
+import { CORD_WEB, DRESSED_TRUNKS, OMEN_FIG } from "../../src/episodes/ep1/data/treeOmens";
 
 describe("plant heights for the wind", () => {
   it("knows how each plant bends and sounds by its name", () => {
@@ -169,7 +169,18 @@ describe("tree omens", () => {
     }
   });
 
-  it("marks trunks a step off the path, keeps the fig off it, and strings the cord across it", () => {
+  it("hangs an effigy that swings whole from its tie", () => {
+    const out = { positions: [], normals: [], uvs: [], wind: [], indices: [] };
+    effigy(out, new Vector3(1, 2.4, 3), 0.4, 1, seededRandom(4));
+    const ys = out.positions.filter((_, i) => i % 3 === 1);
+    expect(Math.max(...ys)).toBeLessThan(2.4 + 0.15);
+    expect(Math.min(...ys)).toBeGreaterThan(2.4 - 0.5);
+    const hang = out.wind.filter((_, i) => i % 2 === 0);
+    expect(Math.min(...hang)).toBeGreaterThan(0.25);
+    expect(new Set(out.wind.filter((_, i) => i % 2 === 1)).size).toBe(1);
+  });
+
+  it("marks trunks a step off the path and keeps the fig and the web's poles off it", () => {
     for (const trunk of DRESSED_TRUNKS) {
       const d = pathDistance(trunk.x, trunk.z);
       expect(d).toBeGreaterThan(2);
@@ -178,12 +189,22 @@ describe("tree omens", () => {
     }
     expect(DRESSED_TRUNKS.filter((t) => t.blood).length).toBeGreaterThanOrEqual(2);
     expect(pathDistance(OMEN_FIG.x, OMEN_FIG.z)).toBeGreaterThan(4.5);
-    const [ax, az] = BOUNDARY_CORD.from,
-      [bx, bz] = BOUNDARY_CORD.to;
-    expect(pathDistance(ax, az)).toBeGreaterThan(1.5);
-    expect(pathDistance(bx, bz)).toBeGreaterThan(1.5);
-    expect(pathDistance((ax + bx) / 2, (az + bz) / 2)).toBeLessThan(1);
-    // High enough to walk under.
-    expect(BOUNDARY_CORD.height - 4 * 0.32 * 0.25).toBeGreaterThan(1.75);
+    for (const [x, z] of CORD_WEB.poles) expect(pathDistance(x, z)).toBeGreaterThan(2.5);
+  });
+
+  it("strings every cord, and the effigy over the path, above Sora's head", () => {
+    const low = (span: readonly number[], t: number) => {
+      const [, hp, , hq, sag] = span;
+      return hp + (hq - hp) * t - 4 * sag * t * (1 - t);
+    };
+    for (const span of CORD_WEB.spans) {
+      let lowest = Infinity;
+      for (let t = 0; t <= 1; t += 0.02) lowest = Math.min(lowest, low(span, t));
+      expect(lowest).toBeGreaterThan(2.1);
+    }
+    for (const [index, t, drop] of CORD_WEB.effigies) {
+      // The doll is about 0.45 m from its neck to its feet.
+      expect(low(CORD_WEB.spans[index], t) - drop - 0.45).toBeGreaterThan(1.8);
+    }
   });
 });

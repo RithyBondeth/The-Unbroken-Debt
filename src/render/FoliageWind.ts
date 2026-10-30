@@ -11,7 +11,8 @@ import { FRONT_SPEED, GUST_RISE, type WindState } from "./wind";
  * never comes apart; leaves add their flutter on top, fronds flap, grass and
  * hanging thread lean from the root and part round Sora's feet.
  */
-export type FoliageKind = "leaf" | "frond" | "bark" | "grass" | "card" | "cloth" | "hanging";
+export type FoliageKind =
+  "leaf" | "frond" | "bark" | "grass" | "card" | "cloth" | "hanging" | "effigy";
 
 /** [Trunk bend (∝ h²), stem lean (∝ h), branch sway, flutter, push]. */
 const SHAPES: Record<FoliageKind, readonly [number, number, number, number, number]> = {
@@ -23,6 +24,8 @@ const SHAPES: Record<FoliageKind, readonly [number, number, number, number, numb
   cloth: [0, 0.32, 0.7, 2.4, 0.6],
   /** Aerial roots and vines: long, heavy strands that swing slowly from where they hang. */
   hanging: [0, 0.1, 0.5, 0.3, 0.4],
+  /** A doll hung on a cord: it swings whole, from where it is tied. */
+  effigy: [0, 0.26, 0.6, 0.12, 0.6],
 };
 
 /**
@@ -106,9 +109,9 @@ export function foliageWindCode(wgsl: boolean): string {
     float fw_lean = min(fw_reach * (fw_amount + fw_sway * (0.12 + 0.3 * fw_amount)), 0.1 * fw_h + fw_shape.y * fw_h);
     float fw_side = fw_reach * 0.3 * fw_amount * sin(fw_t * 0.83 + fw_phase * 1.7);
     vec3 fw_d = vec3(fw_dir.x * fw_lean - fw_dir.y * fw_side, 0.0, fw_dir.y * fw_lean + fw_dir.x * fw_side);
-    float fw_branch = fw_shape.z * min(fw_h, 8.0) * 0.011 * fw_amount * sin(fw_t * (2.2 + fw_amount) + dot(fw_p, vec3(0.31, 0.17, 0.23)) + fw_phase);
+    float fw_branch = fw_shape.z * min(fw_h, 8.0) * 0.016 * fw_amount * sin(fw_t * (2.2 + fw_amount) + dot(fw_p, vec3(0.31, 0.17, 0.23)) + fw_phase);
     fw_d = fw_d + vec3(fw_dir.x, 0.3, fw_dir.y) * fw_branch;
-    float fw_flutter = fw_shape.w * 0.016 * min(fw_h * 2.0, 1.0) * (0.25 + fw_amount) * sin(fw_t * (8.0 + 5.0 * fw_amount) + dot(fw_p, vec3(2.7, 3.1, 2.3)));
+    float fw_flutter = fw_shape.w * 0.026 * min(fw_h * 2.0, 1.0) * (0.25 + fw_amount) * sin(fw_t * (8.0 + 5.0 * fw_amount) + dot(fw_p, vec3(2.7, 3.1, 2.3)));
     fw_d = fw_d + vec3(-fw_dir.y * 0.6, 1.0, fw_dir.x * 0.6) * fw_flutter;
     vec2 fw_away = fw_p.xz - fw_push.xy;
     float fw_dist = length(fw_away);
