@@ -61,3 +61,25 @@ the difference.
 
 Evidence: `evidence/2026-10-30-wind/low-jungle-before-after.jpg` (left before,
 right after, gamma lifted for viewing).
+
+## Thick forest and grounding (31 October 2026, later)
+
+- **Thicker forest.** A walk-side layer (`inWalk`, `data/forestBorder.ts`)
+  plants giants every ~6 m, saplings and shrubs between them and ferns beneath,
+  3.4–22 m either side of the path from the compound to the road. It stays out
+  of the first Neak Ta's patrol (x −7 to 8, z 7 to 29) so the stealth encounter
+  is unchanged. The outer ring is tighter too (canopy 6.2 m, mid 3.6 m, floor
+  2 m). On Low the walk keeps 45 % of its giants. Triangles drawn on the walk
+  view rose from 4.28 M to 4.51 M.
+- **Nothing floats.** The village script set plants and logs down at height 0
+  while the terrain dips under them: dead trees in the paddies hovered 23–34 cm
+  above the paddy floor, one by the path 13 cm, and some palms and bananas on
+  slopes. `render/groundSnap.ts` lowers every ground-standing object (plants,
+  dead wood, mounds, rocks, flag poles) until its lowest point is just under the
+  terrain; 21 were moved. Buildings, the wells' frames and anything hung are
+  left alone. The forest border's copies now stand on their template's lowest
+  point instead of world zero, so they cannot hover either.
+
+Evidence: `evidence/2026-10-30-wind/low-thick-forest-grounded.jpg`. It shows the
+walk, both sides of it, the dead tree by the path standing in the ferns, and a
+paddy tree rising out of the water.
