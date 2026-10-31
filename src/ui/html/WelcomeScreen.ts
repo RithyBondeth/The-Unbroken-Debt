@@ -116,6 +116,12 @@ export async function showWelcomeScreen(
       ambience.setVisible(visible);
       root.querySelector(".welcome")?.classList.toggle("welcome-paused", !visible);
     };
+    // Decode the Neak Ta's plates now, so neither arrives a beat late when it is revealed.
+    for (const name of ["hall-far", "hall-near"]) {
+      const image = new Image();
+      image.src = `${import.meta.env.BASE_URL}assets/ui/welcome-${name}.webp`;
+      void image.decode().catch(() => undefined);
+    }
     const cords = animateCords(root.querySelector<HTMLElement>(".welcome-frame")!, abort.signal);
     haunt(
       root.querySelector<HTMLElement>(".welcome-stage")!,
