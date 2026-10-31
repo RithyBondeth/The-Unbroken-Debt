@@ -25,6 +25,7 @@ import { keepLightBudgets } from "../render/lightBudget";
 import { installSoftLampFalloff } from "../render/softLampFalloff";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
+import { WindState } from "../render/wind";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
 import { FallGuard } from "../player/FallGuard";
@@ -104,6 +105,8 @@ export class Game {
   pipeline!: PostPipeline;
   atmosphere!: Atmosphere;
   player!: PlayerController;
+  /** The outdoor wind: sections set its strength, the story its calm and tension. */
+  readonly wind = new WindState();
   /** Puts Sora back on solid ground if she ever leaves the world (the area may set walls). */
   readonly fallGuard = new FallGuard();
   private readonly feetNow = new Vector3();
@@ -326,6 +329,12 @@ export class Game {
 
   private update(): void {
     this.guardFall();
+    const eye = this.camera.globalPosition;
+    this.wind.update(this.deltaSeconds, eye.x, eye.z);
+    if (this.wind.push && this.player) {
+      this.wind.push.x = this.feetNow.x;
+      this.wind.push.z = this.feetNow.z;
+    }
     if (
       this.notebook.isOpen &&
       (this.cutscene || this.threatActive || this.hiding || this.satchel.isOpen)
