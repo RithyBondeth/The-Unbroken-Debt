@@ -1,7 +1,6 @@
 import {
   biquad,
   brown,
-  bubble,
   decay,
   formant,
   mix,
@@ -43,18 +42,10 @@ function seamless(samples: Float32Array, sampleRate: number, fade = 0.05): Float
   return samples;
 }
 
-/** Random impulses at `perSecond`, each of random sign and a size skewed small. */
-function scatter(length: number, rand: () => number, count: number, skew = 2): Float32Array {
-  const out = new Float32Array(length);
-  for (let k = 0; k < count; k++)
-    out[Math.floor(rand() * length)] += (rand() < 0.5 ? -1 : 1) * rand() ** skew;
-  return out;
-}
-
 /**
- * Heavy monsoon rain heard from inside the studio: the wash through the
- * walls, drops ringing on the tin awning, rapping the wooden shutters and
- * ticking on the glass, and the downpipe gurgling as it overflows.
+ * Heavy monsoon rain heard from inside the studio, and nothing else: the wash
+ * through the walls and its hiss. No awning, shutter, glass or downpipe
+ * layers; their pings and ticks read as a ringing under the rain.
  */
 export function rainLoop(sampleRate: number, rand: () => number): Float32Array {
   const fade = 1;
@@ -72,39 +63,6 @@ export function rainLoop(sampleRate: number, rand: () => number): Float32Array {
   for (let i = 0; i < length; i++) {
     const swell = 0.88 + 0.12 * Math.sin((i / sampleRate) * 0.45);
     out[i] = (hiss[i] * 0.4 + wash[i] * 2.2) * swell;
-  }
-  // The tin awning over the window: one sheet, so every drop rings the same modes.
-  const tin = modal(scatter(length, rand, 2600), sampleRate, [
-    [2210, 0.035, 1],
-    [3130, 0.028, 0.8],
-    [4470, 0.02, 0.6],
-    [5890, 0.014, 0.4],
-    [1480, 0.045, 0.5],
-  ]);
-  // The shutters: dull wooden raps.
-  const wood = modal(scatter(length, rand, 700, 1.5), sampleRate, [
-    [620, 0.012, 1],
-    [1180, 0.009, 0.7],
-    [1950, 0.006, 0.5],
-  ]);
-  // The glass: tiny, bright ticks.
-  const glass = modal(scatter(length, rand, 900, 3), sampleRate, [
-    [3900, 0.004, 1],
-    [6100, 0.003, 0.6],
-  ]);
-  for (let i = 0; i < length; i++) out[i] += tin[i] * 0.16 + wood[i] * 0.5 + glass[i] * 0.3;
-  // The downpipe overflowing: a stream of bubbles, its flow surging.
-  for (let k = 0; k < 520; k++) {
-    const at = rand() * (length / sampleRate - 0.05);
-    const surge = 0.5 + 0.5 * Math.sin(at * 1.7 + 0.4) * Math.sin(at * 0.53);
-    mix(
-      out,
-      bubble(sampleRate, 320 + rand() * 700, 0.006 + rand() * 0.01),
-      sampleRate,
-      at,
-      0.05 * surge * (0.3 + rand()),
-      () => 1,
-    );
   }
   return normalise(wrapLoop(out, sampleRate, fade), 0.9);
 }

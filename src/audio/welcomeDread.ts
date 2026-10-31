@@ -6,7 +6,6 @@
  */
 import { biquad, noise, seededRandom } from "./synth";
 import { creak, hall, knock, loopify, place, sweepBand, whisper, type Stereo } from "./dread";
-import { welcomeTheme } from "./welcomeTheme";
 
 function normalise(data: Float32Array, peak: number): Float32Array {
   let max = 0;
@@ -270,7 +269,6 @@ export function stinger(rate: number, kind: Stinger): Stereo {
 /** Everything the title screen plays, synthesised in one pass. */
 export interface DreadBank {
   rate: number;
-  theme: Float32Array;
   chant: Stereo;
   bed: Stereo;
   stingers: Record<Stinger, Stereo>;
@@ -279,7 +277,6 @@ export interface DreadBank {
 export function synthesizeDread(rate: number): DreadBank {
   return {
     rate,
-    theme: welcomeTheme(rate),
     chant: funeralChant(rate),
     bed: whisperBed(rate),
     stingers: {
