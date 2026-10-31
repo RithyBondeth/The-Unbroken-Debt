@@ -23,6 +23,7 @@ import { warmSceneViews } from "../../../render/warmSceneViews";
 import { applyFoliageWind } from "../../../render/FoliageWind";
 import { gradeJungle } from "./jungleGrade";
 import { bakePlantHeights, type PlantSite } from "../../../render/plantHeights";
+import { snapToGround } from "../../../render/groundSnap";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
@@ -137,6 +138,10 @@ export class ActOne {
       // The forest round the village grows from copies of its own plants.
       beforeBatch: (container) => {
         this.border.capture(container);
+        // Nothing that grows or lies on the ground may hover over a dip in it.
+        const grounded = snapToGround(container, (x, z) => this.border.terrainAt(x, z));
+        if (grounded.length)
+          console.info(`[ActOne] ${grounded.length} objects set down on the ground`);
         // Heights for the wind, before the plants are merged into batches.
         this.plantSites = bakePlantHeights(container);
         // Authored low plants predate the shrine. Keep their leaf crowns out

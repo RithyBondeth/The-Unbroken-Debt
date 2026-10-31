@@ -2,6 +2,8 @@ import "./story.css";
 import { setControlText } from "./controlText";
 import "./entry.css";
 import { t, type StringKey } from "../../data/strings";
+import { EntryAmbience } from "../../audio/EntryAmbience";
+import { readWelcomeSettings } from "./WelcomeScreen";
 
 export type { StringKey };
 
@@ -171,21 +173,24 @@ export class ScreenFade {
     const previousFocus = document.activeElement as HTMLElement | null;
     this.card.replaceChildren();
     this.card.classList.add("story-entry");
+    // The ritual hall from the title, out of focus, as if the eyes have not adjusted.
     const atmosphere = document.createElement("div");
     atmosphere.className = "entry-atmosphere";
     atmosphere.setAttribute("aria-hidden", "true");
-    atmosphere.innerHTML = '<div class="entry-door"></div><i></i><i></i>';
+    atmosphere.innerHTML = '<div class="entry-hall"></div><div class="entry-grain"></div>';
     this.node.prepend(atmosphere);
     const label = document.createElement("p");
     label.className = "entry-eyebrow";
-    label.textContent = t("start.before");
-    const icon = document.createElement("div");
-    icon.className = "entry-headphones";
-    icon.setAttribute("aria-hidden", "true");
-    icon.innerHTML = `<svg viewBox="0 0 80 80" fill="none"><path d="M16 45v-9a24 24 0 0 1 48 0v9M22 32v-2a18 18 0 0 1 36 0v2"/><rect x="12" y="40" width="14" height="23" rx="5"/><rect x="54" y="40" width="14" height="23" rx="5"/><path d="M19 47v9M61 47v9"/></svg>`;
+    label.lang = "km";
+    label.textContent = "បុណ្យសព";
     const title = document.createElement("h1");
     title.id = "entry-title";
-    title.textContent = t("start.listen");
+    const lettering = document.createElement("img");
+    lettering.src = `${import.meta.env.BASE_URL}assets/ui/entry-listen.webp`;
+    lettering.alt = t("start.listen");
+    lettering.width = 1600;
+    lettering.height = 317;
+    title.append(lettering);
     const recommendation = document.createElement("p");
     recommendation.className = "entry-recommendation";
     recommendation.textContent = t("start.note");
@@ -196,14 +201,14 @@ export class ScreenFade {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "entry-begin";
-    button.setAttribute("aria-label", t("start.enter"));
     button.setAttribute("aria-keyshortcuts", "Enter");
-    const key = document.createElement("kbd");
-    key.textContent = "Enter";
-    const action = document.createElement("span");
-    action.textContent = t("start.begin");
-    button.append(key, action);
-    this.card.append(label, icon, title, recommendation, detail, button);
+    button.textContent = t("start.enter");
+    // Lights on the side a whisper is crossing, so the point of headphones is heard.
+    const ears = document.createElement("div");
+    ears.className = "entry-ears";
+    ears.setAttribute("aria-hidden", "true");
+    ears.innerHTML = "<i></i><span>L</span><b></b><span>R</span><i></i>";
+    this.card.append(label, title, recommendation, detail, button, ears);
     this.card.setAttribute("role", "region");
     this.card.setAttribute("aria-labelledby", title.id);
     this.card.setAttribute("aria-describedby", detail.id);
@@ -211,6 +216,16 @@ export class ScreenFade {
     this.card.classList.add("shown");
     button.focus({ preventScroll: true });
     const abort = new AbortController();
+    const sound = new EntryAmbience((seconds) => {
+      ears.style.setProperty("--whisper", `${seconds}s`);
+      ears.classList.remove("whispering");
+      void ears.offsetWidth;
+      ears.classList.add("whispering");
+    });
+    sound.start(readWelcomeSettings().sound);
+    document.addEventListener("visibilitychange", () => sound.setVisible(!document.hidden), {
+      signal: abort.signal,
+    });
     let entering = false;
     await new Promise<void>((done) => {
       const begin = () => {
@@ -218,6 +233,7 @@ export class ScreenFade {
         entering = true;
         button.disabled = true;
         onEnter();
+        sound.enter();
         this.node.classList.add("entering");
         this.hideCard();
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

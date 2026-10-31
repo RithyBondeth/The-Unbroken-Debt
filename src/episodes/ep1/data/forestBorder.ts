@@ -174,6 +174,8 @@ export interface BorderOptions {
   farDepth: number;
   /** Fraction of understory and midstory kept (lower presets thin them). */
   density: number;
+  /** Fraction of the walk's extra giants kept (the Low preset thins them). */
+  walkCanopy?: number;
   seed?: number;
   /** False where existing art, colliders or gameplay need the ground. */
   clear: (x: number, z: number, radius: number) => boolean;
@@ -203,7 +205,7 @@ interface LayerSpec {
 const RING: LayerSpec[] = [
   {
     layer: "canopy",
-    spacing: 7.5,
+    spacing: 6.2,
     keep: 0.97,
     radius: 3,
     mix: [
@@ -216,7 +218,7 @@ const RING: LayerSpec[] = [
   },
   {
     layer: "mid",
-    spacing: 4.4,
+    spacing: 3.6,
     keep: 0.85,
     radius: 1.4,
     mix: [
@@ -228,7 +230,7 @@ const RING: LayerSpec[] = [
   },
   {
     layer: "under",
-    spacing: 2.4,
+    spacing: 2,
     keep: 0.85,
     radius: 0.6,
     mix: [
@@ -237,6 +239,57 @@ const RING: LayerSpec[] = [
     ],
   },
 ];
+
+/**
+ * The thick forest either side of the walk, from the road down to the compound:
+ * giants close together, saplings and shrubs between, ferns over the floor, a
+ * wall of growth a step off the trodden path.
+ */
+const WALK: LayerSpec[] = [
+  {
+    layer: "canopy",
+    spacing: 6,
+    keep: 0.9,
+    radius: 2.6,
+    mix: [
+      ["broadleaf", 0.72],
+      ["bamboo", 0.12],
+      ["dead", 0.08],
+      ["pachira", 0.08],
+    ],
+  },
+  {
+    layer: "mid",
+    spacing: 3.6,
+    keep: 0.85,
+    radius: 1.2,
+    mix: [
+      ["young", 0.3],
+      ["pachira", 0.3],
+      ["shrub", 0.3],
+      ["bamboo", 0.1],
+    ],
+  },
+  {
+    layer: "under",
+    spacing: 2.6,
+    keep: 0.8,
+    radius: 0.5,
+    mix: [
+      ["fern", 0.6],
+      ["shrub", 0.4],
+    ],
+  },
+];
+
+/** Beside the walk, inside the authored terrain: off the trodden path, short of the road. */
+export function inWalk(x: number, z: number): boolean {
+  if (z < 6 || z > ROAD_Z - 4.5 || !inside(TERRAIN, x, z, 2)) return false;
+  // The first Neak Ta's patrol and its sight-lines (EarlyStealthBrain) stay as authored.
+  if (x > -7 && x < 8 && z > 7 && z < 29) return false;
+  const d = pathDistance(x, z);
+  return d > 3.4 && d < 22;
+}
 
 /** The belt round the compound: fewer new crowns, a fuller layered understory. */
 const BELT: LayerSpec[] = [
@@ -351,11 +404,17 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
   const zones: [LayerSpec[], (x: number, z: number) => boolean][] = [
     [RING, (x, z) => inRing(x, z, options.nearDepth)],
     [BELT, inBelt],
+    [WALK, inWalk],
   ];
   for (const [specs, within] of zones) {
     for (const spec of specs) {
       const s = spec.spacing;
-      const keep = spec.layer === "canopy" ? spec.keep : spec.keep * options.density;
+      const keep =
+        spec.layer !== "canopy"
+          ? spec.keep * options.density
+          : specs === WALK
+            ? spec.keep * (options.walkCanopy ?? 1)
+            : spec.keep;
       for (let gx = bounds.minX; gx < bounds.maxX; gx += s) {
         for (let gz = bounds.minZ; gz < bounds.maxZ; gz += s) {
           const x = gx + s * (0.15 + 0.7 * random());
