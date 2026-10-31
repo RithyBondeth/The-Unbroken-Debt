@@ -233,6 +233,7 @@ export class ForestBorder {
       nearDepth: low ? 8 : this.preset.name === "medium" ? 14 : 16,
       farDepth: low ? 24 : 44,
       density: low ? 0.55 : this.preset.name === "medium" ? 0.85 : 1,
+      walkCanopy: low ? 0.45 : 1,
       clear: (x: number, z: number, r: number) => this.clear(x, z, r),
     };
     const layout = layoutBorder(options);
@@ -346,11 +347,13 @@ export class ForestBorder {
       max.maximizeInPlace(box.maximumWorld);
     }
     const collider = byName.get(`col_${names[0]}`);
-    const foot = new Vector3((min.x + max.x) / 2, 0, (min.z + max.z) / 2);
+    // The foot is the plant's lowest point, so each copy stands on the ground it is
+    // placed on, whatever height the original stood at.
+    const foot = new Vector3((min.x + max.x) / 2, min.y, (min.z + max.z) / 2);
     if (collider instanceof Mesh) {
       collider.computeWorldMatrix(true);
       const c = collider.getBoundingInfo().boundingBox.centerWorld;
-      foot.set(c.x, 0, c.z);
+      foot.set(c.x, min.y, c.z);
     }
     const parts = meshes.map((mesh) => this.bakePart(mesh, foot));
     const size = new Vector3(max.x - min.x, max.y - foot.y, max.z - min.z);
