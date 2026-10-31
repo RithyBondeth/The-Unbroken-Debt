@@ -21,17 +21,21 @@ export interface Look {
   moonIntensity: number;
 }
 
+/**
+ * The haunted forest is lit by the moon through thin cloud (31 October 2026):
+ * the bare trees stand readable in a cold silver haze without the lamp, the
+ * lamp warms only what is near.
+ */
 export const NIGHT_LOOK: Look = {
-  baseExposure: 1.45,
-  maxExposure: 2.1,
-  nightSightIntensity: 1.4,
-  nightSightRange: 2.6,
-  // Old-growth night: thicker, colder air under the canopy, green-black beyond.
-  fogDensity: 0.024,
-  fogAmbient: [0.005, 0.0095, 0.013],
-  clearColor: [0.005, 0.007, 0.009],
-  skyIntensity: 0.22,
-  moonIntensity: 0.2,
+  baseExposure: 1.6,
+  maxExposure: 2.4,
+  nightSightIntensity: 1.6,
+  nightSightRange: 4,
+  fogDensity: 0.021,
+  fogAmbient: [0.028, 0.033, 0.042],
+  clearColor: [0.018, 0.021, 0.028],
+  skyIntensity: 0.5,
+  moonIntensity: 0.75,
 };
 
 export const DAWN_LOOK: Look = {
@@ -42,6 +46,6 @@ export const DAWN_LOOK: Look = {
   fogDensity: 0.018,
   fogAmbient: [0.12, 0.15, 0.18],
   clearColor: [0.26, 0.31, 0.36],
-  skyIntensity: 0.65,
+  skyIntensity: 1.1,
   moonIntensity: 0.4,
 };

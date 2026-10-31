@@ -21,7 +21,7 @@ import { LowGroundMist } from "../../../render/LowGroundMist";
 import { EaveDrips } from "./EaveDrips";
 import { warmSceneViews } from "../../../render/warmSceneViews";
 import { applyFoliageWind } from "../../../render/FoliageWind";
-import { gradeJungle } from "./jungleGrade";
+import { witherPlants } from "../../../render/Withered";
 import { bakePlantHeights, type PlantSite } from "../../../render/plantHeights";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
@@ -181,7 +181,7 @@ export class ActOne {
     const arrivalModels = new ArrivalModels(game.scene);
     this.sky = new StormSky(game.scene);
     this.lights = new VillageLights(game.scene, this.area, game.camera);
-    gradeJungle(game.scene.materials);
+    witherPlants(game.scene.materials);
     applyFoliageWind(game.scene.materials, game.wind);
     this.windAudio = new WindAudio(game, game.wind, {
       sites: [...this.plantSites, ...this.border.sites],

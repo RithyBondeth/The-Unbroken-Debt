@@ -12,11 +12,11 @@ import { layoutGrass } from "../data/grass";
 /** Grass is batched in square cells this wide (m), each one draw call. */
 const CELL = 12;
 
-/** Linear colours up a blade: wet earth-dark at the root, green, a paler tip; straw when dry. */
-const ROOT = [0.026, 0.028, 0.012];
-const BLADE = [0.08, 0.105, 0.032];
-const TIP = [0.13, 0.15, 0.052];
-const STRAW = [0.27, 0.205, 0.095];
+/** Linear colours up a blade: dark at the root, dead olive-brown, a bleached tip; straw when dry. */
+const ROOT = [0.03, 0.026, 0.016];
+const BLADE = [0.11, 0.095, 0.055];
+const TIP = [0.2, 0.17, 0.11];
+const STRAW = [0.3, 0.24, 0.14];
 
 /**
  * One clump of blades, its foot at the origin and about 1 m tall: each blade

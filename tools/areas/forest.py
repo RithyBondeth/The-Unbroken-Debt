@@ -79,54 +79,68 @@ def curve(a, b, lift, n=5):
 
 
 def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0, collision=True):
-    """An old-growth giant of the lowland forest: a tall, nearly straight bole on high
-    buttress fins, mossed and wound with lianas; heavy limbs spread into a dark crown
-    far overhead, lianas looping between them and vines let down towards the ground.
-    `h` is the height the village was laid out for; the old growth stands half again
-    as tall (Art Bible 3: an enclosed, ancient forest)."""
+    """A dying giant of the cursed forest (31 October 2026): a grey, cracked bole
+    leaning on its buttresses, some snapped off at the top; bare limbs splitting
+    into clawing twigs against the moonlit sky; a few clusters of dead brown
+    leaves still clinging to the living ones; dead vines looping and hanging.
+    `h` is the height the village was laid out for; the giants stand taller."""
     parts = []
     detail = forest_materials()
-    h = min(26.0, h * 1.45)
-    r0 = rng.uniform(0.45, 0.72)
-    lean = (rng.uniform(-0.45, 0.45), rng.uniform(-0.45, 0.45))
-    trunk = [(x + lean[0] * t * t, y + lean[1] * t * t, h * 0.7 * t) for t in (i / 8 for i in range(9))]
-    parts.append(tube(f"tree_{k}_trunk", coll, trunk, r0, m["bark"], sides=12, metres_per_v=1.5, radius_end=r0 * 0.55))
-    # Shallow fluting catches lamplight without a cylindrical plastic silhouette.
+    bark = m["bark_dead"]
+    h = min(22.0, h * 1.25)
+    r0 = rng.uniform(0.38, 0.62)
+    lean = (rng.uniform(-1.3, 1.3), rng.uniform(-1.3, 1.3))
+    snapped = rng.random() < 0.4
+    top = rng.uniform(0.55, 0.75) if snapped else 0.72
+    trunk = [(x + lean[0] * t * t, y + lean[1] * t * t, h * top * t) for t in (i / 8 for i in range(9))]
+    parts.append(tube(f"tree_{k}_trunk", coll, trunk, r0, bark, sides=12, metres_per_v=1.5, radius_end=r0 * 0.5))
+    # Deep fluting and splits: the bark has dried and opened along the grain.
     for v in parts[0].data.vertices:
-        t = max(0, min(1, v.co.z / (h * .7)))
+        t = max(0, min(1, v.co.z / (h * top)))
         cx, cy = x + lean[0] * t * t, y + lean[1] * t * t
         a = math.atan2(v.co.y - cy, v.co.x - cx)
-        f = 1 + .09 * math.sin(a * 5 + t * 3) + .045 * math.sin(a * 9 - t * 5)
+        f = 1 + .12 * math.sin(a * 5 + t * 3) + .06 * math.sin(a * 11 - t * 7) - .08 * (math.sin(a * 3 + k) > .93)
         v.co.x = cx + (v.co.x - cx) * f
         v.co.y = cy + (v.co.y - cy) * f
-    parts.extend(tree_surface_details(coll, {**m, 'moss': detail['moss']}, x, y, h, r0, k, rng))
-    ends, leaves, limbs = [], [], []
+    if snapped:
+        end = trunk[-1]
+        for j in range(5):
+            a = j * math.tau / 5 + rng.uniform(-0.4, 0.4)
+            parts.append(tube(f"tree_{k}_splinter_{j}", coll, [end, (end[0] + math.cos(a) * r0 * 0.4, end[1] + math.sin(a) * r0 * 0.4,
+                                                                    end[2] + rng.uniform(0.4, 1.4))], r0 * 0.22, bark, sides=4, radius_end=0.006))
+    parts.extend(tree_surface_details(coll, {**m, 'bark': bark, 'moss': detail['moss']}, x, y, h * top / 0.72, r0, k, rng))
+    living = rng.random() < 0.3
+    tips, leaves, limbs = [], [], []
     for j in range(int(rng.integers(5, 8))):
-        base = trunk[int(rng.integers(6, 9))]
-        a, e = 2 * math.pi * j / 6 + rng.uniform(-0.5, 0.5), rng.uniform(0.15, 0.6)
-        length = h * rng.uniform(0.26, 0.4) * crown
+        base = trunk[int(rng.integers(5, 9))]
+        a, e = 2 * math.pi * j / 6 + rng.uniform(-0.5, 0.5), rng.uniform(0.25, 0.85)
+        length = h * rng.uniform(0.22, 0.36) * crown
         end = (base[0] + math.cos(a) * math.cos(e) * length, base[1] + math.sin(a) * math.cos(e) * length,
                base[2] + math.sin(e) * length)
-        limb = curve(base, end, -0.4 * length * 0.2)
-        parts.append(tube(f"tree_{k}_limb_{j}", coll, limb, r0 * 0.42, m["bark"], sides=7, metres_per_v=1.5, radius_end=0.06))
+        limb = curve(base, end, rng.uniform(-0.6, 0.3))
+        parts.append(tube(f"tree_{k}_limb_{j}", coll, limb, r0 * 0.38, bark, sides=6, metres_per_v=1.5, radius_end=0.05))
         limbs.append(limb)
-        ends.append(end)
-        for s in range(2):
-            b = limb[2 + s]
-            a2 = a + rng.uniform(-1.0, 1.0)
-            l2 = length * rng.uniform(0.35, 0.6)
-            end2 = (b[0] + math.cos(a2) * l2, b[1] + math.sin(a2) * l2, b[2] + rng.uniform(0.2, 0.9) * l2)
-            parts.append(tube(f"tree_{k}_branch_{j}_{s}", coll, curve(b, end2, 0.2, 4), 0.07, m["bark"], sides=5, radius_end=0.02))
-            ends.append(end2)
-    for e in ends:
-        for c in range(5):
-            centre = (e[0] + rng.normal(0, 1.3), e[1] + rng.normal(0, 1.3), e[2] + rng.normal(0, 0.7))
-            leaves.append((centre, rng.uniform(2.8, 4.0), rng.uniform(0, math.pi), rng.uniform(-0.4, 0.4),
-                           int(rng.choice([0, 1, 2, 2, 3] if rng.random() < 0.15 else [0, 1, 2]))))
-    # Far overhead in the dark a crown reads by its mass, not its leaf count (Low preset budget).
-    parts.append(canopy_sprays(f"tree_{k}_crown", coll, leaves, detail['leaf'], rng, per=10))
-    parts.extend(canopy_lianas(coll, m, k, limbs, rng))
-    parts.append(epiphytes(f"tree_{k}_epiphytes", coll, [limb[1] for limb in limbs], detail['leaf'], rng))
+        for s in range(3):
+            b = limb[1 + s]
+            a2 = a + rng.uniform(-1.1, 1.1)
+            l2 = length * rng.uniform(0.3, 0.55)
+            end2 = (b[0] + math.cos(a2) * l2, b[1] + math.sin(a2) * l2, b[2] + rng.uniform(0.1, 0.9) * l2)
+            branch = curve(b, end2, rng.uniform(-0.3, 0.3), 4)
+            parts.append(tube(f"tree_{k}_branch_{j}_{s}", coll, branch, 0.06, bark, sides=5, radius_end=0.015))
+            # Twigs fork off and claw upwards.
+            for t in range(2):
+                c = branch[int(rng.integers(1, 4))]
+                a3 = a2 + rng.uniform(-1.3, 1.3)
+                l3 = l2 * rng.uniform(0.25, 0.5)
+                tip = (c[0] + math.cos(a3) * l3, c[1] + math.sin(a3) * l3, c[2] + rng.uniform(0.3, 1.0) * l3)
+                parts.append(tube(f"tree_{k}_twig_{j}_{s}_{t}", coll, curve(c, tip, 0.1, 3), 0.018, bark, sides=4, radius_end=0.004))
+                tips.append(tip)
+    if living:
+        for tip in tips[::3]:
+            leaves.append(((tip[0] + rng.normal(0, 0.4), tip[1] + rng.normal(0, 0.4), tip[2]), rng.uniform(1.4, 2.4),
+                           rng.uniform(0, math.pi), 0.0, int(rng.choice([3, 3, 0, 1]))))
+        parts.append(canopy_sprays(f"tree_{k}_crown", coll, leaves, detail['leaf'], rng, per=7))
+    parts.extend(canopy_lianas(coll, {**m, 'bark': bark}, k, limbs, rng))
     if collision:
         collider(f"tree_{k}", coll, x - r0, x + r0, y - r0, y + r0, 0, 3)
     return join(parts, f"tree_{k}")
@@ -151,19 +165,6 @@ def canopy_lianas(coll, m, k, limbs, rng):
         pts = [(p[0] + sway[0] * t * t, p[1] + sway[1] * t * t, p[2] + (bottom - p[2]) * t) for t in (i / 6 for i in range(7))]
         parts.append(tube(f"tree_{k}_cable_{j}", coll, pts, rng.uniform(0.02, 0.04), m["bark"], sides=5, radius_end=0.012))
     return parts
-
-
-def epiphytes(name, coll, perches, leaf, rng):
-    """Bird's-nest ferns and creepers in the crotches of the limbs: broad strap
-    leaves fanned out from a knot, catching rain and the lamp's last light."""
-    from forest_detail import Leaves
-    nest = Leaves()
-    for p in perches:
-        for j in range(int(rng.integers(9, 15))):
-            a = rng.uniform(0, math.tau)
-            length = rng.uniform(0.6, 1.1)
-            nest.add(p, a, length, length * rng.uniform(0.18, 0.26), rng.uniform(0.15, 0.55), int(rng.integers(0, 3)), 0.5)
-    return nest.build(name, coll, leaf)
 
 
 def dead_tree(coll, m, x, y, h, k, rng):

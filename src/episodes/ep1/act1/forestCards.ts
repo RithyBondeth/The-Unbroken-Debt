@@ -26,11 +26,11 @@ function leaf(
   ctx.fill();
 }
 
-/** Old-growth night greens: cold, deep and barely saturated. */
+/** The dying forest's leaves at a distance: dead browns and ash, barely any colour. */
 function green(random: () => number, light: number): string {
-  const hue = 120 + random() * 34;
-  const sat = 10 + random() * 16;
-  return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${(light * 0.8 + random() * 5).toFixed(1)}%)`;
+  const hue = 22 + random() * 22;
+  const sat = 6 + random() * 12;
+  return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${(light * 1.05 + random() * 5).toFixed(1)}%)`;
 }
 
 function bark(random: () => number, light = 14): string {

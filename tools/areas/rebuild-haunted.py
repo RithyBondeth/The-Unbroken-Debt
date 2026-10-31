@@ -1,11 +1,12 @@
-"""Old-growth jungle pass (31 October 2026): the forest round the village becomes
-an enclosed, ancient lowland forest. Rebuilds every broadleaf giant (forest.py),
-clears the banana plants out of the forest to the houses, yard and paddy bank,
-leaves grass only in the clearings and lays a fern and litter floor under the
-canopy. Preserves all props, sacred cloth, gameplay nodes and other colliders.
+"""Haunted-forest pass (31 October 2026): the forest round the village is dying.
+Rebuilds every broadleaf giant (forest.py) grey, cracked and bare, some snapped
+off; clears the banana plants out of the forest to the houses, yard and paddy
+bank; leaves dry grass only in the clearings and lays dead ferns and litter
+under the trees, every surface repainted in dead browns and ash greys.
+Preserves all props, sacred cloth, gameplay nodes and other colliders.
 
 blender -b art-source/blender/ep1/ep1_area_village.blend \
-    -P tools/areas/rebuild-jungle.py -- art-export/ep1/forest-detail.glb
+    -P tools/areas/rebuild-haunted.py -- art-export/ep1/forest-detail.glb
 npm run assets -- ep1/forest-detail.glb
 node tools/areas/update-forest-glb.mjs public/assets/ep1/ep1_area_village.glb \
     public/assets/ep1/forest-detail.glb art-export/ep1/forest-detail.glb.json \

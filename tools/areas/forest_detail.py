@@ -51,8 +51,8 @@ def forest_materials():
     grain = rng.normal(0, .018, (size, size))
     mottles = np.sin(xx * .037 + np.sin(yy * .023) * 2) * np.sin(yy * .052) * .07
     light = .72 + .22 * (1 - edge) + .07 * rib + .05 * veins + grain + mottles
-    # Old-growth night palette: cold, deep blue-greens and one brown of dead leaves.
-    palette = np.array([[.11, .19, .105], [.15, .23, .13], [.085, .16, .1], [.27, .2, .11]])
+    # The cursed forest's leaves: dead browns, ash greys and rust; nothing green is left.
+    palette = np.array([[.29, .23, .16], [.25, .22, .19], [.2, .19, .17], [.37, .24, .13]])
     leaf = np.ones((size, size, 4))
     leaf[:, :, :3] = palette[cell] * np.clip(light, .4, 1.2)[:, :, None]
     for k in range(24):
@@ -71,7 +71,7 @@ def forest_materials():
     gy, gx = np.mgrid[0:512, 0:128].astype(float)
     t = gy / 511
     bands = .82 + .09 * np.sin(gx * .37) + rng.normal(0, .022, gx.shape)
-    base, tip = np.array([.08, .13, .06]), np.array([.22, .26, .13])
+    base, tip = np.array([.16, .14, .1]), np.array([.44, .38, .27])
     grass[:, :, :3] = (base[None, None, :] * (1 - t[:, :, None]) + tip * t[:, :, None]) * bands[:, :, None]
     # A dried tip and a narrow central rib catch the warm player lamp.
     grass[t > .91, :3] *= np.array([1.12, .96, .78])
@@ -85,7 +85,8 @@ def forest_materials():
     my, mx = np.mgrid[0:256, 0:256].astype(float)
     noise = rng.random((256, 256))
     threads = .65 + .2 * np.sin(mx * .4 + np.sin(my * .12) * 2) + .15 * noise
-    moss[:, :, :3] = threads[:, :, None] * np.array([.12, .19, .085])
+    # Pale grey-green lichen rather than living moss.
+    moss[:, :, :3] = threads[:, :, None] * np.array([.36, .37, .32])
     moss_path = save_map('T_ep1_forest_moss_BC', moss)
     for key, path, rough, normal_path in (
         ('leaf', leaf_path, .57, leaf_normal),

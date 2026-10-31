@@ -30,7 +30,7 @@ import { NIGHT_LOOK } from "../data/nightLook";
 import { applyRainWetness } from "../../../render/SurfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
 import { applyFoliageWind } from "../../../render/FoliageWind";
-import { gradeJungle } from "../act1/jungleGrade";
+import { witherPlants } from "../../../render/Withered";
 import { TaxiRain } from "./TaxiRain";
 import {
   taxiDistance,
@@ -75,8 +75,8 @@ export class TaxiVisuals {
       });
     }
     const materials = new Set(landscape.map((mesh) => mesh.material));
-    // The roadside was painted before the old-growth palette: grade all of it.
-    gradeJungle(
+    // The roadside was painted green: wither all of it, its forest surfaces too.
+    witherPlants(
       [...materials].filter((m) => m !== null),
       false,
     );
