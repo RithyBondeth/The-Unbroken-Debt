@@ -2,8 +2,9 @@
 
 No font: each letter is a hand-placed stroke skeleton dragged with a simulated
 bristle brush that runs dry. Uses Blender's Python for numpy and image output:
-  blender -b -P tools/ui/paint-title.py -- <out.png> [seed]
-The shipped title uses seed 31.
+  blender -b -P tools/ui/paint-title.py -- <out.png> [seed] [listen]
+The shipped title uses seed 31. `listen` paints the entry screen's "LISTEN CLOSELY."
+in ash-white paint instead (shipped with seed 7).
 """
 import math
 import sys
@@ -14,6 +15,7 @@ import numpy as np
 argv = sys.argv[sys.argv.index("--") + 1 :]
 OUT = argv[0]
 SEED = int(argv[1]) if len(argv) > 1 else 31
+LISTEN = "listen" in argv[2:]
 rng = np.random.default_rng(SEED)
 
 W, H = 4700, 2300
@@ -39,6 +41,13 @@ LETTERS = {
                  [(0.34, 0.5), (0.58, 0.76), (0.78, 1.02)]]),
     "O": (0.8, [ellipse(0.4, 0.5, 0.4, 0.51, -math.pi * 0.62, math.pi * 1.42, 22)]),
     "K": (0.74, [[(0.0, -0.02), (0.02, 1.02)], [(0.74, -0.02), (0.36, 0.34), (0.03, 0.6)], [(0.26, 0.44), (0.52, 0.72), (0.8, 1.02)]]),
+    "L": (0.5, [[(0.02, -0.01), (0.0, 1.0)], [(0.0, 1.0), (0.56, 0.97)]]),
+    "I": (0.1, [[(0.03, -0.01), (0.0, 1.01)]]),
+    "S": (0.66, [[(0.64, 0.12), (0.46, 0.0), (0.16, 0.02), (0.03, 0.2), (0.14, 0.42), (0.5, 0.54), (0.67, 0.74), (0.56, 0.95), (0.26, 1.0), (0.0, 0.86)]]),
+    "C": (0.74, [ellipse(0.42, 0.5, 0.42, 0.51, -math.pi * 0.27, -math.pi * 1.73, 22)]),
+    "Y": (0.76, [[(0.0, -0.02), (0.38, 0.5)], [(0.78, -0.02), (0.38, 0.5), (0.37, 1.02)]]),
+    ".": (0.1, [[(0.03, 0.9), (0.06, 0.98)]]),
+    " ": (0.34, []),
     "D": (0.76, [[(0.02, -0.01), (0.0, 1.0)],
                  [(0.0, 0.0), (0.38, -0.01), (0.68, 0.15), (0.78, 0.5), (0.68, 0.84), (0.38, 1.0), (0.0, 1.0)]]),
 }
@@ -152,9 +161,12 @@ def write(text, x0, y0, h, track=0.13, slant_deg=0.0, weight=0.17):
         x += (lw + track) * h
 
 
-write("THE", 560, 120, 300, track=0.16, slant_deg=4, weight=0.2)
-write("UNBROKEN", 300, 520, 610, track=0.1, slant_deg=3)
-write("DEBT", 1700, 1270, 610, track=0.12, slant_deg=3)
+if LISTEN:
+    write("LISTEN CLOSELY.", 140, 700, 360, track=0.14, slant_deg=3, weight=0.15)
+else:
+    write("THE", 560, 120, 300, track=0.16, slant_deg=4, weight=0.2)
+    write("UNBROKEN", 300, 520, 610, track=0.1, slant_deg=3)
+    write("DEBT", 1700, 1270, 610, track=0.12, slant_deg=3)
 
 # Dilate each bristle class into round bristle tips.
 cover = np.zeros((H, W), np.float32)
@@ -185,12 +197,14 @@ yy, xx = np.mgrid[0:H, 0:W]
 count = 0
 # Only the lower part of a line drips, so runs never cut through a letter.
 LOW = [(120 + 0.62 * 300, 120 + 1.1 * 300), (520 + 0.7 * 610, 520 + 1.1 * 610), (1270 + 0.7 * 610, 1270 + 1.2 * 610)]
+if LISTEN:
+    LOW = [(700 + 0.72 * 360, 700 + 1.1 * 360)]
 for sx, sy, w in drip_seeds:
-    if count >= 16 or rng.random() < 0.3 or not any(a < sy < b for a, b in LOW):
+    if count >= (7 if LISTEN else 16) or rng.random() < (0.5 if LISTEN else 0.3) or not any(a < sy < b for a, b in LOW):
         continue
     count += 1
-    L = rng.uniform(0.15, 1.0) ** 2 * 520 + 40
-    if sy < 1270 and 1640 < sx < 3750:
+    L = rng.uniform(0.15, 1.0) ** 2 * (260 if LISTEN else 520) + (30 if LISTEN else 40)
+    if not LISTEN and sy < 1270 and 1640 < sx < 3750:
         L = min(L, 1250 - sy)
     w0 = rng.uniform(0.09, 0.16) * w
     ys = np.arange(int(sy - w0), int(min(H - 40, sy + L)))
@@ -215,7 +229,7 @@ for sx, sy, w in drip_seeds:
 # Flicked splatter.
 splat = np.zeros((H, W), np.float32)
 ys, xs = np.nonzero(cover[::8, ::8] > 0.5)
-for _ in range(70):
+for _ in range(30 if LISTEN else 70):
     k = rng.integers(len(ys))
     cx = xs[k] * 8 + rng.normal(0, 90)
     cy = ys[k] * 8 + rng.normal(0, 90)
@@ -252,12 +266,15 @@ dens = np.clip(cover * 0.6 + body * 0.6, 0, 1)
 dark = np.array([84, 5, 6], np.float32) / 255
 mid = np.array([132, 9, 9], np.float32) / 255
 bright = np.array([182, 18, 14], np.float32) / 255
+if LISTEN:
+    # Ash-white, chalky paint: it should not compete with the red title.
+    dark, mid, bright = (np.array(c, np.float32) / 255 for c in ([96, 92, 84], [168, 162, 148], [222, 216, 202]))
 k = dens[..., None]
 rgb = np.where(k < 0.5, dark + (mid - dark) * (k / 0.5), mid + (bright - mid) * ((k - 0.5) / 0.5))
 rgb *= (0.86 + 0.24 * grain)[..., None]
 # Wet sheen on the upper edge of thick strokes.
 sheen = np.clip(-(np.roll(body, -3, 0) - np.roll(body, 3, 0)) * 3.5, 0, 1) * np.clip(body * 1.6 - 0.4, 0, 1)
-rgb += sheen[..., None] * np.array([0.26, 0.07, 0.05])
+rgb += sheen[..., None] * (np.array([0.08, 0.08, 0.07]) if LISTEN else np.array([0.26, 0.07, 0.05]))
 alpha = np.clip((cover - 0.08) * 1.35, 0, 1) * (0.9 + 0.1 * grain)
 
 # Downsample 2x and crop to content.
