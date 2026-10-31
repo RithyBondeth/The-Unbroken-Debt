@@ -312,6 +312,13 @@ for a, b, sag in [
 # A few that sag almost to head height in front of the back door.
 webs.append(thread((2.95, 15.2, 4.5), (0.9, 17.9, 3.3), 0.35))
 webs.append(thread((1.87, 17.95, 4.4), (2.95, 16.8, 3.2), 0.12))
+# And out across the left of the hall, behind the menu.
+for a, b, sag in [
+    (ALTAR, (-2.95, 13.8, 4.4), 0.32), (ALTAR, (-2.95, 15.6, 3.85), 0.2), (ALTAR, (-1.2, 14.2, 4.9), 0.4),
+    (ALTAR, (-2.95, 12.9, 3.7), 0.4), ((-2.95, 14.6, 4.5), (0.45, 15.9, 4.88), 0.26),
+    ((-2.95, 16.4, 3.9), (0.2, 16.6, 4.6), 0.16), ((-2.95, 13.2, 4.6), (-0.4, 13.0, 4.9), 0.3),
+]:
+    webs.append(thread(a, b, sag))
 
 # --- Cloth effigies hanging by the neck from the threads ------------------------------------
 cloth = material("title_effigy_cloth", (0.11, 0.095, 0.075), 0.9)
@@ -355,14 +362,16 @@ def effigy(top, drop, height, tilt):
 
 
 effigies = []
-for web, k, drop, h in [(0, 14, 0.42, 0.34), (1, 12, 0.55, 0.3), (3, 11, 0.3, 0.32), (7, 13, 0.6, 0.36), (8, 9, 0.38, 0.28), (10, 16, 0.5, 0.33)]:
+for web, k, drop, h in [(0, 14, 0.42, 0.34), (1, 12, 0.55, 0.3), (3, 11, 0.3, 0.32), (7, 13, 0.6, 0.36), (8, 9, 0.38, 0.28), (10, 16, 0.5, 0.33),
+                         (12, 15, 0.5, 0.34), (13, 10, 0.4, 0.3), (15, 13, 0.62, 0.36), (16, 9, 0.35, 0.3), (18, 12, 0.48, 0.32)]:
     p = webs[web][k]
     effigies.append(effigy((p.x, p.y, p.z), drop, h, rng.uniform(-1.2, 1.2)))
 for pivot in effigies:
     CORDS.extend(o for o in pivot.children_recursive if o.type == "MESH")
 
 # Hanks of hair knotted along the cords, and blood beading under them.
-for web, k, length in [(1, 9, 0.34), (2, 15, 0.26), (4, 10, 0.3), (6, 6, 0.4), (9, 17, 0.28), (11, 11, 0.36), (5, 7, 0.22)]:
+for web, k, length in [(1, 9, 0.34), (2, 15, 0.26), (4, 10, 0.3), (6, 6, 0.4), (9, 17, 0.28), (11, 11, 0.36), (5, 7, 0.22),
+                       (12, 8, 0.36), (14, 16, 0.3), (17, 7, 0.4), (16, 15, 0.26), (18, 18, 0.34)]:
     p = webs[web][k]
     hair_tuft((p.x, p.y, p.z), length)
 for pts in webs:
@@ -424,7 +433,7 @@ alpha = np.clip(blur(paint, 1) * 1.6 - fray * 0.55, 0, 1) * 0.92
 rgba = np.zeros((N, N, 4), np.float32)
 rgba[..., 0], rgba[..., 1], rgba[..., 2], rgba[..., 3] = 0.2, 0.008, 0.006, alpha
 circle_mat = material("title_ritual_circle", (0.045, 0.002, 0.002), 0.5, image=numpy_image("title_circle", rgba), alpha=True)
-CIRCLE = (1.45, 15.55)
+CIRCLE = (0.7, 15.55)
 plane("title_ritual_circle", (3.3, 3.3), (*CIRCLE, FLOOR + 0.004), (0, 0, 0.3), circle_mat)
 
 # Something was dragged from the circle out of the back door.
@@ -456,6 +465,10 @@ for i, (loc, rot) in enumerate([
     ((0.55, 17.93, 4.05), (math.pi / 2, -0.1, 0)),
     ((-0.6, 17.93, 3.7), (math.pi / 2, 0.15, 0)),
     ((2.94, 16.6, 4.25), (math.pi / 2, 0.2, -math.pi / 2)),
+    ((-2.94, 13.9, 3.75), (math.pi / 2, -0.1, math.pi / 2)),
+    ((-2.94, 14.5, 4.1), (math.pi / 2, 0.15, math.pi / 2)),
+    ((-2.94, 15.3, 3.6), (math.pi / 2, 0.05, math.pi / 2)),
+    ((-2.94, 16.2, 3.95), (math.pi / 2, -0.2, math.pi / 2)),
 ]):
     ink = np.zeros((PH, PW), np.float32)
     for row in range(rng.integers(3, 6)):
@@ -476,7 +489,7 @@ candles = []
 for k in range(13):
     a = k / 13 * math.tau + 0.1
     r = 1.0 + rng.normal(0, 0.03)
-    x, y = CIRCLE[0] + 0.85 * r * math.cos(a), CIRCLE[1] + 1.45 * r * math.sin(a)
+    x, y = CIRCLE[0] + 1.45 * r * math.cos(a), CIRCLE[1] + 0.85 * r * math.sin(a)
     h = rng.uniform(0.05, 0.15)
     bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.022, depth=h, location=(x, y, FLOOR + h / 2))
     bpy.context.active_object.data.materials.append(wax)
@@ -501,10 +514,11 @@ bpy.context.view_layer.update()
 bottom = min((o.matrix_world @ Vector(c)).z for o in parts if not o.name.startswith(("coffin_lid", "coffin_lamp")) for c in o.bound_box)
 TENT = Vector((0.0, 5.9, bottom))
 
-# Long axis down the hall, head toward the altar.
-place = Matrix.Translation(Vector((*CIRCLE, FLOOR))) @ Matrix.Rotation(math.pi / 2, 4, "Z") @ Matrix.Translation(-TENT)
-# In the tent's frame the coffin is long in X: slide the lid across its width and twist it.
-slide = Matrix.Translation(TENT) @ Matrix.Translation((0.12, -0.36, 0.05)) @ Matrix.Rotation(0.2, 4, "Z") @ Matrix.Translation(-TENT)
+# Lying across the frame, its long side to the camera.
+place = Matrix.Translation(Vector((*CIRCLE, FLOOR))) @ Matrix.Rotation(math.pi, 4, "Z") @ Matrix.Translation(-TENT)
+# In the tent's frame the coffin is long in X: the lid has been shoved round on the rim, so
+# a wide wedge of the dark inside faces the camera.
+slide = Matrix.Translation(TENT) @ Matrix.Translation((-0.18, -0.3, 0.03)) @ Matrix.Rotation(-0.5, 4, "Z") @ Matrix.Translation(-TENT)
 lid = link(bpy.data.objects.new("title_coffin_lid", None))
 lid.location = place @ slide @ (TENT + Vector((0, 0, 0.5)))
 bpy.context.view_layer.update()
@@ -842,35 +856,29 @@ for x in (-0.78, -0.26, 0.3, 0.82):
     bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6, radius=0.011, location=lid_at(x, 0.0, 1.352))
     bpy.context.active_object.data.materials.append(thread_mat)
 
-# Long black hair spilling out of the gap and over the foot of the coffin.
-edge = (slide @ Vector((-0.95, 6.3, 1.12))).y
+# Long black hair spilling out of the gap and over the front rim, toward the camera.
 hrnd = np.random.default_rng(51)
-for clump in range(11):
-    cy = hrnd.uniform(edge + 0.03, 6.22)
-    length = hrnd.choice([hrnd.uniform(0.1, 0.22), hrnd.uniform(0.3, 0.5)])
+for clump in range(14):
+    cx = hrnd.uniform(-0.85, 0.85)
+    edge = (slide @ Vector((cx, 6.3, 1.12))).y
+    if edge > 6.18:
+        continue  # the lid still covers the rim here
+    length = hrnd.choice([hrnd.uniform(0.12, 0.25), hrnd.uniform(0.3, 0.5)])
     lift = hrnd.uniform(0.0, 0.012)
-    for _ in range(36):
-        spread = hrnd.normal(0, 0.018)
+    for _ in range(34):
+        spread = hrnd.normal(0, 0.02)
         stray = hrnd.random() < 0.18
         ln = length * hrnd.uniform(0.55, 1.1)
         phase, freq = hrnd.uniform(0, math.tau), hrnd.uniform(4, 9)
-        x0 = hrnd.uniform(-0.88, -0.7)
-        rim = Vector((-1.028, cy + spread, 1.122 + lift + hrnd.uniform(0, 0.006)))
-        pts = [Vector((x0, cy + spread * 1.6, 0.98)), Vector(((x0 - 1.02) / 2, cy + spread * 1.3, 1.11 + lift)), rim]
+        y0 = hrnd.uniform(min(max(edge, 5.95), 6.12), 6.15)
+        rim = Vector((cx + spread, 6.262, 1.122 + lift + hrnd.uniform(0, 0.006)))
+        pts = [Vector((cx + spread * 1.6, y0, 0.98)), Vector((cx + spread * 1.3, (y0 + 6.26) / 2, 1.11 + lift)), rim]
         for k in range(1, 11):
             t = k / 10
-            # Strands draw together toward the tips; a few wander off on their own.
-            y = cy + spread * (1 - 0.65 * t) + 0.008 * math.sin(freq * t + phase) + (hrnd.normal(0, 0.02) * t if stray else 0)
-            pts.append(Vector((-1.04 - 0.012 * math.sin(math.pi * min(1, t * 1.5)), y, rim.z - 0.01 - ln * t)))
+            x = cx + spread * (1 - 0.65 * t) + 0.008 * math.sin(freq * t + phase) + (hrnd.normal(0, 0.02) * t if stray else 0)
+            pts.append(Vector((x, 6.29 + 0.012 * math.sin(math.pi * min(1, t * 1.5)), rim.z - 0.01 - ln * t)))
         c = cord([place @ p for p in pts], 0.0009, "title_coffin_hair", layer=False)
         c.data.materials[0] = hair_mat
-
-# The lid is still tethered to the roof and the altar by cords pulled taut.
-for (x, a, z), target, sag in [
-    ((-0.55, 0.0, 1.36), (2.95, 14.0, 4.3), 0.12), ((0.45, 0.0, 1.36), (0.6, 15.8, 4.9), 0.08),
-    ((0.9, -0.2, 1.3), ALTAR, 0.18),
-]:
-    thread(lid_at(x, a, z), target, sag)
 
 # Nails torn up along the rim where the lid was forced, bent outward.
 iron = material("title_iron", (0.05, 0.032, 0.022), 0.7)
@@ -923,8 +931,8 @@ if MODE.endswith(("far", "near")):
     if MODE.endswith("far"):
         root.location, root.rotation_euler = (1.7, 17.35, FLOOR), (0, 0, math.radians(-6))
     else:
-        # Beside the open coffin, as if it has just climbed out.
-        root.location, root.rotation_euler = (CIRCLE[0] + 0.82, CIRCLE[1] - 0.55, FLOOR), (0, 0, math.radians(-8))
+        # At the coffin's far end, against the lit back door, as if it has just climbed out.
+        root.location, root.rotation_euler = (CIRCLE[0] + 1.55, CIRCLE[1] + 0.25, FLOOR), (0, 0, math.radians(12))
 
 # --- Animation: one seamless loop, every motion periodic in FRAMES -------------------------------
 def flicker(t, seed, depth=0.25):

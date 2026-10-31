@@ -47,8 +47,8 @@ def grade(path, target):
     bottom = np.clip((v - 0.78) / 0.22, 0, 1) ** 1.4 * 0.55
     d = np.sqrt(((u - 0.64) / 0.72) ** 2 + ((v - 0.5) / 0.62) ** 2)
     vig = np.clip((d - 0.42) / 0.6, 0, 1) ** 1.6 * 0.8
-    # The menu sits on the left: let that side fall away into the dark.
-    left = np.clip((0.5 - u) / 0.5, 0, 1) ** 1.3 * 0.7
+    # The menu sits on the left: dim that side, but leave its cords and dolls readable.
+    left = np.clip((0.5 - u) / 0.5, 0, 1) ** 1.3 * 0.4
     rgb *= (1 - top)[..., None] * (1 - bottom)[..., None] * (1 - vig)[..., None] * (1 - left)[..., None]
     if CORDS:
         glow = (rgb @ np.array([0.2126, 0.7152, 0.0722], np.float32))[..., None]
