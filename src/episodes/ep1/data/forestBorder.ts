@@ -196,8 +196,8 @@ interface LayerSpec {
 }
 
 /**
- * The dying forest (31 October 2026): grey broadleaf giants and dead trees,
- * dead bamboo between them, withered saplings and shrubs beneath and dead
+ * Old-growth lowland forest (31 October 2026): broadleaf giants close overhead,
+ * bamboo and a few dead trees between them, saplings and shrubs beneath and
  * ferns over the floor. Palms and bananas belong to the village, not here.
  */
 const RING: LayerSpec[] = [
@@ -207,10 +207,11 @@ const RING: LayerSpec[] = [
     keep: 0.97,
     radius: 3,
     mix: [
-      ["broadleaf", 0.56],
-      ["dead", 0.3],
+      ["broadleaf", 0.74],
       ["bamboo", 0.08],
-      ["sugarPalm", 0.06],
+      ["dead", 0.08],
+      ["pachira", 0.06],
+      ["sugarPalm", 0.04],
     ],
   },
   {
@@ -245,10 +246,10 @@ const BELT: LayerSpec[] = [
     keep: 1,
     radius: 3.2,
     mix: [
-      ["broadleaf", 0.56],
+      ["broadleaf", 0.74],
       ["sugarPalm", 0.08],
-      ["bamboo", 0.08],
-      ["dead", 0.28],
+      ["bamboo", 0.1],
+      ["dead", 0.08],
     ],
   },
   {
@@ -277,7 +278,7 @@ const BELT: LayerSpec[] = [
 ];
 
 const SCALE: Record<Species, [number, number]> = {
-  broadleaf: [0.8, 1.2],
+  broadleaf: [0.75, 1.15],
   young: [0.32, 0.5],
   sugarPalm: [0.8, 1.2],
   coconut: [0.85, 1.15],
@@ -401,8 +402,8 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
       }
     }
   };
-  // Bare dead trees and thinning crowns to the horizon, a little dead bamboo; few palms.
-  card(4.2, (u) => (u < 0.5 ? 7 : u < 0.9 ? Math.floor(((u - 0.5) / 0.4) * 4) : 5), [13, 22]);
-  card(12, (u) => (u < 0.7 ? 7 : 4), [16, 24]);
+  // A closed canopy of old broadleaf giants, a little bamboo and dead wood; few palms.
+  card(4.2, (u) => (u < 0.84 ? Math.floor((u / 0.84) * 4) : u < 0.93 ? 5 : 7), [15, 26]);
+  card(12, (u) => (u < 0.5 ? 3 : 4), [20, 28]);
   return { plants, cards };
 }

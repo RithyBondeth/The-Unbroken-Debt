@@ -49,14 +49,13 @@ describe("storm clouds", () => {
 });
 
 describe("night look", () => {
-  it("is moonlit enough to read the forest, still night, and lifts at dawn", () => {
+  it("is darker than before the monsoon pass and lifts at dawn", () => {
     expect(NIGHT_LOOK.baseExposure).toBeLessThan(1.85);
     expect(NIGHT_LOOK.nightSightIntensity).toBeLessThan(2.8);
-    expect(NIGHT_LOOK.moonIntensity).toBeGreaterThanOrEqual(0.5);
-    expect(NIGHT_LOOK.skyIntensity).toBeGreaterThanOrEqual(0.4);
-    expect(NIGHT_LOOK.fogAmbient[2]).toBeGreaterThan(NIGHT_LOOK.fogAmbient[0]);
+    expect(NIGHT_LOOK.skyIntensity).toBeLessThan(0.38);
+    expect(NIGHT_LOOK.fogAmbient[2]).toBeLessThan(0.028);
     expect(DAWN_LOOK.skyIntensity).toBeGreaterThan(NIGHT_LOOK.skyIntensity * 2);
-    expect(DAWN_LOOK.fogAmbient[0]).toBeGreaterThan(NIGHT_LOOK.fogAmbient[0] * 3);
+    expect(DAWN_LOOK.fogAmbient[0]).toBeGreaterThan(NIGHT_LOOK.fogAmbient[0] * 10);
     expect(DAWN_LOOK.clearColor[1]).toBeGreaterThan(NIGHT_LOOK.clearColor[1] * 10);
   });
 });

@@ -33,19 +33,15 @@ export interface WindAudioOptions {
 export function bedLevels(amount: number, vehicle = false): { roar: number; hiss: number } {
   const a = Math.max(0, Math.min(2, amount));
   const k = vehicle ? 0.45 : 1;
-  // Few leaves left to hiss: the dead forest is mostly air and creaking wood.
-  return { roar: 0.16 * a ** 1.3 * k, hiss: 0.045 * a ** 1.1 * (vehicle ? 0.25 : 1) };
+  return { roar: 0.16 * a ** 1.3 * k, hiss: 0.09 * a ** 1.1 * (vehicle ? 0.25 : 1) };
 }
 
-/**
- * What a tree says to the wind. The dying giants mostly creak and groan; the
- * few dead leaves left on them rattle. Even a light wind leans on dead wood.
- */
+/** What a tree says to the wind; trunks groan only when a gust really leans on them. */
 export function treeSound(voice: TreeVoice, amount: number, random: () => number): TreeSound {
   if (voice === "bamboo") return "bamboo";
   if (voice === "palm") return "fronds";
   if (voice === "dead") return "groan";
-  return random() < (amount > 0.95 ? 0.65 : 0.4) ? "groan" : "rustle";
+  return amount > 0.95 && random() < 0.35 ? "groan" : "rustle";
 }
 
 /**

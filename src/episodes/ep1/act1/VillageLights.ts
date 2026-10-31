@@ -71,8 +71,7 @@ export class VillageLights {
     // The moon hides low in the south, over the flooded fields: their water catches it.
     this.moon = new DirectionalLight("moonlight", new Vector3(-0.25, -0.45, -0.85), scene);
     // Cool and weak through the cloud: the forest reads only as dim shapes in blue.
-    // Bone-white moonlight through thin cloud: the haunted forest reads as grey shapes.
-    this.moon.diffuse = Color3.FromHexString("#B9C3D6");
+    this.moon.diffuse = Color3.FromHexString("#7F9FD6");
     this.moon.specular = new Color3(0.1, 0.13, 0.18);
     this.moon.intensity = NIGHT_LOOK.moonIntensity;
 

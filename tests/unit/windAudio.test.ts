@@ -94,19 +94,17 @@ describe("wind audio", () => {
     expect(bedLevels(9).roar).toBe(bedLevels(2).roar);
   });
 
-  it("gives each tree its own voice, dead wood groaning more as the gusts lean on it", () => {
+  it("gives each tree its own voice, trunks groaning only under a hard gust", () => {
     const random = seededRandom(1);
     expect(treeSound("bamboo", 0.5, random)).toBe("bamboo");
     expect(treeSound("palm", 0.5, random)).toBe("fronds");
     expect(treeSound("dead", 0.2, random)).toBe("groan");
     const leafy = (amount: number) =>
       Array.from({ length: 200 }, () => treeSound("leafy", amount, random));
-    const light = leafy(0.5),
-      hard = leafy(1.4);
-    const groans = (list: string[]) => list.filter((s) => s === "groan").length;
-    expect(groans(light)).toBeGreaterThan(40);
-    expect(light.filter((s) => s === "rustle").length).toBeGreaterThan(80);
-    expect(groans(hard)).toBeGreaterThan(groans(light) * 1.3);
+    expect(leafy(0.5).every((s) => s === "rustle")).toBe(true);
+    const hard = leafy(1.4);
+    expect(hard.filter((s) => s === "groan").length).toBeGreaterThan(30);
+    expect(hard.filter((s) => s === "rustle").length).toBeGreaterThan(100);
   });
 
   it("picks trees in earshot, never underfoot, mostly where the wind is hardest", () => {
