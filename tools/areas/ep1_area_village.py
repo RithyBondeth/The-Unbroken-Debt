@@ -632,7 +632,8 @@ def house_forest(m):
         else:
             raise RuntimeError(f'No clear house-side tree position for {j}')
         height = detail_rng.uniform(12, 17)
-        obj = tropical_tree(AREA, m, x, y, height, 700+j, detail_rng, crown=1.1)
+        # Each tree draws on its own stream: how much detail a tree has never moves the next one.
+        obj = tropical_tree(AREA, m, x, y, height, 700+j, np.random.default_rng(6242111 + j), crown=1.1)
         obj['forest_height'] = height
         occupied.append((x, y))
     def belt(x, y):

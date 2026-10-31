@@ -29,7 +29,8 @@ import { ShadowFigure } from "../entities/ShadowFigure";
 import { NIGHT_LOOK } from "../data/nightLook";
 import { applyRainWetness } from "../../../render/SurfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
-import { FoliageWind } from "../../../render/FoliageWind";
+import { applyFoliageWind } from "../../../render/FoliageWind";
+import { gradeJungle } from "../act1/jungleGrade";
 import { TaxiRain } from "./TaxiRain";
 import {
   taxiDistance,
@@ -43,7 +44,6 @@ import {
 /** Authored cabin, Act I foliage/materials, physical headlights and the same storm grade. */
 export class TaxiVisuals {
   private readonly route: TransformNode;
-  private readonly wind: FoliageWind[] = [];
   private readonly routeChunks: { mesh: Mesh; minZ: number; maxZ: number; active: boolean }[] = [];
   private readonly wipers: TransformNode[] = [];
   private readonly sky: StormSky;
@@ -74,10 +74,16 @@ export class TaxiVisuals {
         active: true,
       });
     }
-    const leafMaterials = new Set(landscape.map((mesh) => mesh.material));
-    for (const material of leafMaterials)
-      if (material instanceof PBRMaterial && /leaf|leaves|palm_fan/.test(material.name))
-        this.wind.push(new FoliageWind(material));
+    const materials = new Set(landscape.map((mesh) => mesh.material));
+    // The roadside was painted before the old-growth palette: grade all of it.
+    gradeJungle(
+      [...materials].filter((m) => m !== null),
+      false,
+    );
+    applyFoliageWind(
+      [...materials].filter((m) => m !== null),
+      game.wind,
+    );
     const hemi = new HemisphericLight("taxi_storm_bounce", new Vector3(0.2, 1, -0.3), scene);
     hemi.diffuse.set(0.48, 0.56, 0.72);
     hemi.groundColor.set(0.13, 0.16, 0.2);
@@ -356,7 +362,6 @@ export class TaxiVisuals {
     this.waterRipples.uOffset = t * 0.009;
     this.waterRipples.vOffset = t * 0.006;
     this.rain.update(t, speed, flash);
-    for (const wind of this.wind) wind.seconds = t;
     this.watcher.root.setEnabled(t > 35.8 && t < 39.0);
     this.watcher.animate(t, 0);
     // Small suspension movement, tied to speed, leaves mouse look independent of the car body.

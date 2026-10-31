@@ -7,6 +7,7 @@ import { thunder } from "../audio/prologueSounds";
 import { villageRain } from "../audio/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
 import { DreadScore } from "../audio/DreadScore";
+import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { taxiConversationAt } from "./taxiConversation";
 
@@ -21,6 +22,7 @@ export class TaxiRide {
   private persisting: Promise<void> = Promise.resolve();
   private readonly loops: StaticSound[] = [];
   private visuals!: TaxiVisuals;
+  private windAudio!: WindAudio;
   private thunder: StaticSound | null = null;
   private score = new DreadScore(null);
   private stung = false;
@@ -37,6 +39,9 @@ export class TaxiRide {
     g.gated.holdStill = true;
     g.interaction.allow = () => false;
     this.visuals = await TaxiVisuals.load(g);
+    // The storm the taxi drives into: gusts off the paddies buffet the car.
+    g.wind.base = 0.62;
+    this.windAudio = new WindAudio(g, g.wind, { vehicle: true });
     if (import.meta.env.DEV) (window as unknown as { taxi: TaxiRide }).taxi = this;
     g.scene.onBeforeRenderObservable.add(() => this.update(g.deltaSeconds));
   }
@@ -81,8 +86,14 @@ export class TaxiRide {
         0.9 - Math.abs(t - 55.7) * 4,
       );
     this.visuals.update(dt, t, flash);
+    this.windAudio.update(dt);
     // The driver keeps looking into the forest; something is standing there at 37.8 s.
-    this.score.pressure(t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25);
+    const pressure = t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25;
+    this.score.pressure(pressure);
+    // The roadside falls still in the seconds before it, then the gust comes with the sting.
+    const g = this.game;
+    g.wind.tension = pressure;
+    g.wind.calm = t > 33.5 && t < 37.6 ? Math.min(1, (t - 33.5) / 2) * 0.85 : 0;
     this.score.update(dt);
     if (t > 37.8 - this.score.lead("rise") && !this.stung) {
       this.stung = true;
@@ -137,6 +148,7 @@ export class TaxiRide {
     await g.fade.to(1, 2);
     for (const sound of this.loops) sound.stop();
     this.score.stop();
+    this.windAudio.stop();
     await this.persisting;
     const save = this.capture();
     save.checkpoint = "CP1";
@@ -189,6 +201,9 @@ export class TaxiRide {
       0.65,
     );
     this.score = new DreadScore(audio);
+    this.score.onSting = (kind, volume) =>
+      stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
+    await this.windAudio.makeSounds();
   }
 }

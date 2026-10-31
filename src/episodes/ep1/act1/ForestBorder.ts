@@ -15,6 +15,8 @@ import { PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/
 import type { Scene } from "@babylonjs/core/scene";
 import { seededRandom } from "../../../audio/synth";
 import type { QualityPreset } from "../../../render/QualityPresets";
+import { foliageKind } from "../../../render/FoliageWind";
+import { plantPhase, type PlantSite, type TreeVoice } from "../../../render/plantHeights";
 import {
   GROUND_TILE,
   PLAY,
@@ -91,6 +93,32 @@ const TRUNK: Partial<Record<Species, number>> = {
   pachira: 0.1,
 };
 
+/** How readily each species bends in the wind (FoliageWind reads height × this from uv6). */
+const FLEX: Record<Species, number> = {
+  broadleaf: 0.85,
+  young: 1.2,
+  sugarPalm: 0.75,
+  coconut: 0.85,
+  bamboo: 1.15,
+  banana: 1.1,
+  dead: 0.6,
+  pachira: 1.1,
+  shrub: 1.4,
+  fern: 1.5,
+};
+
+/** What each species sounds like in the wind; undergrowth is too low to be heard. */
+const VOICE: Partial<Record<Species, TreeVoice>> = {
+  broadleaf: "leafy",
+  young: "leafy",
+  pachira: "leafy",
+  sugarPalm: "palm",
+  coconut: "palm",
+  banana: "palm",
+  bamboo: "bamboo",
+  dead: "dead",
+};
+
 /** Cell sizes (m) and distances past which a layer is not drawn. */
 const CELLS: Record<Layer, { group: string; size: number; lod: number | null }> = {
   canopy: { group: "canopy", size: 48, lod: null },
@@ -104,7 +132,10 @@ interface Bucket {
   receiveShadows: boolean;
   lod: number | null;
   hasUv: boolean;
-  items: { part: Part; m: Float32Array; r: Float32Array }[];
+  /** Plant material: carries height and phase in uv6 for the wind. */
+  sways: boolean;
+  /** Each placement, with its height scale for the wind (0: rigid) and its phase. */
+  items: { part: Part; m: Float32Array; r: Float32Array; reach: number; phase: number }[];
   verts: number;
   indices: number;
 }
@@ -126,6 +157,8 @@ interface Box {
  */
 export class ForestBorder {
   readonly meshes: Mesh[] = [];
+  /** The trees of the border, for the sounds the wind draws from them. */
+  readonly sites: PlantSite[] = [];
   private readonly templates = new Map<Species, Template[]>();
   private log: Template | null = null;
   private pole: Template | null = null;
@@ -169,6 +202,13 @@ export class ForestBorder {
       const found = lists
         .map((names) => this.template(byName, names))
         .filter((t): t is Template => t !== null);
+      // Banana plants were cleared out of the forest (old growth): any left by the houses serve.
+      if (found.length === 0)
+        for (const node of byName.values()) {
+          if (found.length >= 3 || !new RegExp(`^${species}_\\d+$`).test(node.name)) continue;
+          const t = this.template(byName, [node.name]);
+          if (t) found.push(t);
+        }
       if (found.length === 0) console.warn(`[ForestBorder] no templates for ${species}`);
       this.templates.set(species, found);
     }
@@ -388,7 +428,8 @@ export class ForestBorder {
 
   // ------------------------------------------------------------- layout
 
-  private clear(x: number, z: number, r: number): boolean {
+  /** No authored building, prop or collider stands within `r` of this point. */
+  clear(x: number, z: number, r: number): boolean {
     for (const o of this.obstacles)
       if (x > o.minX - r && x < o.maxX + r && z > o.minZ - r && z < o.maxZ + r) return false;
     return true;
@@ -399,7 +440,26 @@ export class ForestBorder {
     if (!list?.length) return;
     const template = list[Math.min(list.length - 1, Math.floor(plant.pick * list.length))];
     const y = this.groundAt(plant.x, plant.z) - 0.03;
-    this.add(buckets, template, plant.layer, plant.x, y, plant.z, plant.yaw, plant.scale);
+    this.add(
+      buckets,
+      template,
+      plant.layer,
+      plant.x,
+      y,
+      plant.z,
+      plant.yaw,
+      plant.scale,
+      FLEX[plant.species],
+    );
+    const voice = VOICE[plant.species];
+    if (voice && plant.layer !== "under")
+      this.sites.push({
+        x: plant.x,
+        y,
+        z: plant.z,
+        height: template.size.y * plant.scale,
+        voice,
+      });
     const half = TRUNK[plant.species];
     if (half && plant.layer !== "under" && outside(PLAY, plant.x, plant.z) < 1.5) {
       const fixed =
@@ -418,8 +478,10 @@ export class ForestBorder {
     z: number,
     yaw: number,
     scale: number,
+    flex = 0,
   ): void {
     const rotation = Matrix.RotationY(yaw);
+    const phase = plantPhase(x, z);
     const matrix = Matrix.Scaling(scale, scale, scale)
       .multiply(rotation)
       .multiply(Matrix.Translation(x, y, z));
@@ -435,13 +497,20 @@ export class ForestBorder {
           receiveShadows: part.receiveShadows,
           lod: cell.lod,
           hasUv: part.uvs !== null,
+          sways: part.uvs !== null && foliageKind(part.material.name) !== null,
           items: [],
           verts: 0,
           indices: 0,
         };
         buckets.set(id, bucket);
       }
-      bucket.items.push({ part, m: Float32Array.from(matrix.m), r: Float32Array.from(rotation.m) });
+      bucket.items.push({
+        part,
+        m: Float32Array.from(matrix.m),
+        r: Float32Array.from(rotation.m),
+        reach: scale * flex,
+        phase,
+      });
       bucket.verts += part.positions.length / 3;
       bucket.indices += part.indices.length;
     }
@@ -487,6 +556,7 @@ export class ForestBorder {
           bz,
           random() * Math.PI * 2,
           s,
+          FLEX[species],
         );
       }
     }
@@ -560,10 +630,11 @@ export class ForestBorder {
     const positions = new Float32Array(bucket.verts * 3);
     const normals = new Float32Array(bucket.verts * 3);
     const uvs = bucket.hasUv ? new Float32Array(bucket.verts * 2) : null;
+    const heights = bucket.sways ? new Float32Array(bucket.verts * 2) : null;
     const indices = new Uint32Array(bucket.indices);
     let vo = 0,
       io = 0;
-    for (const { part, m, r } of bucket.items) {
+    for (const { part, m, r, reach, phase } of bucket.items) {
       const p = part.positions,
         n = part.normals;
       const count = p.length / 3;
@@ -581,6 +652,10 @@ export class ForestBorder {
         normals[o] = nx * r[0] + ny * r[4] + nz * r[8];
         normals[o + 1] = nx * r[1] + ny * r[5] + nz * r[9];
         normals[o + 2] = nx * r[2] + ny * r[6] + nz * r[10];
+        if (heights) {
+          heights[(vo + i) * 2] = Math.max(0, y) * reach;
+          heights[(vo + i) * 2 + 1] = phase;
+        }
       }
       if (uvs && part.uvs) uvs.set(part.uvs, vo * 2);
       for (let k = 0; k < part.indices.length; k++) indices[io + k] = part.indices[k] + vo;
@@ -588,6 +663,7 @@ export class ForestBorder {
       io += part.indices.length;
     }
     const mesh = this.mesh(bucket.name, bucket.material, positions, normals, uvs, indices);
+    if (heights) mesh.setVerticesData("uv6", heights, false, 2);
     mesh.receiveShadows = bucket.receiveShadows;
     if (bucket.lod !== null) mesh.addLODLevel(bucket.lod, null);
   }
@@ -739,8 +815,10 @@ export class ForestBorder {
       const positions = new Float32Array(list.length * 8 * 3);
       const normals = new Float32Array(list.length * 8 * 3);
       const uvs = new Float32Array(list.length * 8 * 2);
+      const heights = new Float32Array(list.length * 8 * 2);
       const indices = new Uint32Array(list.length * 12);
       list.forEach((card, k) => {
+        const phase = plantPhase(card.x, card.z);
         const y = this.groundAt(card.x, card.z) - 0.25;
         const col = card.variant % CARD_COLUMNS;
         const row = Math.floor(card.variant / CARD_COLUMNS);
@@ -775,6 +853,8 @@ export class ForestBorder {
             normals[o + 2] = n.z;
             uvs[(v + c) * 2] = u;
             uvs[(v + c) * 2 + 1] = vv;
+            heights[(v + c) * 2] = up * card.height;
+            heights[(v + c) * 2 + 1] = phase;
           });
           indices.set([v, v + 2, v + 1, v, v + 3, v + 2], k * 12 + q * 6);
         }
@@ -787,6 +867,7 @@ export class ForestBorder {
         uvs,
         indices,
       );
+      mesh.setVerticesData("uv6", heights, false, 2);
       mesh.receiveShadows = false;
     }
   }

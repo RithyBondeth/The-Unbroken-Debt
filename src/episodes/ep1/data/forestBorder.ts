@@ -195,42 +195,45 @@ interface LayerSpec {
   mix: Mix;
 }
 
+/**
+ * Old-growth lowland forest (31 October 2026): broadleaf giants close overhead,
+ * bamboo and a few dead trees between them, saplings and shrubs beneath and
+ * ferns over the floor. Palms and bananas belong to the village, not here.
+ */
 const RING: LayerSpec[] = [
   {
     layer: "canopy",
     spacing: 7.5,
-    keep: 0.95,
+    keep: 0.97,
     radius: 3,
     mix: [
-      ["broadleaf", 0.58],
-      ["sugarPalm", 0.13],
-      ["bamboo", 0.13],
-      ["dead", 0.06],
-      ["coconut", 0.05],
-      ["pachira", 0.05],
+      ["broadleaf", 0.74],
+      ["bamboo", 0.08],
+      ["dead", 0.08],
+      ["pachira", 0.06],
+      ["sugarPalm", 0.04],
     ],
   },
   {
     layer: "mid",
     spacing: 4.4,
-    keep: 0.8,
+    keep: 0.85,
     radius: 1.4,
     mix: [
-      ["pachira", 0.38],
-      ["banana", 0.2],
-      ["bamboo", 0.12],
-      ["sugarPalm", 0.1],
-      ["shrub", 0.2],
+      ["young", 0.28],
+      ["pachira", 0.3],
+      ["bamboo", 0.1],
+      ["shrub", 0.32],
     ],
   },
   {
     layer: "under",
     spacing: 2.4,
-    keep: 0.8,
+    keep: 0.85,
     radius: 0.6,
     mix: [
-      ["shrub", 0.6],
-      ["fern", 0.4],
+      ["shrub", 0.35],
+      ["fern", 0.65],
     ],
   },
 ];
@@ -243,9 +246,9 @@ const BELT: LayerSpec[] = [
     keep: 1,
     radius: 3.2,
     mix: [
-      ["broadleaf", 0.62],
-      ["sugarPalm", 0.18],
-      ["bamboo", 0.12],
+      ["broadleaf", 0.74],
+      ["sugarPalm", 0.08],
+      ["bamboo", 0.1],
       ["dead", 0.08],
     ],
   },
@@ -255,11 +258,11 @@ const BELT: LayerSpec[] = [
     keep: 0.75,
     radius: 1.6,
     mix: [
-      ["young", 0.2],
-      ["pachira", 0.36],
+      ["young", 0.24],
+      ["pachira", 0.32],
+      ["banana", 0.1],
       ["bamboo", 0.08],
-      ["sugarPalm", 0.06],
-      ["shrub", 0.3],
+      ["shrub", 0.26],
     ],
   },
   {
@@ -268,14 +271,14 @@ const BELT: LayerSpec[] = [
     keep: 0.7,
     radius: 0.7,
     mix: [
-      ["shrub", 0.5],
-      ["fern", 0.5],
+      ["shrub", 0.4],
+      ["fern", 0.6],
     ],
   },
 ];
 
 const SCALE: Record<Species, [number, number]> = {
-  broadleaf: [0.8, 1.35],
+  broadleaf: [0.75, 1.15],
   young: [0.32, 0.5],
   sugarPalm: [0.8, 1.2],
   coconut: [0.85, 1.15],
@@ -399,8 +402,8 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
       }
     }
   };
-  // A close canopy of broadleaf and bamboo, with sugar palms standing over it.
-  card(4.2, (u) => (u < 0.78 ? Math.floor((u / 0.78) * 4) : u < 0.93 ? 5 : 7), [9, 17]);
-  card(10, (u) => (u < 0.75 ? 4 : 6), [14, 20]);
+  // A closed canopy of old broadleaf giants, a little bamboo and dead wood; few palms.
+  card(4.2, (u) => (u < 0.84 ? Math.floor((u / 0.84) * 4) : u < 0.93 ? 5 : 7), [15, 26]);
+  card(12, (u) => (u < 0.5 ? 3 : 4), [20, 28]);
   return { plants, cards };
 }
