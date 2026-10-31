@@ -166,7 +166,7 @@ export function notebookMap(
     description =
       "Follow the path past the wayside shrine toward the lit funeral courtyard. The red dot marks your position; the phra phum beyond the front-right corner of the compound fence lets you save progress.";
   } else {
-    bounds = [-16, -18, 40, 34];
+    bounds = [-16, -18, 45, 34];
     bindingOffset = -24;
     labelSize = 0.95;
     title = "Village · House of mourning";
@@ -181,26 +181,32 @@ export function notebookMap(
       ],
       [
         [-13, 3],
-        [-13, -22],
-        [13, -22],
+        [-13, -27],
+        [13, -27],
         [13, 3],
       ],
     ])
       path(points, "detail");
     path([[0, 3], ...SAVE_SHRINE_ROUTE.map((at) => [at.x, at.z])], "path");
-    rect(-6, -19, 12, 8, true);
-    label(0, -21, "HOUSE · upper floor");
+    rect(-6, -23, 12, 12, true);
+    label(0, -25, "HOUSE · upper floor");
     path([
-      [-1, -19],
+      [-1, -23],
       [-1, -11],
     ]);
     path([
       [-6, -13.5],
       [6, -13.5],
     ]);
+    path([
+      [-6, -18],
+      [-1, -18],
+    ]);
     label(2.4, -16.6, "Hall");
     label(4.6, -14.8, "Phone");
     label(-3.5, -16.6, sokOpen ? "Sok’s room" : "Locked room");
+    label(-3.5, -20.6, "Vuthy’s room");
+    label(3.5, -20.6, "Yay Mey’s room");
     label(0, -11.6, "Stairs ↓");
     rect(-4, -7, 8, 6, true);
     label(0, -5.4, "FUNERAL TENT");
@@ -215,7 +221,7 @@ export function notebookMap(
       "path",
     );
     label(0, 12, "Path to taxi ↓");
-    if (at.z >= -23) shapes.push({ kind: "you", x: at.x, y: at.z, r: 0.3 });
+    if (at.z >= -28) shapes.push({ kind: "you", x: at.x, y: at.z, r: 0.3 });
     // Furnishings distinguish the rooms and tent from anonymous rectangles.
     rect(-5.3, -18.5, 2.7, 1.6);
     rect(-0.7, -4.6, 1.4, 2.4);

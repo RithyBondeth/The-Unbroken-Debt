@@ -76,7 +76,7 @@ it("keeps the village plan and player in the same landscape coordinate system", 
   expect(map.shapes.find((s) => s.kind === "rect" && s.walls)).toMatchObject({
     x: 11,
     y: -6,
-    w: 8,
+    w: 12,
     h: 12,
   });
   expect(mapSvg(map)).toContain('cx="16" cy="4"');

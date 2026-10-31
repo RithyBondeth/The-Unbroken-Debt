@@ -17,10 +17,10 @@ export const WALKER_ROUTE = [
   { at: new Vector3(-0.25, 2.5, -13.45) },
   { at: new Vector3(-2.5, 2.5, -13.45), pause: 4 },
   { at: new Vector3(-1.65, 2.5, -13.45) },
-  { at: new Vector3(-1.65, 2.5, -17.1) },
-  { at: new Vector3(-2.35, 2.5, -17.1) },
-  { at: new Vector3(-2.35, 2.5, -18.15) },
-  { at: new Vector3(-2.35, 0, -20.8) },
+  { at: new Vector3(-1.65, 2.5, -20.2) },
+  { at: new Vector3(-2.35, 2.5, -21.2) },
+  { at: new Vector3(-2.35, 2.5, -22.15) },
+  { at: new Vector3(-2.35, 0, -24.8) },
 ];
 
 export const WALKER_SPEED = 1;
@@ -28,12 +28,26 @@ export const WALKER_CATCH_DISTANCE = 1.5;
 export const hearingRadius = (loudness: number): number =>
   loudness <= 0.13 ? 2 : loudness <= 0.4 ? 6 : 10;
 
+/** The open doors from the hall into Sok's room (front) and Vuthy's room (back), on x = -3. */
+const EAST_DOORS = [
+  { minZ: -13.9, maxZ: -13 },
+  { minZ: -19.9, maxZ: -19 },
+];
+/** Sok's and Vuthy's rooms are divided at z = -18. */
+const eastDoorZ = (z: number): number => (z < -18 ? -19.45 : -13.45);
+
 /** Avoid catching through the room partitions; the segment must pass through a doorway. */
 export function throughDoorways(a: Vector3, b: Vector3): boolean {
   for (const x of [-3, 3]) {
     if ((a.x - x) * (b.x - x) >= 0) continue;
     const z = a.z + (b.z - a.z) * ((x - a.x) / (b.x - a.x));
-    if (x === -3 ? z < -13.9 || z > -13 : z < -13.4 || z > -12.5) return false;
+    const open =
+      x === -3 ? EAST_DOORS.some((d) => z >= d.minZ && z <= d.maxZ) : z >= -13.4 && z <= -12.5;
+    if (!open) return false;
+  }
+  if ((a.z + 18) * (b.z + 18) < 0) {
+    const x = a.x + (b.x - a.x) * ((-18 - a.z) / (b.z - a.z));
+    if (x < -3) return false;
   }
   return true;
 }
@@ -41,12 +55,20 @@ export function throughDoorways(a: Vector3, b: Vector3): boolean {
 /** A sound in a side room draws the walker through its door, in either direction. */
 export function doorwayPath(a: Vector3, b: Vector3): Vector3[] {
   const points: Vector3[] = [];
-  if (a.x < -3 && b.x >= -3)
-    points.push(new Vector3(-3.6, 2.5, -13.45), new Vector3(-2.4, 2.5, -13.45));
+  const out = eastDoorZ(a.z),
+    into = eastDoorZ(b.z);
+  if (a.x < -3 && b.x < -3 && out !== into)
+    points.push(
+      new Vector3(-3.6, 2.5, out),
+      new Vector3(-2.4, 2.5, out),
+      new Vector3(-2.4, 2.5, into),
+      new Vector3(-3.6, 2.5, into),
+    );
+  if (a.x < -3 && b.x >= -3) points.push(new Vector3(-3.6, 2.5, out), new Vector3(-2.4, 2.5, out));
   if (a.x > 3 && b.x <= 3)
     points.push(new Vector3(3.6, 2.5, -12.95), new Vector3(2.4, 2.5, -12.95));
   if (b.x < -3 && a.x >= -3)
-    points.push(new Vector3(-2.4, 2.5, -13.45), new Vector3(-3.6, 2.5, -13.45));
+    points.push(new Vector3(-2.4, 2.5, into), new Vector3(-3.6, 2.5, into));
   if (b.x > 3 && a.x <= 3)
     points.push(new Vector3(2.4, 2.5, -12.95), new Vector3(3.6, 2.5, -12.95));
   points.push(b.clone());

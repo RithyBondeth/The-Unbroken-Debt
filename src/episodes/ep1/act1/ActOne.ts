@@ -381,7 +381,7 @@ export class ActOne {
           target: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.6, 0)),
         },
         { eye: new Vector3(0, 1.58, -2), target: new Vector3(0, 1.3, -12) },
-        { eye: new Vector3(-1.65, 4.08, -17.05), target: new Vector3(-1.65, 3.65, -13.8) },
+        { eye: new Vector3(-1.65, 4.08, -21.05), target: new Vector3(-1.65, 3.65, -13.8) },
         { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
       ]);
     } finally {

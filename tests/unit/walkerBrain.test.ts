@@ -80,5 +80,15 @@ describe("hallway walker", () => {
     expect(throughDoorways(new Vector3(-2.7, 2.5, -13.45), new Vector3(-3.5, 2.5, -13.45))).toBe(
       true,
     );
+    // Vuthy's open door at the back, and the wall between his room and Sok's.
+    expect(throughDoorways(new Vector3(-2.7, 2.5, -19.45), new Vector3(-3.5, 2.5, -19.45))).toBe(
+      true,
+    );
+    expect(throughDoorways(new Vector3(-4.5, 2.5, -17), new Vector3(-4.5, 2.5, -19))).toBe(false);
+  });
+  it("reaches Vuthy's room through its own door, and Sok's room from it by the hall", () => {
+    expect(doorwayPath(new Vector3(-1, 2.5, -20), new Vector3(-4.5, 2.5, -20.5))[0].z).toBe(-19.45);
+    const across = doorwayPath(new Vector3(-4.5, 2.5, -20.5), new Vector3(-4.5, 2.5, -15.2));
+    expect(across.map((p) => p.z)).toEqual([-19.45, -19.45, -13.45, -13.45, -15.2]);
   });
 });

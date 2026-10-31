@@ -9,7 +9,7 @@ import { canopyWind, pavilionCloth } from "../audio/atmosphereSounds";
 
 /** The upper floor of the house, its boards at 2.5 m. */
 const inHouse = (feet: Vector3) =>
-  feet.y > 1.9 && Math.abs(feet.x) < 6.3 && feet.z < -9.3 && feet.z > -18.7;
+  feet.y > 1.9 && Math.abs(feet.x) < 6.3 && feet.z < -9.3 && feet.z > -22.7;
 /** Under the funeral pavilion's cloth. */
 const inTent = (feet: Vector3) =>
   Math.abs(feet.x) < 3.8 && feet.z < -1 && feet.z > -7 && feet.y < 0.5;
