@@ -114,7 +114,8 @@ describe("tall grass", () => {
     expect(grassChance(0, ROAD_Z)).toBe(0);
     expect(grassChance(SAVE_SHRINE_POSITION.x, SAVE_SHRINE_POSITION.z)).toBe(0);
     expect(grassChance(0, -10)).toBe(0); // the swept yard
-    expect(grassChance(4.2, 31)).toBeGreaterThan(0.6); // a step off the path
+    expect(grassChance(4.2, 31)).toBeGreaterThan(0.3); // a thin fringe off the path
+    expect(grassChance(4.2, 31)).toBeLessThan(grassChance(10, ROAD_Z - 3.2)); // the open bank is thicker
     expect(grassChance(10, ROAD_Z - 3.2)).toBeGreaterThan(0.5); // the road bank
   });
 

@@ -30,6 +30,7 @@ import { NIGHT_LOOK } from "../data/nightLook";
 import { applyRainWetness } from "../../../render/SurfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
 import { applyFoliageWind } from "../../../render/FoliageWind";
+import { gradeJungle } from "../act1/jungleGrade";
 import { TaxiRain } from "./TaxiRain";
 import {
   taxiDistance,
@@ -74,6 +75,11 @@ export class TaxiVisuals {
       });
     }
     const materials = new Set(landscape.map((mesh) => mesh.material));
+    // The roadside was painted before the old-growth palette: grade all of it.
+    gradeJungle(
+      [...materials].filter((m) => m !== null),
+      false,
+    );
     applyFoliageWind(
       [...materials].filter((m) => m !== null),
       game.wind,

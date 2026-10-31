@@ -202,6 +202,13 @@ export class ForestBorder {
       const found = lists
         .map((names) => this.template(byName, names))
         .filter((t): t is Template => t !== null);
+      // Banana plants were cleared out of the forest (old growth): any left by the houses serve.
+      if (found.length === 0)
+        for (const node of byName.values()) {
+          if (found.length >= 3 || !new RegExp(`^${species}_\\d+$`).test(node.name)) continue;
+          const t = this.template(byName, [node.name]);
+          if (t) found.push(t);
+        }
       if (found.length === 0) console.warn(`[ForestBorder] no templates for ${species}`);
       this.templates.set(species, found);
     }

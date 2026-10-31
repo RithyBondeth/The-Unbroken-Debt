@@ -51,7 +51,8 @@ def forest_materials():
     grain = rng.normal(0, .018, (size, size))
     mottles = np.sin(xx * .037 + np.sin(yy * .023) * 2) * np.sin(yy * .052) * .07
     light = .72 + .22 * (1 - edge) + .07 * rib + .05 * veins + grain + mottles
-    palette = np.array([[.24, .34, .115], [.30, .38, .15], [.17, .29, .12], [.36, .28, .12]])
+    # Old-growth night palette: cold, deep blue-greens and one brown of dead leaves.
+    palette = np.array([[.11, .19, .105], [.15, .23, .13], [.085, .16, .1], [.27, .2, .11]])
     leaf = np.ones((size, size, 4))
     leaf[:, :, :3] = palette[cell] * np.clip(light, .4, 1.2)[:, :, None]
     for k in range(24):
@@ -70,7 +71,7 @@ def forest_materials():
     gy, gx = np.mgrid[0:512, 0:128].astype(float)
     t = gy / 511
     bands = .82 + .09 * np.sin(gx * .37) + rng.normal(0, .022, gx.shape)
-    base, tip = np.array([.13, .19, .065]), np.array([.36, .39, .17])
+    base, tip = np.array([.08, .13, .06]), np.array([.22, .26, .13])
     grass[:, :, :3] = (base[None, None, :] * (1 - t[:, :, None]) + tip * t[:, :, None]) * bands[:, :, None]
     # A dried tip and a narrow central rib catch the warm player lamp.
     grass[t > .91, :3] *= np.array([1.12, .96, .78])
@@ -84,7 +85,7 @@ def forest_materials():
     my, mx = np.mgrid[0:256, 0:256].astype(float)
     noise = rng.random((256, 256))
     threads = .65 + .2 * np.sin(mx * .4 + np.sin(my * .12) * 2) + .15 * noise
-    moss[:, :, :3] = threads[:, :, None] * np.array([.19, .24, .085])
+    moss[:, :, :3] = threads[:, :, None] * np.array([.12, .19, .085])
     moss_path = save_map('T_ep1_forest_moss_BC', moss)
     for key, path, rough, normal_path in (
         ('leaf', leaf_path, .57, leaf_normal),
@@ -156,10 +157,10 @@ class Leaves:
             self.uvs += [(.245, .25), (.255, .25), (.255, .26), (.245, .26)]
 
 
-def canopy_sprays(name, coll, items, material, rng):
+def canopy_sprays(name, coll, items, material, rng, per=18):
     leaves = Leaves()
     for centre, size, yaw, _pitch, cell in items:
-        for j in range(18):
+        for j in range(per):
             a = yaw + rng.uniform(0, math.tau)
             reach = rng.uniform(.05, .38) * size
             base = (centre[0] + math.cos(a) * reach, centre[1] + math.sin(a) * reach,
@@ -212,9 +213,9 @@ def tree_surface_details(coll, m, x, y, h, radius, k, rng):
     parts = []
     for j in range(5):
         a = j * math.tau / 5 + rng.uniform(-.18, .18)
-        reach = radius + rng.uniform(.8, 1.45)
+        reach = radius + rng.uniform(1.2, 2.6)
         c, s = math.cos(a), math.sin(a)
-        height = rng.uniform(1.1, 1.8)
+        height = rng.uniform(1.8, 3.2)
         verts, faces, uvs = [], [], []
         # Convex ribs taper into the soil. Outward winding is essential here:
         # an inverted fin looked like a black triangular cutout by lamplight.
@@ -237,29 +238,32 @@ def tree_surface_details(coll, m, x, y, h, radius, k, rng):
         pts = [(x + c * (radius + reach * t * .72), y + s * (radius + reach * t * .72),
                 .13 * (1 - t) - .015) for t in (0., .3, .6, 1.)]
         parts.append(tube(f'tree_{k}_moss_{j}', coll, pts, .075, m['moss'], sides=5, radius_end=.007))
-    for j in range(int(rng.integers(2, 5))):
+        # A sleeve of moss runs up the bole between the fins, thickest at the foot.
+        sleeve = [(x + c * radius * 1.04, y + s * radius * 1.04, z) for z in (.2, 1.4, 2.8, 4.2)]
+        parts.append(tube(f'tree_{k}_moss_sleeve_{j}', coll, sleeve, .06, m['moss'], sides=5, radius_end=.012))
+    for j in range(int(rng.integers(4, 8))):
         a = rng.uniform(0, math.tau)
-        height = h * rng.uniform(.4, .7)
+        height = h * rng.uniform(.45, .85)
         pts = []
         for i in range(13):
             t = i / 12
             twist = a + t * rng.uniform(2.8, 3.2)
             r = radius * (1 - .35 * t) + .025
             pts.append((x + math.cos(twist) * r, y + math.sin(twist) * r, height * t))
-        parts.append(tube(f'tree_{k}_liana_{j}', coll, pts, rng.uniform(.018, .036),
+        parts.append(tube(f'tree_{k}_liana_{j}', coll, pts, rng.uniform(.022, .06),
                           m['bark'], sides=5, radius_end=.009))
     # Roots hanging clear of the player make threatening vertical silhouettes.
-    for j in range(3):
+    for j in range(int(rng.integers(6, 11))):
         a = rng.uniform(0, math.tau)
-        bx, by = x + math.cos(a) * rng.uniform(1.2, 2.1), y + math.sin(a) * rng.uniform(1.2, 2.1)
-        z = h * rng.uniform(.44, .65)
+        bx, by = x + math.cos(a) * rng.uniform(1.2, 3.2), y + math.sin(a) * rng.uniform(1.2, 3.2)
+        z = h * rng.uniform(.4, .65)
         pts = [(x, y, z + .3), (bx, by, z), (bx + .18, by - .12, z - 1.0),
-               (bx + .23, by - .2, max(2.7, z - rng.uniform(2.1, 4.0)))]
+               (bx + .23, by - .2, max(2.4, z - rng.uniform(3.0, 7.5)))]
         parts.append(tube(f'tree_{k}_hanging_vine_{j}', coll, pts, .022, m['bark'], sides=4, radius_end=.004))
     return parts
 
 
-def understory(coll, spots, rng):
+def understory(coll, spots, rng, prefix='forest'):
     """Fern rosettes and broad juvenile leaves mixed with curled dead litter."""
     mats = forest_materials()
     patches = {}
@@ -295,5 +299,5 @@ def understory(coll, spots, rng):
                 bx, by = x + rng.normal(0, .7), y + rng.normal(0, .7)
                 litter.add((bx, by, .025), rng.uniform(0, math.tau), rng.uniform(.1, .26),
                            rng.uniform(.04, .1), .015, 3, -.1)
-        plants.build(f'forest_understory_{cell[0]}_{cell[1]}', coll, mats['leaf'])
-        litter.build(f'forest_litter_{cell[0]}_{cell[1]}', coll, mats['litter'])
+        plants.build(f'{prefix}_understory_{cell[0]}_{cell[1]}', coll, mats['leaf'])
+        litter.build(f'{prefix}_litter_{cell[0]}_{cell[1]}', coll, mats['litter'])

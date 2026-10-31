@@ -79,32 +79,37 @@ def curve(a, b, lift, n=5):
 
 
 def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0, collision=True):
-    """A big broadleaf tree of the lowland forest: a leaning trunk on buttress roots,
-    a few heavy limbs and a dark, ragged crown."""
+    """An old-growth giant of the lowland forest: a tall, nearly straight bole on high
+    buttress fins, mossed and wound with lianas; heavy limbs spread into a dark crown
+    far overhead, lianas looping between them and vines let down towards the ground.
+    `h` is the height the village was laid out for; the old growth stands half again
+    as tall (Art Bible 3: an enclosed, ancient forest)."""
     parts = []
     detail = forest_materials()
-    r0 = rng.uniform(0.28, 0.42)
-    lean = (rng.uniform(-0.8, 0.8), rng.uniform(-0.8, 0.8))
-    trunk = [(x + lean[0] * t * t, y + lean[1] * t * t, h * 0.62 * t) for t in (i / 6 for i in range(7))]
-    parts.append(tube(f"tree_{k}_trunk", coll, trunk, r0, m["bark"], sides=10, metres_per_v=1.5, radius_end=r0 * 0.6))
+    h = min(26.0, h * 1.45)
+    r0 = rng.uniform(0.45, 0.72)
+    lean = (rng.uniform(-0.45, 0.45), rng.uniform(-0.45, 0.45))
+    trunk = [(x + lean[0] * t * t, y + lean[1] * t * t, h * 0.7 * t) for t in (i / 8 for i in range(9))]
+    parts.append(tube(f"tree_{k}_trunk", coll, trunk, r0, m["bark"], sides=12, metres_per_v=1.5, radius_end=r0 * 0.55))
     # Shallow fluting catches lamplight without a cylindrical plastic silhouette.
     for v in parts[0].data.vertices:
-        t = max(0, min(1, v.co.z / (h * .62)))
+        t = max(0, min(1, v.co.z / (h * .7)))
         cx, cy = x + lean[0] * t * t, y + lean[1] * t * t
         a = math.atan2(v.co.y - cy, v.co.x - cx)
         f = 1 + .09 * math.sin(a * 5 + t * 3) + .045 * math.sin(a * 9 - t * 5)
         v.co.x = cx + (v.co.x - cx) * f
         v.co.y = cy + (v.co.y - cy) * f
     parts.extend(tree_surface_details(coll, {**m, 'moss': detail['moss']}, x, y, h, r0, k, rng))
-    ends, leaves = [], []
-    for j in range(int(rng.integers(3, 6))):
-        base = trunk[int(rng.integers(4, 7))]
-        a, e = rng.uniform(0, 2 * math.pi), rng.uniform(0.3, 0.85)
-        length = h * rng.uniform(0.3, 0.45) * crown
+    ends, leaves, limbs = [], [], []
+    for j in range(int(rng.integers(5, 8))):
+        base = trunk[int(rng.integers(6, 9))]
+        a, e = 2 * math.pi * j / 6 + rng.uniform(-0.5, 0.5), rng.uniform(0.15, 0.6)
+        length = h * rng.uniform(0.26, 0.4) * crown
         end = (base[0] + math.cos(a) * math.cos(e) * length, base[1] + math.sin(a) * math.cos(e) * length,
                base[2] + math.sin(e) * length)
         limb = curve(base, end, -0.4 * length * 0.2)
-        parts.append(tube(f"tree_{k}_limb_{j}", coll, limb, r0 * 0.45, m["bark"], sides=7, metres_per_v=1.5, radius_end=0.06))
+        parts.append(tube(f"tree_{k}_limb_{j}", coll, limb, r0 * 0.42, m["bark"], sides=7, metres_per_v=1.5, radius_end=0.06))
+        limbs.append(limb)
         ends.append(end)
         for s in range(2):
             b = limb[2 + s]
@@ -115,13 +120,50 @@ def tropical_tree(coll, m, x, y, h, k, rng, crown=1.0, collision=True):
             ends.append(end2)
     for e in ends:
         for c in range(5):
-            centre = (e[0] + rng.normal(0, 1.0), e[1] + rng.normal(0, 1.0), e[2] + rng.normal(0, 0.6))
-            leaves.append((centre, rng.uniform(2.2, 3.4), rng.uniform(0, math.pi), rng.uniform(-0.4, 0.4),
+            centre = (e[0] + rng.normal(0, 1.3), e[1] + rng.normal(0, 1.3), e[2] + rng.normal(0, 0.7))
+            leaves.append((centre, rng.uniform(2.8, 4.0), rng.uniform(0, math.pi), rng.uniform(-0.4, 0.4),
                            int(rng.choice([0, 1, 2, 2, 3] if rng.random() < 0.15 else [0, 1, 2]))))
-    parts.append(canopy_sprays(f"tree_{k}_crown", coll, leaves, detail['leaf'], rng))
+    # Far overhead in the dark a crown reads by its mass, not its leaf count (Low preset budget).
+    parts.append(canopy_sprays(f"tree_{k}_crown", coll, leaves, detail['leaf'], rng, per=10))
+    parts.extend(canopy_lianas(coll, m, k, limbs, rng))
+    parts.append(epiphytes(f"tree_{k}_epiphytes", coll, [limb[1] for limb in limbs], detail['leaf'], rng))
     if collision:
         collider(f"tree_{k}", coll, x - r0, x + r0, y - r0, y + r0, 0, 3)
     return join(parts, f"tree_{k}")
+
+
+def canopy_lianas(coll, m, k, limbs, rng):
+    """Lianas looping between a giant's limbs, sagging far below them; a few let
+    straight down towards the ground as rope-thick cables."""
+    parts = []
+    for j in range(len(limbs)):
+        a, b = limbs[j], limbs[(j + int(rng.integers(1, 3))) % len(limbs)]
+        p, q = a[int(rng.integers(2, len(a)))], b[int(rng.integers(2, len(b)))]
+        drop = rng.uniform(2.5, 6.0)
+        pts = [(p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t,
+                p[2] + (q[2] - p[2]) * t - drop * 4 * t * (1 - t)) for t in (i / 10 for i in range(11))]
+        parts.append(tube(f"tree_{k}_loop_{j}", coll, pts, rng.uniform(0.025, 0.05), m["bark"], sides=5, radius_end=0.02))
+    for j in range(int(rng.integers(2, 4))):
+        limb = limbs[int(rng.integers(0, len(limbs)))]
+        p = limb[int(rng.integers(2, len(limb)))]
+        bottom = max(2.4, p[2] - rng.uniform(6.0, 12.0))
+        sway = rng.normal(0, 0.25, 2)
+        pts = [(p[0] + sway[0] * t * t, p[1] + sway[1] * t * t, p[2] + (bottom - p[2]) * t) for t in (i / 6 for i in range(7))]
+        parts.append(tube(f"tree_{k}_cable_{j}", coll, pts, rng.uniform(0.02, 0.04), m["bark"], sides=5, radius_end=0.012))
+    return parts
+
+
+def epiphytes(name, coll, perches, leaf, rng):
+    """Bird's-nest ferns and creepers in the crotches of the limbs: broad strap
+    leaves fanned out from a knot, catching rain and the lamp's last light."""
+    from forest_detail import Leaves
+    nest = Leaves()
+    for p in perches:
+        for j in range(int(rng.integers(9, 15))):
+            a = rng.uniform(0, math.tau)
+            length = rng.uniform(0.6, 1.1)
+            nest.add(p, a, length, length * rng.uniform(0.18, 0.26), rng.uniform(0.15, 0.55), int(rng.integers(0, 3)), 0.5)
+    return nest.build(name, coll, leaf)
 
 
 def dead_tree(coll, m, x, y, h, k, rng):

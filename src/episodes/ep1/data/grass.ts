@@ -3,9 +3,9 @@ import { inSaveShrineClearing } from "./saveShrine";
 import { PLAY, ROAD_Z, YARD, inBelt, inBund, inside, outside, pathDistance } from "./forestBorder";
 
 /**
- * Tall grass (smau) round the village: thick on the verges of the path and the
- * road bank, along the paddies' bunds and at the edge of the swept yard,
- * thinner in the forest belt. The trodden path, the road, the yard, the shrine
+ * Tall grass (smau) round the village: thick on the road bank, along the
+ * paddies' bunds and at the edge of the swept yard, where light reaches the
+ * ground; only a thin fringe along the forest path under the old canopy. The trodden path, the road, the yard, the shrine
  * clearing, the pond and the wells stay bare. Babylon space, metres.
  */
 
@@ -51,7 +51,8 @@ export function grassChance(x: number, z: number): number {
   const road = Math.abs(z - ROAD_Z);
   if (path < 0.9 || road < 2.4) return 0;
   let chance = 0;
-  if (z > 2 && z < 61) chance = Math.max(chance, verge(path, 0.9, 3.4));
+  // Under the old-growth canopy little grass grows: a thin fringe along the trodden path.
+  if (z > 2 && z < 61) chance = Math.max(chance, 0.45 * verge(path, 0.9, 3.4));
   if (Math.abs(x) < 34) chance = Math.max(chance, 0.85 * verge(road, 2.4, 3.2));
   if (inBund(x, z)) chance = Math.max(chance, 0.6);
   const yard = outside(YARD, x, z);
