@@ -14,7 +14,7 @@ The coffin lid is rebuilt for the title: black lacquer gone to craquelure, flaki
 - `public/assets/ui/welcome-hall-far.webp` and `welcome-hall-near.webp`: the same frame with the Neak Ta by the back door, and at the far end of the open coffin, against the lit doorway. They are full plates shown over the empty hall.
 - `public/assets/ui/welcome-cords.webp`, `welcome-cords-far.webp` and `welcome-cords-near.webp`: the cords, their dolls and hair alone on transparency, with the room (and the Neak Ta, where it stands) cut out of them. The plates leave the cords out but keep their shadows.
 - `src/ui/html/welcomeCordPaths.ts`: the cords projected into the frame, for the blood beads.
-- `public/assets/ui/welcome-title.webp`: “THE UNBROKEN DEBT” painted as wet red brush strokes. No font is used: each letter is a stroke skeleton dragged with a simulated bristle brush that runs dry, followed by drips and splatter.
+- `public/assets/ui/welcome-title.webp`: “THE UNBROKEN DEBT” painted as wet red brush strokes. No font is used: each letter is a stroke skeleton dragged with a simulated bristle brush that runs dry, followed by drips and splatter. This lettering is the game's official logo (chosen 31 October 2026 over a cord seal, a threaded serif wordmark, a ledger stamp and gilt Moul on lacquer). Use it, with the red បុណ្យសព mark above it, wherever the game is branded: the welcome screen and the end credits. It does not read at icon size, so the favicon is a single "U" painted with the same brush and red (`art-source/ui/favicon-letter.png`) on the title's near-black, as `public/favicon.png` (32 px) and `public/apple-touch-icon.png` (180 px).
 
 Everything is rendered in Blender Cycles from `ep1_area_village.blend` with the game's own geometry, coffin and Neak Ta, at 1920×1080 from one camera and seed, and graded cold and desaturated with only the lamps, candles and red paint keeping their colour.
 
@@ -32,6 +32,8 @@ blender -b $B -P tools/ui/render-title-scene.py -- src/ui/html/welcomeCordPaths.
 npx prettier --write src/ui/html/welcomeCordPaths.ts
 blender -b -P tools/ui/paint-title.py -- /tmp/title.png 31
 blender -b -P tools/ui/paint-title.py -- /tmp/listen.png 7 listen
+blender -b -P tools/ui/paint-title.py -- art-source/ui/favicon-letter.png 17 icon
+node tools/ui/encode-favicon.mjs art-source/ui/favicon-letter.png public/favicon.png 32 public/apple-touch-icon.png 180
 ```
 
 Encode with sharp: the three plates at WebP quality 90, the cord layers at 88 with alpha, the title resized to 1600 px wide at 88 with alpha. The entry screen's lettering is resized to 1600 px at 88 with alpha. Its background is the empty hall with the cord layer over it, resized to 960 px, blurred (sigma 10), dimmed to 85 % and saved at WebP quality 80. The script also has an animated `loop` mode and transparent `figure-far|figure-near` layers; they were tried for the title and set aside in favour of the still plates.

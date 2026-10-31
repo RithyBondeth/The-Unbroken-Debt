@@ -2,9 +2,10 @@
 
 No font: each letter is a hand-placed stroke skeleton dragged with a simulated
 bristle brush that runs dry. Uses Blender's Python for numpy and image output:
-  blender -b -P tools/ui/paint-title.py -- <out.png> [seed] [listen]
+  blender -b -P tools/ui/paint-title.py -- <out.png> [seed] [listen|icon]
 The shipped title uses seed 31. `listen` paints the entry screen's "LISTEN CLOSELY."
-in ash-white paint instead (shipped with seed 7).
+in ash-white paint instead (shipped with seed 7). `icon` paints a single heavy "U" in
+the title's red for the favicon (shipped with seed 17).
 """
 import math
 import sys
@@ -16,6 +17,7 @@ argv = sys.argv[sys.argv.index("--") + 1 :]
 OUT = argv[0]
 SEED = int(argv[1]) if len(argv) > 1 else 31
 LISTEN = "listen" in argv[2:]
+ICON = "icon" in argv[2:]
 rng = np.random.default_rng(SEED)
 
 W, H = 4700, 2300
@@ -163,6 +165,8 @@ def write(text, x0, y0, h, track=0.13, slant_deg=0.0, weight=0.17):
 
 if LISTEN:
     write("LISTEN CLOSELY.", 140, 700, 360, track=0.14, slant_deg=3, weight=0.15)
+elif ICON:
+    write("U", 1700, 300, 1300, slant_deg=3, weight=0.27)
 else:
     write("THE", 560, 120, 300, track=0.16, slant_deg=4, weight=0.2)
     write("UNBROKEN", 300, 520, 610, track=0.1, slant_deg=3)
@@ -199,12 +203,16 @@ count = 0
 LOW = [(120 + 0.62 * 300, 120 + 1.1 * 300), (520 + 0.7 * 610, 520 + 1.1 * 610), (1270 + 0.7 * 610, 1270 + 1.2 * 610)]
 if LISTEN:
     LOW = [(700 + 0.72 * 360, 700 + 1.1 * 360)]
+if ICON:
+    LOW = [(300 + 0.75 * 1300, 300 + 1.1 * 1300)]
 for sx, sy, w in drip_seeds:
-    if count >= (7 if LISTEN else 16) or rng.random() < (0.5 if LISTEN else 0.3) or not any(a < sy < b for a, b in LOW):
+    if count >= (3 if ICON else 7 if LISTEN else 16) or rng.random() < (0.5 if LISTEN else 0.3) or not any(a < sy < b for a, b in LOW):
         continue
     count += 1
     L = rng.uniform(0.15, 1.0) ** 2 * (260 if LISTEN else 520) + (30 if LISTEN else 40)
-    if not LISTEN and sy < 1270 and 1640 < sx < 3750:
+    if ICON:
+        L = rng.uniform(0.4, 1.0) * 380 + 120
+    elif not LISTEN and sy < 1270 and 1640 < sx < 3750:
         L = min(L, 1250 - sy)
     w0 = rng.uniform(0.09, 0.16) * w
     ys = np.arange(int(sy - w0), int(min(H - 40, sy + L)))
@@ -229,7 +237,7 @@ for sx, sy, w in drip_seeds:
 # Flicked splatter.
 splat = np.zeros((H, W), np.float32)
 ys, xs = np.nonzero(cover[::8, ::8] > 0.5)
-for _ in range(30 if LISTEN else 70):
+for _ in range(14 if ICON else 30 if LISTEN else 70):
     k = rng.integers(len(ys))
     cx = xs[k] * 8 + rng.normal(0, 90)
     cy = ys[k] * 8 + rng.normal(0, 90)

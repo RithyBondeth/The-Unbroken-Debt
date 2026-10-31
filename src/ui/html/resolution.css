@@ -42,6 +42,37 @@
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
+/* The painted title, as on the welcome screen, with its Khmer mark between brush rules. */
+.resolution-paper .resolution-logo {
+  display: grid;
+  justify-items: center;
+  gap: var(--ui-space-2);
+  margin-bottom: var(--ui-space-4);
+}
+.resolution-logo span {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ui-paper-accent);
+  font:
+    400 1.0625rem / 1.6 "Preah Vihear",
+    sans-serif;
+  letter-spacing: 0;
+}
+.resolution-logo span::before,
+.resolution-logo span::after {
+  content: "";
+  width: 28px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ui-paper-accent));
+}
+.resolution-logo span::after {
+  transform: scaleX(-1);
+}
+.resolution-logo img {
+  width: min(26rem, 100%);
+  height: auto;
+}
 .resolution-paper p {
   max-width: 65ch;
   margin: var(--ui-space-4) 0;
