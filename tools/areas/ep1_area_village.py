@@ -5,9 +5,10 @@ shelter for the mourners and the neighbours' huts beyond the fence.
 
 Episode 1 Beat Sheet, sections 4.2–4.4: courtyard 24 x 18 m; the pavilion in
 front of the house so its light spills under the stilts; upper floor 12 x 8 m
-raised 2.5 m (veranda, hall with the ancestral altar, kitchen, Yay Mey's room,
-Sok's room); under the house 15 pillars on a 3 x 4 m grid with the clay jars
-J1-J6. Looks follow Léon Busy's 1921 photographs of Cambodia and the funeral
+raised 2.5 m, deepened to 12 x 12 m for the household of three (veranda, hall
+with the ancestral altar, kitchen, Yay Mey's, Sok's and Vuthy's rooms); under the
+house 20 pillars on a 3 x 4 m grid with the clay jars J1-J6 and a screened bathing
+corner by the rear stairs. Looks follow Léon Busy's 1921 photographs of Cambodia and the funeral
 customs in khmer.py (to confirm with the cultural advisor).
 
 Run (repository root), after `npm run fetch-library` and `npm run drawings -- ep1`:
@@ -38,9 +39,11 @@ rng = np.random.default_rng(1910)
 FLOOR = 2.5  # upper floor height (stilts)
 WALL_H = 2.6
 ZW = FLOOR + WALL_H  # top of the walls
-HOUSE = {"x0": -6.0, "x1": 6.0, "y0": 10.0, "y1": 18.0}
+HOUSE = {"x0": -6.0, "x1": 6.0, "y0": 10.0, "y1": 22.0}
+# The hall altar and what stands round it were laid out against the old back wall (y = 18).
+ALTAR_DY = HOUSE["y1"] - 18.0
 TENT = {"x0": -4.0, "x1": 4.0, "y0": 1.0, "y1": 7.0, "eave": 2.6, "ridge": 4.6}
-YARD = {"x0": -13.0, "x1": 13.0, "y0": -3.0, "y1": 22.0}
+YARD = {"x0": -13.0, "x1": 13.0, "y0": -3.0, "y1": 27.0}
 # The 60 m path from the road (A1-01): a gentle S through the grove, south to north.
 PATH = [(1.5, -60.0), (2.5, -50.0), (0.5, -40.0), (-2.5, -30.0), (-2.0, -20.0), (0.5, -10.0), (0.0, -3.0)]
 # The compound stands alone in the forest: no neighbours in sight, only old wells
@@ -90,6 +93,15 @@ def new_since(before):
     """The top-level objects made since `before` (colliders stay where they are)."""
     new = {o for o in bpy.data.objects if o not in before and not o.name.startswith("col_")}
     return [o for o in new if o.parent not in new]
+
+
+def shifted(dy, build):
+    """Runs `build()` and moves everything it made (colliders too) `dy` metres north."""
+    before = set(bpy.data.objects)
+    build()
+    for o in bpy.data.objects:
+        if o not in before and (o.parent is None or o.parent in before):
+            o.location.y += dy
 
 
 def usable(name, location, build, **props):
@@ -623,7 +635,7 @@ def house_forest(m):
     # Three trees on each flank and four across the rear: the house sits in
     # forest rather than facing a grove with an empty backdrop. Keep roots
     # outside the fence and crowns above all ground-level access routes.
-    specs = [(-26, -15.5, 0, 30)] * 3 + [(15.5, 26, 0, 30)] * 3 + [(-22, 22, 25.5, 36)] * 4
+    specs = [(-26, -15.5, 0, 30)] * 3 + [(15.5, 26, 0, 30)] * 3 + [(-22, 22, 30.5, 38)] * 4
     for j, (x0, x1, y0, y1) in enumerate(specs):
         for _ in range(5000):
             x, y = detail_rng.uniform(x0, x1), detail_rng.uniform(y0, y1)
@@ -638,10 +650,10 @@ def house_forest(m):
         occupied.append((x, y))
     def belt(x, y):
         return ((15 < abs(x) < 27 and 0 < y < 31) or
-                (-24 < x < 24 and 24 < y < 36)) and land(x, y, .1)
+                (-24 < x < 24 and 29 < y < 38)) and land(x, y, .1)
     seeds = []
     for _ in range(10000):
-        x, y = detail_rng.uniform(-27, 27), detail_rng.uniform(0, 36)
+        x, y = detail_rng.uniform(-27, 27), detail_rng.uniform(0, 38)
         if belt(x, y) and all(math.hypot(x-a, y-b) > 1.3 for a, b in seeds):
             seeds.append((x, y))
             if len(seeds) == 80:
@@ -659,9 +671,9 @@ def house_forest(m):
     # Low growth along the inside of the back fence, clear of the shed,
     # rear house access and the cart in the northeast corner.
     for x in (-11.5, -9, -6.5, -3.5, 3.5, 6.5):
-        plants.append((x, 21.15))
+        plants.append((x, YARD["y1"] - 0.85))
         for _ in range(18):
-            grass.append((x + detail_rng.uniform(-.6, .6), detail_rng.uniform(20.6, 21.7), 0.))
+            grass.append((x + detail_rng.uniform(-.6, .6), detail_rng.uniform(YARD["y1"] - 1.4, YARD["y1"] - 0.3), 0.))
     understory(AREA, plants, detail_rng)
     grass_patch('house_sedge', AREA, m, grass, detail_rng, size=(.3, .8))
     for obj in set(AREA.objects) - before:
@@ -731,14 +743,14 @@ def house(m):
     are boarded in a sunburst under carved bargeboards."""
     h = HOUSE
     for x in (-6.0, -3.0, 0.0, 3.0, 6.0):
-        for y in (10.0, 14.0, 18.0):
-            # Posts rise through the walls; the one under the middle of the hall stops at the floor.
-            top = FLOOR if (x, y) == (0.0, 14.0) else ZW
+        for y in (10.0, 14.0, 18.0, 22.0):
+            # Posts rise through the walls; the two under the middle of the hall stop at the floor.
+            top = FLOOR if (x, y) in ((0.0, 14.0), (0.0, 18.0)) else ZW
             box(f"footing_{x:.0f}_{y:.0f}", AREA, x - 0.24, x + 0.24, y - 0.24, y + 0.24, -0.05, 0.1, m["stone"], edge=0.02)
             pole(f"pillar_{x:.0f}_{y:.0f}", AREA, (x, y, 0.1), (x, y, top), 0.155, m["post"], sides=12, metres=2.0, radius_end=0.135)
             collider(f"pillar_{x:.0f}_{y:.0f}", AREA, x - 0.16, x + 0.16, y - 0.16, y + 0.16, 0, top)
     # Floor: girders on the posts, joists across them, boards with real gaps between.
-    for y in (10.0, 14.0, 18.0):
+    for y in (10.0, 14.0, 18.0, 22.0):
         box(f"girder_{y:.0f}", AREA, h["x0"] - 0.2, h["x1"] + 0.2, y - 0.11, y + 0.11, FLOOR - 0.42, FLOOR - 0.18, m["post"])
     for k, x in enumerate(np.arange(h["x0"] + 0.1, h["x1"], 0.8)):
         box(f"joist_{k}", AREA, x - 0.04, x + 0.04, h["y0"], h["y1"], FLOOR - 0.18, FLOOR - 0.05, m["post"])
@@ -750,9 +762,9 @@ def house(m):
     sill, head = FLOOR + 0.8, FLOOR + 1.75
     T = 0.06
     front_gaps = [(-0.5, 0.5, door), (-4.6, -3.8, head, sill), (3.9, 4.7, head, sill)]
-    back_gaps = [(1.9, 2.8, door), (-4.8, -4.0, head, sill), (-1.0, -0.2, head, sill)]
-    west_gaps = [(12.6, 13.4, head, sill), (16.0, 16.8, head, sill)]
-    east_gaps = [(14.0, 14.8, head, sill), (16.7, 17.5, head, sill)]
+    back_gaps = [(1.9, 2.8, door), (-4.8, -4.0, head, sill), (-1.0, -0.2, head, sill), (4.0, 4.8, head, sill)]
+    west_gaps = [(12.6, 13.4, head, sill), (16.0, 16.8, head, sill), (20.0, 20.8, head, sill)]
+    east_gaps = [(14.0, 14.8, head, sill), (16.7, 17.5, head, sill), (19.6, 20.4, head, sill)]
     wall("wall_front", AREA, h["x0"], h["x1"], 11.5 - T, 11.5, zw0, zw1, m["boards"], gaps=front_gaps)
     wall("wall_back", AREA, h["x0"], h["x1"], h["y1"] - T, h["y1"], zw0, zw1, m["boards"], gaps=back_gaps)
     wall("wall_west", AREA, h["x0"], h["x0"] + T, 11.5, h["y1"], zw0, zw1, m["boards"], gaps=west_gaps)
@@ -770,15 +782,21 @@ def house(m):
     window("win_yaymey_w", AREA, False, h["x0"], 16.0, 16.8, sill, head, m, 0.0, 1)
     window("win_sok_e", AREA, False, h["x1"], 14.0, 14.8, sill, head, m, 0.0, -1)
     window("win_sok_e2", AREA, False, h["x1"], 16.7, 17.5, sill, head, m, 0.15, -1)
-    # Partitions: kitchen (south-west), Yay Mey's room (north-west), Sok's room (east).
+    window("win_yaymey_w2", AREA, False, h["x0"], 20.0, 20.8, sill, head, m, 0.0, 1)
+    window("win_vuthy_n", AREA, True, h["y1"], 4.0, 4.8, sill, head, m, 0.5, -1)
+    window("win_vuthy_e", AREA, False, h["x1"], 19.6, 20.4, sill, head, m, 0.0, -1)
+    # Partitions: kitchen (south-west), Yay Mey's room (north-west), Sok's room (east)
+    # and, behind it, Vuthy's room at the back.
     wall("wall_kitchen_hall", AREA, -3.0, -3.0 + T, 11.5, 14.5, zw0, zw1, m["boards"], gaps=[(12.5, 13.4, door)])
     wall("wall_yaymey_hall", AREA, -3.0, -3.0 + T, 14.5, h["y1"], zw0, zw1, m["boards"], gaps=[(15.6, 16.5, door)])
     wall("wall_kitchen_yaymey", AREA, h["x0"], -3.0, 14.5 - T / 2, 14.5 + T / 2, zw0, zw1, m["boards"])
-    wall("wall_sok_hall", AREA, 3.0 - T, 3.0, 11.5, h["y1"], zw0, zw1, m["boards"], gaps=[(13.0, 13.9, door)])
+    wall("wall_sok_hall", AREA, 3.0 - T, 3.0, 11.5, 18.0, zw0, zw1, m["boards"], gaps=[(13.0, 13.9, door)])
+    wall("wall_vuthy_hall", AREA, 3.0 - T, 3.0, 18.0, h["y1"], zw0, zw1, m["boards"], gaps=[(19.0, 19.9, door)])
+    wall("wall_sok_vuthy", AREA, 3.0, h["x1"], 18.0 - T / 2, 18.0 + T / 2, zw0, zw1, m["boards"])
     # Door frames, the open front and back doors, and the two shut inner doors.
     for name, along_x, fixed, a, b in (("front", True, 11.5 - T / 2, -0.5, 0.5), ("back", True, h["y1"] - T / 2, 1.9, 2.8),
                                        ("kitchen", False, -3.0 + T / 2, 12.5, 13.4), ("yaymey", False, -3.0 + T / 2, 15.6, 16.5),
-                                       ("sok", False, 3.0 - T / 2, 13.0, 13.9)):
+                                       ("sok", False, 3.0 - T / 2, 13.0, 13.9), ("vuthy", False, 3.0 - T / 2, 19.0, 19.9)):
         for k, p in enumerate((a, b)):
             q = (p - 0.06, p) if k == 0 else (p, p + 0.06)
             if along_x:
@@ -796,13 +814,15 @@ def house(m):
     flame("veranda_lantern_flame", AREA, -0.9, 10.7, FLOOR + 1.79, 0.045, m["flame"])
     tube("veranda_lantern_cord", AREA, [(-0.9, 10.7, FLOOR + 1.99), (-0.9, 10.7, ZW + 0.3)], 0.004, m["rope"], sides=4)
     empty("light_flame_veranda", AREA, (-0.9, 10.7, FLOOR + 1.82), radius=6.0, intensity=1.8)
-    leaf("door_back_leaf", AREA, (2.8, 17.96), math.radians(-120), 0.88, FLOOR + 0.01, door - 0.01, 0.035, m["boards"])
+    leaf("door_back_leaf", AREA, (2.8, h["y1"] - 0.04), math.radians(-120), 0.88, FLOOR + 0.01, door - 0.01, 0.035, m["boards"])
     # Doors: Yay Mey's stays shut (A1-06); Sok's is locked until Act II (A1-07).
     rotate_uvs(box("interact_door_yaymey", AREA, -3.04, -2.98, 15.6, 16.5, FLOOR, door, m["boards"], action="knock"))
     collider("door_yaymey", AREA, -3.04, -2.98, 15.6, 16.5, FLOOR, door)
     rotate_uvs(box("interact_door_sok", AREA, 2.96, 3.02, 13.0, 13.9, FLOOR, door, m["boards"], action="open", requires="ep1.sok.unlocked"))
     collider("door_sok", AREA, 2.96, 3.02, 13.0, 13.9, FLOOR, door)
     box("door_sok_padlock", AREA, 2.93, 2.96, 13.06, 13.12, FLOOR + 1.0, FLOOR + 1.09, m["iron"])
+    # Vuthy left for town tonight and left his own door standing open into his room.
+    leaf("door_vuthy_leaf", AREA, (3.0, 19.9), math.radians(-90 + 65), 0.88, FLOOR + 0.01, door - 0.01, 0.035, m["boards"])
 
     # Veranda railing, X-braced in 1.5 m bays like the 1921 houses; open at the stairs (east).
     rz0, rz1 = FLOOR + 0.12, FLOOR + 0.9
@@ -822,7 +842,7 @@ def house(m):
     # Roof: plates on the posts, rafters, purlins, tiles, a ridge capping.
     pitch = math.radians(42)
     zp = ZW + 0.05
-    for y in (10.0, 18.0):
+    for y in (h["y0"], h["y1"]):
         box(f"roof_plate_{y:.0f}", AREA, h["x0"] - 0.3, h["x1"] + 0.3, y - 0.1, y + 0.1, ZW - 0.1, zp, m["post"])
     over, gx = 0.9, 0.9
     ym = (h["y0"] + h["y1"]) / 2
@@ -870,29 +890,33 @@ def house(m):
              0.05, m["post"], sides=6, radius_end=0.008)
     # Stairs: up the east end onto the veranda (the pavilion stands 2 m in front), and at the back.
     stairs("stairs_front", AREA, 9.0, 6.0, 10.15, 11.35, 0, FLOOR, m, 12, axis="x")
-    stairs("stairs_rear", AREA, 1.95, 2.75, 21.0, 18.0, 0, FLOOR, m, 11)
+    stairs("stairs_rear", AREA, 1.95, 2.75, h["y1"] + 3.0, h["y1"], 0, FLOOR, m, 11)
 
 
 def interiors(m):
-    """The hall with the ancestral altar, the kitchen, Yay Mey's and Sok's rooms."""
+    """The hall with the ancestral altar, the kitchen, and the rooms of Yay Mey, Sok and Vuthy."""
     F = FLOOR
-    box("hall_mat", AREA, -1.8, 1.8, 12.4, 15.2, F, F + 0.006, m["mat"])
-    # Authored cabinet and close-view altar components share the original anchors.
-    build_hall_altar(AREA, m, F)
-    collider("altar_ancestral", AREA, -0.8, 0.8, 17.4, 17.92, F, F + 1.1)
-    empty("light_flame_hall", AREA, (0.3, 17.5, F + 1.2), radius=4.0, intensity=0.9)
-    # Kanha's drawing of the betel tray, pinned beside the altar (A1-08).
-    usable("interact_kanha_drawing", (1.1, 17.9, F + 1.5), lambda: mesh_object(
-        "kanha_drawing", AREA, [(0.9, 17.89, F + 1.3), (1.3, 17.89, F + 1.3), (1.3, 17.89, F + 1.7), (0.9, 17.89, F + 1.7)],
-        [(0, 1, 2, 3)], m["kanha_drawing"], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)]), action="examine")
-    # The detailed stand is built with the altar; retain its collision and tray marker.
-    collider("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F, F + 0.34)
-    empty("marker_betel_tray", AREA, (0.0, 16.975, F + 0.34))
-    usable("interact_incense_bundle", (-0.45, 17.55, F + 1.12), lambda: [
-        pole(f"incense_bundle_{k}", AREA, (-0.6, 17.52 + k * 0.006, F + 1.105), (-0.3, 17.55 + k * 0.004, F + 1.11), 0.003, m["incense"], sides=4)
-        for k in range(8)], action="pickup", item="incense")
-    usable("interact_altar_candle", (0.45, 17.55, F + 1.12), lambda: lathe("spare_candle", AREA, [(0.014, 0.0), (0.014, 0.17), (0.0, 0.175)],
-                                                                         0.45, 17.5, F + 1.1, m["wax"], segments=8), action="pickup", item="candle")
+    box("hall_mat", AREA, -1.8, 1.8, 12.4, 18.6, F, F + 0.006, m["mat"])
+
+    def altar():
+        # Authored cabinet and close-view altar components share the original anchors.
+        build_hall_altar(AREA, m, F)
+        collider("altar_ancestral", AREA, -0.8, 0.8, 17.4, 17.92, F, F + 1.1)
+        empty("light_flame_hall", AREA, (0.3, 17.5, F + 1.2), radius=4.0, intensity=0.9)
+        # Kanha's drawing of the betel tray, pinned beside the altar (A1-08).
+        usable("interact_kanha_drawing", (1.1, 17.9, F + 1.5), lambda: mesh_object(
+            "kanha_drawing", AREA, [(0.9, 17.89, F + 1.3), (1.3, 17.89, F + 1.3), (1.3, 17.89, F + 1.7), (0.9, 17.89, F + 1.7)],
+            [(0, 1, 2, 3)], m["kanha_drawing"], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)]), action="examine")
+        # The detailed stand is built with the altar; retain its collision and tray marker.
+        collider("offering_stand", AREA, -0.3, 0.3, 16.75, 17.2, F, F + 0.34)
+        empty("marker_betel_tray", AREA, (0.0, 16.975, F + 0.34))
+        usable("interact_incense_bundle", (-0.45, 17.55, F + 1.12), lambda: [
+            pole(f"incense_bundle_{k}", AREA, (-0.6, 17.52 + k * 0.006, F + 1.105), (-0.3, 17.55 + k * 0.004, F + 1.11), 0.003, m["incense"], sides=4)
+            for k in range(8)], action="pickup", item="incense")
+        usable("interact_altar_candle", (0.45, 17.55, F + 1.12), lambda: lathe("spare_candle", AREA, [(0.014, 0.0), (0.014, 0.17), (0.0, 0.175)],
+                                                                             0.45, 17.5, F + 1.1, m["wax"], segments=8), action="pickup", item="candle")
+    # The altar stands against the back wall, which the deeper house moved north.
+    shifted(ALTAR_DY, altar)
     box("hall_shelf", AREA, 2.75, 2.95, 15.0, 16.6, F + 1.2, F + 1.24, m["post"])
     usable("interact_lime_pot", (2.85, 15.6, F + 1.3), lambda: (
         lathe("lime_pot", AREA, [(0.0, 0.0), (0.04, 0.0), (0.055, 0.04), (0.045, 0.08), (0.03, 0.09), (0.0, 0.09)], 2.85, 15.6, F + 1.24, m["brass"], segments=12),
@@ -938,6 +962,8 @@ def interiors(m):
         cloth(f"mosquito_net_{k}", AREA, a, b, F + 0.05, F + 1.6, fixed, m["net"], folds=6, depth=0.03, axis=axis)
     empty("marker_yay_mey_room", AREA, (-4.5, 16.5, F))
     box("yaymey_chest", AREA, -3.6, -3.15, 17.3, 17.75, F, F + 0.4, m["lacquer"], edge=0.01)
+    box("yaymey_blanket", AREA, -3.56, -3.19, 17.36, 17.7, F + 0.4, F + 0.47, m["cotton_dirty"], edge=0.02)
+    yaymey_room(m)
     # Sok's room: desk, chair, manuscripts, the gramophone, the chest under loose planks.
     box("sok_desk", AREA, 4.6, 5.8, 16.6, 17.6, F + 0.72, F + 0.76, m["teak"], edge=0.01)
     for lx in (4.65, 5.75):
@@ -957,6 +983,139 @@ def interiors(m):
         box(f"loose_plank_{k}", AREA, 4.1, 4.95, 12.2 + k * 0.21, 12.4 + k * 0.21, F, F + 0.012, m["floor"], tilt=(0, 0.01 * k, 0)) for k in range(3)],
         action="open", requires="brass_key")
     usable("interact_oil_sok", (5.6, 12.0, F + 0.1), lambda: oil_bottle("oil_sok", 5.6, 12.0, F, m), action="pickup", item="oil")
+    vuthy_room(m)
+
+
+def wall_print(name, x, y, z, hw, hh, u0, u1, m):
+    """A framed photograph from the family prints, hung flat on a north wall (facing south)."""
+    box(f"{name}_frame", AREA, x - hw - 0.03, x + hw + 0.03, y + 0.005, y + 0.025, z - hh - 0.03, z + hh + 0.03, m["frame"])
+    mesh_object(f"{name}_print", AREA, [(x - hw, y, z - hh), (x + hw, y, z - hh), (x + hw, y, z + hh), (x - hw, y, z + hh)],
+                [(0, 1, 2, 3)], m["family_prints"], uvs=[(u0, 0.0), (u1, 0.0), (u1, 1.0), (u0, 1.0)])
+
+
+def yaymey_room(m):
+    """The far end of Yay Mey's room, past her net: where she prays, chews betel and keeps
+    her mourning clothes. Her photograph of Kanha, the daughter who left, by the window."""
+    F = FLOOR
+    # A small offering shelf high on the back wall: an incense bowl gone cold, dried
+    # jasmine in a brass vase, her prayer beads hung over the edge.
+    box("yaymey_shelf", AREA, -5.8, -5.05, 21.72, 21.94, F + 1.55, F + 1.59, m["teak"], edge=0.005)
+    for k, x in enumerate((-5.74, -5.14)):
+        box(f"yaymey_shelf_bracket_{k}", AREA, x - 0.015, x + 0.015, 21.8, 21.94, F + 1.4, F + 1.55, m["teak"])
+    lathe("yaymey_incense_bowl", AREA, [(0.0, 0.0), (0.04, 0.0), (0.06, 0.03), (0.065, 0.07), (0.0, 0.06)], -5.6, 21.84, F + 1.59, m["brass"], segments=14)
+    for k in range(4):
+        pole(f"yaymey_incense_stub_{k}", AREA, (-5.6 + 0.012 * (k - 1.5), 21.84, F + 1.64), (-5.6 + 0.02 * (k - 1.5), 21.85, F + 1.72),
+             0.0025, m["incense_burnt"], sides=4)
+    place(AREA, "brass_vase_01", (-5.25, 21.84, F + 1.59), scale=0.5)
+    for k in range(5):
+        pole(f"yaymey_jasmine_stem_{k}", AREA, (-5.25, 21.84, F + 1.68), (-5.25 + 0.03 * (k - 2), 21.84 + 0.01 * k, F + 1.83), 0.003, m["dead_flowers"], sides=4)
+    beads = [(-5.45 + 0.07 * math.sin(t), 21.71, F + 1.57 - 0.16 * (1 - math.cos(t)) / 2) for t in np.linspace(0, math.tau, 25)]
+    tube("yaymey_prayer_beads", AREA, beads, 0.007, m["drum_wood"], sides=5)
+    tube("yaymey_prayer_tassel", AREA, [(-5.45, 21.71, F + 1.41), (-5.45, 21.71, F + 1.34)], 0.006, m["thread"], sides=5, radius_end=0.012)
+    wall_print("yaymey_photo", -3.6, 21.92, F + 1.55, 0.1, 0.14, 0.4, 0.6, m)
+    # Her betel set on the floor by the mat: a lacquer tray, the brass box, the little
+    # mortar she crushes the nut in now her teeth are gone, a spittoon.
+    lathe("yaymey_betel_tray", AREA, [(0.0, 0.0), (0.2, 0.0), (0.22, 0.05), (0.0, 0.04)], -4.9, 17.15, F, m["lacquer"], segments=16)
+    lathe("yaymey_betel_box", AREA, [(0.0, 0.0), (0.07, 0.0), (0.075, 0.06), (0.06, 0.08), (0.0, 0.085)], -4.95, 17.1, F + 0.04, m["brass"], segments=14)
+    lathe("yaymey_mortar", AREA, [(0.0, 0.0), (0.04, 0.0), (0.045, 0.07), (0.035, 0.075), (0.025, 0.03), (0.0, 0.03)], -4.75, 17.25, F + 0.04, m["brass"], segments=12)
+    pole("yaymey_pestle", AREA, (-4.75, 17.25, F + 0.07), (-4.72, 17.3, F + 0.16), 0.008, m["brass"], sides=6)
+    lathe("yaymey_spittoon", AREA, [(0.0, 0.0), (0.07, 0.0), (0.09, 0.08), (0.05, 0.12), (0.1, 0.16), (0.0, 0.15)], -5.5, 17.35, F, m["brass"], segments=12)
+    # A clay water pot and its cup by the head of the mat.
+    lathe("yaymey_water_pot", AREA, [(0.0, 0.0), (0.08, 0.0), (0.12, 0.08), (0.11, 0.17), (0.05, 0.22), (0.055, 0.25), (0.0, 0.24)],
+          -3.45, 15.0, F, m["clay"], segments=14)
+    lathe("yaymey_cup", AREA, [(0.0, 0.0), (0.03, 0.0), (0.04, 0.06), (0.0, 0.05)], -3.3, 15.2, F, m["coconut"], segments=10)
+    # Mourning clothes over a bamboo pole slung from the tie beam: a white blouse, her
+    # krama, a dark sampot, folded once over the pole.
+    pole("yaymey_clothes_pole", AREA, (-5.62, 18.3, F + 1.75), (-5.62, 19.7, F + 1.75), 0.018, m["bamboo"], sides=8)
+    for k, y in enumerate((18.4, 19.6)):
+        tube(f"yaymey_clothes_cord_{k}", AREA, [(-5.62, y, F + 1.75), (-5.94, y, ZW - 0.05)], 0.004, m["rope"], sides=4)
+    for k, (a, b, drop, mat) in enumerate(((18.45, 18.95, 0.7, "cotton"), (19.0, 19.3, 0.55, "krama"), (19.32, 19.65, 0.95, "cotton_dirty"))):
+        cloth(f"yaymey_hung_{k}", AREA, a, b, F + 1.74 - drop, F + 1.74, -5.6, m[mat], folds=3, depth=0.025, axis="y", segments=(8, 8))
+    # A second, rolled mat for the hot season, and the stick she walks with now.
+    z = F + 0.09 * math.cos(math.pi / 10)
+    tube("yaymey_rolled_mat", AREA, [(-5.8, 21.55, z), (-4.9, 21.55, z)], 0.09, m["mat"], sides=10, metres_per_v=1.0)
+    pole("yaymey_walking_stick", AREA, (-3.2, 18.2, F), (-3.07, 18.3, F + 0.95), 0.014, m["worn"], sides=6)
+    collider("yaymey_shelfside", AREA, -5.8, -4.9, 21.4, 21.7, F, F + 0.2)
+
+
+def vuthy_room(m):
+    """Vuthy's room behind Sok's: the grandson Yay Mey half raised. He left for town
+    tonight and took his lantern; what stays is a young clerk's room: a low writing
+    table with the account book and the letter to his late mother's family, the money
+    he sends them, his town clothes and the trunk he keeps them in."""
+    F = FLOOR
+    # His sleeping mat along the east wall, the net knotted up out of the way.
+    box("vuthy_mat", AREA, 4.75, 5.85, 19.95, 21.8, F, F + 0.03, m["mat"])
+    box("vuthy_pillow", AREA, 4.95, 5.65, 21.35, 21.72, F + 0.03, F + 0.13, m["cotton"], edge=0.03)
+    box("vuthy_blanket", AREA, 4.85, 5.75, 20.1, 20.55, F + 0.03, F + 0.09, m["krama"], edge=0.02)
+    lathe("vuthy_net_knot", AREA, [(0.0, 0.0), (0.08, 0.05), (0.13, 0.25), (0.1, 0.5), (0.04, 0.62), (0.0, 0.64)], 5.3, 20.85, F + 1.5, m["net"], segments=10)
+    tube("vuthy_net_cord", AREA, [(5.3, 20.85, F + 2.14), (5.3, 20.85, ZW - 0.05)], 0.004, m["rope"], sides=4)
+    # The low writing table under the back window and the cushion he kneels on.
+    box("vuthy_table", AREA, 3.35, 4.45, 21.2, 21.8, F + 0.31, F + 0.35, m["teak"], edge=0.006)
+    for lx in (3.4, 4.4):
+        for ly in (21.25, 21.75):
+            box(f"vuthy_table_leg_{lx:.1f}_{ly:.2f}", AREA, lx - 0.025, lx + 0.025, ly - 0.025, ly + 0.025, F, F + 0.31, m["teak"])
+    collider("vuthy_table", AREA, 3.35, 4.45, 21.2, 21.8, F, F + 0.35)
+    box("vuthy_cushion", AREA, 3.6, 4.15, 20.6, 21.05, F, F + 0.08, m["cushion"], edge=0.025)
+    t = F + 0.35
+    place(AREA, "vintage_oil_lamp", (4.25, 21.65, t), scale=0.85)
+    # The account book, open, and the letter he did not finish; ink pot and pen.
+    box("vuthy_ledger_cover", AREA, 3.5, 3.92, 21.3, 21.6, t, t + 0.006, m["worn"])
+    for k, (a, b) in enumerate(((3.51, 3.7), (3.72, 3.91))):
+        box(f"vuthy_ledger_page_{k}", AREA, a, b, 21.31, 21.59, t + 0.006, t + 0.016 - 0.003 * k, m["paper"], tilt=(0, 0.03 * (1 - 2 * k), 0))
+    box("vuthy_letter", AREA, 3.95, 4.15, 21.25, 21.5, t, t + 0.002, m["paper"], tilt=(0, 0, 0.15))
+    lathe("vuthy_ink_pot", AREA, [(0.0, 0.0), (0.025, 0.0), (0.028, 0.03), (0.012, 0.04), (0.0, 0.04)], 4.05, 21.65, t, m["glaze"], segments=10)
+    pole("vuthy_pen", AREA, (3.98, 21.55, t + 0.005), (4.12, 21.6, t + 0.01), 0.004, m["teak"], sides=5)
+    # The cloth purse of coins he sends to his mother's people, tied shut, and three loose.
+    lathe("vuthy_purse", AREA, [(0.0, 0.0), (0.05, 0.005), (0.055, 0.035), (0.02, 0.06), (0.03, 0.08), (0.0, 0.08)], 3.45, 21.7, t, m["cotton_dirty"], segments=10)
+    for k in range(3):
+        lathe(f"vuthy_coin_{k}", AREA, [(0.0, 0.0), (0.016, 0.0), (0.016, 0.003), (0.0, 0.003)], 3.55 + 0.035 * k, 21.25 + 0.02 * (k % 2), t, m["brass"], segments=10)
+    wall_print("vuthy_photo", 3.5, 21.92, F + 1.45, 0.1, 0.14, 0.6, 0.8, m)
+    # His town clothes on pegs on the partition: a white shirt, dark trousers, a krama.
+    for k, (cx, drop, mat) in enumerate(((4.15, 0.75, "cotton"), (4.75, 1.0, "cotton_dirty"), (5.35, 0.6, "krama"))):
+        pole(f"vuthy_peg_{k}", AREA, (cx, 18.04, F + 1.75), (cx, 18.15, F + 1.75), 0.012, m["post"], sides=4)
+        cloth(f"vuthy_cloth_{k}", AREA, cx - 0.2, cx + 0.2, F + 1.74 - drop, F + 1.74, 18.1, m[mat], folds=3, depth=0.03, segments=(8, 8))
+    # The trunk in the corner, a brass clasp, a folded sarong on its lid.
+    box("vuthy_trunk", AREA, 5.15, 5.85, 18.3, 18.85, F, F + 0.45, m["lacquer"], edge=0.012)
+    box("vuthy_trunk_clasp", AREA, 5.46, 5.54, 18.28, 18.3, F + 0.32, F + 0.42, m["brass"])
+    box("vuthy_sarong", AREA, 5.25, 5.75, 18.4, 18.75, F + 0.45, F + 0.5, m["cloth_red"], edge=0.015)
+    collider("vuthy_trunk", AREA, 5.15, 5.85, 18.3, 18.85, F, F + 0.45)
+    # By the door, the iron hook where his lantern hangs: empty, the boards above it sooted.
+    tube("vuthy_lantern_hook", AREA, [(3.0, 20.35, F + 1.82), (3.09, 20.35, F + 1.82), (3.1, 20.35, F + 1.76), (3.07, 20.35, F + 1.74)],
+         0.005, m["iron"], sides=4)
+    box("vuthy_hook_soot", AREA, 3.0, 3.004, 20.2, 20.5, F + 1.9, F + 2.35, m["soot"])
+
+
+def bathing_corner(m):
+    """Under the back of the house by the rear stairs, the household's bathing place
+    (no bathroom in a 1930s village house): a woven bamboo screen round a slatted floor
+    over the mud, the big jar of rainwater and the coconut-shell dipper. The latrine
+    stands far off in the trees."""
+    x0, x1, y0, y1, h = 3.25, 5.75, 18.75, 21.75, 1.8
+    T = 0.05
+    wall("bath_screen_n", AREA, x0, x1, y1 - T, y1, 0, h, m["bamboo_wall"], surface="dirt")
+    wall("bath_screen_e", AREA, x1 - T, x1, y0, y1, 0, h, m["bamboo_wall"], surface="dirt")
+    wall("bath_screen_s", AREA, x0, x1, y0, y0 + T, 0, h, m["bamboo_wall"], surface="dirt")
+    wall("bath_screen_w", AREA, x0, x0 + T, y0, y1, 0, h, m["bamboo_wall"], gaps=[(19.1, 20.1, h)], surface="dirt")
+    for k, (x, y) in enumerate(((x0, y0), (x1, y0), (x0, y1), (x1, y1), (x0, 19.1), (x0, 20.1))):
+        pole(f"bath_stake_{k}", AREA, (x, y, -0.1), (x, y, h + 0.08), 0.035, m["bamboo"], metres=2.0)
+    # Bamboo slats over two sleepers, the mud dark and wet beneath.
+    box("bath_wet_ground", AREA, x0 + 0.1, x1 - 0.1, y0 + 0.1, y1 - 0.1, 0.0, 0.004, m["mud"])
+    for k, x in enumerate((3.55, 5.0)):
+        box(f"bath_sleeper_{k}", AREA, x - 0.05, x + 0.05, 19.1, 21.05, 0.0, 0.08, m["post_rough"])
+    for k in range(13):
+        y = 19.15 + k * 0.145
+        box(f"bath_slat_{k}", AREA, 3.4, 5.15, y, y + 0.11, 0.08, 0.105, m["bamboo"], tilt=(0, 0.004 * (k % 3 - 1), 0))
+    collider("bath_slats", AREA, 3.4, 5.15, 19.15, 21.05, 0.0, 0.105, surface="teak")
+    # The rainwater jar in the back corner, open, a shell dipper on a stick across it.
+    water_jar("bath_jar", AREA, 5.3, 21.3, m, scale=1.15, lid=False)
+    collider("bath_jar", AREA, 4.88, 5.72, 20.88, 21.72, 0, 1.0)
+    lathe("bath_dipper", AREA, [(0.0, 0.0), (0.06, 0.005), (0.08, 0.04), (0.085, 0.07), (0.0, 0.065)], 5.12, 21.12, 1.0, m["coconut"], segments=10)
+    pole("bath_dipper_handle", AREA, (5.12, 21.12, 1.05), (4.8, 20.85, 1.12), 0.012, m["bamboo"], sides=6)
+    # A low stool to sit on, a krama over the screen, a clay pot of ash for scrubbing.
+    box("bath_stool", AREA, 4.2, 4.5, 20.2, 20.5, 0.105, 0.3, m["worn"], edge=0.01)
+    cloth("bath_krama", AREA, 4.0, 4.6, h - 0.45, h + 0.04, y0 + 0.08, m["krama"], folds=3, depth=0.02, segments=(8, 6))
+    lathe("bath_ash_pot", AREA, [(0.0, 0.0), (0.06, 0.0), (0.08, 0.06), (0.06, 0.12), (0.0, 0.11)], 3.55, 21.45, 0.105, m["clay"], segments=12)
 
 
 def oil_bottle(name, x, y, z, m):
@@ -1020,8 +1179,8 @@ def under_house(m):
         w = lathe(f"toy_wheel_{k}", AREA, [(0.0, -0.008), (0.04, -0.008), (0.04, 0.008), (0.0, 0.008)], 0, 0, 0, m["worn"], segments=10)
         w.location = (dx, dy, 0.04)
         w.rotation_euler = (math.radians(90), 0, 0)
-    for k, (x, y) in enumerate([(-6, 10), (6, 10), (6, 18), (-6, 18), (0, 14)]):
-        empty(f"patrol_roamer_{k:02d}", AREA, (x * 0.7, y + (0.6 if y < 14 else -0.6 if y > 14 else 0), 0))
+    for k, (x, y) in enumerate([(-6, 10), (6, 10), (6, 22), (-6, 22), (0, 16)]):
+        empty(f"patrol_roamer_{k:02d}", AREA, (x * 0.7, y + (0.6 if y == 10 else -0.6 if y == 22 else 0), 0))
     empty("spawn_under_house", AREA, (0, 9.0, 0), (0, 0, 0), checkpoint="CP5")
     # Between the pillars, clear of the jars and the roamer's round.
     ritual_traces(AREA, m, -1.5, 12.0, rng)
@@ -1199,7 +1358,7 @@ def house_details(m):
     collider("footwash_jar", AREA, 9.35, 9.95, 9.3, 9.9, 0, 0.65)
     lathe("footwash_ladle", AREA, [(0.0, -0.06), (0.06, -0.05), (0.08, 0.0)], 9.62, 9.58, 0.72, m["coconut"], segments=10)
     sandals(AREA, m, [(9.5, 10.5, 1.6), (9.9, 10.9, 1.3), (9.3, 11.2, 1.9)])
-    for k, (x, y) in enumerate(((-6.7, 19.3), (6.7, 19.3), (-6.7, 8.7))):
+    for k, (x, y) in enumerate(((-6.7, HOUSE["y1"] + 1.3), (6.7, HOUSE["y1"] + 1.3), (-6.7, 8.7))):
         water_jar(f"rain_jar_{k}", AREA, x, y, m, scale=1.1, lid=False)
         collider(f"rain_jar_{k}", AREA, x - 0.4, x + 0.4, y - 0.4, y + 0.4, 0, 0.95)
     # Mourning clothes on a line between the back posts.
@@ -1216,19 +1375,10 @@ def house_details(m):
         cobweb(f"house_web_{k}", AREA, m, corner, right, down, 0.75)
     # Rain off the roof's eaves.
     eave(2, (-6.9, 9.1, 4.35), (6.9, 9.1, 4.35))
-    eave(3, (-6.9, 18.9, 4.35), (6.9, 18.9, 4.35))
+    eave(3, (-6.9, HOUSE["y1"] + 0.9, 4.35), (6.9, HOUSE["y1"] + 0.9, 4.35))
     F = FLOOR
-    # The hall's mantel clock on its own shelf (the hands are the model's; stopping them at 8:12 comes with the beats).
-    place(AREA, "mantel_clock_01", (-1.6, 17.8, F + 1.24), rot_deg=180)
-    box("clock_shelf", AREA, -1.9, -1.3, 17.7, 17.94, F + 1.2, F + 1.24, m["teak"])
-    # The family's old photographs (the group, the mother, the eldest daughter), faded.
-    # With them, high by the altar as images of monks are hung, a young monk at Angkor.
-    for k, (fx, fz, hw, hh, u0, u1) in enumerate(((2.15, F + 1.8, 0.2, 0.14, 0.0, 0.4), (-2.3, F + 1.75, 0.1, 0.14, 0.4, 0.6),
-                                                  (-2.0, F + 1.98, 0.1, 0.14, 0.6, 0.8), (1.1, F + 1.95, 0.1, 0.14, 0.8, 1.0))):
-        box(f"family_frame_{k}", AREA, fx - hw - 0.03, fx + hw + 0.03, 17.93, 17.95, fz - hh - 0.03, fz + hh + 0.03, m["frame"])
-        y = 17.925
-        mesh_object(f"family_print_{k}", AREA, [(fx - hw, y, fz - hh), (fx + hw, y, fz - hh), (fx + hw, y, fz + hh), (fx - hw, y, fz + hh)],
-                    [(0, 1, 2, 3)], m["family_prints"], uvs=[(u0, 0.0), (u1, 0.0), (u1, 1.0), (u0, 1.0)])
+    # Like the altar itself, what stands round it moved with the back wall.
+    shifted(ALTAR_DY, lambda: hall_by_altar(m))
     # Papers on the east wall of the hall (T_ep1_house_papers_BC, pixel rectangles as
     # in tools/drawings/village.mjs): the merchant's calendar for 1932 on a nail, Sok's
     # school certificate framed over the shelf; the head-tax receipt on the shelf.
@@ -1272,12 +1422,28 @@ def house_details(m):
     # A hanging lamp in the hall, unlit; rice baskets and a betel set by the altar.
     tube("hall_lamp_cord", AREA, [(0.0, 14.5, ZW + 1.5), (0.0, 14.5, F + 2.04)], 0.004, m["rope"], sides=4)
     place(AREA, "Lantern_01", (0.0, 14.5, F + 1.75))
-    for k, (bx, by) in enumerate(((1.6, 17.5), (2.0, 17.3))):
+
+
+def hall_by_altar(m):
+    """The clock, the old photographs, rice baskets and the betel set by the ancestral altar."""
+    F = FLOOR
+    # The hall's mantel clock on its own shelf (the hands are the model's; stopping them at 8:12 comes with the beats).
+    place(AREA, "mantel_clock_01", (-1.6, 17.8, F + 1.24), rot_deg=180)
+    box("clock_shelf", AREA, -1.9, -1.3, 17.7, 17.94, F + 1.2, F + 1.24, m["teak"])
+    # The family's old photographs (the group, the mother, the eldest daughter), faded.
+    # With them, high by the altar as images of monks are hung, a young monk at Angkor.
+    for k, (fx, fz, hw, hh, u0, u1) in enumerate(((2.15, F + 1.8, 0.2, 0.14, 0.0, 0.4), (-2.3, F + 1.75, 0.1, 0.14, 0.4, 0.6),
+                                                  (-2.0, F + 1.98, 0.1, 0.14, 0.6, 0.8), (1.1, F + 1.95, 0.1, 0.14, 0.8, 1.0))):
+        box(f"family_frame_{k}", AREA, fx - hw - 0.03, fx + hw + 0.03, 17.93, 17.95, fz - hh - 0.03, fz + hh + 0.03, m["frame"])
+        y = 17.925
+        mesh_object(f"family_print_{k}", AREA, [(fx - hw, y, fz - hh), (fx + hw, y, fz - hh), (fx + hw, y, fz + hh), (fx - hw, y, fz + hh)],
+                    [(0, 1, 2, 3)], m["family_prints"], uvs=[(u0, 0.0), (u1, 0.0), (u1, 1.0), (u0, 1.0)])
+    for k, (bx, by) in enumerate(((-1.6, 17.45), (-2.05, 17.25))):
         place(AREA, "wicker_basket_02", (bx, by, F), rot_deg=50 * k, scale=1.6)
     usable("interact_betel_tray", (1.1, 16.9, F + 0.05), lambda: lathe(
         "hall_betel_tray", AREA, [(0.0, 0.0), (0.18, 0.0), (0.2, 0.05), (0.0, 0.04)], 1.1, 16.9, F, m["lacquer"], segments=14),
         action="pickup", item="betel_tray")
-    lathe("hall_spittoon", AREA, [(0.0, 0.0), (0.07, 0.0), (0.09, 0.08), (0.05, 0.12), (0.1, 0.16), (0.0, 0.15)], 1.45, 16.6, F, m["brass"], segments=12)
+    lathe("hall_spittoon", AREA, [(0.0, 0.0), (0.07, 0.0), (0.09, 0.08), (0.05, 0.12), (0.1, 0.16), (0.0, 0.15)], 0.8, 16.65, F, m["brass"], segments=12)
 
 
 def cooking_shelter(m):
@@ -1383,12 +1549,14 @@ def build():
     house_details(m)
     from house_decay import house_decay
     house_decay(AREA, m)
-    from rural_detail import rural_details
-    rural_details(AREA)
     interiors(m)
     under_house(m)
+    bathing_corner(m)
     cooking_shelter(m)
     shed(m)
+    # Last: it re-weaves the shed and re-details the stairs, traps and umbrellas built above.
+    from rural_detail import rural_details
+    rural_details(AREA)
 
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
