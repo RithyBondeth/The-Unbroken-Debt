@@ -10,6 +10,7 @@ import type { BusName, SpatialOptions } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
 import * as sounds from "../audio/prologueSounds";
 import { DreadScore } from "../audio/DreadScore";
+import { PhoneBell } from "../audio/PhoneBell";
 import { studioRoom } from "../audio/dreadSounds";
 import { newGameSave } from "../../../systems/saves/SaveData";
 import { INK_BLOT_ENTRY, KIT, LINES, STARTING_MATCHES, TIMING, type Line } from "../data/prologue";
@@ -59,6 +60,8 @@ export class Prologue {
   private score = new DreadScore(null);
   private drawerOpen = false;
   private ringing = false;
+  private bell = new PhoneBell(null);
+  private room: StaticSound | null = null;
   private playTime = 0;
   private wasFlashing = false;
   private readonly taking = new Set<string>();
@@ -162,6 +165,7 @@ export class Prologue {
     this.rain?.update(dt, this.lights.lightning.intensity / 60);
     this.ink.update(dt);
     this.score.update(dt);
+    this.bell.update(dt);
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
     // Thunder follows each flash after a few seconds (sound travels about 1 km in 3 s).
     const flashing = this.lights.flashing;
@@ -182,7 +186,7 @@ export class Prologue {
     });
     await this.makeSounds();
 
-    // P01: rain, the clock, the desk lamp. Pencil hints if the player sits still.
+    // P01: rain, the storm and the desk lamp. Pencil hints if the player sits still.
     void game.fade.to(0, 3);
     game.cutscene = false;
     game.interaction.allow = (id) => id === ILLUSTRATION || id === "interact_save_studio";
@@ -207,15 +211,11 @@ export class Prologue {
     game.flags.set("ep1.kit.collected", true);
 
     if (!game.flags.has("ep1.clock.stopped")) {
-      // The room closes in, then the clock and the candle die on the sting's hit.
-      this.score.pressure(0.3);
-      await this.wait(Math.max(0, TIMING.dreadDelay - this.score.lead("rise")));
-      this.score.sting("rise");
-      await this.wait(this.score.lead("rise"));
+      // Lightning, and the clock and the candle die with it. Until the phone
+      // rings the studio is heard through the storm alone: rain and thunder.
+      await this.wait(TIMING.dreadDelay);
       this.lights.strike();
       void this.ink.spill(2.4);
-      this.play("candle");
-      this.play("clockStop");
       game.flags.set("ep1.clock.stopped", "20:12");
       game.satchel.close();
       game.sketchbook?.write(INK_BLOT_ENTRY);
@@ -224,8 +224,6 @@ export class Prologue {
       game.hints.show("hint.sketchbook", 8);
     } else void this.ink.spill(0.01);
     this.lights.snuffCandle();
-    this.sfx.get("clock")?.stop();
-    this.score.pressure(0.45);
 
     // P06: the telephone rings until Sora answers.
     if (!game.flags.get("ep1.phone.answered", false)) {
@@ -235,8 +233,9 @@ export class Prologue {
       game.sketchbook?.close();
       game.satchel.close();
       this.ringing = true;
+      this.room?.play();
       this.score.pressure(0.6);
-      this.sfx.get("ring")?.play();
+      this.bell.start();
       setTimeout(() => {
         if (this.ringing) game.hints.show("hint.phone");
       }, 5000);
@@ -275,7 +274,7 @@ export class Prologue {
     const game = this.game;
     this.ringing = false;
     game.hints.performed("hint.phone");
-    this.sfx.get("ring")?.stop();
+    this.bell.stop();
     game.cutscene = true;
     game.gated.holdStill = true;
     this.node("telephone_earpiece")?.setEnabled(false);
@@ -543,13 +542,6 @@ export class Prologue {
     const desk = at(ILLUSTRATION, new Vector3(-3, 0.9, -0.7));
     const list: [string, SoundMaker, BusName, Vector3, SpatialOptions][] = [
       ["rain", sounds.rainLoop, "ambience", window, { loop: true, minDistance: 3, volume: 0.8 }],
-      [
-        "clock",
-        sounds.clockLoop,
-        "sfx",
-        markers.get("clock")?.position ?? desk,
-        { loop: true, volume: 0.35 },
-      ],
       ["ring", sounds.phoneRing, "sfx", at(PHONE, desk), { loop: true, minDistance: 2 }],
       [
         "static",
@@ -569,22 +561,20 @@ export class Prologue {
       ["pen", sounds.penScratch, "sfx", desk, { volume: 0.6 }],
       ["pickup", sounds.pickUp, "sfx", desk, { volume: 0.6 }],
       ["drawer", sounds.drawerOpen, "sfx", at(DRAWER, desk), { volume: 0.8 }],
-      ["candle", sounds.candleOut, "sfx", this.lights.candle.position, { volume: 0.7 }],
-      ["clockStop", sounds.clockStop, "sfx", markers.get("clock")?.position ?? desk, {}],
       ["train", sounds.trainPassing, "ambience", desk, { minDistance: 20 }],
     ];
     // A small plastered room: Sora's own steps and the telephone ring in it.
     audio.setSpace("studio", 0);
     const sampleRate = audio.context.sampleRate;
-    // The room's own air, and Phnom Penh beyond the rain.
-    const room = await audio.sound(
+    // The room's own air, and Phnom Penh beyond the rain: it joins with the phone.
+    const room = (this.room = await audio.sound(
       "studio_room",
       audio.buffer(studioRoom(sampleRate), sampleRate),
       "room",
       0.55,
-    );
+    ));
     room.loop = true;
-    room.play();
+    if (this.game.flags.get("ep1.phone.answered", false)) room.play();
     this.loops.push(room);
     this.score = new DreadScore(audio);
     await this.score.load();
@@ -601,12 +591,13 @@ export class Prologue {
     );
     list.forEach(([name, , , , options], i) => {
       this.sfx.set(name, made[i]);
-      if (options.loop && (name === "rain" || name === "clock")) {
+      if (options.loop && name === "rain") {
         made[i].play();
         this.loops.push(made[i]);
       }
     });
     this.loops.push(made[list.findIndex(([n]) => n === "static")]);
+    this.bell = new PhoneBell(this.sfx.get("ring") ?? null);
   }
 
   /** Plays a one-shot; `position` moves it first (the train plays at Sora's ears). */

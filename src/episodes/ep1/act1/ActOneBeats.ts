@@ -20,6 +20,7 @@ import { ArrivalProgress } from "./ArrivalProgress";
 import { DocumentReader } from "../../../ui/html/DocumentReader";
 import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
+import { PhoneBell } from "../audio/PhoneBell";
 import { checkpointName } from "../../../systems/saves/Checkpoints";
 
 /** CP2's clear aisle at the south end of the pavilion, facing the house. */
@@ -30,7 +31,7 @@ export class ActOneBeats {
   readonly progress: VigilProgress;
   readonly arrival: ArrivalProgress;
   private readonly note = new DocumentReader(ARRIVAL_NOTE, "Mak Yey’s instructions");
-  private ring: StaticSound | null = null;
+  private bell = new PhoneBell(null);
   private line: StaticSound | null = null;
   private readonly sok: VillageDoor;
   private readonly shed: VillageDoor;
@@ -85,12 +86,14 @@ export class ActOneBeats {
     if (!audio) return;
     const rate = audio.context.sampleRate;
     const at = this.sok.marker.position;
-    this.ring = await audio.spatialSound(
-      "arrival_phone_ring",
-      audio.buffer(phoneRing(rate, seededRandom(96)), rate),
-      "sfx",
-      this.arrivalModels.phone.position,
-      { minDistance: 5, volume: 0.7, loop: true },
+    this.bell = new PhoneBell(
+      await audio.spatialSound(
+        "arrival_phone_ring",
+        audio.buffer(phoneRing(rate, seededRandom(96)), rate),
+        "sfx",
+        this.arrivalModels.phone.position,
+        { minDistance: 4, volume: 0.55, loop: true },
+      ),
     );
     this.line = await audio.spatialSound(
       "arrival_phone_line",
@@ -127,10 +130,12 @@ export class ActOneBeats {
 
   async begin(): Promise<void> {
     this.started = true;
-    if (!this.arrival.called) this.ring?.play();
-    if (this.game.flags.get("ep1.arrival.road", false)) return;
-    await this.dialogue(ARRIVAL.road);
-    this.game.flags.set("ep1.arrival.road", true);
+    // The hall phone starts once Sora has taken in the road, not over her words.
+    if (!this.game.flags.get("ep1.arrival.road", false)) {
+      await this.dialogue(ARRIVAL.road);
+      this.game.flags.set("ep1.arrival.road", true);
+    }
+    if (!this.arrival.called) this.bell.start();
   }
 
   update(dt: number): void {
@@ -139,6 +144,7 @@ export class ActOneBeats {
     this.sok.update(dt);
     this.shed.update(dt);
     this.progress.update(dt);
+    this.bell.update(dt);
     const game = this.game;
     const feet = game.player.feet;
     this.arrivalModels.updateTelephoneCord(game.hands.phoneCordPoint);
@@ -197,7 +203,7 @@ export class ActOneBeats {
   private async call(): Promise<void> {
     if (this.busy || this.arrival.called) return;
     this.busy = true;
-    this.ring?.stop();
+    this.bell.stop();
     this.line?.play();
     this.arrivalModels.receiver.setEnabled(false);
     this.game.hands.holdPhone(true);
