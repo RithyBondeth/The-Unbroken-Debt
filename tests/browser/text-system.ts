@@ -39,6 +39,7 @@ async function preview(): Promise<void> {
     ending: "Ending",
     map: "Ending map",
     summary: "Ending summary",
+    credits: "Credits",
     choice: "Story choice",
     caught: "Caught",
     entry: "Entry",
@@ -143,11 +144,17 @@ async function preview(): Promise<void> {
       break;
     }
     case "ending":
+    case "credits":
     case "map":
     case "summary":
     case "choice": {
       const resolution = new ResolutionView();
       if (view === "map") await resolution.map();
+      else if (view === "credits")
+        await resolution.credits(
+          ["Episode 1 · The House of Mourning", "Created by Rithy Bondeth"],
+          ["Episode summary", "Export completion save"],
+        );
       else if (view === "summary") {
         const flags = new Flags();
         flags.set("lore.ep1.L1", true);
