@@ -2,6 +2,7 @@ import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
 import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "../../src/episodes/ep1/audio/DreadScore";
+import { PhoneBell } from "../../src/episodes/ep1/audio/PhoneBell";
 import { Flags } from "../../src/core/Flags";
 
 it.each([
@@ -59,6 +60,7 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     ink: { inkLine: vi.fn(), spill: vi.fn() },
     sfx: new Map(),
     score: new DreadScore(null),
+    bell: new PhoneBell(null),
     ringing: false,
     makeSounds: vi.fn(),
     idleHints: vi.fn(),
@@ -72,6 +74,9 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     used: vi.fn((id: string) => {
       if (id === "interact_telephone") {
         expect(state.ringing).toBe(true);
+        // Only rain and thunder are heard before the phone: no clock, candle or dread sting.
+        expect(state.play).not.toHaveBeenCalled();
+        expect(sting).not.toHaveBeenCalled();
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
         order.push("phone");
@@ -79,6 +84,7 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
       return Promise.resolve();
     }),
   };
+  const sting = vi.spyOn(state.score, "sting");
   vi.useFakeTimers();
   try {
     const run = Reflect.get(Prologue.prototype, "run") as (this: typeof state) => Promise<void>;
