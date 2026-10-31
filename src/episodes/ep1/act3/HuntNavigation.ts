@@ -6,13 +6,13 @@ export class HuntNavigation {
   readonly radius = 0.36;
   private readonly step = 0.35;
   private readonly width = 33;
-  private readonly depth = 23;
+  private readonly depth = 35;
   private readonly cells: Vector3[] = [];
   private readonly open: boolean[] = [];
   constructor(readonly obstacles: readonly GroundObstacle[] = HUNT_OBSTACLES) {
     for (let z = 0; z < this.depth; z++)
       for (let x = 0; x < this.width; x++) {
-        const at = new Vector3(-5.6 + x * this.step, 0, -17.6 + z * this.step);
+        const at = new Vector3(-5.6 + x * this.step, 0, -21.6 + z * this.step);
         this.cells.push(at);
         this.open.push(this.walkable(at));
       }
@@ -21,7 +21,7 @@ export class HuntNavigation {
     return (
       at.x >= -5.85 &&
       at.x <= 5.85 &&
-      at.z >= -17.8 &&
+      at.z >= -21.8 &&
       at.z <= -9.65 &&
       !this.obstacles.some(
         (b) =>

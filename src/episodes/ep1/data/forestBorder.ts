@@ -25,7 +25,7 @@ export const ROAD_Z = 63.5;
 const PADDIES = { minZ: 60.5, maxZ: 86.5 };
 /** Raised bunds close the fields east and west, inside the walls' thicket. */
 const BUND_X = 33.5;
-export const YARD: Rect = { minX: -13, maxX: 13, minZ: -22, maxZ: 3 };
+export const YARD: Rect = { minX: -13, maxX: 13, minZ: -27, maxZ: 3 };
 export const PATH: readonly (readonly [number, number])[] = [
   [-1.5, 60],
   [-2.5, 50],
@@ -369,7 +369,7 @@ function inRing(x: number, z: number, nearDepth: number): boolean {
 export function inBelt(x: number, z: number): boolean {
   if (!inside(PLAY, x, z, 2.5)) return false;
   const sides = Math.abs(x) >= 14.5 && z > -33 && z < 6;
-  const rear = z <= -23.5;
+  const rear = z <= -28.5;
   return (sides || rear) && !inside(YARD, x, z, -1.8) && pathDistance(x, z) > 3;
 }
 

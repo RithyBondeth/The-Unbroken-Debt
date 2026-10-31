@@ -34,7 +34,7 @@ async function review(): Promise<void> {
   document.getElementById("turn")?.addEventListener("click", () => game.sketchbook?.turn(1));
   document.getElementById("tray")?.addEventListener("click", () => {
     if (game.sketchbook?.isOpen) game.sketchbook.toggle();
-    game.player.teleport(new Vector3(0, 2.5, -16.25), Math.PI);
+    game.player.teleport(new Vector3(0, 2.5, -20.25), Math.PI);
     game.player.pitch = 1.0;
     act.vigil.lamp.light();
     if (arranged) return use("interact_altar");
