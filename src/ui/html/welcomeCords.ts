@@ -19,7 +19,7 @@ const LAYERS: Record<CordPresence, string> = {
  * the same formula, so the blood beads stay on their cords.
  */
 function offset(x: number, y: number, t: number, thrash: number): number {
-  const reach = smooth(0.66, 0.5, y) * smooth(0.46, 0.56, x);
+  const reach = smooth(0.66, 0.5, y) * smooth(0.0, 0.05, x);
   const sway = Math.sin(0.7 * t + x * 4 + y * 2) * 2.4 + Math.sin(0.43 * t + x * 7.3) * 1.2;
   const tremble = Math.sin(x * 90 + t * 31) * Math.sin(x * 23 - t * 7) * 0.5;
   const wave = Math.sin(x * 28 - t * 40) * 7 * thrash;
@@ -47,7 +47,7 @@ uniform float thrash;
 uniform vec2 altar;
 varying vec2 uv;
 void main() {
-  float reach = smoothstep(0.66, 0.5, uv.y) * smoothstep(0.46, 0.56, uv.x);
+  float reach = smoothstep(0.66, 0.5, uv.y) * smoothstep(0.0, 0.05, uv.x);
   float sway = sin(0.7 * t + uv.x * 4.0 + uv.y * 2.0) * 2.4 + sin(0.43 * t + uv.x * 7.3) * 1.2;
   float tremble = sin(uv.x * 90.0 + t * 31.0) * sin(uv.x * 23.0 - t * 7.0) * 0.5;
   float wave = sin(uv.x * 28.0 - t * 40.0) * 7.0 * thrash;
@@ -144,7 +144,7 @@ export function animateCords(frame: HTMLElement, signal: AbortSignal): CordLayer
   const lows = CORDS.map((cord) =>
     cord.reduce((best, p, i) => (p[1] > cord[best][1] ? i : best), 0),
   );
-  const visible = CORDS.map((cord) => cord.some(([x, y]) => x > 0.5 && y > 0.02 && y < 0.62));
+  const visible = CORDS.map((cord) => cord.some(([x, y]) => x > 0.03 && y > 0.02 && y < 0.62));
   const spawn = (bead: Partial<Bead> = {}): Bead => {
     const options = CORDS.map((_, i) => i).filter((i) => visible[i]);
     const cord = options[Math.floor(Math.random() * options.length)];
