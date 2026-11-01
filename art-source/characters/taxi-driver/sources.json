@@ -1,0 +1,155 @@
+[
+  {
+    "file": "short02.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short02/short02.obj",
+    "zipOffset": 254729374,
+    "compressedSize": 50161,
+    "method": 8,
+    "sha256": "48f979114adfa712165a69cc55c45a70831af1fb3cba8e2a89120f0c87407b64"
+  },
+  {
+    "file": "short02.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short02/short02.mhclo",
+    "zipOffset": 254779617,
+    "compressedSize": 43333,
+    "method": 8,
+    "sha256": "625736cdb73e6d094df6e5a2df18f371781f1d2cd37b0ae15795c5d7051c3ec2"
+  },
+  {
+    "file": "short02_diffuse.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short02/short02_diffuse.png",
+    "zipOffset": 254823762,
+    "compressedSize": 3526253,
+    "method": 8,
+    "sha256": "47fe33831a3929567c733356dd66243116e05df2ace1f884ddca0080b728229f"
+  },
+  {
+    "file": "short02_normal.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short02/short02_normal.png",
+    "zipOffset": 258350105,
+    "compressedSize": 1608604,
+    "method": 8,
+    "sha256": "2cfac7619f8eec77dd90df979d912415058f4f0fc16940cba40a8eb1ae6d74b5"
+  },
+  {
+    "file": "eyebrow002.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyebrows/eyebrow002/eyebrow002.obj",
+    "zipOffset": 273171477,
+    "compressedSize": 2874,
+    "method": 8,
+    "sha256": "7fe4e036311c41802bd6889acb02d1b06184a0dd759ac72e1d9fba1037243667"
+  },
+  {
+    "file": "eyebrow002.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyebrows/eyebrow002/eyebrow002.mhclo",
+    "zipOffset": 273073551,
+    "compressedSize": 2993,
+    "method": 8,
+    "sha256": "550781113f5c3971e7e200450d7d94e2290d43e9449a42667d2bf972c1eb0593"
+  },
+  {
+    "file": "eyebrow002.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyebrows/eyebrow002/eyebrow002.png",
+    "zipOffset": 273076638,
+    "compressedSize": 94747,
+    "method": 8,
+    "sha256": "1de4e4cb69b3f4324390219ffbeb17a0b2555104d3211d1ac667655b69b64038"
+  },
+  {
+    "file": "eyelashes01.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyelashes/eyelashes01/eyelashes01.obj",
+    "zipOffset": 231546946,
+    "compressedSize": 6080,
+    "method": 8,
+    "sha256": "f78f5b93fea1946fcae103d32c4f082dd9612a1ec2e7e2f90b03ebe59b0baf20"
+  },
+  {
+    "file": "eyelashes01.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyelashes/eyelashes01/eyelashes01.mhclo",
+    "zipOffset": 231553121,
+    "compressedSize": 952,
+    "method": 8,
+    "sha256": "5a86b29c15649273d723084954b7fa7bf199112571d4f58539b46734d397ee6b"
+  },
+  {
+    "file": "eyelashes01.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyelashes/eyelashes01/eyelashes01.png",
+    "zipOffset": 231554170,
+    "compressedSize": 90109,
+    "method": 8,
+    "sha256": "4b69c0fff2648874460e9caf80c31413c444218a5c50afebc425aeaa65484a35"
+  },
+  {
+    "file": "high-poly.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyes/high-poly/high-poly.obj",
+    "zipOffset": 280592672,
+    "compressedSize": 29513,
+    "method": 8,
+    "sha256": "da2493215b708a344c33dc72f2a9a5b8fa985dcc5a70ad3b208995cf871da8e1"
+  },
+  {
+    "file": "high-poly.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyes/high-poly/high-poly.mhclo",
+    "zipOffset": 280642520,
+    "compressedSize": 21322,
+    "method": 8,
+    "sha256": "b183cfe37120ab726f9b3f2ea6cd3a64c44ce7b4bd91a77c841cf70c04f83a0d"
+  },
+  {
+    "file": "brown_eye.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "eyes/materials/brown_eye.png",
+    "zipOffset": 277130389,
+    "compressedSize": 607878,
+    "method": 8,
+    "sha256": "4659691c7295ad6206c78b003e5fd0e5f91dcd53032fa914a229bb48cabe424b"
+  },
+  {
+    "file": "male_casualsuit01.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "clothes/male_casualsuit01/male_casualsuit01.obj",
+    "zipOffset": 214284560,
+    "compressedSize": 232791,
+    "method": 8,
+    "sha256": "001921d237e408c35103720d046aa37f9c5512db1a179a5ede6a065cd504ba89"
+  },
+  {
+    "file": "male_casualsuit01.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "clothes/male_casualsuit01/male_casualsuit01.mhclo",
+    "zipOffset": 213331495,
+    "compressedSize": 199174,
+    "method": 8,
+    "sha256": "78503ed7f56c149843d85e06e1164bc6871ce7319b2ef689237046352cc90de4"
+  },
+  {
+    "file": "male_casualsuit01_diffuse.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "clothes/male_casualsuit01/male_casualsuit01_diffuse.png",
+    "zipOffset": 206036483,
+    "compressedSize": 5525333,
+    "method": 8,
+    "sha256": "3fd0bba5dcbdea0ac427f644a6c7c298938f7369b8f96626621ce1e88989394e"
+  },
+  {
+    "file": "male_casualsuit01_normal.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "clothes/male_casualsuit01/male_casualsuit01_normal.png",
+    "zipOffset": 211561929,
+    "compressedSize": 1729674,
+    "method": 8,
+    "sha256": "ff029fc5a3350ebc72813cdf050afcffd23064c7701d99e664572713cfa98a5f"
+  }
+]

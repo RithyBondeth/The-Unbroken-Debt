@@ -144,3 +144,33 @@ export function taxiWipers(rate: number, random: () => number): Float32Array {
   for (let i = 0; i < n; i++) out[i] += hiss[i] * 0.01;
   return normalise(wrapLoop(out, rate, 0.3), 0.32);
 }
+
+/**
+ * The clockwork taximeter on the dash, a 6 s loop: its escapement ticking four
+ * times a second in a tin case, and once a loop the fare drum turning over with
+ * a dull clunk and a ratchet.
+ */
+export function taxiMeter(rate: number, random: () => number): Float32Array {
+  const n = Math.round(rate * 6),
+    ticks = new Float32Array(n),
+    drum = new Float32Array(n);
+  for (let k = 0; k < 24; k++) {
+    // Tick and tock differ a little, as an escapement's two pallets do.
+    ticks[Math.round((k * 0.25 + 0.01) * rate)] = (k % 2 ? 0.7 : 1) * (0.85 + 0.15 * random());
+  }
+  drum[Math.round(4.6 * rate)] = 1;
+  for (let k = 0; k < 5; k++) drum[Math.round((4.62 + k * 0.025) * rate)] = 0.25;
+  const tin = modal(ticks, rate, [
+    [Math.min(3300, rate * 0.4), 0.004, 1],
+    [Math.min(5100, rate * 0.4), 0.002, 0.4],
+    [1400, 0.006, 0.3],
+  ]);
+  const clunk = modal(drum, rate, [
+    [410, 0.05, 1],
+    [930, 0.02, 0.5],
+    [Math.min(2600, rate * 0.4), 0.006, 0.3],
+  ]);
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = tin[i] * 0.5 + clunk[i] * 0.8;
+  return normalise(biquad(out, rate, "highpass", 180, 0.7), 0.6);
+}

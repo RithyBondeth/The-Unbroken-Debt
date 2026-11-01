@@ -13,15 +13,18 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Plane } from "@babylonjs/core/Maths/math.plane";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
+import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
+import { taxiDriverFace, type DriverFace } from "./taxiDriver";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { SpotLight } from "@babylonjs/core/Lights/spotLight";
 import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
 import { realiseInstances } from "../../../core/AreaLoader";
+import { mergeStaticMeshes } from "../../../render/StaticBatcher";
 import { addStaticBox } from "../../../core/Physics";
 import { buildTaxiRoadside } from "./TaxiRoadside";
 import { StormSky } from "../act1/StormSky";
@@ -34,27 +37,56 @@ import { gradeJungle } from "../act1/jungleGrade";
 import { TaxiRain } from "./TaxiRain";
 import {
   taxiDistance,
-  taxiRoadX,
   taxiRoadPose,
   taxiRouteChunkVisible,
   taxiSpeed,
+  taxiRoadPoint,
   taxiWiperAngle,
 } from "./taxiMotion";
+import {
+  TAXI_RITUAL_ALONG,
+  TAXI_RITUAL_LATERAL,
+  taxiFlinch,
+  taxiRunnerAt,
+  taxiSwerve,
+} from "./taxiApparitions";
+
+/** The running form and its smear: lag behind the lead (s) and how solid each is. */
+const RUNNER_TRAIL = [
+  [0, 1],
+  [0.022, 0.42],
+  [0.045, 0.18],
+] as const;
+/** Not the shrine's lacquer: something closer to a hole in the headlights. */
+const RUNNER_BLACK = new Color3(0.004, 0.004, 0.005);
 
 /** Authored cabin, Act I foliage/materials, physical headlights and the same storm grade. */
 export class TaxiVisuals {
-  private readonly route: TransformNode;
+  readonly route: TransformNode;
   private readonly routeChunks: { mesh: Mesh; minZ: number; maxZ: number; active: boolean }[] = [];
   private readonly wipers: TransformNode[] = [];
   private readonly sky: StormSky;
   private readonly flash: DirectionalLight;
   private readonly rain: TaxiWeather;
   private readonly glass: TaxiRain;
-  private readonly watcher: ShadowFigure;
   private readonly dialTexture: DynamicTexture;
   private dialIn = 0;
   private readonly mirror: MirrorTexture;
   private readonly waterRipples: Texture;
+  private readonly runners: ShadowFigure[] = [];
+  private readonly candlelight: PointLight;
+  private readonly flames: PBRMaterial[] = [];
+  private readonly charm: TransformNode | null;
+  private readonly charmSwing = { side: 0, sideRate: 0, pitch: 0, pitchRate: 0 };
+  private readonly driver: TransformNode | null = null;
+  private lastYaw = 0;
+  private lastSpeed = 6.8;
+  private readonly blinkTargets: MorphTarget[] = [];
+  /** The driver's other baked shapes by name, eased towards taxiDriverFace each frame. */
+  private readonly faceTargets = new Map<keyof DriverFace, MorphTarget[]>();
+  private readonly face: DriverFace = { talk: 0, look_road: 0, look_sora: 0, nod: 0, grip: 0 };
+  private blinkAt = -10;
+  private nextBlink = 1.4;
 
   private constructor(
     private readonly game: Game,
@@ -272,12 +304,50 @@ export class TaxiVisuals {
     const face = cabinMeshes.find((m) => m.name.includes("taxi_mirror_surface"));
     if (face) face.material = mirrorMaterial;
     this.rain = new TaxiWeather(scene, game.preset.name === "low");
-    this.watcher = new ShadowFigure(scene, "taxi_roadside_watcher", 2.05);
-    this.watcher.root.parent = route;
-    const watcherZ = taxiDistance(35.8) + 14;
-    this.watcher.root.position.set(taxiRoadX(watcherZ) + 3.7, 0, watcherZ);
-    this.watcher.root.rotation.y = -Math.PI * 0.75;
-    this.watcher.root.setEnabled(false);
+    for (const [index] of RUNNER_TRAIL.entries()) {
+      const form = new ShadowFigure(scene, `taxi_road_runner_${index}`, 2.1);
+      form.root.parent = route;
+      form.root.setEnabled(false);
+      form.darken(RUNNER_BLACK, true);
+      this.runners.push(form);
+    }
+    // Candles still burning at the rite: one warm, guttering light for the whole ring.
+    const rite = taxiRoadPoint(TAXI_RITUAL_LATERAL, TAXI_RITUAL_ALONG);
+    this.candlelight = new PointLight(
+      "taxi_rite_candlelight",
+      new Vector3(rite.x, 0.35, rite.z),
+      scene,
+    );
+    this.candlelight.parent = route;
+    this.candlelight.diffuse.set(1, 0.58, 0.26);
+    this.candlelight.specular.set(0.4, 0.25, 0.1);
+    this.candlelight.range = 9;
+    this.candlelight.intensity = 0;
+    for (const material of scene.materials)
+      if (material instanceof PBRMaterial && material.name === "M_taxi_ritual_flame")
+        this.flames.push(material);
+    this.charm = scene.getTransformNodeByName("taxi_mirror_charm_pivot");
+    if (this.charm) this.charm.rotationQuaternion ??= Quaternion.Identity();
+    // The driver's body as one piece, pivoting at his hips on the seat.
+    const anatomy = cabinMeshes.find((m) => m.name.includes("taxi_driver_anatomy"));
+    if (anatomy) {
+      const box = anatomy.getBoundingInfo().boundingBox;
+      const pivot = new TransformNode("taxi_driver_pivot", scene);
+      pivot.position.set(box.centerWorld.x, box.minimumWorld.y + 0.42, box.centerWorld.z - 0.1);
+      for (const mesh of cabinMeshes) if (/taxi_driver/.test(mesh.name)) mesh.setParent(pivot);
+      this.driver = pivot;
+      for (const mesh of cabinMeshes)
+        if (/taxi_driver/.test(mesh.name) && mesh.morphTargetManager)
+          for (let i = 0; i < mesh.morphTargetManager.numTargets; i++) {
+            const target = mesh.morphTargetManager.getTarget(i);
+            if (target.name === "blink") this.blinkTargets.push(target);
+            else if (target.name in this.face) {
+              const list = this.faceTargets.get(target.name as keyof DriverFace) ?? [];
+              list.push(target);
+              this.faceTargets.set(target.name as keyof DriverFace, list);
+            }
+          }
+    }
     for (const material of scene.materials)
       if (material instanceof PBRMaterial) material.maxSimultaneousLights = 8;
     for (const mesh of cabinMeshes) {
@@ -295,14 +365,52 @@ export class TaxiVisuals {
       ShadowFigure.prepare(scene),
     ]);
     cabin.addAllToScene();
-    for (const material of cabin.materials)
-      if (material instanceof PBRMaterial && material.name === "M_taxi_dashboard_walnut")
-        material.albedoColor.scaleInPlace(3);
+    for (const material of cabin.materials) {
+      if (!(material instanceof PBRMaterial)) continue;
+      if (material.name === "M_taxi_dashboard_walnut") {
+        // Old varnished walnut: a dark grain under a clear lacquer that catches the lightning.
+        material.albedoColor.scaleInPlace(1.6);
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = 0.65;
+        material.clearCoat.roughness = 0.18;
+      }
+      if (material.name === "M_taxi_driver_skin") {
+        // Light through the ears and fingers; a soft sheen of sweat rather than plastic.
+        material.subSurface.isTranslucencyEnabled = true;
+        material.subSurface.translucencyIntensity = 0.35;
+        material.subSurface.tintColor = new Color3(0.95, 0.45, 0.32);
+        material.roughness = 0.52;
+      }
+      if (material.name === "M_taxi_driver_eye") {
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = 1;
+        material.clearCoat.roughness = 0.04;
+      }
+    }
     for (const material of cabin.materials)
       if (material instanceof PBRMaterial && material.name === "M_taxi_window_glass")
         material.specularIntensity = 0.03;
     realiseInstances(cabin);
-    const cabinMeshes = cabin.meshes.filter((m) => m.getTotalVertices() > 0);
+    // Six hundred small authored parts would each be drawn twice (scene and mirror):
+    // batch the static trim by material, keeping apart what moves or is re-textured.
+    const apart = /taxi_driver|taxi_charm|taxi_mirror_surface|taxi_instrument_face/;
+    const trim = cabin.meshes.filter(
+      (m): m is Mesh =>
+        m instanceof Mesh &&
+        m.getTotalVertices() > 0 &&
+        !apart.test(m.name) &&
+        !m.morphTargetManager,
+    );
+    const batched = mergeStaticMeshes(trim, {
+      cellSize: 100,
+      group: (mesh) => mesh.getVerticesDataKinds().sort().join(","),
+    });
+    const cabinMeshes = [
+      ...batched,
+      ...cabin.meshes.filter(
+        (m) => m.getTotalVertices() > 0 && !m.isDisposed() && !trim.includes(m as Mesh),
+      ),
+    ];
     for (const material of roadside.materials)
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
@@ -330,7 +438,8 @@ export class TaxiVisuals {
     g.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
     g.atmosphere.nightSight.range = 2.8;
     g.atmosphere.nightSight.excludedMeshes.push(this.glass.glass);
-    g.camera.maxZ = 60;
+    // Far enough for the painted forest walls on both sides; fog closes beyond.
+    g.camera.maxZ = 85;
     if (g.pipeline.fog) {
       g.pipeline.fog.density = NIGHT_LOOK.fogDensity;
       g.pipeline.fog.heightFalloff = 0.25;
@@ -352,9 +461,13 @@ export class TaxiVisuals {
         chunk.active = active;
       }
     }
-    const pose = taxiRoadPose(distance);
-    this.route.rotation.y = pose.yaw;
-    this.route.position.set(pose.x, 0, pose.z);
+    // A swerve turns the car, so the world turns about the passenger instead of the route origin.
+    const pose = taxiRoadPose(distance),
+      swerve = taxiSwerve(t),
+      c = Math.cos(swerve),
+      s = Math.sin(swerve);
+    this.route.rotation.y = pose.yaw + swerve;
+    this.route.position.set(pose.x * c + pose.z * s, 0, -pose.x * s + pose.z * c);
     this.flash.intensity = flash * 3;
     this.sky.update(flash, g.pipeline.main.imageProcessing.exposure, dt);
     for (const wiper of this.wipers) wiper.rotation.z = angle;
@@ -362,12 +475,15 @@ export class TaxiVisuals {
     this.waterRipples.uOffset = t * 0.009;
     this.waterRipples.vOffset = t * 0.006;
     this.rain.update(t, speed, flash);
-    this.watcher.root.setEnabled(t > 35.8 && t < 39.0);
-    this.watcher.animate(t, 0);
+    this.updateRunners(t);
+    this.updateRite(t, distance);
+    this.updateCabinLife(dt, t, speed, flash);
     // Small suspension movement, tied to speed, leaves mouse look independent of the car body.
     const bump = (Math.sin(t * 5.6) * 0.0028 + Math.sin(t * 9.9 + 0.7) * 0.0012) * (speed / 6.8);
-    g.camera.position.y = g.player.feet.y + 1.31 + bump;
-    g.camera.rotation.z = (Math.sin(t * 1.15) * 0.003 + Math.sin(t * 3.1) * 0.001) * (speed / 6.8);
+    const flinch = taxiFlinch(t);
+    g.camera.position.y = g.player.feet.y + 1.31 + bump - flinch * 0.014;
+    g.camera.rotation.z =
+      (Math.sin(t * 1.15) * 0.003 + Math.sin(t * 3.1) * 0.001) * (speed / 6.8) + swerve * 0.25;
     this.dialIn -= dt;
     if (this.dialIn <= 0) {
       this.dialIn = 0.1;
@@ -375,6 +491,97 @@ export class TaxiVisuals {
     }
     g.atmosphere.update(dt, 0.22 + flash * 0.3);
   }
+  /** Where the clockwork meter sits on the dash, for its ticking. */
+  meterPosition(): Vector3 {
+    const meter = this.game.scene.meshes.find((m) => m.name.startsWith("taxi_meter_case"));
+    meter?.computeWorldMatrix(true);
+    return meter
+      ? meter.getBoundingInfo().boundingBox.centerWorld.clone()
+      : new Vector3(0.27, 1.17, 1.13);
+  }
+
+  /** Each pass: the lead form and two fainter copies a beat behind it, smeared by speed. */
+  private updateRunners(t: number): void {
+    RUNNER_TRAIL.forEach(([lag, solid], i) => {
+      const form = this.runners[i],
+        pose = taxiRunnerAt(t, lag);
+      form.root.setEnabled(pose !== null);
+      if (!pose) return;
+      const edge = Math.min(1, pose.progress / 0.1, (1 - pose.progress) / 0.12);
+      form.setPresence(solid * edge);
+      form.root.position.set(pose.x, -0.12, pose.z);
+      form.root.rotation.set(0.32, pose.heading, 0);
+      form.animate(t * 4.4, 1, 0);
+    });
+  }
+
+  /** Candle flames gutter in the rain; their light reaches only while the rite is near. */
+  private updateRite(t: number, distance: number): void {
+    const near = Math.max(0, 1 - Math.abs(distance - TAXI_RITUAL_ALONG) / 70),
+      gutter =
+        0.78 +
+        0.12 * Math.sin(t * 13.1) +
+        0.07 * Math.sin(t * 23.7 + 1.3) +
+        0.05 * Math.sin(t * 41.9);
+    this.candlelight.intensity = near * 3.4 * gutter;
+    for (const flame of this.flames) flame.emissiveIntensity = 0.7 + 0.3 * gutter;
+  }
+
+  /**
+   * The cabin is not a still life: the charm on the mirror swings with every bend,
+   * bump and stab of the brake, and the driver breathes, then flinches.
+   */
+  private updateCabinLife(dt: number, t: number, speed: number, flash: number): void {
+    if (dt <= 0) return;
+    const yaw = this.route.rotation.y,
+      turnRate = (yaw - this.lastYaw) / dt,
+      braking = (speed - this.lastSpeed) / dt;
+    this.lastYaw = yaw;
+    this.lastSpeed = speed;
+    if (this.charm?.rotationQuaternion) {
+      // A short pendulum (about 0.15 m) pushed by the car's turning and braking.
+      const k = 64,
+        damping = 1.4,
+        swing = this.charmSwing,
+        jolt = Math.sin(t * 9.9 + 0.7) * 0.6 * (speed / 6.8);
+      swing.sideRate +=
+        (-k * swing.side - damping * swing.sideRate - turnRate * speed * 4 + jolt) * dt;
+      swing.side += swing.sideRate * dt;
+      swing.pitchRate += (-k * swing.pitch - damping * swing.pitchRate + braking * 4) * dt;
+      swing.pitch += swing.pitchRate * dt;
+      swing.side = Math.max(-0.6, Math.min(0.6, swing.side));
+      swing.pitch = Math.max(-0.5, Math.min(0.5, swing.pitch));
+      Quaternion.FromEulerAnglesToRef(swing.pitch, 0, swing.side, this.charm.rotationQuaternion);
+    }
+    // He blinks every few seconds, twice in quick succession now and then, and
+    // screws his eyes half shut when something crosses the road.
+    if (t < this.blinkAt) this.blinkAt = t - 1;
+    if (t - this.blinkAt > this.nextBlink) {
+      this.blinkAt = t;
+      const beat = Math.sin(t * 12.9898) * 43758.5453;
+      this.nextBlink = beat - Math.floor(beat) < 0.2 ? 0.32 : 2.2 + (beat - Math.floor(beat)) * 3.4;
+    }
+    const since = t - this.blinkAt,
+      lid = since < 0.07 ? since / 0.07 : since < 0.22 ? 1 - (since - 0.07) / 0.15 : 0;
+    for (const target of this.blinkTargets) target.influence = Math.max(lid, taxiFlinch(t) * 0.55);
+    // Lips, glances, nods and his hand on the wheel follow the conversation.
+    const want = taxiDriverFace(t),
+      follow = 1 - Math.exp(-dt / 0.12);
+    for (const name of Object.keys(this.face) as (keyof DriverFace)[]) {
+      // The jaw follows syllables closely; the head turns more slowly.
+      this.face[name] +=
+        (want[name] - this.face[name]) *
+        (name === "talk" ? Math.min(1, follow * 1.4) : follow * 0.6);
+      for (const target of this.faceTargets.get(name) ?? []) target.influence = this.face[name];
+    }
+    if (this.driver) {
+      const flinch = taxiFlinch(t);
+      this.driver.rotation.x = Math.sin(t * 1.45) * 0.006 - flinch * 0.06 - flash * 0.01;
+      this.driver.rotation.y = flinch * 0.05;
+      this.driver.rotation.z = Math.sin(t * 0.37) * 0.004;
+    }
+  }
+
   private paintDials(speed: number): void {
     const c = this.dialTexture.getContext() as CanvasRenderingContext2D;
     c.fillStyle = "#111712";

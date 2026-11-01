@@ -21,7 +21,9 @@ export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
   const root = new TransformNode("taxi_continuous_route", scene);
   for (const mesh of landscape) {
     mesh.unfreezeWorldMatrix();
-    mesh.parent = root;
+    // A plant alone in its cell is not merged: it still hangs under the glTF
+    // root's handedness flip, so keep its world placement when re-parenting.
+    mesh.setParent(root);
     mesh.isPickable = false;
     mesh.receiveShadows = true;
   }
