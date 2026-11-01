@@ -14,6 +14,11 @@ import type { GameEvents } from "../../core/events";
 
 /** How far Sora can reach to use something, in metres. */
 const REACH = 1.8;
+/**
+ * Small things need not sit exactly under the centre of the view: anything within
+ * this angle of it, in reach and in plain sight, is focused when the ray hits nothing usable.
+ */
+const AIM_ASSIST = Math.cos((7 * Math.PI) / 180);
 
 /** Warm ivory complements the lamp and remains legible on dark wood. */
 const OUTLINE = new Color4(0.82, 0.74, 0.57, 0);
@@ -56,6 +61,7 @@ export class Interaction {
   private readonly reducedMotion =
     typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
   private readonly ray = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
+  private readonly sight = new Ray(Vector3.Zero(), Vector3.Forward(), REACH);
   constructor(
     private readonly scene: Scene,
     private readonly camera: Camera,
@@ -112,8 +118,45 @@ export class Interaction {
     );
     this.distance = hit?.pickedMesh ? hit.distance : Infinity;
     const target = hit?.pickedMesh ? this.byMesh.get(hit.pickedMesh.uniqueId) : undefined;
-    this.setFocus(target && this.allow(target.id) ? target : null);
+    this.setFocus(target && this.allow(target.id) ? target : this.nearMiss(this.distance));
     this.updateHints();
+  }
+
+  /**
+   * The usable thing closest to the centre of the view, within the aim-assist cone,
+   * in reach, not behind whatever the ray hit (`blocked` metres away) and not hidden
+   * behind anything else.
+   */
+  private nearMiss(blocked: number): Target | null {
+    const eye = this.ray.origin,
+      forward = this.ray.direction;
+    let best: Target | null = null,
+      bestCos = AIM_ASSIST;
+    for (const target of this.targets.values()) {
+      if (!this.allow(target.id)) continue;
+      for (const mesh of target.meshes) {
+        if (!mesh.isEnabled() || mesh.isDisposed()) continue;
+        const sphere = mesh.getBoundingInfo().boundingSphere;
+        const to = sphere.centerWorld.subtract(eye);
+        const distance = to.length();
+        if (distance > REACH || distance - sphere.radiusWorld > blocked + 0.05) continue;
+        const cos = Vector3.Dot(to.scaleInPlace(1 / distance), forward);
+        if (cos <= bestCos) continue;
+        this.sight.origin.copyFrom(eye);
+        this.sight.direction.copyFrom(to);
+        this.sight.length = distance;
+        const seen = this.scene.pickWithRay(
+          this.sight,
+          (m) => m.isEnabled() && m.isVisible && m.isPickable && m.renderingGroupId === 0,
+        );
+        const first = seen?.pickedMesh ? this.byMesh.get(seen.pickedMesh.uniqueId) : undefined;
+        if (seen?.pickedMesh && first !== target && seen.distance < distance - sphere.radiusWorld)
+          continue;
+        best = target;
+        bestCos = cos;
+      }
+    }
+    return best;
   }
 
   /** E: uses the focused object. Returns its id, or null if nothing is in focus. */

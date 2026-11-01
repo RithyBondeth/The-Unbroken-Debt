@@ -13,6 +13,8 @@ import { StormSky } from "./StormSky";
 import { ForestBorder } from "./ForestBorder";
 import { TallGrass } from "./TallGrass";
 import { TreeOmens } from "./TreeOmens";
+import { blendPathGround } from "./PathGround";
+import { GuestTent } from "./GuestTent";
 import { PLAY } from "../data/forestBorder";
 import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
 import { GROUND_MIST } from "../data/forestAtmosphere";
@@ -100,6 +102,7 @@ export class ActOne {
   private resolutionDelay = 0;
   private running = false;
   forest!: ForestAtmosphere;
+  private guests!: GuestTent;
   private lowMist: LowGroundMist | null = null;
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
@@ -184,9 +187,11 @@ export class ActOne {
     const chestModels = new ChestModels(game.scene, this.area);
     const corpseModels = await CorpseModels.load(game.scene, this.area);
     const arrivalModels = new ArrivalModels(game.scene);
+    this.guests = new GuestTent(game.scene, (x, z) => this.border.groundAt(x, z));
     this.sky = new StormSky(game.scene);
     this.lights = new VillageLights(game.scene, this.area, game.camera);
     gradeJungle(game.scene.materials);
+    blendPathGround(game.scene);
     applyFoliageWind(game.scene.materials, game.wind);
     this.windAudio = new WindAudio(game, game.wind, {
       sites: [...this.plantSites, ...this.border.sites],
@@ -253,7 +258,7 @@ export class ActOne {
       Math.max(this.night.threatSilence, this.forest?.silence ?? 0),
     );
     this.forest = new ForestAtmosphere(game);
-    this.apparitions = new Apparitions(game, this.area, this.lights, this.vigil);
+    this.apparitions = new Apparitions(game, this.area, this.lights);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
       game,
@@ -424,6 +429,12 @@ export class ActOne {
       this.chest.update(dt);
       this.ritual.update(dt);
     }
+    this.guests.update(
+      dt,
+      game.camera.globalPosition,
+      this.lights.tentLevel,
+      game.flags.get("ep1.act2.started", false),
+    );
     this.krasue.update(dt, this.early.active || this.apparitions.active);
     // Story scripts get first refusal on the soundscape every frame.
     this.forest.update(
@@ -577,6 +588,7 @@ export class ActOne {
     await this.forest.makeSounds();
     await this.windAudio.makeSounds();
     await this.apparitions.makeSounds();
+    await this.guests.makeSounds(audio);
     await this.betel.makeSounds();
     await this.beats.makeSounds();
     await this.investigation.makeSounds();

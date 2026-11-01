@@ -26,7 +26,7 @@ it.each([
   expect(state.game.flags.get("ep1.phone.answered", false)).toBe(false);
 });
 
-it("puts the automatic notebook away before waiting for the ringing phone", async () => {
+it("rings the phone the moment the kit is packed, without opening the notebook", async () => {
   let bookOpen = false;
   let satchelOpen = true;
   const order: string[] = [];
@@ -45,9 +45,14 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
         },
       },
       sketchbook: {
+        written: new Set<string>(),
         write: () => {
           bookOpen = true;
           order.push("write");
+        },
+        restore: (ids: string[]) => {
+          state.game.sketchbook.written = new Set(ids);
+          order.push("restore");
         },
         close: () => {
           bookOpen = false;
@@ -62,6 +67,8 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     score: new DreadScore(null),
     bell: new PhoneBell(null),
     ringing: false,
+    objectives: { show: vi.fn(), hide: vi.fn() },
+    packingList: () => [],
     makeSounds: vi.fn(),
     idleHints: vi.fn(),
     play: vi.fn(),
@@ -79,6 +86,9 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
         expect(sting).not.toHaveBeenCalled();
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
+        // No pause between the last item and the ring.
+        expect(state.wait).not.toHaveBeenCalled();
+        expect(state.game.hints.show).toHaveBeenCalledWith("hint.phone", 12);
         order.push("phone");
       }
       return Promise.resolve();
@@ -89,7 +99,8 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
   try {
     const run = Reflect.get(Prologue.prototype, "run") as (this: typeof state) => Promise<void>;
     await run.call(state);
-    expect(order).toEqual(["write", "close", "phone"]);
+    expect(order).toEqual(["restore", "close", "phone"]);
+    expect(state.game.sketchbook.written.has("SB-01")).toBe(true);
     expect(state.phoneCall).toHaveBeenCalledOnce();
     expect(state.leave).toHaveBeenCalledOnce();
   } finally {

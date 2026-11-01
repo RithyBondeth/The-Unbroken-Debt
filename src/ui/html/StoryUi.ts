@@ -17,7 +17,23 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-const after = (seconds: number) => new Promise<void>((done) => setTimeout(done, seconds * 1000));
+/** While the game is paused, story timing (subtitles, fades) holds where it is. */
+export const storyClock = { paused: false };
+
+/** Resolves after `seconds` of unpaused time. */
+const after = (seconds: number) =>
+  new Promise<void>((done) => {
+    let left = seconds * 1000;
+    let last = performance.now();
+    const tick = () => {
+      const now = performance.now();
+      if (!storyClock.paused) left -= now - last;
+      last = now;
+      if (left <= 0) done();
+      else setTimeout(tick, Math.min(left, 100));
+    };
+    setTimeout(tick, Math.min(left, 100));
+  });
 
 /**
  * Control hints with shared type and keycaps that fade: shown the first time an action
@@ -64,6 +80,44 @@ export function subtitleChunks(text: string, max = SUBTITLE_CHARS): string[] {
     else chunks.push(part);
   }
   return chunks.map((c) => c.trim()).filter(Boolean);
+}
+
+export interface Objective {
+  text: string;
+  /** Ticked off: shown struck through. */
+  done?: boolean;
+  /** An item under the line above it. */
+  sub?: boolean;
+}
+
+/**
+ * What to do now, in the top-left corner: one line, or a short checklist that
+ * ticks itself off, so the next step is never a guess.
+ */
+export class Objectives {
+  private readonly node = element("div", "story-objectives");
+
+  constructor() {
+    this.node.setAttribute("role", "status");
+    this.node.setAttribute("aria-live", "polite");
+  }
+
+  show(lines: readonly Objective[]): void {
+    const list = document.createElement("ul");
+    for (const line of lines) {
+      const item = document.createElement("li");
+      item.textContent = line.text;
+      item.classList.toggle("done", !!line.done);
+      item.classList.toggle("sub", !!line.sub);
+      list.append(item);
+    }
+    this.node.replaceChildren(list);
+    this.node.classList.add("shown");
+  }
+
+  hide(): void {
+    this.node.classList.remove("shown");
+  }
 }
 
 /** Bottom centre, at most two lines, with the speaker's name (section 6.3). */
