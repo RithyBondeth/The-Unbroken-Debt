@@ -53,3 +53,75 @@ The latest pass widens the track from 4.4 to 5.6 metres. Plant placement checks 
 There are 218 shallow water patches, including 48 broad flooded pools across the carriageway. Their surface sits above the mud crown, with a matching reflection plane, subtle drifting surface normals and the existing storm reflections. Markers follow the wider shoulder. The optimized roadside GLB is 11,578,352 bytes, within 12 MiB.
 
 Validation: all 356 unit tests pass with two workers; the 17 taxi asset/batching/motion checks include a regression over exported vegetation footprints, road width and visible water elevation. ESLint, TypeScript and the production build pass. Moving browser inspection recorded no console errors. Evidence: `docs/evidence/taxi-clear-water/road.png`.
+
+## Dread pass: jungle road, roadside rite, running forms and soundscape
+
+**Road.** The laterite cart track has two deep wheel ruts with mud pushed up beside them, a grassy centre hump (11,000 blades in tufts), a crumbling edge into flooded ditches on both sides, 900 pebbles of gravel, and the existing rut pools. A colonial telegraph line follows the left verge: tarred posts every 38–47 m, cross-arms with glass insulators and two sagging wires; some posts lean and one arm hangs broken. Three milestones mark the route. Track and ground use shared smooth normals.
+
+**Forest.** The roadside now uses the village's old-growth jungle (the same `tree_*` giants with lianas, `dead_*` snags, termite mounds, `jungle_understory` and leaf litter, sedge, ferns and shrubs) in four layers: giants at 4–9.5 m, young growth, an unshadowed middle wall of decimated crowns and a far wall. Bananas no longer appear in the forest. Omens line the road: rotting crocodile flags, threads strung through the trees, incense and candles at trunk feet, and two Ting Mong guarding the village approach.
+
+**Roadside rite (advisor review).** At 212 m on Sora's side (passed around 28–31 s, while the driver says people don't wait beside this road): a dead tree bound in white cloth; the spirit house with ground offerings; flags; a Ting Mong facing the road; bamboo poles with long white banners; and a ring of ten stakes and white cord (the lowest cord snapped). Inside lies a banana-stem raft carrying a life-size effigy bound in white cloth, its face covered and a red cloth over its feet, with banana-leaf cones, an incense bowl and fourteen lit candles. A guttering point light and flickering flame emission light it in the rain. It is written as a sending-away rite left at the forest edge. It is not desecrated: the horror is that it is fresh and unattended. The rite, cloth wraps, the effigy, the mirror yantra and the blessing threads all need cultural-advisor review.
+
+**Cabin and driver.** Added a mirror charm (jasmine garland with a red tassel, prayer beads, and a folded yantra cloth with ruled diagrams but no script) on a pivot that swings with bends, bumps and braking; a mechanical taximeter with its flag up; and what the morning's mourners left behind (a white lotus bud and a coil of blessing thread on the rear bench, a bundle of incense on the floor). The driver wears a checked red krama with a knot and tails, white blessing threads at the wrist, and a cap refitted to his head. His head is turned past Sora toward the trees on her side. At runtime he breathes, flinches at the crossing and the slap, and the car swerves.
+
+**Running forms.** `taxiApparitions.ts` times three passes of the black Neak Ta form. Each is a lightless (unlit, near-black) copy of the ShadowFigure with two fainter trailing copies as a speed smear:
+- **Glimpse (19.4 s):** it runs between the trunks on the driver's side.
+- **Crossing (46.9 s):** it crosses the road 8 m ahead in 0.62 s, silhouetted by a lightning flash, while the driver says not to call to it. He lifts off the throttle, brakes and swerves.
+- **Overtake (57.3 s):** it sprints up Sora's side, slaps her window when level with it, and veers into the trees ahead under lightning.
+
+**Sound.** `TaxiSoundscape` adds the following over the engine, wipers, rain, wind and DreadScore:
+- Frogs and crickets, muffled by the car body. They fall silent from 22 s around the rite and the watcher, return, then stop again just before the overtake.
+- The dash radio hissing between stations. It surges whenever something is near.
+- Wordless whispers and flags snapping, placed at the rite as the car passes.
+- For the crossing: a stereo rush with Doppler and slapping feet, a shock sting on the beat, the brakes slithering, the driver's gasp, ringing ears and thunder.
+- For the overtake: sprinting feet placed on the runner, then the slap on Sora's window with a shock sting.
+- Thunder for the other two lightning flashes.
+
+All sounds are synthesised in `taxiDreadSounds.ts`. Like the rest of the score, they contain no chant or bell.
+
+**Budgets.** Roadside textures for set dressing are capped at 512 px, with prop relief maps at 256 px (`optimise-taxi.mjs`). The roadside GLB is 11.1 MB (limit 12 MiB) and the cabin 5.8 MB (limit 6 MiB). In the moving ride the forest draws about 2.8 M triangles in 680 draw calls (previously 2.2 M in 800).
+
+**Fixes found on the way.**
+- Primitive spheres carried a second UV map, which broke batching.
+- A roadside mesh left alone in its batch cell lost its glTF handedness parent and appeared inside the car. `buildTaxiRoadside` now re-parents with `setParent`.
+
+Tests: `taxiApparitions.test.ts` covers pass timing, the road crossing, overtaking at the window, swerve, forest hush, radio surges and throttle. `taxiSounds.test.ts` checks every new sound and the rush's pan and peak. `taxiAssets.test.ts` checks the telegraph line, gravel, ditches, centre grass, the rite pieces and emissive flames, the charm pivot, the krama and the taximeter.
+
+## Real driver and a working taxi's cabin
+
+**Driver.** The driver was a bare MakeHuman body with sphere eyes and a primitive cap. He is rebuilt from fitted CC0 MakeHuman proxies: short combed hair with grey through it, eyebrows, eyelashes, textured brown eyes, and a button shirt and trousers with real folds, re-dyed to washed cotton. The skin under the clothes is removed. The face blend is an adult man rather than an androgynous one. His head is turned past Sora toward the trees on her side, his eyes turned further still. At runtime:
+- he blinks every few seconds (sometimes twice) and screws his eyes half shut at the crossing;
+- the skin gets a little translucency and a softer sheen;
+- the eyes get a wet clear coat.
+
+Sources and the rebuild steps are in `art-source/characters/taxi-driver/README.md`.
+
+**Cabin.**
+- **Seats:** tuck-and-roll front seats with rolled edges, bolsters and piping, and a leather robe rail on their backs. The rear bench has a buttoned back and a centre armrest.
+- **Doors:** cards with walnut capping, pleated panels, chrome strips, carpet kick panels, the shut line, leather pull straps, lock knobs, crank rosettes and rear-door handles.
+- **Roof:** lining bows and seams, a frosted dome lamp, leather assist straps and coat hooks.
+- **Windshield:** a header rail with the vacuum wiper motor and its hose, and a chrome sill.
+- **Rear window:** a roller blind drawn down, with its tassel.
+- **Dash:** an eight-day clock in the glovebox lid, the ignition key with a leather fob, the passenger's grab bar, an ashtray with two butts, and a fare card tucked behind the windshield.
+- **Floor:** a handbrake and gear-lever gaiter, a furled oiled-paper umbrella by Sora's door, and mud and wet leaves tracked onto her mat.
+
+The walnut is darker and varnished (clear coat) instead of glowing. The clockwork meter ticks, and its fare drum turns over (`taxiMeter`), placed at the meter.
+
+**Budgets.** At load the static trim is batched by material, so the cabin now draws in about 120 batches instead of about 620 pieces. The moving ride measured 599 draw calls and 3.1 M triangles, against about 680 before this pass. The cabin GLB is 5.9 MB (limit 6 MiB). The shirt and hair relief maps are capped at 512 and 256 px.
+
+## Grip, krama, a talking driver, endless forest, two runners
+
+**Grip.** Both hands are posed on the rim at nine and three, halfway down the wheel. The rim position is shared with the wheel geometry (`WHEEL_CENTRE`, `WHEEL_FACING`, `WHEEL_RADIUS`). Each palm sits just outside the rim, fingers pointing forward through the wheel and curled back round it, with the thumbs resting up along the inside of the rim. Each hand's IK target is nudged until the hollow of the curled fingers closes on the rim. The wristwatch and wrist threads are removed.
+
+**Krama.** Removed at review, with the wrist threads: he wears only his shirt.
+
+**Talking.** The driver mesh and his hair, brows, lashes, eyes and shirt carry baked shapes: `talk` (MakeHuman mouth-open target), `look_road`, `look_sora`, `nod` and `grip` (two fingers of the near hand lift to tap the rim), plus `blink`. `taxiDriver.ts` turns the conversation clock into weights:
+- **While he speaks:** his jaw moves gently on syllables (about three a second) and closes between words and at line ends. He glances round to Sora as he starts, nods on stressed words and taps two fingers on the rim.
+- **While Sora speaks:** he half turns to listen.
+- **Otherwise:** he watches the road, except while he keeps looking into the trees (20–34 s). The crossing snaps his eyes forward.
+
+`TaxiVisuals` eases each shape towards its weight: the jaw quickly, the head slowly.
+
+**Endless forest.** The roadside adds a sparse row of crowns at 22–31 m and cut-out forest walls of trunks, lianas and canopy at 34 and 44 m on both sides. The ground now runs to 70 m and the camera sees to 85 m, so no horizon opens between the trunks.
+
+**Two runners.** The roadside Neak Ta watcher and the early glimpse are removed. The crossing now lands on the 37.8 s lightning, and Sora's next line refers to it: "Wait—something ran across the road! Did you see that?" The old rising sting is removed so it does not double the crossing's shock. The overtake at Sora's window is unchanged.

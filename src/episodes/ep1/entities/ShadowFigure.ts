@@ -139,6 +139,30 @@ export class ShadowFigure {
     group.add(this);
   }
 
+  /**
+   * Gives this form its own materials, darkened to `albedo` (the eyes keep their
+   * chalk), leaving the shared effigy paint of the other forms untouched. `void`
+   * forms take no light at all: a figure-shaped hole in the headlights.
+   */
+  darken(albedo: Color3, lightless = false): void {
+    const clones = new Map<PBRMaterial, PBRMaterial>();
+    for (const entry of this.fades) {
+      const source = entry.mesh.material as PBRMaterial;
+      if (source.name === "M_ancestor_chalk_eye") continue;
+      let clone = clones.get(source);
+      if (!clone) {
+        clone = source.clone(`${source.name}_${this.root.name}`);
+        clone.albedoColor = albedo.clone();
+        clone.roughness = 0.94;
+        clone.metallic = 0;
+        clone.unlit = lightless;
+        clones.set(source, clone);
+      }
+      entry.mesh.material = clone;
+      entry.plugin = DitheredTileFadeMaterialPlugin.GetOrCreate(clone);
+    }
+  }
+
   /** Opaque dither coverage avoids glass-like overlapping body parts during a fade. */
   setPresence(value: number): void {
     const coverage = Math.max(0, Math.min(1, value));
