@@ -211,11 +211,16 @@ describe("authored taxi assets", () => {
       );
     }
   });
-  it("covers the entire ride and visible horizon without recycled sectors", () => {
-    const bounds = getBounds(road.getRoot().listScenes()[0]);
-    expect(bounds.min[2]).toBeLessThan(-25);
-    expect(bounds.max[2]).toBeGreaterThan(505);
-  });
+  // Bounding the whole decoded road walks every vertex: over 5 s on a busy CI runner.
+  it(
+    "covers the entire ride and visible horizon without recycled sectors",
+    { timeout: 30_000 },
+    () => {
+      const bounds = getBounds(road.getRoot().listScenes()[0]);
+      expect(bounds.min[2]).toBeLessThan(-25);
+      expect(bounds.max[2]).toBeGreaterThan(505);
+    },
+  );
   it("keeps low vegetation outside the widened road and exposes standing water above its crown", () => {
     const lateral = (x: number, z: number) => {
       let t = z;
