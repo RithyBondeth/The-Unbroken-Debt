@@ -18,7 +18,8 @@ import { StudioLights } from "./Studio";
 import { Rain } from "../Rain";
 import { DRAWING_VIEW_RADIUS, drawingFocus } from "../../../player/DrawingPose";
 import { InkMarks } from "./InkMarks";
-import type { StringKey } from "../../../data/strings";
+import { t, type StringKey } from "../../../data/strings";
+import { Objectives, type Objective } from "../../../ui/html/StoryUi";
 import { StudioDetails } from "./StudioDetails";
 import type { SaveData } from "../../../systems/saves/SaveData";
 import { SavePoint } from "../../../systems/saves/SavePoint";
@@ -40,6 +41,14 @@ const KIT_HINTS: Record<(typeof KIT)[number], StringKey> = {
   sketchbook: "hint.packSketchbook",
   matches: "hint.packMatches",
   lamp: "hint.packLamp",
+};
+
+/** The packing checklist: each kit item and where it is in the room. */
+const KIT_PLACES: Record<(typeof KIT)[number], StringKey> = {
+  satchel: "objective.satchel",
+  sketchbook: "objective.sketchbook",
+  matches: "objective.matches",
+  lamp: "objective.lamp",
 };
 
 type SoundMaker = (sampleRate: number, rand: () => number) => Float32Array;
@@ -65,6 +74,7 @@ export class Prologue {
   private playTime = 0;
   private wasFlashing = false;
   private readonly taking = new Set<string>();
+  private readonly objectives = new Objectives();
   details!: StudioDetails;
 
   constructor(private readonly game: Game) {}
@@ -197,6 +207,7 @@ export class Prologue {
     if (!game.resumedSave) await this.saveProgress("Studio · Drafting table");
     // Completed studio beats do not replay after a reload.
     if (!game.flags.get("ep1.illustration.inked", false)) {
+      this.objectives.show([{ text: t("objective.drawing") }]);
       await this.used(ILLUSTRATION);
       game.cutscene = true;
       await this.drawIllustration();
@@ -207,45 +218,43 @@ export class Prologue {
     game.interaction.allow = () => true;
 
     // P03–P04: the drawer, the letters and the kit, in any order (see onUse).
+    this.objectives.show(this.packingList());
     await this.until(() => KIT.every((item) => game.inventory.has(item)));
     game.flags.set("ep1.kit.collected", true);
 
+    // P05–P06: the moment the last thing is packed, lightning, the candle dies,
+    // the ink spills across the drawing, and the telephone rings.
+    game.satchel.close();
     if (!game.flags.has("ep1.clock.stopped")) {
-      // Lightning, and the clock and the candle die with it. Until the phone
-      // rings the studio is heard through the storm alone: rain and thunder.
-      await this.wait(TIMING.dreadDelay);
       this.lights.strike();
       void this.ink.spill(2.4);
       game.flags.set("ep1.clock.stopped", "20:12");
-      game.satchel.close();
-      game.sketchbook?.write(INK_BLOT_ENTRY);
-      await this.saveProgress("Studio · The telephone call");
-      await this.wait(2.5);
-      game.hints.show("hint.sketchbook", 8);
+      // Written into the book quietly: it must not open over the ringing phone.
+      const book = game.sketchbook;
+      if (book && !book.written.has(INK_BLOT_ENTRY))
+        book.restore([...book.written, INK_BLOT_ENTRY]);
+      void this.saveProgress("Studio · The telephone call");
     } else void this.ink.spill(0.01);
     this.lights.snuffCandle();
 
     // P06: the telephone rings until Sora answers.
     if (!game.flags.get("ep1.phone.answered", false)) {
-      await this.wait(TIMING.ringDelay);
-      // The ink-blot entry opens the book automatically. Put it away as the
-      // phone rings so the reading gate cannot silently block answering with E.
       game.sketchbook?.close();
-      game.satchel.close();
       this.ringing = true;
       this.room?.play();
       this.score.pressure(0.6);
       this.bell.start();
-      setTimeout(() => {
-        if (this.ringing) game.hints.show("hint.phone");
-      }, 5000);
+      this.objectives.show([{ text: t("objective.phone") }]);
+      game.hints.show("hint.phone", 12);
       await this.used(PHONE);
       await this.phoneCall();
       await this.saveProgress("Studio · After the phone call");
     }
 
     // P07: out of the door, into the night.
+    this.objectives.show([{ text: t("objective.leave") }]);
     await this.used(DOOR);
+    this.objectives.hide();
     await this.leave();
   }
 
@@ -390,12 +399,7 @@ export class Prologue {
         move(ease);
         if (t >= 1) {
           slide.remove();
-          // Lean toward the exposed contents; movement keys leave inspection.
-          const match = this.node("matchbox");
-          if (match && !this.game.inventory.has("matches")) {
-            this.game.inspectObject(match.getAbsolutePosition(), 0.2);
-            this.game.hints.show("hint.takeMatches", 10);
-          }
+          if (!this.game.inventory.has("matches")) this.game.hints.show("hint.takeMatches", 10);
           void this.saveProgress();
         }
       });
@@ -433,12 +437,19 @@ export class Prologue {
     this.play("pickup");
     game.inventory.add(item, count);
     if (item === "matches") game.hints.performed("hint.takeMatches");
-    // P04: the satchel opens once by itself, to show where things go.
-    if (item === "satchel") {
-      game.toggleSatchel();
-      game.hints.show("hint.satchel", 8);
-    }
+    // Where things go, without opening the satchel over the room (that took E away).
+    if (item === "satchel") game.hints.show("hint.satchel", 6);
+    if (!game.flags.get("ep1.kit.collected", false)) this.objectives.show(this.packingList());
     await this.saveProgress();
+  }
+
+  /** P04: what Sora still has to pack, and where each thing is, ticked off as she takes it. */
+  private packingList(): Objective[] {
+    const inventory = this.game.inventory;
+    return [
+      { text: t("objective.pack") },
+      ...KIT.map((item) => ({ text: t(KIT_PLACES[item]), done: inventory.has(item), sub: true })),
+    ];
   }
 
   captureProgress(): SaveData {

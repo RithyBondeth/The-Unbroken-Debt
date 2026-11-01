@@ -54,10 +54,6 @@ export const TITLE_CARD = { title: "Night 3", khmer: "យប់ទី ៣" };
 export const TIMING = {
   /** P01: pencil hints appear if the player hasn't looked or moved by then. */
   idleHint: 3,
-  /** P05 starts this long after the kit is complete. */
-  dreadDelay: 2.5,
-  /** P06: the telephone rings this long after the ink spills. */
-  ringDelay: 5,
   /** Checkpoint CP1: the carriage arrives at the village at 11:30 PM. */
   cp1Clock: "23:30",
 };
