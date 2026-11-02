@@ -8,6 +8,16 @@ import {
 import { taxiMotor, taxiWipers } from "../../src/episodes/ep1/audio/taxiSounds";
 import { villageRain } from "../../src/episodes/ep1/audio/nightSounds";
 import { thunder } from "../../src/episodes/ep1/audio/prologueSounds";
+import {
+  bambooKnock,
+  carBuffet,
+  crownRustle,
+  frondClatter,
+  gustSwell,
+  leafHiss,
+  trunkGroan,
+  windRoar,
+} from "../../src/episodes/ep1/audio/windSounds";
 
 /** Plays each new or rebuilt Act 0 and Act 1 sound on its own, without loading the game. */
 type Make = (rate: number) => Float32Array | Float32Array[];
@@ -59,6 +69,49 @@ const GROUPS: [string, [string, string, Make, boolean?][]][] = [
             (r: number) => thunder(r, seededRandom(seed)),
           ] as [string, string, Make],
       ),
+    ],
+  ],
+  [
+    "Wind (Episode 1)",
+    [
+      [
+        "Wind roar (stereo)",
+        "The air through the forest, under everything outdoors",
+        (r) => [windRoar(r, seededRandom(7401)), windRoar(r, seededRandom(7402))],
+        true,
+      ],
+      [
+        "Leaf hiss (stereo)",
+        "The canopy's wet leaves, risen and lowered with the gusts",
+        (r) => [leafHiss(r, seededRandom(7403)), leafHiss(r, seededRandom(7404))],
+        true,
+      ],
+      [
+        "Gust swell",
+        "One gust front passing, with its thin howl",
+        (r) => gustSwell(r, seededRandom(7405)),
+      ],
+      [
+        "Crown rustle",
+        "One tree thrashing as a gust reaches it",
+        (r) => crownRustle(r, seededRandom(7420)),
+      ],
+      [
+        "Bamboo knock",
+        "Culms knocking and squealing in the grove",
+        (r) => bambooKnock(r, seededRandom(7422)),
+      ],
+      [
+        "Frond clatter",
+        "Palm fronds and banana leaves",
+        (r) => frondClatter(r, seededRandom(7424)),
+      ],
+      [
+        "Trunk groan",
+        "A trunk taking a hard gust's weight",
+        (r) => trunkGroan(r, seededRandom(7426)),
+      ],
+      ["Taxi buffet", "A gust striking the taxi's body", (r) => carBuffet(r, seededRandom(7409))],
     ],
   ],
 ];

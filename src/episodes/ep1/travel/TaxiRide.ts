@@ -7,8 +7,14 @@ import { thunder } from "../audio/prologueSounds";
 import { villageRain } from "../audio/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
 import { DreadScore } from "../audio/DreadScore";
+import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { taxiConversationAt } from "./taxiConversation";
+import { TaxiSoundscape, taxiThrottle } from "./TaxiSoundscape";
+import { taxiPass, taxiPassBeat } from "./taxiApparitions";
+
+/** Lightning silhouettes the form crossing the beams, and catches it again as it overtakes. */
+const OVERTAKE_FLASH = taxiPassBeat(taxiPass("overtake")) + 0.35;
 
 const TAXI_SECONDS = 72;
 /** The playable journey between CP0 and CP1. Reload resumes the ride, never an empty studio. */
@@ -21,9 +27,10 @@ export class TaxiRide {
   private persisting: Promise<void> = Promise.resolve();
   private readonly loops: StaticSound[] = [];
   private visuals!: TaxiVisuals;
+  private windAudio!: WindAudio;
+  private dread: TaxiSoundscape | null = null;
   private thunder: StaticSound | null = null;
   private score = new DreadScore(null);
-  private stung = false;
   private thunderPlayed = false;
   private skip: HTMLButtonElement | null = null;
 
@@ -37,6 +44,9 @@ export class TaxiRide {
     g.gated.holdStill = true;
     g.interaction.allow = () => false;
     this.visuals = await TaxiVisuals.load(g);
+    // The storm the taxi drives into: gusts off the paddies buffet the car.
+    g.wind.base = 0.62;
+    this.windAudio = new WindAudio(g, g.wind, { vehicle: true });
     if (import.meta.env.DEV) (window as unknown as { taxi: TaxiRide }).taxi = this;
     g.scene.onBeforeRenderObservable.add(() => this.update(g.deltaSeconds));
   }
@@ -52,6 +62,7 @@ export class TaxiRide {
     });
     await this.makeSounds();
     for (const sound of this.loops) sound.play();
+    this.dread?.begin(this.elapsed);
     await g.fade.to(0, 2);
     this.running = true;
     try {
@@ -79,16 +90,21 @@ export class TaxiRide {
         1 - Math.abs(t - 37.8) * 3,
         0.7 - Math.abs(t - 13.4) * 4,
         0.9 - Math.abs(t - 55.7) * 4,
+        0.8 - Math.abs(t - OVERTAKE_FLASH) * 5,
       );
     this.visuals.update(dt, t, flash);
+    this.windAudio.update(dt);
+    this.dread?.update(t);
+    // The engine note follows the driver's foot: off when something crosses, then harder.
+    if (this.loops[0]) this.loops[0].volume = 0.65 * taxiThrottle(t);
     // The driver keeps looking into the forest; something is standing there at 37.8 s.
-    this.score.pressure(t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25);
+    const pressure = t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25;
+    this.score.pressure(pressure);
+    // The roadside falls still in the seconds before it, then the gust comes with the sting.
+    const g = this.game;
+    g.wind.tension = pressure;
+    g.wind.calm = t > 33.5 && t < 37.6 ? Math.min(1, (t - 33.5) / 2) * 0.85 : 0;
     this.score.update(dt);
-    if (t > 37.8 - this.score.lead("rise") && !this.stung) {
-      this.stung = true;
-      // A ride resumed past the figure does not replay its sting.
-      if (t < 37.8) this.score.sting("rise", 0.85);
-    }
     if (t > 37.8 && !this.thunderPlayed) {
       this.thunderPlayed = true;
       this.thunder?.play();
@@ -137,6 +153,8 @@ export class TaxiRide {
     await g.fade.to(1, 2);
     for (const sound of this.loops) sound.stop();
     this.score.stop();
+    this.windAudio.stop();
+    this.dread?.stop();
     await this.persisting;
     const save = this.capture();
     save.checkpoint = "CP1";
@@ -189,6 +207,16 @@ export class TaxiRide {
       0.65,
     );
     this.score = new DreadScore(audio);
+    this.score.onSting = (kind, volume) =>
+      stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
+    await this.windAudio.makeSounds();
+    this.dread = new TaxiSoundscape(
+      audio,
+      this.visuals.route,
+      this.score,
+      this.visuals.meterPosition(),
+    );
+    await this.dread.load();
   }
 }

@@ -3,7 +3,6 @@ import { Axis, Space } from "@babylonjs/core/Maths/math.axis";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
@@ -14,13 +13,10 @@ import type { Area } from "../../../core/AreaLoader";
 import { extrasOf } from "../../../core/LevelBuilder";
 import { seededRandom } from "../../../audio/synth";
 import type { DreadScore } from "../audio/DreadScore";
-import { breathOut, branchSnap, shadowVanish } from "../audio/nightSounds";
-import { limitLightToRange } from "../../../render/RenderSetup";
+import { branchSnap } from "../audio/nightSounds";
+import { ghostRush, mudSprint } from "../audio/taxiDreadSounds";
 import type { VillageLights } from "./VillageLights";
-import type { Vigil } from "./Vigil";
-import { ShadowFigure } from "../entities/ShadowFigure";
-import { SpiritPresence } from "../entities/SpiritPresence";
-import { StalkerVoice } from "../audio/StalkerVoice";
+import { ShadowRunner } from "../entities/ShadowRunner";
 
 /** Blender (x east, y north, z up) to Babylon. */
 const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
@@ -28,35 +24,14 @@ const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
 /** Height of Sora's eyes above her feet (m), to find the ground under her. */
 const EYE = 1.58;
 
-/**
- * Where the figure stands at the Neak Ta shrine (the shrine at (-3.9, -34.9) faces
- * the path): at its south shoulder, where from the path the banyan's trunk is
- * straight behind it.
- */
-const SHRINE_SPOT = at(-5.0, -37.2);
-/** A faint cold glow on the banyan's trunk behind it, so it stands out black. */
-const SHRINE_GLOW = at(-6.1, -36.5, 1.5);
-/** Within this angle of the middle of her view, Sora is looking at it. */
-const LOOKING = Math.cos((22 * Math.PI) / 180);
-
-/** How a standing figure goes: what it waits for, and what it leaves behind. */
-interface Standing {
-  start: number;
-  /** Seconds it has been looked at. */
-  seenFor: number;
-  /** Gone after being looked at straight on this long (or in view this long, if `inView`). */
-  lookFor: number;
-  inView: boolean;
-  /** Gone when she comes this close (m). */
-  near: number;
-  /** Gone unseen after this long (s). */
-  wait: number;
-  sound: StaticSound | null;
-  /** The jolt of a scare as it goes. */
-  scare: boolean;
-  /** A branch snaps beside it once she is this close and hasn't looked yet (m), or 0. */
-  lure: number;
-}
+/** Where the runner's materials are compiled during loading: by the Neak Ta shrine. */
+const WARMUP_SPOT = at(-5.0, -37.2);
+/** How far ahead of Sora a runner crosses (m), how far out to each side it runs, and how fast. */
+const DASH_AHEAD = 8.5;
+const DASH_REACH = 6.5;
+const DASH_SECONDS = 0.62;
+/** ghostRush's nearest point is 0.6 s in: the form crosses her view then. */
+const RUSH_CLOSEST = 0.6;
 
 /** The village figures that turn to watch Sora while she isn't looking. */
 const WATCHERS = /^(tingmong_\d+|neakta_stone_watch)$/;
@@ -89,10 +64,10 @@ interface Passing {
  * statues are its forms), kept to glimpses as the tension curve asks of Act I
  * (Beat Sheet, section 2): one each, and never a catch.
  *
- * - At the shrine: passing the Neak Ta shrine on the path, a tall figure stands
- *   beside it; the moment Sora looks at it straight, it is gone, with a sound.
- * - The watcher: a figure stands by the gate, black against the glowing tent; it
- *   is gone when Sora raises the lamp, comes close, or looks at it too long.
+ * - The runners: twice on the path, a black shadow sprints across it a few
+ *   metres ahead of Sora, faster than a person can run, as on the taxi ride:
+ *   once as she passes the Neak Ta shrine, once before the gate. A rush of air
+ *   tears past her ears, bare feet slap the mud, and lightning catches it.
  * - Behind the cloth: once the incense has died down, lightning throws a figure's
  *   shadow along the tent's back cloth while Sora is inside.
  * - The follower: on the path, steps answer Sora's own a beat late, just behind her,
@@ -103,28 +78,25 @@ interface Passing {
 export class Apparitions {
   /** Environmental false alarms must not compete with an authored presence. */
   get active(): boolean {
-    return !!this.passing || !!this.standing || this.presence.visible || !!this.follower;
+    return !!this.passing || this.runner.running || !!this.follower;
   }
 
   private time = 0;
-  private readonly figure: Mesh;
-  private readonly form: ShadowFigure;
-  private readonly presence = new SpiritPresence();
-  private readonly voice = new StalkerVoice(0.32);
-  private attention = 0;
-  private shrineGlow = false;
-  private readonly glow: PointLight;
+  private readonly runner: ShadowRunner;
+  /** 0–1: the fright after a runner, fading over a few seconds. */
+  private fright = 0;
   private readonly cloth: Mesh;
   private readonly watchers: Watcher[] = [];
   private passing: Passing | null = null;
   private readonly done = new Set<string>();
-  /** The figure standing somewhere (the shrine, the gate), until it goes. */
-  private standing: Standing | null = null;
+  /** Things timed to a runner: the sting, the flash, the jolt. */
+  private cues: { at: number; play: () => void }[] = [];
   /** The follower: steps answered until `until`, or until Sora stops. */
   private follower: { until: number; lastStep: number } | null = null;
-  private sounds: Record<"vanish" | "breath" | "snap", StaticSound | null> = {
-    vanish: null,
-    breath: null,
+  private sounds: Record<"rushLeft" | "rushRight" | "sprint" | "snap", StaticSound | null> = {
+    rushLeft: null,
+    rushRight: null,
+    sprint: null,
     snap: null,
   };
   private steps: StaticSound[] = [];
@@ -138,7 +110,6 @@ export class Apparitions {
     private readonly game: Game,
     area: Area,
     private readonly lights: VillageLights,
-    private readonly vigil: Vigil,
   ) {
     const scene = game.scene;
     const texture = new Texture(
@@ -146,11 +117,7 @@ export class Apparitions {
       scene,
     );
     texture.hasAlpha = true;
-    // The forest presence has depth and a fixed facing, so moving sideways
-    // reveals its profile rather than turning a flat card toward the player.
-    this.form = new ShadowFigure(scene, "neakta_shadow", 2.5);
-    this.figure = this.form.root;
-    this.form.setPresence(0);
+    this.runner = new ShadowRunner(scene, "neakta_runner");
     // On the cloth: a soft shadow, half seen through the light of the flash.
     const soft = new StandardMaterial("M_neakta_shadow_cloth", scene);
     soft.diffuseTexture = texture;
@@ -162,21 +129,8 @@ export class Apparitions {
     soft.backFaceCulling = false;
     this.cloth = CreatePlane("neakta_shadow_cloth", { width: 1.3, height: 2.6 }, scene);
     this.cloth.material = soft;
-    for (const mesh of [this.figure, this.cloth]) {
-      mesh.isPickable = false;
-      mesh.setEnabled(false);
-    }
-
-    this.glow = new PointLight("neakta_glow", SHRINE_GLOW, scene);
-    this.glow.diffuse = new Color3(0.45, 0.55, 0.75);
-    this.glow.specular = Color3.Black();
-    this.glow.range = 5;
-    this.glow.intensity = 0;
-    this.glow.shadowEnabled = false;
-    this.glow.renderPriority = 3;
-    limitLightToRange(this.glow, area.container.meshes);
-    // Keep this light in the shader from startup; animate intensity rather than
-    // enabling a new light (and compiling scene materials) during the scare.
+    this.cloth.isPickable = false;
+    this.cloth.setEnabled(false);
 
     const nodes = [...area.container.transformNodes, ...area.container.meshes];
     for (const node of nodes) {
@@ -196,18 +150,9 @@ export class Apparitions {
     game.bus.on("player:step", () => this.onStep());
   }
 
-  /** Render the forest form during loading; restore its hidden encounter state afterwards. */
+  /** Render the runner during loading; restore its hidden state afterwards. */
   prepareRenderWarmup(): () => void {
-    const position = this.figure.position.clone();
-    this.figure.position.copyFrom(SHRINE_SPOT);
-    this.figure.position.y = 0;
-    this.form.setPresence(1);
-    this.figure.setEnabled(true);
-    return () => {
-      this.figure.position.copyFrom(position);
-      this.form.setPresence(0);
-      this.figure.setEnabled(false);
-    };
+    return this.runner.prepareRenderWarmup(WARMUP_SPOT);
   }
 
   /** The act's stingers, once they are made (ActOne). */
@@ -215,23 +160,38 @@ export class Apparitions {
 
   /** 0–1: how strongly the Neak Ta is showing itself right now. */
   get dread(): number {
-    return this.presence.value;
+    return this.fright;
   }
 
   async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
     const rate = audio.context.sampleRate;
-    await this.voice.load(audio, "shrine_presence", 2260);
-    const one = (name: string, samples: Float32Array, minDistance: number) =>
-      audio.spatialSound(name, audio.buffer(samples, rate), "threat", Vector3.Zero(), {
-        minDistance,
-        maxDistance: 50,
-      });
+    // The rush tears past from one ear to the other, the way the runner goes.
+    const rush = (name: string, from: number, seed: number) =>
+      audio.sound(
+        name,
+        audio.buffer(ghostRush(rate, seededRandom(seed), from, -from), rate),
+        "threat",
+        1,
+      );
     this.sounds = {
-      vanish: await one("shadow_vanish", shadowVanish(rate, seededRandom(61)), 6),
-      breath: await one("shadow_breath", breathOut(rate, seededRandom(62)), 1.5),
-      snap: await one("branch_snap", branchSnap(rate, seededRandom(63)), 4),
+      rushLeft: await rush("runner_rush_left", -1, 64),
+      rushRight: await rush("runner_rush_right", 1, 65),
+      sprint: await audio.spatialSound(
+        "runner_sprint",
+        audio.buffer(mudSprint(rate, seededRandom(66)), rate),
+        "threat",
+        Vector3.Zero(),
+        { minDistance: 2, maxDistance: 40 },
+      ),
+      snap: await audio.spatialSound(
+        "branch_snap",
+        audio.buffer(branchSnap(rate, seededRandom(63)), rate),
+        "threat",
+        Vector3.Zero(),
+        { minDistance: 4, maxDistance: 50 },
+      ),
     };
     // Steps in the same mud as Sora's, but slower and heavier, with a suction
     // every time: someone bigger, walking where she has just walked.
@@ -267,10 +227,10 @@ export class Apparitions {
 
   update(dt: number): void {
     if (this.game.flags.get("ep1.act2.started", false)) {
-      this.vanish(true);
       this.cloth.setEnabled(false);
       this.follower = null;
-      this.voice.stop();
+      this.cues = [];
+      this.runner.update(dt);
       return;
     }
     this.time += dt;
@@ -278,24 +238,13 @@ export class Apparitions {
     const camera = this.game.camera;
     this.eye.copyFrom(camera.globalPosition);
     camera.getDirectionToRef(Axis.Z, this.forward);
-    if (this.standing) {
-      const want = Math.atan2(
-        this.eye.x - this.figure.position.x,
-        this.eye.z - this.figure.position.z,
-      );
-      const error = Math.atan2(
-        Math.sin(want - this.figure.rotation.y),
-        Math.cos(want - this.figure.rotation.y),
-      );
-      this.attention += (-error / 0.32 - this.attention) * (1 - Math.exp(-dt * 1.4));
-    }
-    this.form.animate(this.time, 0, this.attention);
     const bx = -this.eye.x,
       by = -this.eye.z;
 
-    // Coming up the path towards the shrine, while it is still ahead of her.
-    if (by > -50 && by < -40 && Math.abs(bx) < 4) this.once("shrine", () => this.startShrine());
-    if (by > -24 && by < -16 && Math.abs(bx) < 4) this.once("watcher", () => this.startWatcher());
+    // Coming up the path towards the village, looking where she is going.
+    const ahead = this.forward.z < -0.55;
+    if (by > -50 && by < -40 && Math.abs(bx) < 4 && ahead) this.once("shrine", () => this.dash(1));
+    if (by > -24 && by < -14 && Math.abs(bx) < 4 && ahead) this.once("gate", () => this.dash(0.8));
     if (
       this.lights.tentLevel < 0.95 &&
       this.lights.flashing &&
@@ -308,13 +257,13 @@ export class Apparitions {
     if (by > -45 && by < -12 && this.game.player.speed > 0.6)
       this.once("follower", () => (this.follower = { until: t + 9, lastStep: t }));
 
+    for (const cue of this.cues) if (cue.at <= t) cue.play();
+    this.cues = this.cues.filter((cue) => cue.at > t);
     this.updatePassing(t);
-    this.updateStanding(dt, by);
-    this.presence.update(dt);
-    this.form.setPresence(this.presence.value);
-    this.figure.setEnabled(this.presence.visible);
-    this.voice.breathe(this.presence.visible ? this.figure.position : null, 0, this.presence.value);
-    this.glow.intensity = this.shrineGlow ? 4 * this.presence.value : 0;
+    this.runner.update(dt);
+    if (this.runner.running && this.sounds.sprint)
+      this.sounds.sprint.spatial.position = this.runner.position.add(new Vector3(0, 0.4, 0));
+    this.fright = Math.max(0, this.fright - dt / 5);
     if (this.follower && (t > this.follower.until || t - this.follower.lastStep > 0.7)) {
       // She has stopped: one more step behind her, then nothing.
       if (t - this.follower.lastStep > 0.7) this.playStep(0);
@@ -328,7 +277,7 @@ export class Apparitions {
 
   /** Runs `start` the first time `id` comes up. */
   private once(id: string, start: () => void): void {
-    if (this.done.has(id) || this.passing || this.standing || this.presence.visible) return;
+    if (this.done.has(id) || this.passing || this.runner.running) return;
     this.done.add(id);
     start();
   }
@@ -337,85 +286,45 @@ export class Apparitions {
     return this.eye.y - EYE;
   }
 
-  private startShrine(): void {
-    this.stand(SHRINE_SPOT, {
-      lookFor: 1.8,
-      inView: false,
-      near: 3.8,
-      wait: 40,
-      sound: this.sounds.vanish,
-      scare: true,
-      lure: 10,
-    });
-    this.shrineGlow = true;
-  }
-
-  private startWatcher(): void {
-    // By the gate, just off the path: from the path the glowing tent is behind it,
-    // so it stands out black against the funeral's light.
-    const spot = at(0.9, -9.5);
-    if (Vector3.Distance(spot, this.eye) < 9) return;
-    this.stand(spot, {
-      lookFor: 3.2,
-      inView: true,
-      near: 5.5,
-      wait: 25,
-      sound: this.sounds.breath,
-      scare: false,
-      lure: 0,
-    });
-  }
-
-  private stand(spot: Vector3, how: Omit<Standing, "start" | "seenFor">): void {
-    spot.y = this.ground();
-    this.figure.position.copyFrom(spot);
-    this.figure.rotation.y = Math.atan2(this.eye.x - spot.x, this.eye.z - spot.z) + 0.24;
-    this.attention = 0;
-    this.shrineGlow = false;
-    this.presence.show();
-    this.form.setPresence(0);
-    this.figure.setEnabled(true);
-    this.standing = { ...how, start: this.time, seenFor: 0 };
-    // The one that waits in plain view is felt before it is seen.
-    if (how.inView) this.score?.sting("swell", 0.6);
-  }
-
-  /** `by` is how far north Sora is (Blender y). */
-  private updateStanding(dt: number, by: number): void {
-    const s = this.standing;
-    if (!s) return;
-    const to = this.figure.position.add(new Vector3(0, 1.25, 0)).subtract(this.eye);
-    const distance = to.length();
-    const looking = s.inView
-      ? this.game.camera.isInFrustum(this.figure)
-      : Vector3.Dot(to.normalize(), this.forward) > LOOKING && distance < 22;
-    // Give the entrance time to resolve before a direct look dismisses it.
-    if (looking && this.presence.settled) s.seenFor += dt;
-    if (s.lure > 0 && distance < s.lure && s.seenFor === 0) {
-      // Something moves beside the shrine: a reason to turn and look.
-      this.play(this.sounds.snap, this.figure.position.add(new Vector3(0, 0.05, 0)));
-      s.lure = 0;
+  /**
+   * A runner across the path ahead of her, left to right or right to left: the
+   * rush starts first, the form crosses her view on its loudest instant, and
+   * lightning, the sting and a jolt land with it. `strength` scales the scare.
+   */
+  private dash(strength: number): void {
+    const forward = new Vector3(this.forward.x, 0, this.forward.z).normalize();
+    const right = new Vector3(forward.z, 0, -forward.x);
+    const centre = this.eye.add(forward.scale(DASH_AHEAD));
+    centre.y = this.ground();
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const from = centre.add(right.scale(side * DASH_REACH)).add(forward.scale(-1.2));
+    const to = centre.add(right.scale(-side * DASH_REACH)).add(forward.scale(1.6));
+    const delay = RUSH_CLOSEST - DASH_SECONDS / 2;
+    this.runner.dash(from, to, DASH_SECONDS, delay);
+    const rush = side < 0 ? this.sounds.rushLeft : this.sounds.rushRight;
+    if (rush) {
+      rush.volume = strength;
+      rush.play();
     }
-    if (distance < s.near || s.seenFor > s.lookFor || this.vigil.lampRaised) {
-      // A short recession into darkness keeps the exit sharp without a one-frame pop.
-      this.play(s.sound, this.figure.position);
-      // Close and looked at, it is gone in a shriek; further off, a blow of pressure.
-      this.score?.sting(s.scare ? "shock" : "drop", s.scare ? 0.9 : 0.6);
-      if (s.scare) this.game.atmosphere.scare();
-      this.vanish();
-    } else if (this.time - s.start > s.wait || (s.scare && by > -28))
-      // Never seen: it leaves as quietly as it came.
-      this.vanish();
-  }
-
-  private vanish(immediate = false): void {
-    this.presence.hide(immediate);
-    this.standing = null;
-    if (immediate) {
-      this.form.setPresence(0);
-      this.figure.setEnabled(false);
-      this.glow.intensity = 0;
+    if (this.sounds.sprint) {
+      this.sounds.sprint.spatial.position = from;
+      this.sounds.sprint.volume = strength;
+      this.sounds.sprint.play();
     }
+    const beat = this.time + RUSH_CLOSEST;
+    const lead = this.score?.lead("shock") ?? 0;
+    this.cues.push(
+      { at: beat - lead, play: () => this.score?.sting("shock", 0.95 * strength) },
+      { at: beat - 0.05, play: () => this.lights.storm.strike() },
+      {
+        at: beat,
+        play: () => {
+          this.game.atmosphere.scare();
+          this.fright = Math.max(this.fright, strength);
+        },
+      },
+      { at: beat + 0.5, play: () => this.score?.ring() },
+    );
   }
 
   private startCloth(): void {
@@ -515,9 +424,7 @@ export class Apparitions {
   }
 
   dispose(): void {
-    this.voice.stop();
-    this.form.dispose();
+    this.runner.dispose();
     this.cloth.dispose(false, true);
-    this.glow.dispose();
   }
 }

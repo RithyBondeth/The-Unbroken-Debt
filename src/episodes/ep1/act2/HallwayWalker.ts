@@ -147,7 +147,7 @@ export class HallwayWalker {
       !game.sketchbook?.isOpen &&
       p.y > 2.2 &&
       p.z < -11.4 &&
-      p.z > -18.1 &&
+      p.z > -22.1 &&
       p.x > -3.55 &&
       p.x < 3
     )

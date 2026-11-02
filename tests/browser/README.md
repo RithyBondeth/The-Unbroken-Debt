@@ -5,6 +5,8 @@
 Open `/tests/browser/sound-audition.html` to play each Act 0 and Act 1 dread
 sound, the rebuilt taxi engine and wipers, stereo village rain and the three
 thunder rolls on their own. See `docs/production/act0-act1-dread-audio.md`.
+The **Wind** group plays the wind beds, a gust, each tree's voice and the taxi
+buffet; see `docs/production/forest-wind-and-omens.md`.
 
 ## Unified notebook
 

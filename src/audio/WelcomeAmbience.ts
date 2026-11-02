@@ -2,7 +2,7 @@ import { seededRandom } from "./synth";
 import { loadDread, type DreadBank, type Stinger } from "./welcomeDread";
 
 /**
- * A wrong funeral chant over faint bells, whispers and creaks under rain, timber
+ * A wrong funeral chant over whispers and creaks under rain, timber
  * and wind, plus stingers cued by the apparitions; gesture-activated.
  */
 export class WelcomeAmbience {
@@ -139,7 +139,7 @@ export class WelcomeAmbience {
     );
   }
 
-  /** The chant, whispers and bells join once synthesised, under the same gain and lifecycle. */
+  /** The chant and whispers join once synthesised, under the same gain and lifecycle. */
   private attach(context: AudioContext, master: GainNode, bank: DreadBank): void {
     if (this.disposed || this.context !== context) return;
     const loop = (buffer: AudioBuffer, level: number) => {
@@ -152,10 +152,7 @@ export class WelcomeAmbience {
       this.sources.push(source);
       source.start();
     };
-    const theme = context.createBuffer(1, bank.theme.length, bank.rate);
-    theme.getChannelData(0).set(bank.theme);
-    // The bells sit far behind the chant; chant and whispers loop at different lengths.
-    loop(theme, 0.45);
+    // No ringing bells under the title: chant and whispers loop at different lengths.
     loop(this.stereoBuffer(context, bank.rate, bank.chant), 1);
     loop(this.stereoBuffer(context, bank.rate, bank.bed), 1);
     for (const kind of ["appear", "near", "vanish"] as const)

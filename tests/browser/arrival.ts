@@ -115,8 +115,8 @@ async function run() {
     check(game.inventory.count("betel") === 0, "partial offering consumes its placed leaf");
     await ray(
       "interact_blessed_matches",
-      new Vector3(-0.65, 2.5, -16.6),
-      new Vector3(-0.65, 3.614, -17.5),
+      new Vector3(-0.65, 2.5, -20.6),
+      new Vector3(-0.65, 3.614, -21.5),
     );
     game.bus.emit("interact:use", { id: "interact_blessed_matches" });
     check(

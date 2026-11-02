@@ -70,7 +70,7 @@ async function review(): Promise<void> {
     const views: Record<string, [Vector3, Vector3, number]> = {
       forest: [new Vector3(2.5, 0, 39.7), new Vector3(5, 1.3, 37.2), 1.55],
       profile: [new Vector3(7.8, 0, 38.8), new Vector3(5, 1.3, 37.2), 1.5],
-      hall: [new Vector3(-1.65, 2.5, -17.05), new Vector3(-1.65, 3.65, -13.8), 2.3],
+      hall: [new Vector3(-1.65, 2.5, -21.05), new Vector3(-1.65, 3.65, -13.8), 2.3],
       mask: [new Vector3(-1.65, 2.5, -15.4), new Vector3(-1.62, 4.58, -13.8), 0.3],
       under: [new Vector3(-2.4, 0, -12.8), new Vector3(-1.5, 0.96, -10.65), 1.35],
     };

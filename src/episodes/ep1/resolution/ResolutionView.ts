@@ -113,6 +113,24 @@ export class ResolutionView {
     this.content.append(map);
     await action;
   }
+  /** The end credits under the game's logo: the painted title from the welcome screen. */
+  credits(paragraphs: string[], buttons: string[]): Promise<number> {
+    const title = "Boon Sop: The Unbroken Debt";
+    const action = this.show(title, paragraphs, buttons);
+    const heading = this.content.querySelector("h1")!;
+    heading.className = "resolution-logo";
+    heading.setAttribute("aria-label", title);
+    const mark = document.createElement("span");
+    mark.lang = "km";
+    mark.textContent = "បុណ្យសព";
+    const logo = document.createElement("img");
+    logo.src = `${import.meta.env.BASE_URL}assets/ui/welcome-title.webp`;
+    logo.alt = "";
+    logo.width = 1600;
+    logo.height = 855;
+    heading.replaceChildren(mark, logo);
+    return action;
+  }
   summary(progress: ResolutionProgress): Promise<number> {
     this.panel.classList.add("resolution-book");
     return this.show(

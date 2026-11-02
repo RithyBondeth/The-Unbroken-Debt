@@ -30,3 +30,9 @@ export function taxiRoadPose(distance: number) {
 export function taxiRouteChunkVisible(minZ: number, maxZ: number, distance: number): boolean {
   return maxZ >= distance - 80 && minZ <= distance + 80;
 }
+
+/** A point `lateral` metres right of the centreline at `along` metres, as build-taxi.py's road_point. */
+export function taxiRoadPoint(lateral: number, along: number) {
+  const a = taxiRoadHeading(along);
+  return { x: taxiRoadX(along) + lateral * Math.cos(a), z: along - lateral * Math.sin(a) };
+}

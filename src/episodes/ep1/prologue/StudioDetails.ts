@@ -20,7 +20,8 @@ import { seededRandom } from "../../../audio/synth";
 
 /** Close-range studio craftsmanship. Existing anchors, colliders and story IDs remain authoritative. */
 export class StudioDetails {
-  readonly drawerTravel = 0.46;
+  /** How far the drawer pulls out: two thirds of its 0.42 m depth, so it stays on its runners. */
+  readonly drawerTravel = 0.3;
   readonly matchbox: Mesh;
   private readonly walnut: PBRMaterial;
   private readonly drawerWood: PBRMaterial;
@@ -547,6 +548,23 @@ export class StudioDetails {
   private buildDrawer(drawer: TransformNode): void {
     if (drawer instanceof Mesh) drawer.visibility = 0;
     this.scene.getMeshByName("drawer_knob")?.setEnabled(false);
+    // The case the drawer runs in, hung under the desk top: without it the open
+    // drawer had nothing round or under it and seemed to float beside the desk.
+    const front = drawer.getAbsolutePosition();
+    const at = (x: number, y: number, z: number) => [front.x + x, front.y + y, front.z + z];
+    this.box(null, "drawer_case_floor", [0.46, 0.014, 0.53], at(0.24, -0.059, 0), this.walnut);
+    for (const z of [-0.258, 0.258]) {
+      this.box(null, "drawer_case_side", [0.46, 0.115, 0.014], at(0.24, -0.002, z), this.walnut);
+      // Hardwood runners the drawer's sides slide on.
+      this.box(
+        null,
+        "drawer_case_runner",
+        [0.44, 0.012, 0.02],
+        at(0.24, -0.046, z * 0.93),
+        this.drawerWood,
+      );
+    }
+    this.box(null, "drawer_case_back", [0.014, 0.115, 0.53], at(0.465, -0.002, 0), this.walnut);
     const moving = new TransformNode("studio_drawer_interior", this.scene);
     moving.position.copyFrom(drawer.getAbsolutePosition());
     moving.setParent(drawer);
@@ -615,7 +633,8 @@ export class StudioDetails {
 
   private buildMatchbox(): void {
     const box = this.matchbox;
-    box.setAbsolutePosition(new Vector3(-0.43, 0.65, -2.65));
+    // Near the front of the drawer, so it is in plain sight once the drawer is open.
+    box.setAbsolutePosition(new Vector3(-0.55, 0.65, -2.63));
     box.visibility = 0;
     const detail = new TransformNode("studio_matchbox_detail", this.scene);
     detail.position.copyFrom(box.getAbsolutePosition());
@@ -679,6 +698,12 @@ export class StudioDetails {
     const tie = this.scene.getMeshByName("letters_string");
     if (!tie) return;
     tie.visibility = 0;
+    // Brought forward with the matchbox, to where the drawer opens.
+    for (const node of [
+      tie,
+      ...[0, 1, 2, 3, 4].map((i) => this.scene.getMeshByName(`letter_${i}`)),
+    ])
+      node?.setAbsolutePosition(node.getAbsolutePosition().add(new Vector3(-0.08, 0, 0)));
     for (let i = 0; i < 5; i++) {
       const sheet = this.scene.getMeshByName(`letter_${i}`);
       if (sheet) sheet.material = this.paper;

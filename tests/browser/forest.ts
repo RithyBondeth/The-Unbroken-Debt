@@ -60,7 +60,7 @@ async function review(): Promise<void> {
     road: [new Vector3(-1.5, 0, 60), new Vector3(-1.5, 2, 49), 5],
     yard: [new Vector3(10.5, 0, -1), new Vector3(17, 1.8, 1), 3],
     house: [new Vector3(-10.8, 0, -4), new Vector3(0, 3.8, -14), 8],
-    rear: [new Vector3(0, 0, -20.5), new Vector3(0, 4, -30), 5],
+    rear: [new Vector3(0, 0, -25.5), new Vector3(0, 4, -35), 5],
   };
   const show = async (which: string) => {
     view = which;

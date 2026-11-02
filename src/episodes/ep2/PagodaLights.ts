@@ -12,7 +12,7 @@ import type { Game } from "../../core/Game";
 import type { Area } from "../../core/AreaLoader";
 import { FLAME_COLOR, limitLightToRange } from "../../render/RenderSetup";
 import { softFalloff, useSoftFalloff } from "../../render/softLampFalloff";
-import { FoliageWind } from "../../render/FoliageWind";
+import { applyFoliageWind, type FoliageWind } from "../../render/FoliageWind";
 import { NIGHT_LOOK, DAWN_LOOK } from "../ep1/data/nightLook";
 import { LowGroundMist } from "../../render/LowGroundMist";
 import type { MistPocket } from "../../render/mist";
@@ -114,15 +114,17 @@ export class PagodaLights {
       });
       scene.onDisposeObservable.addOnce(() => shadows.dispose());
     }
-    for (const mat of area.container.materials) {
+    for (const mat of area.container.materials)
       if (mat instanceof PBRMaterial) mat.maxSimultaneousLights = 8;
-      if (mat instanceof PBRMaterial && /leaf|leaves|fern|grass|bamboo_leaves/.test(mat.name))
-        this.wind.push(new FoliageWind(mat));
-    }
+    // Foliage bends to the game's shared wind, as in Episode 1's forest.
+    this.wind.push(...applyFoliageWind(area.container.materials, game.wind));
   }
   begin(): void {
     const g = this.game;
     g.addFlameLights(this.lamp, ...this.flames.slice(0, 4));
+    // A still, close night under the canopy: a light breeze in the crowns.
+    g.wind.base = 0.3;
+    g.wind.calm = 0;
     g.atmosphere.baseExposure = NIGHT_LOOK.baseExposure;
     g.atmosphere.maxExposure = NIGHT_LOOK.maxExposure;
     g.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
@@ -139,7 +141,6 @@ export class PagodaLights {
   }
   update(dt: number, flame: number): void {
     this.time += dt;
-    for (const wind of this.wind) wind.seconds = this.time;
     const shade = Math.max(0.5, Math.min(1, (this.game.interaction.distance / 1.3) ** 2));
     this.shade += (shade - this.shade) * Math.min(1, dt * 5);
     this.lamp.intensity =

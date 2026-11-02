@@ -91,12 +91,24 @@ describe("authored taxi assets", () => {
         0,
       ) / samples.length;
     expect(outward).toBeGreaterThan(0.015);
-    expect(
-      cabin
+    // Fitted MakeHuman eyes with a painted iris, and a blink the runtime can play.
+    const eyes = cabin
+      .getRoot()
+      .listMeshes()
+      .find((m) => m.getName().startsWith("taxi_driver_eyes"))!;
+    expect(eyes.listPrimitives()[0].getMaterial()?.getBaseColorTexture()).toBeTruthy();
+    // Shapes the runtime plays: blinking, speech, glances, a nod and a re-grip.
+    for (const [part, shapes] of [
+      ["taxi_driver_anatomy", ["blink", "talk", "look_road", "look_sora", "nod", "grip"]],
+      ["taxi_driver_lashes", ["blink", "look_road", "look_sora", "nod"]],
+      ["taxi_driver_hair", ["look_road", "look_sora", "nod"]],
+    ] as const) {
+      const mesh = cabin
         .getRoot()
-        .listNodes()
-        .filter((m) => /driver_eye_[LR]/.test(m.getName())),
-    ).toHaveLength(2);
+        .listMeshes()
+        .find((m) => m.getName().startsWith(part))!;
+      expect((mesh.getExtras() as { targetNames?: string[] }).targetNames).toEqual(shapes);
+    }
   });
   it("keeps the road and standing-water normals facing the headlights", () => {
     const surfaces = road
@@ -199,11 +211,16 @@ describe("authored taxi assets", () => {
       );
     }
   });
-  it("covers the entire ride and visible horizon without recycled sectors", () => {
-    const bounds = getBounds(road.getRoot().listScenes()[0]);
-    expect(bounds.min[2]).toBeLessThan(-25);
-    expect(bounds.max[2]).toBeGreaterThan(505);
-  });
+  // Bounding the whole decoded road walks every vertex: over 5 s on a busy CI runner.
+  it(
+    "covers the entire ride and visible horizon without recycled sectors",
+    { timeout: 30_000 },
+    () => {
+      const bounds = getBounds(road.getRoot().listScenes()[0]);
+      expect(bounds.min[2]).toBeLessThan(-25);
+      expect(bounds.max[2]).toBeGreaterThan(505);
+    },
+  );
   it("keeps low vegetation outside the widened road and exposes standing water above its crown", () => {
     const lateral = (x: number, z: number) => {
       let t = z;
@@ -334,12 +351,35 @@ describe("authored taxi assets", () => {
       .listNodes()
       .map((n) => n.getName());
     for (const name of [
-      "taxi_driver_cap_crown",
-      "taxi_driver_chest_pocket",
-      "taxi_driver_watch_face",
-      "taxi_driver_rolled_cuff_L",
+      "taxi_driver_hair",
+      "taxi_driver_brows",
+      "taxi_driver_lashes",
+      "taxi_driver_suit",
     ])
       expect(names).toContain(name);
+    // Hair, brows and lashes are cut out of their maps, not drawn as solid shells.
+    for (const material of ["M_taxi_driver_hair", "M_taxi_driver_brows", "M_taxi_driver_lashes"])
+      expect(
+        cabin
+          .getRoot()
+          .listMaterials()
+          .find((m) => m.getName() === material)
+          ?.getAlphaMode(),
+      ).toBe("MASK");
+    // The cabin is furnished like a working taxi, not a box.
+    for (const piece of [
+      /^taxi_seat_roll/,
+      /^taxi_rear_tuft_button/,
+      /^taxi_door_pleat/,
+      /^taxi_headliner_bow/,
+      /^taxi_dome_lamp_lens/,
+      /^taxi_wiper_motor/,
+      /^taxi_rear_blind/,
+      /^taxi_dash_clock_face/,
+      /^taxi_ignition_key/,
+      /^taxi_handbrake_lever/,
+    ])
+      expect(names.some((n) => piece.test(n))).toBe(true);
     expect(
       cabin
         .getRoot()
@@ -358,6 +398,46 @@ describe("authored taxi assets", () => {
         .listNodes()
         .filter((n) => n.getName().startsWith("taxi_road_")).length,
     ).toBeGreaterThan(1000);
+  });
+  it("dresses the road, the rite and the cabin for the dread pass", () => {
+    const roadNames = road
+      .getRoot()
+      .listNodes()
+      .map((n) => n.getName());
+    const count = (pattern: RegExp, names: string[]) => names.filter((n) => pattern.test(n)).length;
+    // A colonial telegraph line, gravel, centre grass and flooded ditches along the track.
+    expect(count(/^taxi_telegraph_post/, roadNames)).toBeGreaterThan(10);
+    expect(count(/^taxi_telegraph_wire/, roadNames)).toBeGreaterThan(20);
+    expect(count(/^taxi_road_pebble/, roadNames)).toBeGreaterThan(500);
+    expect(count(/^taxi_ditch_water/, roadNames)).toBeGreaterThan(20);
+    expect(roadNames).toContain("taxi_median_grass");
+    // The rite: spirit house, guardian, banners, the cord ring, the bound effigy and lit candles.
+    for (const piece of [
+      /^taxi_road_rite_spirit_house/,
+      /^taxi_road_rite_tingmong/,
+      /^taxi_rite_banner/,
+      /^taxi_rite_cord/,
+      /^taxi_rite_effigy_wrap/,
+      /^taxi_rite_candle_flame/,
+    ])
+      expect(count(piece, roadNames)).toBeGreaterThan(0);
+    const flame = road
+      .getRoot()
+      .listMaterials()
+      .find((m) => m.getName() === "M_taxi_ritual_flame")!;
+    expect(Math.max(...flame.getEmissiveFactor())).toBeGreaterThan(0.5);
+    const cabinNames = cabin
+      .getRoot()
+      .listNodes()
+      .map((n) => n.getName());
+    // The mirror charm hangs from one pivot the runtime swings.
+    const pivot = cabin
+      .getRoot()
+      .listNodes()
+      .find((n) => n.getName() === "taxi_mirror_charm_pivot")!;
+    expect(pivot.listChildren().length).toBeGreaterThan(40);
+    for (const name of ["taxi_meter_case", "taxi_rear_lotus_bud"])
+      expect(cabinNames).toContain(name);
   });
   it("keeps download and geometry costs bounded for the transition scene", () => {
     expect(statSync("public/assets/ep1/ep1_taxi_cabin.glb").size).toBeLessThan(6 * 1024 * 1024);

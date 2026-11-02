@@ -1,0 +1,368 @@
+/* The pause menu: the frozen frame drained of colour under a blood-dark veil, with the
+   title screen's type, red paint smears and grain. */
+.pause {
+  --pause-bone: #d9d6cc;
+  --pause-blood: #a3150f;
+  position: fixed;
+  inset: 0;
+  z-index: var(--ui-z-menu);
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: var(--ui-safe-bottom) var(--ui-safe-x);
+  overflow-y: auto;
+  font-family: var(--ui-font-body);
+  color: var(--pause-bone);
+  isolation: isolate;
+}
+.pause[hidden] {
+  display: none;
+}
+
+.pause-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  backdrop-filter: grayscale(0.85) brightness(0.42) contrast(1.15) blur(2px);
+  background: radial-gradient(
+    ellipse 62% 58% at 50% 48%,
+    rgb(5 6 6 / 0.15),
+    rgb(30 3 2 / 0.72) 70%,
+    rgb(5 1 1 / 0.97)
+  );
+}
+.pause.shown .pause-veil {
+  animation: pause-veil-in 0.9s ease-out both;
+}
+/* A slow pulse of red at the edges, like blood in the ears. */
+.pause-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 18vmin 4vmin rgb(120 6 4 / 0.45);
+  animation: pause-pulse 4.2s ease-in-out infinite;
+}
+.pause-grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.2;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: pause-grain 0.6s steps(6) infinite;
+}
+/* Paint run down from the top edge. */
+.pause-drip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22vh;
+  background:
+    radial-gradient(4px 70px at 12% 0, rgb(110 8 5 / 0.8), transparent),
+    radial-gradient(3px 110px at 31% 0, rgb(110 8 5 / 0.7), transparent),
+    radial-gradient(5px 60px at 58% 0, rgb(110 8 5 / 0.75), transparent),
+    radial-gradient(3px 140px at 77% 0, rgb(110 8 5 / 0.65), transparent),
+    radial-gradient(4px 90px at 91% 0, rgb(110 8 5 / 0.7), transparent),
+    linear-gradient(rgb(90 5 3 / 0.55), transparent 18%);
+  transform-origin: top;
+}
+.pause.shown .pause-drip {
+  animation: pause-drip 2.4s cubic-bezier(0.3, 0, 0.2, 1) both;
+}
+
+/* Eyes, low in the dark at the edge of the screen. */
+.pause-eyes {
+  position: fixed;
+  left: var(--x, 8%);
+  top: var(--y, 40%);
+  display: flex;
+  gap: 26px;
+  transform: rotate(var(--tilt, 0deg));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease;
+}
+.pause-eyes i {
+  width: 14px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 55%, #f1e6c8 0 22%, #b8a77c 38%, transparent 70%);
+  box-shadow: 0 0 10px 2px rgb(200 190 150 / 0.25);
+  transform: scaleY(0.1);
+}
+.pause-eyes.open {
+  opacity: 0.85;
+}
+.pause-eyes.open i {
+  animation: pause-blink 1.6s ease-in-out both;
+}
+
+.pause-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: min(30rem, 100%);
+}
+.pause.shown .pause-panel {
+  animation: pause-panel-in 0.7s 0.15s ease-out both;
+}
+.pause-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 var(--ui-space-3);
+  font-size: 0.95rem;
+  color: var(--pause-blood);
+  letter-spacing: 0.08em;
+}
+.pause-eyebrow::before {
+  content: "";
+  width: 34px;
+  height: 3px;
+  background: var(--pause-blood);
+  clip-path: polygon(0 40%, 18% 10%, 55% 0, 100% 30%, 92% 80%, 60% 100%, 22% 85%, 4% 100%);
+}
+/* The title shudders: a red ghost of it slips out of register now and then. */
+.pause-title {
+  position: relative;
+  margin: 0 0 var(--ui-space-2);
+  font: 400 var(--ui-display) / 1 var(--ui-font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pause-bone);
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.9);
+  animation: pause-flicker 5.3s steps(1) infinite;
+}
+.pause-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  color: var(--pause-blood);
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: pause-ghost 5.3s steps(1) infinite;
+}
+.pause-whisper {
+  margin: 0 0 var(--ui-space-8);
+  font: italic 1rem / 1.5 var(--ui-font-display);
+  color: rgb(217 214 204 / 0.55);
+}
+
+.pause-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.pause-menu[hidden],
+.pause-controls[hidden],
+.pause-confirm[hidden] {
+  display: none;
+}
+.pause button {
+  position: relative;
+  min-height: 44px;
+  padding: 6px 0 6px 34px;
+  border: 0;
+  background: none;
+  font: 500 1rem / 1.2 var(--ui-font-body);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-align: left;
+  color: rgb(217 214 204 / 0.58);
+  cursor: pointer;
+}
+/* A smear of red paint marks the choice under the cursor, as on the title. */
+.pause button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 22px;
+  height: 5px;
+  background: var(--pause-blood);
+  clip-path: polygon(0 40%, 18% 10%, 55% 0, 100% 30%, 92% 80%, 60% 100%, 22% 85%, 4% 100%);
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left;
+  transition: transform 0.18s ease-out;
+}
+.pause button:hover,
+.pause button:focus-visible {
+  color: var(--pause-bone);
+  outline: none;
+}
+.pause button:hover::before,
+.pause button:focus-visible::before {
+  transform: translateY(-50%) scaleX(1);
+}
+.pause button.pause-danger {
+  color: var(--ui-accent-bright);
+}
+.pause-controls {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--ui-space-2) var(--ui-space-4);
+  margin: 0 0 var(--ui-space-4);
+  font-size: var(--ui-small);
+}
+.pause-controls dt {
+  color: var(--ui-accent-bright);
+  letter-spacing: 0.08em;
+}
+.pause-controls dd {
+  margin: 0;
+  color: rgb(217 214 204 / 0.75);
+}
+.pause-controls .pause-back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: var(--ui-space-3);
+}
+.pause-confirm p {
+  max-width: 26rem;
+  margin: 0 0 var(--ui-space-4);
+  color: rgb(217 214 204 / 0.75);
+  line-height: 1.6;
+}
+.pause-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.pause-hint {
+  position: fixed;
+  bottom: var(--ui-safe-bottom);
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: var(--ui-caption);
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: uppercase;
+  color: rgb(217 214 204 / 0.4);
+}
+.pause-hint kbd {
+  margin-right: 0.4em;
+  color: var(--pause-bone);
+}
+
+@keyframes pause-veil-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pause-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+}
+@keyframes pause-drip {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+}
+@keyframes pause-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  12% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.7;
+  }
+  30% {
+    opacity: 0.95;
+  }
+}
+@keyframes pause-grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6%, 4%);
+  }
+  40% {
+    transform: translate(5%, -3%);
+  }
+  60% {
+    transform: translate(-3%, -6%);
+  }
+  80% {
+    transform: translate(6%, 5%);
+  }
+}
+@keyframes pause-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  61% {
+    opacity: 0.35;
+  }
+  62% {
+    opacity: 1;
+  }
+  64% {
+    opacity: 0.6;
+  }
+  65% {
+    opacity: 1;
+  }
+}
+@keyframes pause-ghost {
+  0%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+  61% {
+    opacity: 0.8;
+    transform: translate(-5px, 1px);
+  }
+  63% {
+    opacity: 0.5;
+    transform: translate(4px, -1px);
+  }
+  65% {
+    opacity: 0;
+  }
+}
+@keyframes pause-blink {
+  0% {
+    transform: scaleY(0.1);
+  }
+  25%,
+  70% {
+    transform: scaleY(1);
+  }
+  76% {
+    transform: scaleY(0.1);
+  }
+  82%,
+  92% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pause-veil::after,
+  .pause-grain,
+  .pause-title,
+  .pause-title::after,
+  .pause.shown .pause-veil,
+  .pause.shown .pause-panel,
+  .pause.shown .pause-drip,
+  .pause-eyes.open i {
+    animation: none;
+  }
+  .pause-eyes {
+    display: none;
+  }
+}

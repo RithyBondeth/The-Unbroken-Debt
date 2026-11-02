@@ -57,7 +57,7 @@ export class FinalRitual {
     );
     this.spare = craft.root("ritual_spare", [0, 0, 0]);
     const altar = area.level.interactables.find((m) => m.name === "interact_incense_bundle");
-    const at = altar?.position ?? new Vector3(-0.45, 3.62, -17.55);
+    const at = altar?.position ?? new Vector3(-0.45, 3.62, -21.55);
     craft.box(
       this.spare,
       "ritual_spare_match",

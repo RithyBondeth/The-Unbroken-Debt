@@ -4,11 +4,13 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { realiseInstances } from "../../../core/AreaLoader";
 import { mergeStaticMeshes } from "../../../render/StaticBatcher";
+import { bakePlantHeights } from "../../../render/plantHeights";
 
 /** One continuous authored route. Plants never recycle through the camera's view. */
 export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
   realiseInstances(roadside);
   roadside.addAllToScene();
+  bakePlantHeights(roadside);
   const meshes = roadside.meshes.filter(
     (m): m is Mesh => m instanceof Mesh && m.getTotalVertices() > 0,
   );
@@ -19,7 +21,9 @@ export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
   const root = new TransformNode("taxi_continuous_route", scene);
   for (const mesh of landscape) {
     mesh.unfreezeWorldMatrix();
-    mesh.parent = root;
+    // A plant alone in its cell is not merged: it still hangs under the glTF
+    // root's handedness flip, so keep its world placement when re-parenting.
+    mesh.setParent(root);
     mesh.isPickable = false;
     mesh.receiveShadows = true;
   }

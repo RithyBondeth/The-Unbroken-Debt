@@ -21,13 +21,13 @@ from khmer import join
 from house_detail import corner_web, detail_material
 
 FLOOR, ZW = 2.5, 5.1
-X0, X1, Y0, Y1 = -6.0, 6.0, 10.0, 18.0
+X0, X1, Y0, Y1 = -6.0, 6.0, 10.0, 22.0
 FRONT = 11.5 - 0.06
 # The roof (house() in ep1_area_village.py): 42° slopes from the eaves to the ridge.
 PITCH = math.radians(42)
-RIDGE_Y = 14.0
+RIDGE_Y = (Y0 + Y1) / 2
 EAVE_Z = ZW + 0.05 + 0.12 - 0.9 * math.tan(PITCH)
-RIDGE_Z = ZW + 0.05 + 0.12 + 4.0 * math.tan(PITCH)
+RIDGE_Z = ZW + 0.05 + 0.12 + (RIDGE_Y - Y0) * math.tan(PITCH)
 EAVE_S, EAVE_N = Y0 - 0.9, Y1 + 0.9
 ROOF_X = (X0 - 0.9, X1 + 0.9)
 
@@ -173,9 +173,9 @@ def house_decay(coll, m):
     # Faces: (fixed coordinate, along-x, outward normal, the openings' centres and widths).
     sides = [
         ('front', FRONT, True, (0, -1, 0), [(-4.2, .8), (4.3, .8)], [(0, 1.2)]),
-        ('back', Y1, True, (0, 1, 0), [(-4.4, .8), (-.6, .8)], [(2.35, 1.0)]),
-        ('west', X0, False, (-1, 0, 0), [(13.0, .8), (16.4, .8)], []),
-        ('east', X1, False, (1, 0, 0), [(14.4, .8), (17.1, .8)], []),
+        ('back', Y1, True, (0, 1, 0), [(-4.4, .8), (-.6, .8), (4.4, .8)], [(2.35, 1.0)]),
+        ('west', X0, False, (-1, 0, 0), [(13.0, .8), (16.4, .8), (20.4, .8)], []),
+        ('east', X1, False, (1, 0, 0), [(14.4, .8), (17.1, .8), (20.0, .8)], []),
     ]
     for label, fixed, along_x, normal, windows, doors in sides:
         lo, hi = (X0, X1) if along_x else (11.5 if label in ('west', 'east') else Y0, Y1)
@@ -208,7 +208,7 @@ def house_decay(coll, m):
     # Mud splashed up every stilt, as a thin sleeve over the post.
     sleeves = []
     for x in (-6.0, -3.0, 0.0, 3.0, 6.0):
-        for y in (10.0, 14.0, 18.0):
+        for y in (10.0, 14.0, 18.0, 22.0):
             verts, faces, uvs = [], [], []
             seg = 16
             top = rng.uniform(.55, .85)
@@ -224,7 +224,7 @@ def house_decay(coll, m):
     join(sleeves, 'house_decay_post_mud')
 
     # Termite tubes climbing two stilts from the ground.
-    for k, (x, y) in enumerate(((-6.0, 18.0), (3.0, 10.0))):
+    for k, (x, y) in enumerate(((-6.0, Y1), (3.0, 10.0))):
         for j in range(3):
             th = rng.uniform(0, math.tau)
             pts = []
@@ -247,7 +247,7 @@ def house_decay(coll, m):
                               flat=.4 if moss else .12))
     # Moss on the stone footings, on their shaded faces.
     for x in (-6.0, -3.0, 0.0, 3.0, 6.0):
-        for y in (10.0, 14.0, 18.0):
+        for y in (10.0, 14.0, 18.0, 22.0):
             if rng.random() < .6:
                 tufts.append(lump('house_decay_moss', coll, d['moss'], (x + rng.uniform(-.2, .2), y + .24, .05),
                                   rng.uniform(.06, .1), (0, 1, .2), rng, flat=.5))
@@ -302,7 +302,7 @@ def house_decay(coll, m):
 
     # A paper wasp nest under the north-east eave, and an older broken one.
     nest = []
-    for k, (c, r) in enumerate((((5.6, 18.55, 4.62), .16), ((-5.4, 9.45, 4.6), .09))):
+    for k, (c, r) in enumerate((((5.6, Y1 + .55, 4.62), .16), ((-5.4, 9.45, 4.6), .09))):
         for j in range(4):
             p = Vector(c) + Vector((0, 0, -j * r * .55))
             nest.append(lump(f'house_decay_wasp_nest_{k}', coll, d['paper'], p, r * (1 - .12 * j), (0, 0, -1), rng, flat=.9, seg=9))
@@ -321,7 +321,7 @@ def house_decay(coll, m):
     for k, (corner, right, down) in enumerate((((-5.95, 10.05, ZW - .05), (.6, 0, 0), (0, .25, -.55)),
                                                ((5.95, 10.05, ZW - .05), (-.6, 0, 0), (0, .25, -.55)),
                                                ((6.9, 9.15, EAVE_Z - .12), (-.7, 0, 0), (0, .3, -.4)),
-                                               ((-6.9, 18.85, EAVE_Z - .12), (.7, 0, 0), (0, -.3, -.4)),
+                                               ((-6.9, Y1 + .85, EAVE_Z - .12), (.7, 0, 0), (0, -.3, -.4)),
                                                ((7.5, 10.2, 1.2), (0, .5, 0), (0, 0, -.6)))):
         corner_web(f'house_decay_web_{k}', coll, corner, right, down, .8)
     return set(coll.objects) - before

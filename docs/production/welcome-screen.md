@@ -14,7 +14,7 @@ The coffin lid is rebuilt for the title: black lacquer gone to craquelure, flaki
 - `public/assets/ui/welcome-hall-far.webp` and `welcome-hall-near.webp`: the same frame with the Neak Ta by the back door, and at the far end of the open coffin, against the lit doorway. They are full plates shown over the empty hall.
 - `public/assets/ui/welcome-cords.webp`, `welcome-cords-far.webp` and `welcome-cords-near.webp`: the cords, their dolls and hair alone on transparency, with the room (and the Neak Ta, where it stands) cut out of them. The plates leave the cords out but keep their shadows.
 - `src/ui/html/welcomeCordPaths.ts`: the cords projected into the frame, for the blood beads.
-- `public/assets/ui/welcome-title.webp`: “THE UNBROKEN DEBT” painted as wet red brush strokes. No font is used: each letter is a stroke skeleton dragged with a simulated bristle brush that runs dry, followed by drips and splatter.
+- `public/assets/ui/welcome-title.webp`: “THE UNBROKEN DEBT” painted as wet red brush strokes. No font is used: each letter is a stroke skeleton dragged with a simulated bristle brush that runs dry, followed by drips and splatter. This lettering is the game's official logo (chosen 31 October 2026 over a cord seal, a threaded serif wordmark, a ledger stamp and gilt Moul on lacquer). Use it, with the red បុណ្យសព mark above it, wherever the game is branded: the welcome screen and the end credits. It does not read at icon size, so the favicon is a single "U" painted with the same brush and red (`art-source/ui/favicon-letter.png`) on the title's near-black, as `public/favicon.png` (32 px) and `public/apple-touch-icon.png` (180 px).
 
 Everything is rendered in Blender Cycles from `ep1_area_village.blend` with the game's own geometry, coffin and Neak Ta, at 1920×1080 from one camera and seed, and graded cold and desaturated with only the lamps, candles and red paint keeping their colour.
 
@@ -31,9 +31,12 @@ done
 blender -b $B -P tools/ui/render-title-scene.py -- src/ui/html/welcomeCordPaths.ts threads-data
 npx prettier --write src/ui/html/welcomeCordPaths.ts
 blender -b -P tools/ui/paint-title.py -- /tmp/title.png 31
+blender -b -P tools/ui/paint-title.py -- /tmp/listen.png 7 listen
+blender -b -P tools/ui/paint-title.py -- art-source/ui/favicon-letter.png 17 icon
+node tools/ui/encode-favicon.mjs art-source/ui/favicon-letter.png public/favicon.png 32 public/apple-touch-icon.png 180
 ```
 
-Encode with sharp: the three plates at WebP quality 90, the cord layers at 88 with alpha, the title resized to 1600 px wide at 88 with alpha. The script also has an animated `loop` mode and transparent `figure-far|figure-near` layers; they were tried for the title and set aside in favour of the still plates.
+Encode with sharp: the three plates at WebP quality 90, the cord layers at 88 with alpha, the title resized to 1600 px wide at 88 with alpha. The entry screen's lettering is resized to 1600 px at 88 with alpha. Its background is the empty hall with the cord layer over it, resized to 960 px, blurred (sigma 10), dimmed to 85 % and saved at WebP quality 80. The script also has an animated `loop` mode and transparent `figure-far|figure-near` layers; they were tried for the title and set aside in favour of the still plates.
 
 ## Behavior
 
@@ -43,7 +46,9 @@ Existing `?start=act1`, `?continue` and recognized spike URLs retain their direc
 
 ## Listening screen
 
-After the scene loads, a dedicated listening screen replaces the old click-to-begin card. It shares the title screen palette: a cold black doorway with moonlight and red binding threads, a fine headphone illustration, “Listen closely.” in spaced bone capitals and a visible Enter key marked with a red paint smear. The copy explains that directional sound helps locate things in the darkness. Enter starts the scene from anywhere on the screen; the focused button also supports pointer activation. Clicking the background does not start play.
+After the scene loads, a dedicated listening screen replaces the old click-to-begin card. It matches the title screen. Behind it is the same ritual hall, cords and all, heavily blurred and slowly drifting, as if the eyes have not adjusted to the dark (`public/assets/ui/entry-hall.webp`), under a dark vignette and the title's film grain. The red បុណ្យសព mark sits above “LISTEN CLOSELY.”, painted with the title's brush tool in ash-white paint (`public/assets/ui/entry-listen.webp`). Below it come the headphones recommendation, the line explaining that directional sound helps locate things in the darkness, and a plain “Press Enter to begin” with the menu's red paint smear breathing beside it. An L–R line under the prompt lights up on the side a whisper is crossing. Enter starts the scene from anywhere on the screen; the focused button also supports pointer activation. Clicking the background does not start play.
+
+While it waits, the screen has its own quiet soundscape (`src/audio/EntryAmbience.ts`, synthesised in `entryDread.ts` and `dread.ts`): a low drone with two tones beating against each other, and rain far off. Every 5.5–7.5 seconds a whisper crosses the head from the left ear to the right, a little closer each time, sometimes followed by knocks behind to the right or boards creaking to the left. It is kept well below the welcome screen, so players can set their volume. Pressing Enter cuts it all off under a sharp breath at the ear and a heavy thud, and the scene fades in on the silence that follows. Browsers allow sound only after a gesture: coming from the title menu it plays, and on a direct link the screen stays silent until Enter. It respects the shared sound setting and mutes in hidden tabs.
 
 Audio unlock and pointer capture run synchronously inside the activation gesture. Repeated, composing and modified Enter presses do not start play, and activation is guarded during the 650 ms departure fade. The listener is removed and focus returns to the canvas before the scene continues. Reduced-motion preferences skip the departure delay. Entry styling is removed before ordinary story cards are displayed.
 

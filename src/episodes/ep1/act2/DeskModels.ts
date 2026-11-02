@@ -52,7 +52,7 @@ export class DeskModels {
     this.brass = this.mat("aged_brass", "#9b7840", 0.52, 0.75);
     this.iron = this.mat("lock_iron", "#242420", 0.68, 0.6);
     this.woodGrain();
-    this.compartment = this.root("altar_key_recess", new Vector3(0, 2.5, -17.365));
+    this.compartment = this.root("altar_key_recess", new Vector3(0, 2.5, -21.365));
     this.panel = this.root(
       "altar_hinged_panel",
       new Vector3(-0.235, 0.26, 0.025),
@@ -69,11 +69,14 @@ export class DeskModels {
     this.journal = this.root("sok_journal_b", new Vector3(0.01, 0.608, 0.285), this.drawer);
     this.buildDesk();
     this.buildJournal();
-    // Sok left his chair pulled aside; its carved back must not occlude the
-    // drawer or the papers when Sora leans over them from the room.
+    // Sok left his chair pulled aside to the free end of the desk; its carved back
+    // must not occlude the drawer or the papers when Sora leans over them from the
+    // room, and it must stay clear of the gramophone stand at (-5.4, -15.6).
     const chair = scene.getTransformNodeByName("prop_chinese_armchair");
-    if (chair)
-      chair.setAbsolutePosition(chair.getAbsolutePosition().add(new Vector3(-0.45, 0, 0.75)));
+    if (chair) {
+      const at = chair.getAbsolutePosition();
+      chair.setAbsolutePosition(new Vector3(-3.95, at.y, -17));
+    }
 
     const photo = area.level.interactables.find((m) => m.name === "interact_portrait");
     if (!photo) throw new Error("[Desk investigation] missing funeral portrait");
