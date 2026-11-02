@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Episode 2 · Pagoda review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      #review {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      #results {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 1000;
+        max-width: 90vw;
+        max-height: 28vh;
+        overflow: auto;
+        background: #151310e8;
+        color: #e6dccb;
+        padding: 12px;
+        font: 12px/1.5 monospace;
+        white-space: pre-wrap;
+      }
+      #review button {
+        font:
+          13px Ubuntu,
+          sans-serif;
+        background: #181613;
+        color: #e6dccb;
+        border: 1px solid #655b4d;
+        padding: 8px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Episode 2 pagoda scene"></canvas>
+    <div id="overlay" hidden></div>
+    <nav id="review" aria-label="Scene review">
+      <button data-view="gate">Naga gate</button><button data-view="kuti">Sophal’s kuti</button
+      ><button data-view="garden">Stupa garden</button
+      ><button data-view="offering">Family stupa</button
+      ><button data-view="hall">Prayer hall</button><button data-view="pond">Lotus pond</button
+      ><button data-view="interior">Hall interior</button
+      ><button data-view="cloister">Old cloister</button
+      ><button data-view="library">Library mirrors</button
+      ><button data-view="pret">Hungry ghost</button
+      ><button data-view="memory">Forest memory</button
+      ><button id="journey">Run episode journey</button>
+      <button id="traversal">Verify traversal and reach</button
+      ><button id="capture">Save screenshot</button><button id="clean">Hide review controls</button>
+      <button id="cinematic">Play cinematic</button>
+      <button id="escape" hidden>Verify physical escape</button>
+      <a href="?scene=harvest">Harvest / Chea</a>
+      <a href="?scene=collapse">Collapse</a>
+      <a href="?scene=dawn">Dawn</a>
+      <a href="?scene=sophal">Sophal</a>
+    </nav>
+    <pre id="results" role="status">Loading the production pagoda scene…</pre>
+    <script type="module" src="./pagoda.ts"></script>
+  </body>
+</html>

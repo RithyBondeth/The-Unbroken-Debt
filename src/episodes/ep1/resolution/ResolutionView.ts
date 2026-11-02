@@ -7,10 +7,10 @@ export class ResolutionView {
   readonly panel = document.createElement("section");
   private readonly content = document.createElement("div");
   private previousFocus: HTMLElement | null = null;
-  constructor() {
+  constructor(label = "Episode 1 resolution") {
     this.panel.className = "resolution";
     this.panel.hidden = true;
-    this.panel.setAttribute("aria-label", "Episode 1 resolution");
+    this.panel.setAttribute("aria-label", label);
     this.panel.setAttribute("role", "dialog");
     this.panel.setAttribute("aria-modal", "true");
     this.content.className = "resolution-content";

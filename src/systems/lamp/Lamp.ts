@@ -58,6 +58,11 @@ export class Lamp {
     return true;
   }
 
+  /** Slides the shutter without spending a match; a closed wick still burns oil. */
+  toggleShutter(): void {
+    if (this.burning) this.setState(this._state === "open" ? "shuttered" : "open");
+  }
+
   putOut(): void {
     if (this.burning) this.setState("out");
   }

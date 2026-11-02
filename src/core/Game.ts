@@ -48,7 +48,7 @@ import {
 } from "../ui/html/StoryUi";
 import { EP1_GRADE } from "../episodes/ep1/data/grade";
 import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
-import { ITEMS } from "../episodes/ep1/data/items";
+import { ITEMS, type ItemInfo } from "../episodes/ep1/data/items";
 import { Prologue } from "../episodes/ep1/prologue/Prologue";
 import { ActOne } from "../episodes/ep1/act1/ActOne";
 import type { SaveData } from "../systems/saves/SaveData";
@@ -57,6 +57,10 @@ import { NotebookReader } from "../ui/html/NotebookReader";
 import { PauseMenu } from "../ui/html/PauseMenu";
 import { storyClock } from "../ui/html/StoryUi";
 import { TaxiRide } from "../episodes/ep1/travel/TaxiRide";
+import { WhisperingPagoda } from "../episodes/ep2/WhisperingPagoda";
+import { PagodaProgress, enterPagoda } from "../episodes/ep2/PagodaProgress";
+import { EP2_SKETCHBOOK, pagodaNotebook } from "../episodes/ep2/data/notebook";
+import { EP2_ITEMS } from "../episodes/ep2/data/pagoda";
 
 /** A part of an episode with its own area and script (the prologue, an act). */
 interface Section {
@@ -88,7 +92,7 @@ export class Game {
   readonly fade = new ScreenFade();
   readonly satchel = new SatchelPanel();
   private readonly saveIndicator = new SaveIndicator();
-  readonly saves = new SaveStore((saving, result) => this.saveIndicator.set(saving, result));
+  readonly saves: SaveStore;
   readonly checkpoints = new Checkpoints(() => this.saves);
   /** Null if the browser refused to create audio. */
   audio: AudioSystem | null = null;
@@ -105,6 +109,8 @@ export class Game {
   private started = false;
   /** A scripted moment has Sora's hands: nothing can be used, opened or read. */
   cutscene = false;
+  handsHidden = false;
+  episode = 1;
   /** The live threat keeps notebook / inventory menus out of the encounter. */
   threatActive = false;
   hiding = false;
@@ -148,7 +154,12 @@ export class Game {
   constructor(
     private readonly engine: WebGPUEngine,
     device: DeviceProfile,
+    saveDatabase?: string,
   ) {
+    this.saves = new SaveStore(
+      (saving, result) => this.saveIndicator.set(saving, result),
+      saveDatabase,
+    );
     this.preset = getPreset(device.quality);
     // Before any material compiles: the falloff Sora's lamp uses (VillageLights).
     installSoftLampFalloff();
@@ -258,10 +269,45 @@ export class Game {
    */
   private async chooseSection(): Promise<Section> {
     const params = new URLSearchParams(location.search);
+    // Production handoff requires a real completed Episode 1 save.
+    if (params.get("start") === "ep2" || params.get("episode") === "2") {
+      const current = (await this.saves.load("autosave")).save;
+      if (current?.episode === 2) {
+        this.restore(current);
+        await this.checkpoints.load(current);
+        return new WhisperingPagoda(this);
+      }
+      const previous =
+        current?.episode === 1 && current.flags["ep1.complete"] === true
+          ? current
+          : (await this.saves.load("episode1")).save;
+      if (previous?.episode === 1 && previous.flags["ep1.complete"] === true) {
+        // Archive the completion before the pagoda writes its own first checkpoint.
+        await this.saves.save("episode1", previous);
+        this.restore(enterPagoda(previous));
+        return new WhisperingPagoda(this);
+      }
+      if (import.meta.env.DEV && params.get("start") === "ep2") {
+        this.episode = 2;
+        this.flags.set("ep2.preview", true);
+        this.flags.set("ep2.checkpoint", "CP0");
+        for (const [item, n] of Object.entries({
+          satchel: 1,
+          sketchbook: 1,
+          lamp: 1,
+          matches: 10,
+          oil: 2,
+        }))
+          this.inventory.add(item, n);
+        return new WhisperingPagoda(this);
+      }
+      throw new Error("Complete Episode 1 before entering The Whispering Pagoda.");
+    }
     const resumed = params.has("continue") ? (await this.saves.load("autosave")).save : null;
     if (resumed) {
       this.restore(resumed);
       await this.checkpoints.load(resumed);
+      if (resumed.episode === 2) return new WhisperingPagoda(this);
       if (resumed.flags["ep1.travel.pending"] === true) return new TaxiRide(this);
       if (resumed.checkpoint === "CP0") return new Prologue(this);
     } else if (params.get("start") === "act1") {
@@ -282,9 +328,10 @@ export class Game {
   /** Puts a save's story state back (the area and position come from its checkpoint). */
   private restore(save: SaveData): void {
     this.resumedSave = save;
+    this.episode = save.episode;
     this.flags.load(save.flags);
-    this.flags.set("ep1.checkpoint", save.checkpoint);
-    this.flags.set("ep1.clock", save.clock);
+    this.flags.set(`ep${save.episode}.checkpoint`, save.checkpoint);
+    this.flags.set(`ep${save.episode}.clock`, save.clock);
     this.inventory.load(save.inventory);
     this.savedLamp = save.lamp;
   }
@@ -321,6 +368,7 @@ export class Game {
     const url = new URL(location.href);
     url.searchParams.set("continue", "");
     url.searchParams.delete("start");
+    url.searchParams.delete("episode");
     location.replace(url.toString());
   }
 
@@ -334,8 +382,12 @@ export class Game {
   /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
   private createSketchbook(): void {
     const height = this.preset.name === "low" ? 1024 : 1536;
-    const sketchbook = new Sketchbook(this.scene, EP1_SKETCHBOOK, height, this.camera, (written) =>
-      this.notebookContent(written),
+    const sketchbook = new Sketchbook(
+      this.scene,
+      this.episode === 2 ? EP2_SKETCHBOOK : EP1_SKETCHBOOK,
+      height,
+      this.camera,
+      (written) => this.notebookContent(written),
     );
     this.sketchbook = sketchbook;
     const written = this.flags.get<string>("sketchbook.written", "");
@@ -398,7 +450,12 @@ export class Game {
     const documentOpen = !!document.querySelector(".document-reader:not([hidden])");
     this.hands.update(
       this.deltaSeconds,
-      this.cutscene || this.hiding || this.satchel.isOpen || documentOpen || this.notebook.isOpen,
+      this.cutscene ||
+        this.handsHidden ||
+        this.hiding ||
+        this.satchel.isOpen ||
+        documentOpen ||
+        this.notebook.isOpen,
       book?.book.root ?? null,
       this.player?.speed ?? 0,
       book?.turnState ?? null,
@@ -571,6 +628,12 @@ export class Game {
       : this.flags.get("ep1.checkpoint", "CP0") === "CP0"
         ? "Your first checkpoint will be recorded at the writing desk."
         : "Save at the spirit house beyond the front-right corner of the compound fence. Reach it from the front gate.";
+    if (this.episode === 2)
+      return pagodaNotebook(
+        new PagodaProgress(this.flags, this.inventory),
+        this.player?.feet ?? Vector3.Zero(),
+        last?.episode === 2 ? checkpoint : "The next checkpoint is at Sophal’s kuti.",
+      );
     return buildNotebookContent(
       this.flags,
       this.inventory,
@@ -581,12 +644,13 @@ export class Game {
   }
 
   private satchelEntries(): SatchelEntry[] {
+    const items: Record<string, ItemInfo> = { ...ITEMS, ...EP2_ITEMS };
     return this.inventory
       .list()
-      .filter(([id]) => ITEMS[id])
+      .filter(([id]) => items[id])
       .map(([id, n]) => ({
-        name: ITEMS[id].name,
-        note: ITEMS[id].note?.replace("{n}", String(n)),
+        name: items[id].name,
+        note: items[id].note?.replace("{n}", String(n)),
       }));
   }
 
