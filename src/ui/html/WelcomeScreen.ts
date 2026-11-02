@@ -96,6 +96,9 @@ export async function showWelcomeScreen(
   try {
     const result = await saves.load("autosave");
     hasSave = result.save !== null;
+    if (result.save?.episode === 2)
+      root.querySelector<HTMLElement>(".welcome-chapter")!.textContent =
+        "Episode II · The Whispering Pagoda";
     resume.disabled = !hasSave;
     status.textContent = result.problem
       ? "Your saved game could not be read. You can begin a new game."
@@ -208,7 +211,7 @@ export async function showWelcomeScreen(
           case "controls":
             open(
               "How to play",
-              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / save at a spirit house or writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape pauses the game.</p>`,
+              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / save at a spirit house or writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>X</dt><dd>Episode 2: slide lamp shutter</dd><dt>Space</dt><dd>Episode 2: hold breath (six seconds)</dd><dt>G</dt><dd>Episode 2: throw empty clay bowl</dd><dt>R</dt><dd>Episode 2: refill lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape pauses the game.</p>`,
             );
             break;
           case "credits":

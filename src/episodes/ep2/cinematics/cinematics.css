@@ -1,0 +1,31 @@
+.cinematic-controls {
+  position: fixed;
+  right: var(--ui-safe-x);
+  top: var(--ui-space-6);
+  z-index: calc(var(--ui-z-resolution) + 1);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+  max-width: calc(100vw - 2 * var(--ui-safe-x));
+  padding: var(--ui-space-2);
+  background: var(--ui-hud-bg);
+  color: var(--ui-muted);
+  font: var(--ui-caption)/1.5 var(--ui-font-body);
+}
+.cinematic-controls[hidden] {
+  display: none;
+}
+.cinematic-label {
+  padding-inline: var(--ui-space-2);
+}
+.cinematic-controls[data-paused="true"] .cinematic-label::after {
+  content: " · Paused";
+}
+@media (max-width: 520px) {
+  .cinematic-label {
+    flex-basis: 100%;
+    text-align: right;
+  }
+}
