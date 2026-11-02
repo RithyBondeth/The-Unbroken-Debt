@@ -25,7 +25,8 @@ async function boot(): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const spike = params.get("spike");
   // Keep existing developer/checkpoint entry URLs direct.
-  const direct = hasSpike(spike) || params.has("start") || params.has("continue");
+  const direct =
+    hasSpike(spike) || params.has("start") || params.has("continue") || params.has("episode");
   const settings = direct ? readWelcomeSettings() : await showWelcomeScreen(overlay);
 
   // Phones, tablets and browsers without (hardware) WebGPU get the requirements page.
@@ -56,6 +57,9 @@ async function boot(): Promise<void> {
   const game = new Game(
     engine,
     import.meta.env.DEV && isQualityName(forced) ? { ...device, quality: forced } : device,
+    import.meta.env.DEV && params.get("profile") === "ep2-play"
+      ? `boon-sop-${params.get("profile")}`
+      : undefined,
   );
   game.input.sensitivity = settings.sensitivity;
   game.input.invertY = settings.invertY;

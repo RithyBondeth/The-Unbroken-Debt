@@ -170,8 +170,14 @@ export class DawnResolution {
           "Story, art and audio © 2026 Rithy Bondeth. Third-party assets retain their own licences.",
           "Episode 1 complete. Your journal choice, lore and respect are saved for Episode 2: The Whispering Pagoda.",
         ],
-        ["Episode summary", "Export completion save"],
+        ["Episode summary", "Export completion save", "Continue to Episode 2"],
       );
+      if (action === 2) {
+        const url = new URL(location.href);
+        url.search = "?episode=2";
+        location.assign(url.toString());
+        return;
+      }
       if (action === 0) await this.view.summary(this.progress);
       else {
         const code = await encodeSaveCode(this.capture());

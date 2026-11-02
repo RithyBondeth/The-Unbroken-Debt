@@ -384,3 +384,15 @@ records every phase. Dialogue and paused-input controls check interruption.
 **Toggle mist** compares the local pockets; `?quality=low` checks the particle
 fallback. Saves use the isolated `boon-sop-atmosphere-review` database, and captures
 go to `debug-shots/atmosphere-*.png`. See `docs/production/episode-1-atmosphere.md`.
+
+## Episode 2 · The Whispering Pagoda
+
+Open `/tests/browser/pagoda.html` for the actual pagoda environment, lighting, lamp and player. Camera presets cover the gate, kuti, stupa garden, prayer hall, lotus pond, mirrors, Pret and forest memory. `?quality=low` selects the Low rendering fallback. Saves use the separate `boon-sop-ep2-review` database.
+
+**Run episode journey** exercises the production story handlers and paper controls through the second seal, with an injected checkpoint-write failure, puzzle recovery and cross-episode archive checks. **Verify traversal and reach** uses the real Havok controller and interaction rays for thresholds, the garden and raised bridge. Reload between runs. Both tests report their scripted substitutions explicitly. **Save screenshot** writes a scene image to `debug-shots/ep2-<view>.png`.
+
+See `docs/production/episode-2-implementation.md` for the rebuild pipeline and release limitations.
+
+Episode 2 cinematic review: choose **Harvest / Chea**, **Collapse**, **Dawn** or **Sophal** in the pagoda fixture, then **Play cinematic**. These links seed isolated chapter stages; the production cinematic director provides the real pause/resume and skip controls. `body[data-cinematic]`, `data-scene-time` and `data-scene-paused` expose review timing. After harvest/famine, Chea's actual hands and slower controller are playable. The fixture remains silent; normal play enables sound.
+
+`/tests/browser/pagoda-balance.html` runs a physical garden route with real steps, live hearing, escalating Pret and catches. It seeds only a CP1-equivalent inventory in `boon-sop-ep2-balance`; only the starting position is teleported. Movement and breath inputs are scripted, and interactions use production handlers/paper buttons at reached positions. It reports blocked routes or catches instead of resetting the ghosts or adding invulnerability. This is a repeatable balance check, not a claim of a complete manual playthrough.

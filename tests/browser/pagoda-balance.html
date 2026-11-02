@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Episode 2 · Active balance route</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      #run,
+      #results {
+        position: fixed;
+        z-index: 1000;
+        left: 12px;
+        background: #171510ed;
+        color: #eadfcd;
+        padding: 12px;
+      }
+      #run {
+        top: 12px;
+      }
+      #results {
+        bottom: 12px;
+        max-height: 35vh;
+        max-width: 90vw;
+        overflow: auto;
+        font: 12px/1.5 monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Active Episode 2 stealth test"></canvas>
+    <div id="overlay" hidden></div>
+    <button id="run" disabled>Walk active stealth route</button>
+    <pre id="results" role="status">Loading production Episode 2, isolated balance save…</pre>
+    <script type="module" src="./pagoda-balance.ts"></script>
+  </body>
+</html>
