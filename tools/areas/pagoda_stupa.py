@@ -14,7 +14,7 @@ import numpy as np
 
 from kit import lathe, tube
 from pagoda_architecture import Craft
-from pagoda_ruin import candles, dead_garland, erode, fig_roots, incense_pot, lean, sash
+from pagoda_ruin import candles, dead_garland, erode, fig_roots, incense_pot, lean, place_object, sash
 
 FAMILY = ('chea', 'wife', 'chhun', 'kanha')
 
@@ -117,6 +117,26 @@ def memorial(coll, m, x, y, k, height, ident, rng):
         # The family still comes: a fresh-ish cloth, kept candle stubs at the side.
         dressing += sash(coll, m, f'stupa_sash_{k}', x, y, 1.89, .5, m['white_cloth'], rng, tail=.5)
         dressing += candles(coll, m, f'stupa_candle_{k}', x - .45, y - .8, 0, rng)
+    if not family and 'red_thread' in m:
+        horror = rng.random()
+        if horror < .16:
+            # Cracked open: the chamber front broken, the clay urn tipped, ash and bone spilt.
+            urn = lathe(f'stupa_urn_{k}', coll, [(0, 0), (.07, 0), (.11, .07), (.1, .16), (.05, .2), (.06, .22), (0, .22)], 0, 0, 0, m['clay'], segments=12)
+            place_object(urn, x + .05, y - .18, 1.0, rng.uniform(0, math.tau), (1.2, .2))
+            dressing.append(urn)
+            for b in range(int(rng.integers(5, 10))):
+                bx, by = x + rng.uniform(-.35, .35), y - rng.uniform(.5, .66)
+                length = rng.uniform(.04, .14)
+                a = rng.uniform(0, math.tau)
+                dressing.append(tube(f'stupa_bone_{k}', coll, [(bx, by, .37), (bx + math.cos(a) * length, by + math.sin(a) * length * .3, .37)],
+                                     rng.uniform(.006, .012), m['bone'], sides=5))
+            dressing.append(lathe(f'stupa_ash_{k}', coll, [(0, 0), (.22, 0), (.12, .012), (0, .015)], x, y - .58, .36, m['ash'], segments=12))
+        elif horror < .36:
+            # Bound with red cord, round and round the pedestal, a paper tag knotted in.
+            pts = [(x + math.cos(t) * .6, y + math.sin(t) * .6, .3 + t / math.tau * .05) for t in np.linspace(0, math.tau * 6, 140)]
+            dressing.append(tube(f'stupa_red_cord_{k}', coll, pts, .004, m['red_thread'], sides=3))
+            from pagoda_rituals import talisman
+            dressing += talisman(coll, m, f'stupa_tag_{k}', (x - .61, y - .3, .55), rng)
     objs = built + [o for o in coll.objects if o not in made and o not in built]
     erode(objs, .006 if family else .011, 5.5, k)
     if not family:

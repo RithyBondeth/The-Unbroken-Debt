@@ -191,4 +191,30 @@ export const drawings = [
     });
     </script>`,
   },
+  {
+    // Old rust-red handprints on plaster: pressed, dragged down, smeared sideways.
+    name: "handprints",
+    file: "T_ep2_handprints_BC",
+    size: [1024, 512],
+    alpha: true,
+    draw: () => `<canvas id="c" width="1024" height="512"></canvas><script>
+      const ctx=document.getElementById('c').getContext('2d'),w=1024,h=512;let s=40433;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+      const print=(cx,cy,scale,rot,drag,alpha)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.scale(scale,scale);
+        // A human hand: a squarish palm, four long joined fingers, a thumb angled from the heel.
+        const hand=new Path2D();hand.roundRect(-46,-50,92,104,[18,18,30,30]);
+        for(const [fx,len,wd] of [[-33,78,21],[-11,94,22],[12,88,21],[33,68,19]])hand.roundRect(fx-wd/2,-50-len,wd,len+14,10);
+        const thumb=new Path2D();thumb.roundRect(-11,-34,22,74,11);
+        const m=new DOMMatrix().translate(-44,18).rotate(-48);hand.addPath(thumb,m);
+        ctx.save();ctx.clip(hand);
+        for(let k=0;k<9000;k++){const x=-110+r()*200,y=-160+r()*220;ctx.fillStyle='rgba(78,14,6,'+(alpha*(.25+r()*.6))+')';ctx.fillRect(x,y,1+r()*3,1+r()*3)}
+        // Skin creases and finger joints left pale where the hand pressed least.
+        for(let k=0;k<7;k++){ctx.strokeStyle='rgba(255,255,255,0)';ctx.globalCompositeOperation='destination-out';ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1.6;ctx.beginPath();const y=-30+k*12+r()*6;ctx.moveTo(-44,y);ctx.quadraticCurveTo(0,y+(r()-.5)*20,44,y+(r()-.5)*10);ctx.stroke()}
+        for(const [fx,len] of [[-33,78],[-11,94],[12,88],[33,68]])for(const j of [.33,.66]){ctx.beginPath();ctx.moveTo(fx-10,-50-len*j);ctx.lineTo(fx+10,-50-len*j);ctx.stroke()}
+        ctx.globalCompositeOperation='source-over';ctx.restore();
+        // The drag: the fingers slid down as the hand fell away.
+        for(const [fx] of [[-33],[-11],[12],[33]])for(let k=0;k<300*drag;k++){const t=r();ctx.fillStyle='rgba(78,14,6,'+(.4*(1-t)*r()*alpha)+')';ctx.fillRect(fx+(r()-.5)*18+t*6,54+t*260*drag,1+r()*2,2+r()*5)}
+        ctx.restore()};
+      print(150,230,1.1,-.15,1,1);print(420,200,1.0,.25,.4,.8);print(640,260,1.15,-.05,1.2,.9);print(880,210,.9,.4,.2,.6);
+    </script>`,
+  },
 ];
