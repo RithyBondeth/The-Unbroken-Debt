@@ -122,7 +122,7 @@ export function pagodaNotebook(
     beat: "live",
     section: "notes",
     heading: "Sophal’s rules",
-    text: "The Pret are blind. Dry leaves carry every step; moss and bare earth are quieter. C to crouch. Hold Space to quiet your breath for six seconds; holding too long ends in a gasp. G throws an empty clay bowl. The rice belongs to the dead. X closes the lamp shutter; it still burns oil. F extinguishes or lights the wick. R refills it.",
+    text: "The shrouded dead are blind. Dry leaves carry every step; moss and bare earth are quieter. C to crouch. Hold Space to quiet your breath for six seconds; holding too long ends in a gasp. G throws an empty clay bowl. The rice belongs to the dead. X closes the lamp shutter; it still burns oil. F extinguishes or lights the wick. R refills it.",
   });
   if (p.flags.get("ep2.monk.met", false)) {
     entries.push({
