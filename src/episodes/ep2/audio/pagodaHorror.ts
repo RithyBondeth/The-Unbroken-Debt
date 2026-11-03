@@ -345,3 +345,19 @@ export function distantSob(rate: number, rand: () => number): Float32Array {
   }
   return normalise(hall(out, rate, 0.7, 1.6), 0.9);
 }
+
+/** A stone image dragged a hand's breadth over brick: a low grinding scrape that judders. */
+export function stoneGrind(rate: number, rand: () => number): Float32Array {
+  const length = seconds(1.6, rate);
+  const grit = biquad(noise(length, rand), rate, "bandpass", 420, 0.7);
+  const rumble = biquad(noise(length, rand), rate, "lowpass", 90, 0.7);
+  const out = new Float32Array(length);
+  for (let i = 0; i < length; i++) {
+    const t = i / rate;
+    // Stick-slip: the weight catches and lurches a dozen times as it moves.
+    const judder = 0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI * 7.5 + Math.sin(t * 11) * 0.8));
+    const env = Math.min(1, t / 0.08) * Math.max(0, 1 - t / 1.6) ** 0.6;
+    out[i] = (grit[i] * 0.8 + rumble[i] * 1.6) * judder * env;
+  }
+  return normalise(hall(out, rate, 0.35, 1.2), 0.9);
+}

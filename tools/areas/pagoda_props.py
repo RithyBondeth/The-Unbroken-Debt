@@ -23,8 +23,6 @@ def prop_materials():
         'gold_leaf': plain('M_ep2_gold_leaf', (.5, .36, .11), rough=.38, metal=.75),
         'silver_old': plain('M_ep2_silver_old', (.26, .26, .24), rough=.58, metal=.65),
         'slate': library_material('clay_plaster', 'M_ep2_stone_slate', colour=(.085, .085, .08), tile=.6),
-        'rice_cooked': plain('M_ep2_rice_cooked', (.62, .6, .5), rough=.85),
-        'banana_leaf': plain('M_ep2_banana_leaf', (.07, .12, .045), rough=.7),
         'lacquer': library_material('dark_wooden_planks', 'M_ep2_teak_lacquer', tint=(.32, .14, .08)),
         'paint_green': library_material('clay_plaster', 'M_ep2_paint_green', colour=(.05, .15, .09), tile=1.2),
         'paint_yellow': library_material('clay_plaster', 'M_ep2_paint_yellow', colour=(.45, .33, .07), tile=1.2),
@@ -219,33 +217,6 @@ def footed_tray(coll, m, name, x, y, z, r=.3):
                  x, y, z, m['bronze'], segments=32)
 
 
-def rice_ball(coll, m, name, x, y, z, rng):
-    """Pressed sticky rice: a lumpy, grain-pitted mound, not a sphere."""
-    ball = sphere(name, coll, (x, y, z + .045), (.07, .065, .05), m['rice_cooked'], segments=20, rings=14)
-    seed = rng.uniform(0, 9)
-    for v in ball.data.vertices:
-        n = v.co.normalized()
-        v.co *= 1 + .08 * math.sin(n.x * 9 + seed) * math.cos(n.y * 7) + .04 * math.sin(n.z * 23 + n.x * 17)
-        if v.co.z < -.4:
-            v.co.z = -.4
-    return ball
-
-
-def banana_leaf(coll, m, name, x, y, z, w=.34, l=.5, yaw=0.0):
-    nx, ny = 6, 4
-    verts, faces = [], []
-    for j in range(ny + 1):
-        for i in range(nx + 1):
-            u, t = i / nx - .5, j / ny - .5
-            verts.append((u * l, t * w, .012 * (u * 2) ** 2 + .01 * (t * 2) ** 2))
-    for j in range(ny):
-        for i in range(nx):
-            a = j * (nx + 1) + i
-            faces.append((a, a + 1, a + nx + 2, a + nx + 1))
-    leaf = mesh_object(name, coll, verts, faces, m['banana_leaf'], smooth=True)
-    return place_object(leaf, x, y, z, yaw)
-
-
 # ------------------------------------------------------------------ guardians of the way
 
 
@@ -333,79 +304,6 @@ def inscribed_tablet(coll, m, name, x, y, z, rng):
                 objs.append(tube(name + '_line', coll, pts, .0025, m['void'], sides=3))
             px += length + rng.uniform(.008, .03)
     return objs
-
-
-# ------------------------------------------------------------------ the hungry dead
-
-
-def hungry_ghost(coll, m, name, seed):
-    """A preta as temple murals show them: very tall and starved to the bone, hunched,
-    a swollen belly, a needle-thin neck and pinhole mouth, arms long enough to drag,
-    hair hanging lank. Feet at the origin, facing -Y. One fused sculpt."""
-    rng = np.random.default_rng(seed)
-    sk = m['skin']
-    parts = [
-        # Swollen, sagging belly under a caved-in ribcage.
-        # The belly sags like a filled sack, heaviest low down.
-        sphere('pret_belly', coll, (0, -.14, 1.98), (.3, .3, .28), sk),
-        sphere('pret_belly_sag', coll, (0, -.2, 1.74), (.37, .36, .3), sk),
-        sphere('pret_belly_fold', coll, (0, -.27, 1.62), (.3, .26, .14), sk),
-        sphere('pret_pelvis', coll, (0, .02, 1.6), (.22, .16, .14), sk),
-        sphere('pret_ribcage', coll, (0, -.2, 2.42), (.23, .19, .3), sk),
-        sphere('pret_shoulders', coll, (0, -.22, 2.66), (.27, .13, .07), sk),
-        tube('pret_spine', coll, [(0, .1, 1.62), (0, .08, 2.0), (0, .0, 2.4), (0, -.12, 2.68)], .07, sk, sides=10),
-        # A long thin neck thrust forward, the skull hanging low.
-        tube('pret_neck', coll, [(0, -.22, 2.7), (0, -.36, 2.95), (0, -.52, 3.06)], .045, sk, sides=10, radius_end=.035),
-        sphere('pret_skull', coll, (0, -.62, 3.08), (.145, .175, .18), sk),
-        sphere('pret_jaw', coll, (0, -.74, 2.95), (.08, .09, .075), sk),
-    ]
-    for side in (-1, 1):
-        parts += [
-            sphere('pret_cheek', coll, (side * .075, -.74, 3.06), (.035, .03, .03), sk),
-            sphere('pret_brow', coll, (side * .06, -.75, 3.14), (.05, .03, .025), sk),
-            tube('pret_collarbone', coll, [(side * .03, -.32, 2.66), (side * .25, -.26, 2.7)], .025, sk, sides=6),
-            # Arms reaching nearly to the knees, knobbed at the elbow, with long clawed fingers.
-            tube('pret_upper_arm', coll, [(side * .27, -.22, 2.66), (side * .36, -.3, 2.25), (side * .4, -.36, 1.92)], .045, sk, sides=10, radius_end=.035),
-            sphere('pret_elbow', coll, (side * .4, -.36, 1.92), (.05, .05, .055), sk),
-            tube('pret_forearm', coll, [(side * .4, -.36, 1.92), (side * .42, -.5, 1.5), (side * .4, -.6, 1.18)], .035, sk, sides=10, radius_end=.026),
-            sphere('pret_hand', coll, (side * .4, -.62, 1.14), (.045, .03, .06), sk),
-            # Legs: bone and tendon, the knees standing out.
-            tube('pret_thigh', coll, [(side * .17, .0, 1.62), (side * .22, -.14, 1.2), (side * .23, -.2, .9)], .065, sk, sides=10, radius_end=.045),
-            sphere('pret_knee', coll, (side * .23, -.21, .9), (.065, .06, .07), sk),
-            tube('pret_shin', coll, [(side * .23, -.2, .9), (side * .2, -.08, .45), (side * .19, .0, .1)], .04, sk, sides=10, radius_end=.03),
-            tube('pret_foot', coll, [(side * .19, .04, .06), (side * .2, -.14, .04), (side * .21, -.3, .025)], .035, sk, sides=8, radius_end=.02),
-        ]
-        for rib in range(6):
-            z = 2.22 + rib * .065
-            parts.append(tube('pret_rib', coll, [(side * .02, -.38, z + .02), (side * .16, -.37, z), (side * .25, -.24, z - .02), (side * .22, -.05, z - .03)], .016, sk, sides=6))
-        for f in range(4):
-            spread = (f - 1.5) * .022
-            parts.append(tube('pret_finger', coll, [(side * .4 + spread, -.63, 1.1), (side * .4 + spread * 1.4, -.67, .92), (side * .4 + spread * 1.6, -.62, .76)],
-                              .011, sk, sides=6, radius_end=.003))
-    for j in range(7):
-        parts.append(sphere('pret_vertebra', coll, (0, .13 - j * .02, 1.7 + j * .14), (.03, .03, .03), sk))
-    body = sculpt(parts, name, voxel=.02, smooth=3, ratio=.5, rough=.003, seed=seed)
-    # Skin hanging in loose folds over the belly and drawn tight over bone elsewhere.
-    for v in body.data.vertices:
-        sag = max(0.0, 1 - abs(v.co.z - 1.75) / .35) * (v.co.y < -.1)
-        v.co += v.normal * (.006 * math.sin(v.co.z * 70 + v.co.x * 20) * sag + .002 * math.sin(v.co.x * 90) * math.sin(v.co.z * 80))
-    extras = []
-    for side in (-1, 1):
-        extras.append(sphere('pret_eye_socket', coll, (side * .05, -.765, 3.09), (.035, .02, .03), m['void']))
-        extras.append(sphere('pret_blind_eye', coll, (side * .05, -.775, 3.09), (.009, .004, .008), m['eye']))
-    extras.append(sphere('pret_pinhole_mouth', coll, (0, -.795, 2.97), (.008, .005, .01), m['void']))
-    # Lank hair hanging from the scalp over the face and down the back.
-    for j in range(80):
-        a = rng.uniform(-math.pi, math.pi)
-        top = (math.sin(a) * .13, -.62 + math.cos(a) * .15, 3.18 + rng.uniform(-.03, .05))
-        front = math.cos(a) < -.2
-        length = rng.uniform(.6, 1.4) if not front else rng.uniform(.35, .75)
-        out = (top[0] * 1.5, top[1] + (-.1 if front else .12))
-        phase = rng.uniform(0, math.tau)
-        pts = [top] + [(out[0] + .03 * math.sin(t * 9 + phase) + rng.normal(0, .01), out[1] + .02 * math.cos(t * 7 + phase), top[2] - length * t)
-                       for t in (.2, .4, .6, .8, 1.0)]
-        extras.append(tube('pret_hair', coll, pts, rng.uniform(.003, .006), m['hair'], sides=3, radius_end=.0015))
-    return [body] + extras
 
 
 # ------------------------------------------------------------------ the ground

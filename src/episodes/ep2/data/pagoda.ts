@@ -6,7 +6,8 @@ export const KUTI = { x: -18, y: 0.22, z: 15, yaw: Math.PI };
 export const LIBRARY = { x: 0, y: 1.4, z: -29, yaw: Math.PI };
 export const DAWN = { x: -12, y: 0.08, z: 8.5, yaw: Math.PI };
 export const MEMORY = { x: 80, y: 0.08, z: 10, yaw: Math.PI };
-export const BOUNDS = { minX: -29, maxX: 29, minZ: -39, maxZ: 40 };
+/** The compound, and east of it the clearing of the reclining Buddha. */
+export const BOUNDS = { minX: -29, maxX: 44, minZ: -39, maxZ: 40 };
 
 export const ANCESTORS = [
   {

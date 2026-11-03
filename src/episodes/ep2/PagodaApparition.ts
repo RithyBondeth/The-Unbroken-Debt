@@ -29,6 +29,8 @@ export interface Scare {
 
 const HALL_DOOR = { x: 22, z: 6.6 };
 const KUTI_DOOR = { x: -18, z: 15.5 };
+/** The far end of the reclining Buddha's bed, in the clearing east of the compound. */
+const SALA_FAR = { x: 40.2, z: 12.9 };
 const dist = (a: { x: number; z: number }, b: { x: number; z: number }) =>
   Math.hypot(a.x - b.x, a.z - b.z);
 const ahead = (c: ScareContext, d: number, side = 0) => ({
@@ -43,7 +45,7 @@ export function facing(c: ScareContext, p: { x: number; z: number }): number {
   return (Math.sin(c.yaw) * dx + Math.cos(c.yaw) * dz) / d;
 }
 
-/** The six one-time scares of the episode, in story order. */
+/** The one-time scares of the episode, in story order. */
 export const SCARES: Scare[] = [
   {
     // Crossing the threshold: something red crosses the processional path far ahead.
@@ -93,6 +95,18 @@ export const SCARES: Scare[] = [
     ready: (c) =>
       c.stage === "library" && Math.abs(c.feet.x) < 1.2 && c.feet.z < -20 && c.feet.z > -26,
     place: (c) => ({ x: c.feet.x + 2.2, z: c.feet.z - 1.6 }),
+  },
+  {
+    // In the clearing: she stands at the far end of the reclining Buddha's bed.
+    id: "sala",
+    kind: "stare",
+    ready: (c) =>
+      c.stage !== "escape" &&
+      c.stage !== "memory" &&
+      c.feet.x > 33 &&
+      c.feet.x < 37 &&
+      facing(c, SALA_FAR) > 0.8,
+    place: () => SALA_FAR,
   },
   {
     // After the first mirror turns: she is behind Sora in the archive.

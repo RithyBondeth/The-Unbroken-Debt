@@ -21,11 +21,13 @@ from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image,
 from pagoda_stupa import memorial
 from pagoda_forest import giant, outer_forest
 from pagoda_pond import build_pond, pond_materials
+from pagoda_offerings import (offering_materials, sticky_rice_ball, banana_leaf_piece, lotus_bud, lotus_bunch,
+                              terracotta_bowl, tray_places)
 from pagoda_rituals import (ritual_materials, red_string_web, bound_trunk, boundary_stakes, sorcery_altar,
                             hanging_doll)
 from pagoda_props import (prop_materials, hall_buddha, money_tree, curtain_swag, stepped_altar, offering_table,
-                          footed_tray, rice_ball, banana_leaf, naga_rail, family_emblem, inscribed_tablet,
-                          hungry_ghost, leaf_litter, sutra_table, hall_doors, sealed_doorway, verse_board,
+                          footed_tray, naga_rail, family_emblem, inscribed_tablet,
+                          leaf_litter, sutra_table, hall_doors, sealed_doorway, verse_board,
                           bell_pavilion, kuti_furnishings, supplies_contents, lore_contents)
 from khmer import rotate_uvs
 
@@ -52,6 +54,9 @@ def materials():
         ('paper',(.65,.57,.4),.95,0), ('rice',(.78,.75,.64),.95,0), ('clay',(.28,.13,.07),.9,0),
         ('void',(.006,.006,.005),1,0), ('thread',(.75,.73,.63),.9,0), ('stem_green',(.1,.17,.06),.8,0)]:
         m[key]=plain('M_ep2_'+key,col,rough=rough,metal=metal)
+    # Offerings and old metal with real colour and relief: patinated bronze, fired clay.
+    m.update(offering_materials())
+    m['clay']=m['terracotta']
     m['flame']=glow_material('M_flame', texture('T_ep1_flame_BC'),strength=3)
     m['tiles'].use_backface_culling=False
     # Sculpted bodies use seamless maps; a character UV atlas cannot be box-projected.
@@ -162,13 +167,22 @@ collider('earth',AREA,-30,30,-40,42,-.18,-.01,'dirt')
 for name,(gx0,gx1,gy0,gy1) in {'earth':(-30,30,-40,17.4),'earth_north':(-30,30,39.2,42),
                                 'earth_west':(-30,-18.6,17.4,39.2),'earth_east':(18.6,30,17.4,39.2)}.items():
     box(name,AREA,gx0,gx1,gy0,gy1,-.18,-.01,m['earth'])
-for x in [-30,30]:cube('col_boundary',x,1,-.2,1,84,5,None,True)
+cube('col_boundary',-30,1,-.2,1,84,5,None,True)
+# East of the fallen bay the forest opens into the clearing of the reclining Buddha
+# (the sala, its images and its watchers are authored in tools/ep2/build-cinematics.py).
+ANNEX=(28.4,44.6,-21,1.2)
+cube('col_boundary',30,-30.6,-.2,1,22.8,5,None,True)
+cube('col_boundary',30,21.6,-.2,1,40.8,5,None,True)
+cube('col_boundary',45,-9.9,-.2,1,23.2,5,None,True)
+for z in [-21.5,1.7]:cube('col_boundary',37,z,-.2,16,1,5,None,True)
+collider('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,'dirt')
+box('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,m['earth'])
 for z in [-40,42]:cube('col_boundary',0,z,-.2,60,1,5,None,True)
 # Low masonry compound walls and breathing foliage beyond them.
 # Old lotus-crested temple walls: leaning bays, scabbed plaster, fallen sections, creepers.
 wall_rng=np.random.default_rng(1767)
 temple_wall(AREA,m,'compound_wall_west',(-28,-39.5),(-28,41.5),wall_rng,'mould_white',breaches=(4,13,21))
-temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_grey',breaches=(9,17))
+temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_grey',breaches=(9,17),open_bays=(9,))
 temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(5,))
 temple_wall(AREA,m,'gateway_boundary_west',(-28,-27),(-7.6,-27),wall_rng,'mould_red',breaches=(2,))
 temple_wall(AREA,m,'gateway_boundary_east',(7.6,-27),(28,-27),wall_rng,'mould_red')
@@ -280,18 +294,17 @@ for id,x,z in [('rice',-17,-7),('lotus',-17,7),('water',17,9),('bowls',16,-8)]:
     offering_table(AREA,m,id+'_stand',x,z)
     collider(id+'_stand',AREA,x-.5,x+.5,z-.375,z+.375,0,.45,'teak')
     def contents(id=id,x=x,z=z):
+        # Three of each on a footed bronze tray (its dish at .56), spaced so none touch.
         footed_tray(AREA,m,id+'_tray',x,z,.44)
-        if id=='rice':banana_leaf(AREA,m,'rice_leaf',x,z,.555,yaw=.3)
-        for k in range(3):
-            px=x+(k-1)*.17;pz=z+(.04 if k==1 else -.03)
-            if id=='lotus':
-                lathe('lotus_bud',AREA,[(0,0),(.05,.03),(.07,.1),(.06,.17),(.03,.23),(0,.27)],px,pz,.56,m['lotus'],segments=10)
-                tube('lotus_stem',AREA,[(px,pz,.56),(px+.12,pz+.05,.565),(px+.24,pz+.02,.56)],.008,m['stem_green'],sides=5)
-            elif id=='water':
+        if id=='rice':banana_leaf_piece(AREA,m,'rice_leaf',x,z,.563,rng,length=.5,width=.4,yaw=.3)
+        if id=='lotus':
+            for px,pz,yaw in lotus_bunch(x,z):lotus_bud(AREA,m,'lotus_bud',px,pz,.561,rng,yaw=yaw+rng.normal(0,.06))
+        for px,pz in ([] if id=='lotus' else tray_places(x,z)):
+            if id=='water':
                 lathe('water_cup',AREA,[(0,0),(.05,0),(.04,.02),(.06,.03),(.085,.1),(.08,.11),(.07,.04),(0,.04)],px,pz,.56,m['bronze'],segments=20)
                 lathe('water_surface',AREA,[(0,0),(.074,0)],px,pz,.65,m['water'],segments=16)
-            elif id=='rice':rice_ball(AREA,m,'rice_ball',px,pz,.565,rng)
-            else:lathe('empty_clay_bowl',AREA,[(0,0),(.05,0),(.06,.01),(.1,.03),(.12,.07),(.11,.075),(.09,.03),(0,.02)],px,pz,.56,m['clay'],segments=16)
+            elif id=='rice':sticky_rice_ball(AREA,m,'rice_ball',px,pz,.566,rng)
+            else:terracotta_bowl(AREA,m,'empty_clay_bowl',px,pz,.561,rng)
     usable('pickup_'+id,x,z,.5,contents)
 # Prayer hall; bell puzzle and lore remain an optional detour.
 building('vihear',22,1,9,15,.15)
@@ -437,7 +450,7 @@ red_string_web(AREA,m,'yard_web_w',[(x,y,2.1) for x,y in forgotten[:11]],rit,den
 red_string_web(AREA,m,'yard_web_e',[(x,y,2.1) for x,y in forgotten[11:19]],rit,density=1.1)
 sorcery_altar(AREA,m,'yard_altar',-23.3,29.2,math.pi/2,rit)
 # Seen through the fallen bay of the east wall: another altar under the strangler.
-sorcery_altar(AREA,m,'forest_altar',31.2,-9.6,math.pi,rit)
+sorcery_altar(AREA,m,'forest_altar',30.6,-14.6,math.pi/2,rit)
 # The old cloister becomes a gallery of weathered images facing its walk.
 for j,(py,headless) in enumerate([(-1.85,True),(-.15,False),(6.15,False),(7.85,True),(10.15,True),(11.85,False)]):
     seated_image(AREA,m,'cloister_image_'+str(j),-25.35,py,math.pi/2,.7,headless=headless,damage=j==2,seed=10+j)
@@ -445,7 +458,7 @@ for j,(py,headless) in enumerate([(-1.85,True),(-.15,False),(6.15,False),(7.85,T
     if not headless:sash(AREA,m,'cloister_image_sash_'+str(j),-25.35,py,.13*.7+.5*.7,.25*.7,m['saffron'],ruin_rng,tail=.3)
 # Layered forest: three ranks of old growth outside, inner emergents, bamboo, understory.
 avoid=[(x,y,1.0) for x,y in forgotten]+[(4.8,-37.6,.8)]
-outer_forest(AREA,m,np.random.default_rng(6241910),avoid)
+outer_forest(AREA,m,np.random.default_rng(6241910),avoid,clear=[(ANNEX[0],ANNEX[1]-1.6,ANNEX[2]+1.4,ANNEX[3]-1.4)])
 inner=[(-24,-25),(24,-23),(-24,15),(24,20),(-12,40),(12,40),(-7,-24),(8,-22),(-21,3),(-23,22),(20,28),(-23,35),(25,35),(-9,-34),(8,-35)]
 for k,(x,z) in enumerate(inner):
     giant(AREA,m,x,z,rng.uniform(10,15),120+k,rng,reach=1.8,collision=True)
@@ -467,6 +480,12 @@ for k in range(1400):
     if z<-26.6 or 12.8<x<19.2 and -25.6<z<-19.2 or -17.2<x<-9.6 and z<-24.8 or x<-24.6 and -3.4<z<13.4:continue
     if any((x-a)**2+(z-b)**2<.9 for a,b in forgotten):continue
     spots.append((x,z))
+# The clearing's floor: undergrowth everywhere but the path in and the sala itself.
+for k in range(420):
+    x,z=rng.uniform(ANNEX[0]+.8,ANNEX[1]-.6),rng.uniform(ANNEX[2]+.6,ANNEX[3]-.6)
+    if x<36 and -11.4<z<-6:continue
+    if 34.6<x<41.8 and -15.6<z<-2.6:continue
+    spots.append((x,z))
 understory(AREA,spots,rng)
 grass_geometry('pagoda_grasses',AREA,[(x,z,.015) for x,z in spots],rng,size=(.35,.85))
 # Fallen boughs and roots at the forest edge, kept off playable aisles.
@@ -481,14 +500,17 @@ for k in range(15):
 for x in [79.5,80,80.5]:lathe('memory_shrine_stone',AREA,[(.3,0),(.35,.4),(.25,.7),(.05,.9)],x,8,0,m['stone'])
 usable('memory_shrine',80,7,.4,lambda:cube('memory_betel_box',80,7,.4,.5,.35,.2,m['silver']))
 lamp('memory',80,8,.6)
-# Hungry ghosts: detailed three-dimensional emaciated bodies and pinhole mouths.
-# Origin at feet, exported independent roots retained by the runtime for movement.
+# The hungry dead of the garden: corpses bound in their burial shrouds (the Pocong
+# scan), tied at head, neck, waist and feet as the dead are wrapped for the pyre.
+# Feet at each root's origin; the runtime moves and hops each root independently.
+sys.path.insert(0,os.path.join(ROOT,'tools/ep2'))
+from pagoda_scans import scan,instance
+shroud=None
 for i in range(5):
-    before=set(AREA.objects)
-    # Author locally then parent; runtime poses each root independently.
-    hungry_ghost(AREA,m,'pret_anatomy_'+str(i),40+i)
     root=anchor('pret_'+str(i),0,0)
-    adopt(root,[o for o in AREA.objects if o not in before and o!=root and o.parent is None])
+    if shroud is None:shroud=body=scan(AREA,'pocong','pret_shroud_'+str(i),height=1.78)
+    else:body=instance(AREA,shroud,'pret_shroud_'+str(i),(0,0,0),0,scale=1+.04*((i*7)%3-1))
+    adopt(root,[body])
     root.location=(12+i*2,12,0)
 # Babylon's glTF import mirrors X. Compensate once, on the authored world root,
 # so gameplay, notebook and Blender's named coordinates all use X east/Z south.

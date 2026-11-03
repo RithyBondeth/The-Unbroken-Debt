@@ -48,7 +48,7 @@ def fallen_log(coll, m, name, x, y, yaw, length, r, rng):
     return parts
 
 
-def outer_forest(coll, m, rng, avoid=()):
+def outer_forest(coll, m, rng, avoid=(), clear=()):
     """Three ranks of old growth beyond the walls and along the approach track."""
     trees = []
     k = 0
@@ -74,6 +74,9 @@ def outer_forest(coll, m, rng, avoid=()):
                  (-7.2, -30.2), (6.7, -29.5)]:
         trees.append((x + rng.normal(0, .4), y + rng.normal(0, .4), rng.uniform(11, 15)))
     for x, y, h in trees:
+        # Clearings the player walks into (x0, x1, y0, y1) keep only their ring of trunks.
+        if any(x0 < x < x1 and y0 < y < y1 for x0, x1, y0, y1 in clear):
+            continue
         near_track = abs(y) < 40 and abs(x) < 28
         giant(coll, m, x, y, h, 700 + k, rng, reach=1.6 if near_track else None, collision=near_track,
               crown=rng.uniform(1.0, 1.2))

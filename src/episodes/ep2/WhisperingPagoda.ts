@@ -16,7 +16,8 @@ import { EP1_GRADE } from "../ep1/data/grade";
 import { PagodaLights } from "./PagodaLights";
 import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
-import { PagodaApparition } from "./PagodaApparition";
+import { PagodaApparition, type ScareContext } from "./PagodaApparition";
+import { PagodaWatchers } from "./PagodaWatchers";
 import { buildFarForest } from "./PagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
 import { CheaHands } from "./cinematics/CheaHands";
@@ -46,6 +47,7 @@ export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
   private apparition!: PagodaApparition;
+  private watchers!: PagodaWatchers;
   equipment!: PagodaEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
@@ -58,6 +60,8 @@ export class WhisperingPagoda {
   readonly escapeClock = new EscapeClock();
   private contactGrace: number = B.loadGrace;
   private readonly actors: TransformNode[] = [];
+  /** Each shrouded corpse's hop phase, advancing only while it moves. */
+  private readonly hop: number[] = [0, 0, 0, 0, 0];
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -134,6 +138,8 @@ export class WhisperingPagoda {
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
     this.apparition.attach();
+    this.watchers = new PagodaWatchers(g, this.sounds);
+    this.watchers.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
       if (light !== this.lights.lamp)
         light.excludedMeshes.push(...this.equipment.held.meshes, ...g.hands.meshes);
@@ -918,12 +924,16 @@ export class WhisperingPagoda {
       actor.setEnabled(visible);
       if (!visible) return;
       const brain = this.ghosts[i];
+      const was = { x: brain.position.x, z: brain.position.z };
       if (active && p.stage === "garden") brain.update(simDt);
-      actor.setAbsolutePosition(
-        new Vector3(brain.position.x, Math.sin(this.time * 1.2 + i) * 0.035, brain.position.z),
-      );
+      // The bound dead cannot walk: they hop, feet together, when they move, and
+      // stand swaying when they stop to listen.
+      const moved = Math.hypot(brain.position.x - was.x, brain.position.z - was.z) > 1e-4;
+      this.hop[i] = moved ? this.hop[i] + simDt * 4.2 : 0;
+      const lift = moved ? Math.abs(Math.sin(this.hop[i] * Math.PI)) * 0.16 : 0;
+      actor.setAbsolutePosition(new Vector3(brain.position.x, lift, brain.position.z));
       actor.rotation.y = brain.yaw;
-      actor.rotation.z = Math.sin(this.time * 0.8 + i) * 0.018;
+      actor.rotation.z = Math.sin(this.time * 0.8 + i) * 0.03;
     });
     this.sounds.update(
       dt,
@@ -956,19 +966,17 @@ export class WhisperingPagoda {
       },
       haunting,
     );
-    this.apparition.update(
-      dt,
-      {
-        stage: p.stage,
-        feet,
-        yaw: g.player.yaw,
-        offerings: p.offerings,
-        inKuti: inKuti(feet),
-        mirrorsTurned: p.mirrors.some((turn) => turn !== 0),
-        nearestPret,
-      },
-      haunting,
-    );
+    const scareContext: ScareContext = {
+      stage: p.stage,
+      feet,
+      yaw: g.player.yaw,
+      offerings: p.offerings,
+      inKuti: inKuti(feet),
+      mirrorsTurned: p.mirrors.some((turn) => turn !== 0),
+      nearestPret,
+    };
+    this.apparition.update(dt, scareContext, haunting);
+    this.watchers.update(dt, scareContext, haunting);
     if (!active) return;
     if (p.stage === "garden") {
       if (this.breath.update(simDt, g.input.isHeld("Space"))) {
