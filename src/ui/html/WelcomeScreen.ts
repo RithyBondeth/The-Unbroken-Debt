@@ -96,7 +96,10 @@ export async function showWelcomeScreen(
   try {
     const result = await saves.load("autosave");
     hasSave = result.save !== null;
-    if (result.save?.episode === 2)
+    if (result.save?.episode === 3)
+      root.querySelector<HTMLElement>(".welcome-chapter")!.textContent =
+        "Episode III · The Drowned Village";
+    else if (result.save?.episode === 2)
       root.querySelector<HTMLElement>(".welcome-chapter")!.textContent =
         "Episode II · The Whispering Pagoda";
     resume.disabled = !hasSave;

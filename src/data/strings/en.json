@@ -148,5 +148,9 @@
   "ep2.hint.controls": "W A S D · Move | E · Use | Q · Sketchbook | C · Crouch | Space · Hold breath | X · Shutter | G · Throw empty bowl",
   "ep2.hint.stupa": "E · Read inscription / place offering",
   "ep2.hint.mirror": "E · Turn bronze mirror",
-  "ep2.hint.bell": "E · Strike bell"
+  "ep2.hint.bell": "E · Strike bell",
+  "ep3.hint.controls": "WASD move · E interact · Q sketchbook · F lamp · X shutter · R refill",
+  "ep3.hint.fuse": "E · Open the sealed medical tin",
+  "ep3.hint.seal": "E · Board and cover the broken window",
+  "ep3.hint.row": "Alternate A and D to pull the oars"
 }

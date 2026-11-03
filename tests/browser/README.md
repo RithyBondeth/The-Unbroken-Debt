@@ -396,3 +396,21 @@ See `docs/production/episode-2-implementation.md` for the rebuild pipeline and r
 Episode 2 cinematic review: choose **Harvest / Chea**, **Collapse**, **Dawn** or **Sophal** in the pagoda fixture, then **Play cinematic**. These links seed isolated chapter stages; the production cinematic director provides the real pause/resume and skip controls. `body[data-cinematic]`, `data-scene-time` and `data-scene-paused` expose review timing. After harvest/famine, Chea's actual hands and slower controller are playable. The fixture remains silent; normal play enables sound.
 
 `/tests/browser/pagoda-balance.html` runs a physical garden route with real steps, live hearing, escalating Pret and catches. It seeds only a CP1-equivalent inventory in `boon-sop-ep2-balance`; only the starting position is teleported. Movement and breath inputs are scripted, and interactions use production handlers/paper buttons at reached positions. It reports blocked routes or catches instead of resetting the ghosts or adding invulnerability. This is a repeatable balance check, not a claim of a complete manual playthrough.
+
+# Episode 3 review
+
+Open `/tests/browser/drowned-village.html` for the real production scene with a
+separate `boon-sop-ep3-review-<session>` save database per tab. This keeps concurrent
+review tabs and hot reloads from clearing each other's setup saves.
+`stage=market|clinic|vault|memory|purification|escape`
+selects chapter state; `view=market|lok|water|clinic|ward|attic|vault|kanha|portrait|ritual|escape|rescue`
+selects the camera. `quality` selects a preset; `audio` enables the real soundscape.
+`stage=purification&candles=3` seeds the valid state before the fourth-candle choice.
+
+**Verify story and saves** scripts dialogue choices while exercising the actual
+oar-input listener, frame-driven docking, repairs, fuses, safe dials, memory
+interactions, mother choice and save-code roundtrip. Start from `stage=market`.
+**Verify physical routes** drives the real Havok character along the docks,
+landing, attic stair and doorway, cellar ramp and each roof bridge, with threats
+paused, then checks production interaction rays. Use scene buttons for visual
+inspection; **Save screenshot** writes the rendered frame to `debug-shots/`.
