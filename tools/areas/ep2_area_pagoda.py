@@ -509,7 +509,8 @@ shroud=None
 for i in range(5):
     root=anchor('pret_'+str(i),0,0)
     if shroud is None:shroud=body=scan(AREA,'pocong','pret_shroud_'+str(i),height=1.78)
-    else:body=instance(AREA,shroud,'pret_shroud_'+str(i),(0,0,0),0,scale=1+.04*((i*7)%3-1))
+    # Each its own mesh: their hops, lean and twitching head are shape keys that move apart.
+    else:body=instance(AREA,shroud,'pret_shroud_'+str(i),(0,0,0),0,scale=1+.04*((i*7)%3-1),own=True)
     adopt(root,[body])
     root.location=(12+i*2,12,0)
 # Babylon's glTF import mirrors X. Compensate once, on the authored world root,

@@ -361,3 +361,117 @@ export function stoneGrind(rate: number, rand: () => number): Float32Array {
   }
   return normalise(hall(out, rate, 0.35, 1.2), 0.9);
 }
+
+/** Female formants: the male table scaled up a sixth. */
+const female = (v: Vowel) => VOWELS[v].map((f) => f * 1.22);
+
+/**
+ * The kuntilanak's laugh: a thin, high woman's "hi-hi-hi" that runs down the
+ * scale and ends in a long wavering note, breathy, far too happy, in a hall.
+ */
+export function kuntilanakLaugh(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(seconds(3.2, rate));
+  const notes = 7;
+  for (let k = 0; k <= notes; k++) {
+    const last = k === notes;
+    const len = last ? 0.62 : 0.12;
+    const at = 0.05 + k * 0.19;
+    const f0 = 860 - k * 38;
+    const n = seconds(len, rate);
+    const src = glottal(
+      n,
+      rate,
+      (t) => f0 * (1 + (last ? 0.03 * Math.sin(t * 38) : 0)) * (1 - t * 0.25),
+      rand,
+    );
+    const air = biquad(noise(n, rand), rate, "highpass", 2400, 0.7);
+    for (let i = 0; i < n; i++) src[i] = src[i] * 0.8 + air[i] * 0.35;
+    const voice = articulate(src, rate, (t) => (t < 0.02 ? female("e") : female("i")));
+    for (let i = 0; i < n; i++) {
+      const t = i / rate;
+      // An "h" of breath, the voiced note, then cut off sharp.
+      voice[i] *= Math.min(1, t / 0.012) * Math.max(0, 1 - t / len) ** (last ? 0.6 : 0.25);
+    }
+    place(out, voice, rate, at, 1);
+  }
+  return normalise(hall(out, rate, 0.75, 1.5), 0.9);
+}
+
+/** A neck snapping over too far: two dry cracks and a gristly pop, close. */
+export function boneCrack(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(seconds(0.7, rate));
+  for (const [at, gain] of [
+    [0.02, 1],
+    [0.055, 0.7],
+    [0.11, 0.45],
+  ] as const) {
+    const n = seconds(0.06, rate);
+    const snap = biquad(noise(n, rand), rate, "highpass", 1600 + rand() * 900, 0.8);
+    for (let i = 0; i < n; i++) {
+      const t = i / rate;
+      snap[i] =
+        snap[i] * Math.exp(-t / 0.004) +
+        Math.sin(2 * Math.PI * 1150 * t) * Math.exp(-t / 0.006) * 0.4;
+    }
+    place(out, snap, rate, at, gain);
+  }
+  const thump = new Float32Array(seconds(0.2, rate));
+  for (let i = 0; i < thump.length; i++) {
+    const t = i / rate;
+    thump[i] = Math.sin(2 * Math.PI * 95 * t) * Math.exp(-t / 0.04);
+  }
+  place(out, thump, rate, 0.02, 0.6);
+  return normalise(hall(out, rate, 0.25, 0.8), 0.9);
+}
+
+/** Where she was a moment ago: a breath sucked in hard and cut off dead. */
+export function vanishBreath(rate: number, rand: () => number): Float32Array {
+  const length = seconds(0.75, rate);
+  const gasp = biquad(noise(length, rand), rate, "bandpass", 1100, 0.9);
+  const low = biquad(noise(length, rand), rate, "lowpass", 260, 0.7);
+  const out = new Float32Array(length);
+  const end = 0.62;
+  for (let i = 0; i < length; i++) {
+    const t = i / rate;
+    if (t > end) break;
+    // Swelling like a reversed sigh, then nothing: no tail at all.
+    const swell = (t / end) ** 3.2 * Math.min(1, (end - t) / 0.004);
+    out[i] = (gasp[i] + low[i] * 1.4) * swell;
+  }
+  return normalise(out, 0.9);
+}
+
+/** A bound corpse landing from a hop: a heavy thud through the ground, cloth slapping. */
+export function pocongThud(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(seconds(0.6, rate));
+  const n = seconds(0.4, rate);
+  const body = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / rate;
+    body[i] = Math.sin(2 * Math.PI * (72 - 30 * t) * t) * Math.exp(-t / 0.09);
+  }
+  place(out, body, rate, 0, 1);
+  const cloth = biquad(noise(seconds(0.12, rate), rand), rate, "bandpass", 520, 0.8);
+  for (let i = 0; i < cloth.length; i++) cloth[i] *= Math.exp(-i / rate / 0.03);
+  place(out, cloth, rate, 0.004, 0.55);
+  const grit = biquad(noise(seconds(0.08, rate), rand), rate, "highpass", 2600, 0.7);
+  for (let i = 0; i < grit.length; i++) grit[i] *= Math.exp(-i / rate / 0.015);
+  place(out, grit, rate, 0.006, 0.25);
+  return normalise(out, 0.9);
+}
+
+/** A moan from inside the shroud: low, shut-mouthed, catching, the cloth muffling it. */
+export function pocongGroan(rate: number, rand: () => number): Float32Array {
+  const length = seconds(2.6, rate);
+  const f0 = (t: number) => 88 - 16 * t + 4 * Math.sin(t * 9);
+  const voice = articulate(glottal(length, rate, f0, rand), rate, (t) =>
+    t < 1.2 ? VOWELS.u : VOWELS.o,
+  );
+  const muffled = biquad(voice, rate, "lowpass", 650, 0.7);
+  for (let i = 0; i < length; i++) {
+    const t = i / rate;
+    const catchy = 0.7 + 0.3 * Math.abs(Math.sin(t * Math.PI * 2.4));
+    muffled[i] *= Math.min(1, t / 0.25) * Math.max(0, 1 - t / 2.6) ** 0.7 * catchy;
+  }
+  return normalise(softClip(hall(muffled, rate, 0.3, 1), 1.6), 0.9);
+}

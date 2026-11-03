@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { SCARES, facing, type ScareContext } from "../../src/episodes/ep2/PagodaApparition";
+import {
+  BEATS,
+  SCARES,
+  facing,
+  ghostPose,
+  type ScareContext,
+} from "../../src/episodes/ep2/PagodaApparition";
 
 const base: ScareContext = {
   stage: "garden",
@@ -46,5 +52,29 @@ describe("Episode 2 apparition scares", () => {
     expect(scare("bridge").ready(bridge)).toBe(true);
     expect(scare("bridge").ready({ ...bridge, feet: { x: 4, z: -23 } })).toBe(false);
     expect(scare("bridge").ready({ ...bridge, stage: "garden" })).toBe(false);
+  });
+  it("flickers in rather than fading: on, off, on, off, on", () => {
+    expect([0.01, 0.06, 0.1, 0.15, 0.2].map((t) => ghostPose("lunge", t).visible)).toEqual([
+      true,
+      false,
+      true,
+      false,
+      true,
+    ]);
+  });
+  it("throws her arms out at once in a lunge, and snaps her neck over", () => {
+    expect(ghostPose("lunge", 0.2).reach).toBe(1);
+    expect(ghostPose("lunge", 0.4).snap).toBe(1);
+    expect(ghostPose("lunge", 0.7).snap).toBeLessThan(0);
+  });
+  it("blinks out mid-stare and comes back a step nearer", () => {
+    expect(ghostPose("stare", 0.95).visible).toBe(false);
+    expect(ghostPose("stare", 0.5).travel).toBe(0);
+    expect(ghostPose("stare", 1.1).travel).toBe(1);
+  });
+  it("cracks her neck in every appearance, and laughs when she stares", () => {
+    for (const beats of Object.values(BEATS))
+      expect(beats.some((b) => b.sound === "crack")).toBe(true);
+    expect(BEATS.stare.some((b) => b.sound === "laugh")).toBe(true);
   });
 });
