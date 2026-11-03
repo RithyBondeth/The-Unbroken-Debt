@@ -62,7 +62,7 @@ export class PagodaCinematics {
   async load(): Promise<void> {
     const g = this.game;
     this.area = await loadArea(g.scene, "ep2", "ep2_cinematics", {
-      keep: [/^harvest_/, /^sophal_living/, /^memory_basket_/],
+      keep: [/^harvest_/, /^sophal_living/, /^memory_basket_/, /^pagoda_ghost/],
       cellSize: 8,
     });
     const find = (name: string) =>

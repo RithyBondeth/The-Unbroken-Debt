@@ -64,43 +64,8 @@ def extrude(coll, name, outline, t, mat, origin=(0, 0, 0)):
 
 
 def hall_buddha(coll, m, x, y, z, s, yaw):
-    """The seated Buddha of the hall, calling the earth to witness: whitened plaster
-    face and hands, saffron robe over the left shoulder, on a red lotus throne."""
-    skin = [
-        sphere('hall_buddha_shoulder_r', coll, (.2 * s, .06 * s, .71 * s), (.1 * s, .1 * s, .09 * s), m['buddha_skin']),
-        tube('hall_buddha_neck', coll, [(0, .06 * s, .74 * s), (0, .06 * s, .88 * s)], .072 * s, m['buddha_skin'], sides=12),
-        sphere('hall_buddha_head', coll, (0, .05 * s, 1.0 * s), (.115 * s, .125 * s, .15 * s), m['buddha_skin']),
-        sphere('hall_buddha_hair', coll, (0, .075 * s, 1.06 * s), (.118 * s, .11 * s, .11 * s), m['buddha_skin']),
-        sphere('hall_buddha_ushnisha', coll, (0, .075 * s, 1.17 * s), (.06 * s, .06 * s, .065 * s), m['buddha_skin']),
-        tube('hall_buddha_flame', coll, [(0, .075 * s, 1.21 * s), (0, .075 * s, 1.38 * s)], .03 * s, m['buddha_skin'], sides=10, radius_end=.003),
-        sphere('hall_buddha_nose', coll, (0, -.068 * s, .99 * s), (.017 * s, .022 * s, .038 * s), m['buddha_skin']),
-        sphere('hall_buddha_brow', coll, (0, -.05 * s, 1.03 * s), (.08 * s, .03 * s, .02 * s), m['buddha_skin']),
-        # The bare right arm hangs by the side, the forearm reaching over the knee to touch the earth.
-        sphere('hall_buddha_upper_arm', coll, (.29 * s, .04 * s, .58 * s), (.075 * s, .075 * s, .15 * s), m['buddha_skin']),
-        tube('hall_buddha_arm_r', coll, [(.27 * s, .06 * s, .7 * s), (.32 * s, .03 * s, .46 * s), (.34 * s, -.12 * s, .3 * s), (.33 * s, -.27 * s, .16 * s)], .08 * s, m['buddha_skin'], sides=14, radius_end=.05 * s),
-        sphere('hall_buddha_hand_r', coll, (.33 * s, -.3 * s, .13 * s), (.055 * s, .075 * s, .032 * s), m['buddha_skin']),
-        sphere('hall_buddha_hand_l', coll, (-.03 * s, -.13 * s, .3 * s), (.075 * s, .055 * s, .028 * s), m['buddha_skin']),
-    ]
-    for side in (-1, 1):
-        skin.append(tube('hall_buddha_ear', coll, [(side * .115 * s, .07 * s, 1.03 * s), (side * .125 * s, .07 * s, .93 * s), (side * .115 * s, .06 * s, .84 * s)],
-                         .02 * s, m['buddha_skin'], sides=8, radius_end=.016 * s))
-    skin.append(sphere('hall_buddha_sole', coll, (.18 * s, -.14 * s, .27 * s), (.065 * s, .11 * s, .028 * s), m['buddha_skin']))
-    face = sculpt(skin, 'hall_buddha_skin', voxel=.011 * s, smooth=5, ratio=.35, rough=.001, seed=5)
-    # The robe covers the lap, body and left shoulder; its hem crosses under the right arm.
-    robe = [
-        sphere('hall_buddha_lap', coll, (0, -.03 * s, .2 * s), (.47 * s, .31 * s, .13 * s), m['robe']),
-        sphere('hall_buddha_hips', coll, (0, .04 * s, .32 * s), (.29 * s, .22 * s, .16 * s), m['robe']),
-        sphere('hall_buddha_torso', coll, (-.01 * s, .06 * s, .55 * s), (.23 * s, .165 * s, .27 * s), m['robe']),
-        sphere('hall_buddha_shoulder_l', coll, (-.19 * s, .06 * s, .71 * s), (.12 * s, .12 * s, .09 * s), m['robe']),
-        tube('hall_buddha_arm_l', coll, [(-.24 * s, .06 * s, .7 * s), (-.31 * s, .02 * s, .48 * s), (-.24 * s, -.08 * s, .32 * s), (-.1 * s, -.14 * s, .3 * s)], .085 * s, m['robe'], sides=14, radius_end=.07 * s),
-        tube('hall_buddha_drape', coll, [(-.2 * s, -.1 * s, .72 * s), (-.19 * s, -.15 * s, .5 * s), (-.15 * s, -.2 * s, .3 * s)], .06 * s, m['robe'], sides=10, radius_end=.08 * s),
-    ]
-    for side in (-1, 1):
-        robe.append(sphere('hall_buddha_knee', coll, (side * .35 * s, -.12 * s, .2 * s), (.15 * s, .16 * s, .1 * s), m['robe']))
-    cloth = sculpt(robe, 'hall_buddha_robe', voxel=.012 * s, smooth=6, ratio=.35, rough=.001, seed=6)
-    for v in cloth.data.vertices:
-        # Shallow folds running down and round the lap.
-        v.co += v.normal * .005 * s * math.sin(v.co.x * 50 / s + v.co.z * 14 / s)
+    """The red lotus throne of the hall's seated Buddha."""
+    # The image itself is a real seated body cast as plaster (tools/ep2/build-cinematics.py).
     # The lotus throne: drum, double ring of faded crimson petals, cushion.
     throne = [lathe('hall_buddha_throne', coll, [(.62 * s, -.32 * s), (.6 * s, -.26 * s), (.48 * s, -.2 * s), (.46 * s, -.1 * s), (.55 * s, -.04 * s), (.55 * s, 0), (0, 0)],
                     0, 0, 0, m['gilt'], segments=40)]
@@ -119,9 +84,7 @@ def hall_buddha(coll, m, x, y, z, s, yaw):
         throne.append(ring)
     for o in throne:
         place_object(o, x, y, z + .32 * s, yaw)
-    for o in (face, cloth):
-        place_object(o, x, y, z + .25 * s, yaw)
-    return [face, cloth] + throne
+    return throne
 
 
 def relief_deva(coll, m, name, x, y, z, h, end):

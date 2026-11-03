@@ -16,6 +16,8 @@ import { EP1_GRADE } from "../ep1/data/grade";
 import { PagodaLights } from "./PagodaLights";
 import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
+import { PagodaApparition } from "./PagodaApparition";
+import { buildFarForest } from "./PagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
 import { CheaHands } from "./cinematics/CheaHands";
 import { COLLAPSE_KEEP } from "./cinematics/LibraryCollapse";
@@ -43,6 +45,7 @@ import {
 export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
+  private apparition!: PagodaApparition;
   equipment!: PagodaEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
@@ -111,8 +114,10 @@ export class WhisperingPagoda {
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
     });
     g.fallGuard.bounds = BOUNDS;
-    g.camera.maxZ = 95;
+    // The far forest runs on into the fog in every direction.
+    g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
+    buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
     for (let i = 0; i < 5; i++) {
       const actor = this.node("pret_" + i);
       if (!actor) throw new Error("Missing Pret " + i);
@@ -127,6 +132,8 @@ export class WhisperingPagoda {
     this.equipment = new PagodaEquipment(g, this.lights);
     await this.equipment.load();
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
+    this.apparition = new PagodaApparition(g, this.sounds, this.lights);
+    this.apparition.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
       if (light !== this.lights.lamp)
         light.excludedMeshes.push(...this.equipment.held.meshes, ...g.hands.meshes);
@@ -923,6 +930,44 @@ export class WhisperingPagoda {
       this.ghosts.slice(0, p.pretCount).map((b) => b.position),
       active && p.stage === "garden",
       active && p.stage === "escape",
+    );
+    // The horror layer and the apparition: silent and still in readers, menus and cinematics.
+    const feet = g.player.feet;
+    const haunting = active && !g.cutscene;
+    const nearestPret =
+      p.stage === "garden"
+        ? Math.min(
+            ...this.ghosts
+              .slice(0, p.pretCount)
+              .map((b) => Math.hypot(b.position.x - feet.x, b.position.z - feet.z)),
+          )
+        : 99;
+    this.sounds.haunt(
+      dt,
+      {
+        x: feet.x,
+        z: feet.z,
+        yaw: g.player.yaw,
+        stage: p.stage,
+        safe: inKuti(feet),
+        inHall: feet.x > 17.6 && feet.x < 26.4 && feet.z > -8.4 && feet.z < 6.4,
+        fear: g.atmosphere.mood.fear,
+        moving: g.player.speed > 0.2,
+      },
+      haunting,
+    );
+    this.apparition.update(
+      dt,
+      {
+        stage: p.stage,
+        feet,
+        yaw: g.player.yaw,
+        offerings: p.offerings,
+        inKuti: inKuti(feet),
+        mirrorsTurned: p.mirrors.some((turn) => turn !== 0),
+        nearestPret,
+      },
+      haunting,
     );
     if (!active) return;
     if (p.stage === "garden") {
