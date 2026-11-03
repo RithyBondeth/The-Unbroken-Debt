@@ -18,6 +18,7 @@ import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
 import { PagodaApparition, type ScareContext } from "./PagodaApparition";
 import { PagodaWatchers } from "./PagodaWatchers";
+import { ShroudedDead } from "./ShroudedDead";
 import { buildFarForest } from "./PagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
 import { CheaHands } from "./cinematics/CheaHands";
@@ -60,8 +61,8 @@ export class WhisperingPagoda {
   readonly escapeClock = new EscapeClock();
   private contactGrace: number = B.loadGrace;
   private readonly actors: TransformNode[] = [];
-  /** Each shrouded corpse's hop phase, advancing only while it moves. */
-  private readonly hop: number[] = [0, 0, 0, 0, 0];
+  /** How the shrouded dead move, twitch and vanish. */
+  private dead!: ShroudedDead;
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -129,6 +130,7 @@ export class WhisperingPagoda {
       for (const mesh of actor.getChildMeshes()) mesh.isPickable = false;
       this.actors.push(actor);
     }
+    this.dead = new ShroudedDead(this.actors, this.sounds, this.lights);
     await ShadowFigure.prepare(g.scene);
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
@@ -918,23 +920,42 @@ export class WhisperingPagoda {
     const active = !this.paused;
     if (active) this.contactGrace = Math.max(0, this.contactGrace - simDt);
     this.cinematics.collapse.update(dt, active && p.stage === "escape");
+    const shown = (i: number) =>
+      (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
     this.actors.forEach((actor, i) => {
-      const visible =
-        (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
-      actor.setEnabled(visible);
-      if (!visible) return;
+      if (!shown(i)) {
+        actor.setEnabled(false);
+        return;
+      }
       const brain = this.ghosts[i];
       const was = { x: brain.position.x, z: brain.position.z };
       if (active && p.stage === "garden") brain.update(simDt);
-      // The bound dead cannot walk: they hop, feet together, when they move, and
-      // stand swaying when they stop to listen.
       const moved = Math.hypot(brain.position.x - was.x, brain.position.z - was.z) > 1e-4;
-      this.hop[i] = moved ? this.hop[i] + simDt * 4.2 : 0;
-      const lift = moved ? Math.abs(Math.sin(this.hop[i] * Math.PI)) * 0.16 : 0;
-      actor.setAbsolutePosition(new Vector3(brain.position.x, lift, brain.position.z));
-      actor.rotation.y = brain.yaw;
-      actor.rotation.z = Math.sin(this.time * 0.8 + i) * 0.03;
+      this.dead.update(
+        active ? simDt : 0,
+        i,
+        actor,
+        brain.position,
+        brain.yaw,
+        moved,
+        g.player.feet,
+        this.time,
+      );
     });
+    if (active && !g.cutscene)
+      this.dead.watch(simDt, (i) => {
+        if (!shown(i)) return null;
+        const at = this.ghosts[i].position,
+          feet = g.player.feet;
+        const dx = at.x - feet.x,
+          dz = at.z - feet.z,
+          distance = Math.hypot(dx, dz) || 1;
+        return {
+          facing: (Math.sin(g.player.yaw) * dx + Math.cos(g.player.yaw) * dz) / distance,
+          distance,
+          at: new Vector3(at.x, 0, at.z),
+        };
+      });
     this.sounds.update(
       dt,
       this.ghosts.slice(0, p.pretCount).map((b) => b.position),

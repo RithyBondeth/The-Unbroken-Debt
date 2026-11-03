@@ -1,4 +1,5 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
+import { SoundState } from "@babylonjs/core/AudioV2/soundState";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "../../core/Game";
 import {
@@ -22,6 +23,11 @@ import {
   heartbeat,
   monkChant,
   stoneGrind,
+  kuntilanakLaugh,
+  boneCrack,
+  vanishBreath,
+  pocongThud,
+  pocongGroan,
   stepsBehind,
   templeDrum,
   templeGong,
@@ -60,6 +66,12 @@ export class PagodaSoundscape {
   private steps: StaticSound | null = null;
   private scream: StaticSound | null = null;
   private grindSound: StaticSound | null = null;
+  private laughSound: StaticSound | null = null;
+  private crackSound: StaticSound | null = null;
+  private vanishSound: StaticSound | null = null;
+  /** One thud and one groan per shrouded corpse, so their hops overlap naturally. */
+  private readonly thuds: StaticSound[] = [];
+  private readonly groans: StaticSound[] = [];
   private chantLevel = 0;
   private hushed = 0;
   private stillFor = 0;
@@ -101,6 +113,11 @@ export class PagodaSoundscape {
         this.steps,
         this.scream,
         this.grindSound,
+        this.laughSound,
+        this.crackSound,
+        this.vanishSound,
+        ...this.thuds,
+        ...this.groans,
       ])
         sound?.stop();
       this.score.stop();
@@ -282,6 +299,64 @@ export class PagodaSoundscape {
       false,
       "threat",
     );
+    // The apparition's voice and body, placed where she is.
+    this.laughSound = await spatial(
+      "kunti_laugh",
+      kuntilanakLaugh(rate, seededRandom(267)),
+      Vector3.Zero(),
+      0.85,
+      false,
+      "threat",
+      6,
+      60,
+    );
+    this.crackSound = await spatial(
+      "bone_crack",
+      boneCrack(rate, seededRandom(268)),
+      Vector3.Zero(),
+      0.8,
+      false,
+      "sfx",
+      3,
+      30,
+    );
+    this.vanishSound = await spatial(
+      "vanish",
+      vanishBreath(rate, seededRandom(269)),
+      Vector3.Zero(),
+      0.75,
+      false,
+      "threat",
+      3,
+      30,
+    );
+    for (let i = 0; i < 5; i++) {
+      this.thuds.push(
+        await spatial(
+          "pocong_thud_" + i,
+          pocongThud(rate, seededRandom(270 + i)),
+          Vector3.Zero(),
+          0.5,
+          false,
+          "sfx",
+          4,
+          32,
+        ),
+      );
+      if (i < 2)
+        this.groans.push(
+          await spatial(
+            "pocong_groan_" + i,
+            pocongGroan(rate, seededRandom(280 + i)),
+            Vector3.Zero(),
+            0.55,
+            false,
+            "threat",
+            4,
+            30,
+          ),
+        );
+    }
     this.grindSound = await spatial(
       "stone_grind",
       stoneGrind(rate, seededRandom(266)),
@@ -369,6 +444,39 @@ export class PagodaSoundscape {
   }
 
   /** A stone image has moved where the player could not see it. */
+  /** The kuntilanak's laugh from where she stands (or stood). */
+  laugh(at: Vector3, volume = 1): void {
+    this.at(this.laughSound, at, 0.85 * volume);
+  }
+
+  /** Her neck snapping over. */
+  crack(at: Vector3): void {
+    this.at(this.crackSound, at);
+  }
+
+  /** She is gone: a breath sucked in where she was, cut off dead. */
+  vanish(at: Vector3): void {
+    this.at(this.vanishSound, at);
+  }
+
+  /** Shrouded corpse `i` landing from a hop. */
+  thud(i: number, at: Vector3, volume = 0.5): void {
+    this.at(this.thuds[i % Math.max(1, this.thuds.length)], at, volume);
+  }
+
+  /** Shrouded corpse `i` moaning inside its shroud. */
+  groan(i: number, at: Vector3): void {
+    const g = this.groans[i % Math.max(1, this.groans.length)];
+    if (g && g.state !== SoundState.Started) this.at(g, at);
+  }
+
+  private at(sound: StaticSound | null | undefined, at: Vector3, volume?: number): void {
+    if (!sound) return;
+    sound.spatial.position = at.clone();
+    if (volume !== undefined) sound.volume = volume;
+    sound.play();
+  }
+
   grind(at: Vector3): void {
     if (!this.grindSound) return;
     this.grindSound.spatial.position = at.clone();
