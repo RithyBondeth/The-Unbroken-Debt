@@ -23,7 +23,7 @@ def ritual_materials():
         'marigold_dead': plain('M_ep2_marigold_dead', (.3, .14, .03), rough=.95),
         'wax_red': plain('M_ep2_wax_red', (.4, .05, .04), rough=.5),
         'ribbon_yellow': plain('M_ep2_ribbon_yellow', (.6, .45, .05), rough=.6),
-        'doll_cloth': library_material('rough_linen', 'M_ep2_doll_cloth', tint=(.45, .38, .3)),
+        'doll_cloth': library_material('rough_linen', 'M_ep2_doll_cloth', tint=(.24, .2, .16)),  # handled, rained on, grimy
     }
     for key in ('talisman', 'talisman_red', 'ribbon_yellow'):
         m[key].use_backface_culling = False

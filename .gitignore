@@ -15,6 +15,8 @@ art-source/textures/s3/
 # Library assets: re-downloaded by `npm run fetch-library` from the committed manifest
 art-source/library/*
 !art-source/library/polyhaven.json
+# Sketchfab scans have no download manifest (downloads need an account): kept in LFS.
+!art-source/library/scans/
 
 # Reference images are for study only and may be copyrighted
 art-source/reference/*

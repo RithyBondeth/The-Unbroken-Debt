@@ -13,8 +13,15 @@ const base: ScareContext = {
 const scare = (id: string) => SCARES.find((s) => s.id === id)!;
 
 describe("Episode 2 apparition scares", () => {
-  it("has six distinct one-time scares", () => {
-    expect(new Set(SCARES.map((s) => s.id)).size).toBe(6);
+  it("has seven distinct one-time scares", () => {
+    expect(new Set(SCARES.map((s) => s.id)).size).toBe(7);
+  });
+  it("shows her at the far end of the reclining Buddha only from inside the sala's mouth", () => {
+    const sala = { ...base, feet: { x: 35, z: 8.7 }, yaw: Math.atan2(40.2 - 35, 12.9 - 8.7) };
+    expect(scare("sala").ready(sala)).toBe(true);
+    expect(scare("sala").ready({ ...sala, yaw: sala.yaw + Math.PI })).toBe(false);
+    expect(scare("sala").ready({ ...sala, feet: { x: 20, z: 8.7 } })).toBe(false);
+    expect(scare("sala").ready({ ...sala, stage: "escape" })).toBe(false);
   });
   it("lunges at the sealed hall only when Sora faces the door", () => {
     const near = { ...base, feet: { x: 22, z: 9 }, yaw: Math.PI };

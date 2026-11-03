@@ -156,33 +156,59 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
     faces, fuse into a net, then grip the ground. `surface(z)` gives the radius the
     roots must keep outside at each height; `around` limits their bearing."""
     parts, strands = [], []
+    n = int(n * 1.5)  # more, thinner roots: a net, not a few logs
     for j in range(n):
         a = around[0] + (around[1] - around[0]) * (j + rng.uniform(.15, .85)) / n
         pts = []
-        steps = 18
+        steps = 30
         phase = rng.uniform(0, math.tau)
         for i in range(steps + 1):
             t = i / steps
             z = top * (1 - t) + .06
             # Roots creep sideways as they descend, hugging the masonry.
             a += .05 * math.sin(t * 9 + phase) + rng.normal(0, .02)
-            r = surface(z) + .03 + .025 * math.sin(t * 13 + phase * 2)
+            r = surface(z) + .02 + .012 * math.sin(t * 13 + phase * 2)
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, z))
         for i in range(1, 4):
             r = surface(.06) + spread * i / 3 * rng.uniform(.6, 1.1)
             a += rng.normal(0, .12)
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, .04 - .03 * i))
         strands.append(pts)
-        thick = rng.uniform(.06, .12)
-        parts.append(tube(f'{name}_root_{j}', coll, pts, thick * .35, m['bark'], sides=7, radius_end=thick))
+        thick = rng.uniform(.035, .085)
+        root = tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick)
+        for f in root.data.polygons:
+            f.use_smooth = True
+        parts.append(root)
+        # Fine rootlets feeling their way off the main root over the masonry.
+        for _ in range(int(rng.integers(1, 4))):
+            i = int(rng.integers(5, steps - 4))
+            p = pts[i]
+            da = rng.choice([-1, 1]) * rng.uniform(.15, .4)
+            ra = math.atan2(p[1] - cy, p[0] - cx)
+            twig = [p]
+            for k in range(1, 5):
+                z = p[2] - k * rng.uniform(.06, .14)
+                rr = surface(max(z, .06)) + .012
+                twig.append((cx + math.cos(ra + da * k / 4) * rr, cy + math.sin(ra + da * k / 4) * rr, max(z, .04)))
+            parts.append(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003))
     # Neighbouring roots fuse into the lattice that makes figs look like they crawl.
     for j in range(n):
         a, b = strands[j], strands[(j + 1) % n]
         for _ in range(int(rng.integers(1, 3))):
             i = int(rng.integers(4, 17))
-            p, q = a[i], b[min(len(b) - 1, i + int(rng.integers(-1, 2)))]
-            mid = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2 - .08)
-            parts.append(tube(f'{name}_web_{j}', coll, [p, mid, q], .028, m['bark'], sides=5, radius_end=.022))
+            i = min(i, len(a) - 5)
+            p, q = a[i], b[min(len(b) - 5, i + int(rng.integers(-2, 3)))]
+            # The link hugs the surface between the two roots instead of cutting across.
+            link = []
+            a0 = math.atan2(p[1] - cy, p[0] - cx)
+            turn = (math.atan2(q[1] - cy, q[0] - cx) - a0 + math.pi) % math.tau - math.pi  # the short way round
+            for k in range(7):
+                t = k / 6
+                ang = a0 + turn * t
+                z = p[2] * (1 - t) + q[2] * t - .05 * math.sin(math.pi * t)
+                rr = surface(max(z, .06)) + .016
+                link.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr, z))
+            parts.append(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014))
     if crown:
         lean_a = rng.uniform(0, math.tau)
         trunk = [(cx + math.cos(lean_a) * .4 * t * t, cy + math.sin(lean_a) * .4 * t * t, top + crown * t) for t in np.linspace(0, 1, 6)]
@@ -477,10 +503,11 @@ def _bell_radius(profile, h, s, _x):
 # ----------------------------------------------------------- the enclosure
 
 
-def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), height=1.6, bay=3.2, collide=True):
+def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), height=1.6, bay=3.2, collide=True, open_bays=()):
     """A Thai/Khmer temple enclosure: plinth, plastered brick body, coping with a
     crest of leaf-shaped merlons, piers with lotus-bud finials. Bays lean, the skin
-    has scabbed to brick, a few bays have fallen. Axis-aligned from a to b."""
+    has scabbed to brick, a few bays have fallen. Axis-aligned from a to b. The
+    fallen bays in `open_bays` can be walked through."""
     made = set(coll.objects)
     ax, ay = a
     bx, by = b
@@ -570,9 +597,16 @@ def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), heigh
                               px, py, height + .8, mat, segments=14))
         erode(objs, .012, 4, i + 50)
     if collide:
-        x0, x1 = sorted([ax - nx * .36, bx + nx * .36])
-        y0, y1 = sorted([ay - ny * .36, by + ny * .36])
-        collider(name, coll, x0, x1, y0, y1, 0, height + .4, 'stone')
+        # One collider per run of standing bays, leaving the open breaches clear.
+        cuts = [0.0] + [t for i in sorted(open_bays) for t in (i * step, (i + 1) * step)] + [length]
+        for k in range(0, len(cuts), 2):
+            t0, t1 = cuts[k], cuts[k + 1]
+            if t1 - t0 < .01:
+                continue
+            p0, p1 = at(t0, -.36), at(t1, .36)
+            x0, x1 = sorted([p0[0], p1[0]])
+            y0, y1 = sorted([p0[1], p1[1]])
+            collider(name if k == 0 else f'{name}_{k // 2}', coll, x0, x1, y0, y1, 0, height + .4, 'stone')
     return [o for o in coll.objects if o not in made]
 
 

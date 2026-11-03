@@ -21,6 +21,7 @@ import {
   ghostWhisper,
   heartbeat,
   monkChant,
+  stoneGrind,
   stepsBehind,
   templeDrum,
   templeGong,
@@ -58,6 +59,7 @@ export class PagodaSoundscape {
   private knock: StaticSound | null = null;
   private steps: StaticSound | null = null;
   private scream: StaticSound | null = null;
+  private grindSound: StaticSound | null = null;
   private chantLevel = 0;
   private hushed = 0;
   private stillFor = 0;
@@ -98,6 +100,7 @@ export class PagodaSoundscape {
         this.knock,
         this.steps,
         this.scream,
+        this.grindSound,
       ])
         sound?.stop();
       this.score.stop();
@@ -279,6 +282,16 @@ export class PagodaSoundscape {
       false,
       "threat",
     );
+    this.grindSound = await spatial(
+      "stone_grind",
+      stoneGrind(rate, seededRandom(266)),
+      Vector3.Zero(),
+      0.75,
+      false,
+      "sfx",
+      6,
+      45,
+    );
     this.scream = await audio.sound(
       "ep2_apparition_scream",
       audio.buffer(ghostScream(rate, seededRandom(265)), rate),
@@ -353,6 +366,13 @@ export class PagodaSoundscape {
       w.spatial.position = new Vector3(at.x, 1.6, at.z);
       w.play();
     }
+  }
+
+  /** A stone image has moved where the player could not see it. */
+  grind(at: Vector3): void {
+    if (!this.grindSound) return;
+    this.grindSound.spatial.position = at.clone();
+    this.grindSound.play();
   }
 
   /** A glimpse, not a shock: the score rises and the ears start to ring. */
