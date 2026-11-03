@@ -29,6 +29,8 @@ export class PagodaLights {
   readonly sky: HemisphericLight;
   readonly moon: DirectionalLight;
   private readonly wind: FoliageWind[] = [];
+  /** 0–1 while an apparition is close: the lamp gutters. */
+  scare = 0;
   private mist: LowGroundMist | null = null;
   private time = 0;
   private shade = 1;
@@ -143,9 +145,12 @@ export class PagodaLights {
     this.time += dt;
     const shade = Math.max(0.5, Math.min(1, (this.game.interaction.distance / 1.3) ** 2));
     this.shade += (shade - this.shade) * Math.min(1, dt * 5);
+    // An apparition makes the flame gutter and nearly die.
+    const gutter = this.scare > 0 ? 1 - this.scare * (0.55 + 0.45 * Math.random()) : 1;
     this.lamp.intensity =
       (22 / (16 * softFalloff(4, 11.5))) *
       flame *
+      gutter *
       this.shade *
       (0.9 + 0.06 * Math.sin(this.time * 7.3) + 0.04 * Math.sin(this.time * 13.1));
     for (const [i, l] of this.flames.entries())

@@ -20,6 +20,9 @@ from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image,
                          sash, incense_pot, candles, fig_roots, lean, rubble)
 from pagoda_stupa import memorial
 from pagoda_forest import giant, outer_forest
+from pagoda_pond import build_pond, pond_materials
+from pagoda_rituals import (ritual_materials, red_string_web, bound_trunk, boundary_stakes, sorcery_altar,
+                            hanging_doll)
 from pagoda_props import (prop_materials, hall_buddha, money_tree, curtain_swag, stepped_altar, offering_table,
                           footed_tray, rice_ball, banana_leaf, naga_rail, family_emblem, inscribed_tablet,
                           hungry_ghost, leaf_litter, sutra_table, hall_doors, sealed_doorway, verse_board,
@@ -66,6 +69,9 @@ m=materials()
 m.update(painted_materials())
 m.update(ruin_materials())
 m.update(prop_materials())
+m.update(ritual_materials())
+m.update(pond_materials())
+m['mud']=library_material('mud_forest','M_ep2_mud',tint=(.42,.38,.3))
 # Episode 1's forest builders (dead and rag trees, termite mounds) expect these.
 for key,tex,tint in [('bark_dead','bark_brown_02',(.42,.41,.38)),('termite','red_dirt_mud_01',(.6,.45,.36)),
                      ('cloth_red','rough_linen',(.36,.07,.05)),('cotton_dirty','rough_linen',(.5,.47,.4)),
@@ -151,7 +157,11 @@ def building(name,x,z,w,d,floor):
     craft.build(name+'_foundation_stones',AREA)
 
 # A continuous ground collider, with water recessed and no invisible bridge blockers.
-cube('earth',0,1,-.18,60,82,.17,m['earth'],True,surface='dirt')
+# One ground collider; the visible ground leaves room for the sunken pond basin.
+collider('earth',AREA,-30,30,-40,42,-.18,-.01,'dirt')
+for name,(gx0,gx1,gy0,gy1) in {'earth':(-30,30,-40,17.4),'earth_north':(-30,30,39.2,42),
+                                'earth_west':(-30,-18.6,17.4,39.2),'earth_east':(18.6,30,17.4,39.2)}.items():
+    box(name,AREA,gx0,gx1,gy0,gy1,-.18,-.01,m['earth'])
 for x in [-30,30]:cube('col_boundary',x,1,-.2,1,84,5,None,True)
 for z in [-40,42]:cube('col_boundary',0,z,-.2,60,1,5,None,True)
 # Low masonry compound walls and breathing foliage beyond them.
@@ -226,6 +236,11 @@ for k,p in enumerate(layout['trees']):
     giant(AREA,m,p['x'],-p['z'],12+k,300+k,rng,reach=.66,crown=1.05)
     collider('garden_tree_'+str(k),AREA,p['x']-.7,p['x']+.7,-p['z']-.7,-p['z']+.7,0,8)
     # Root collars stay inside the collision footprint; lianas hang above head height.
+    # Red cord wound round the old trunks, and dolls hung high in their branches.
+    bound_trunk(AREA,m,'garden_tree_cord_'+str(k),p['x'],-p['z'],.62,rng)
+    for d in range(2):
+        a=rng.uniform(0,math.tau)
+        hanging_doll(AREA,m,f'garden_tree_doll_{k}_{d}',(p['x']+math.cos(a)*1.6,-p['z']+math.sin(a)*1.6,3.2),rng,drop=rng.uniform(.6,.9))
     for j in range(5):
         a=j*math.tau/5
         tube('garden_buttress',AREA,[(p['x'],-p['z'],1),(p['x']+.45*math.cos(a),-p['z']+.45*math.sin(a),.18),(p['x']+.68*math.cos(a),-p['z']+.68*math.sin(a),.02)],.09,m['bark'],radius_end=.015)
@@ -280,6 +295,11 @@ for id,x,z in [('rice',-17,-7),('lotus',-17,7),('water',17,9),('bowls',16,-8)]:
     usable('pickup_'+id,x,z,.5,contents)
 # Prayer hall; bell puzzle and lore remain an optional detour.
 building('vihear',22,1,9,15,.15)
+# Rust-red handprints on the hall's front wall and door jambs, and dolls under its eaves.
+from pagoda_rituals import handprints
+handprints(AREA,m,'vihear_handprints',[(19.2,-6.62,1.1,-1),(24.6,-6.62,1.4,-1),(20.66,-6.7,1.2,-1),(17.38,-2,1.3,0),(26.62,3,1.0,0)],rng)
+for k,x in enumerate([18.2,20.0,24.1,25.9]):
+    hanging_doll(AREA,m,'vihear_eave_doll_'+str(k),(x,-7.1,2.95),rng,drop=rng.uniform(.5,.8))
 threshold_ramp('hall_threshold',22,-7.8,2.6)
 # The hall image after Khmer vihara altars: stepped painted altar, red lotus throne,
 # white-faced Buddha in saffron, gilded bodhi trees, small images and old offerings.
@@ -328,7 +348,8 @@ for x in [21.23,22.77]:
     lathe('altar_vase',AREA,[(.07,0),(.12,.1),(.1,.2),(.05,.28),(.07,.3)],x,5.15,.53,m['clay'])
     for j in range(5):pole('altar_incense',AREA,(x+(j-2)*.02,5.15,.75),(x+(j-2)*.03,5.15,1.0+j*.02),.003,m['post'])
 # Lotus pond and raised scripture library. Land ends at Y=18; the bridge is 2m wide.
-cube('pond_water',0,28,.025,35,21,.025,m['water'])
+# The pond: a sunken, silted tank with an uneven shore (pagoda_pond.py).
+pond_parts,pond_reeds,_=build_pond(AREA,m,np.random.default_rng(1911))
 for side in [-1,1]:
     cube('col_pond_barrier',side*9.8,28,0,17.4,21,1,None,True)
 # Only bridge and library are walkable in the pond; invisible low rail prevents falls.
@@ -344,18 +365,14 @@ for k in range(35):
 verts=[(-1,18,-.1),(1,18,-.1),(-1,28,-.1),(1,28,-.1),(-1,18,.12),(1,18,.12),(-1,28,1.32),(1,28,1.32)]
 mesh_object('col_bridge_ramp',AREA,verts,[(0,2,3,1),(4,5,7,6),(0,1,5,4),(2,6,7,3),(0,4,6,2),(1,3,7,5)],surface='teak')
 building('hawtrai',0,32,9,8,1.32)
+handprints(AREA,m,'hawtrai_handprints',[(-2.6,27.87,2.4,-1),(2.9,27.87,2.6,-1)],rng)
 cube('interact_bridge_lock',0,18,0,1.9,.16,1.5,m['bronze'])
 collider('bridge_lock',AREA,-1,1,17.9,18.1,0,1.6)
 for i in range(4):
     cylinder('bridge_symbol_'+str(i),AREA,-.6+i*.4,17.9,.9,1,.09,m['silver'])
-# Pond lotus leaves, closed flowers and oil cups; keep bridge clearance.
-for k in range(100):
-    x,z=rng.uniform(-17,17),rng.uniform(19,37)
-    if abs(x)<5 and z>27 or abs(x)<1.5:continue
-    r=rng.uniform(.16,.4)
-    lathe('lotus_pad',AREA,[(0,0),(r,0),(r,.01),(0,.01)],x,z,.065,m['lotus_leaf'],segments=12)
-    if k%8==0:lathe('pond_lotus',AREA,[(0,0),(.055,.04),(.07,.12),(0,.23)],x,z,.08,m['lotus'])
-for x in [-5,5]:lamp('pond_'+str(x),x,23,.2)
+# Oil lamps left floating on the black water; reeds along the shore.
+for x in [-5,5]:lamp('pond_'+str(x),x,23,-.2)
+grass_geometry('pond_reeds',AREA,pond_reeds,rng,size=(.7,1.4))
 # Archive shelves, tied palm-leaf bundles and swivel mirrors.
 for x in [-3.6,3.6]:
     for y in [30,32,34]:
@@ -404,6 +421,23 @@ for j,(px,py) in enumerate(forgotten):
         fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,crown=ruin_rng.uniform(1.8,3.2),hang=3)
     collider('forgotten_stupa_'+str(j),AREA,px-.7,px+.7,py-.7,py+.7,0,3.2,'stone')
 spirit_house(AREA,m,'roadside_spirit_house',4.8,-37.6,math.pi,ruin_rng)
+# Rituals on the approach: a boundary of stakes and red cord both sides of the track,
+# cord strung overhead between the trunks, tags, bells and dolls; a sorcery altar.
+rit=np.random.default_rng(3311)
+for side in (-1,1):
+    boundary_stakes(AREA,m,'approach_boundary_'+('w' if side<0 else 'e'),[(side*4.05+rit.normal(0,.08),-39.3+k*1.9) for k in range(6)],rit)
+approach_anchors=[(-6.7,-30.2,3.2),(6.2,-29.5,3.1),(-12.5,-37,3.4),(13,-38.5,3.0),(-10.7,-33.2,2.8),(11.2,-31.4,2.9),
+                  (-5.3,-35.8,2.7),(-17.5,-32.5,3.3),(17,-33,3.2),(5.3,-34.6,2.4),(-5,-32.6,2.4)]
+red_string_web(AREA,m,'approach_web',approach_anchors,rit,density=1.4)
+sorcery_altar(AREA,m,'approach_altar',-8.6,-37.4,-.4,rit)
+for k,(x,y,r) in enumerate([(-7.2,-30.2,.55),(6.7,-29.5,.55),(-11,-33.2,.3),(11.5,-31.4,.3),(-13,-37,.55)]):
+    bound_trunk(AREA,m,'approach_trunk_cord_'+str(k),x,y,r,rit)
+# Forgotten yards: cord from stupa to stupa, and an altar among them.
+red_string_web(AREA,m,'yard_web_w',[(x,y,2.1) for x,y in forgotten[:11]],rit,density=1.1)
+red_string_web(AREA,m,'yard_web_e',[(x,y,2.1) for x,y in forgotten[11:19]],rit,density=1.1)
+sorcery_altar(AREA,m,'yard_altar',-23.3,29.2,math.pi/2,rit)
+# Seen through the fallen bay of the east wall: another altar under the strangler.
+sorcery_altar(AREA,m,'forest_altar',31.2,-9.6,math.pi,rit)
 # The old cloister becomes a gallery of weathered images facing its walk.
 for j,(py,headless) in enumerate([(-1.85,True),(-.15,False),(6.15,False),(7.85,True),(10.15,True),(11.85,False)]):
     seated_image(AREA,m,'cloister_image_'+str(j),-25.35,py,math.pi/2,.7,headless=headless,damage=j==2,seed=10+j)
