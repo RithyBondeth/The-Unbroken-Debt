@@ -33,6 +33,12 @@ export class PagodaCinematics {
   collapse!: LibraryCollapse;
   private people: { root: TransformNode; managers: MorphTargetManager[] }[] = [];
   private monk: MorphTargetManager[] = [];
+  private monkNode: TransformNode | null = null;
+  /** Sophal's head turn (-1..1, smoothed), nod and bow, and who is speaking. */
+  private monkLook = 0;
+  private monkBow = -1;
+  private monkSpeaking = false;
+  private monkListening = false;
   private village!: TransformNode;
   private rice!: TransformNode;
   private fireLogs!: TransformNode;
@@ -99,7 +105,10 @@ export class PagodaCinematics {
     }
     const monk = need("sophal_living");
     this.monk = managers(monk);
-    for (const manager of [...this.monk, ...this.people.flatMap((p) => p.managers)])
+    this.monkNode = monk;
+    // Sophal blends all five of his shapes: capping influencers below the target
+    // count makes WebGPU drop the whole mesh once any target is weighted.
+    for (const manager of this.people.flatMap((p) => p.managers))
       manager.numMaxInfluencers = Math.min(4, manager.numTargets);
     for (const mesh of this.area.container.meshes) {
       mesh.isPickable = false;
@@ -211,7 +220,7 @@ export class PagodaCinematics {
   }
   update(dt: number): void {
     this.time += dt;
-    this.morph(this.monk, { listen: 0.35 + 0.15 * Math.sin(this.time * 0.7) });
+    this.animateMonk(dt);
     if (this.memoryMode === "harvest") {
       for (const [i, p] of this.people.entries()) {
         const phase = this.time * 1.7 + i * 0.8,
@@ -228,6 +237,40 @@ export class PagodaCinematics {
     }
     this.sounds.cinematicPause(document.hidden || (this.director.active && this.director.isPaused));
   }
+  /**
+   * Sophal is alive: he breathes; his head turns to follow Sora when she is in front
+   * of him; he bows a little when she first comes close; he nods as he speaks and
+   * gives small nods as he listens.
+   */
+  private animateMonk(dt: number): void {
+    const node = this.monkNode;
+    if (!node || !this.monk.length) return;
+    const feet = this.game.player.feet;
+    // In the scan's own frame he faces +Z; look_pos turns his face towards +X.
+    const local = Vector3.TransformCoordinates(feet, node.getWorldMatrix().clone().invert());
+    const near = Math.hypot(local.x, local.z);
+    const target =
+      near < 6 && local.z > 0.2 ? Math.max(-1, Math.min(1, Math.atan2(local.x, local.z) / 0.6)) : 0;
+    this.monkLook += (target - this.monkLook) * Math.min(1, dt * 2.5);
+    if (this.monkBow < 0 && near < 2.6 && local.z > 0) this.monkBow = 0;
+    else if (this.monkBow >= 0 && this.monkBow < 2.6) this.monkBow += dt;
+    else if (this.monkBow >= 2.6 && near > 5) this.monkBow = -1;
+    const bow =
+      this.monkBow >= 0 && this.monkBow < 2.6 ? Math.sin((Math.PI * this.monkBow) / 2.6) * 0.8 : 0;
+    const t = this.time;
+    const nod = this.monkSpeaking
+      ? 0.25 + 0.3 * Math.abs(Math.sin(t * 4.6)) * (0.6 + 0.4 * Math.sin(t * 1.3))
+      : this.monkListening
+        ? 0.14 + 0.08 * Math.sin(t * 1.4)
+        : 0.08 + 0.05 * Math.sin(t * 0.7);
+    this.morph(this.monk, {
+      look_pos: Math.max(0, this.monkLook),
+      look_neg: Math.max(0, -this.monkLook),
+      nod,
+      bow,
+      breathe: 0.5 + 0.5 * Math.sin((t * Math.PI * 2) / 4.4),
+    });
+  }
   async sophal(): Promise<void> {
     const g = this.game,
       feet = g.player.feet,
@@ -237,10 +280,16 @@ export class PagodaCinematics {
     g.player.pitch = 0.19;
     try {
       await this.director.play(SOPHAL_SCENE, (frame) => {
+        const cue = SOPHAL_SCENE.cues.find(
+          (c) => frame.elapsed >= c.at && frame.elapsed < c.at + c.duration,
+        );
+        this.monkSpeaking = !!cue?.speaker.startsWith("Venerable");
+        this.monkListening = !!cue && !this.monkSpeaking;
         g.player.yaw =
           Math.PI + (frame.reducedMotion ? 0 : Math.sin(frame.progress * Math.PI) * 0.035);
       });
     } finally {
+      this.monkSpeaking = this.monkListening = false;
       g.player.teleport(feet, yaw);
       g.player.pitch = pitch;
     }

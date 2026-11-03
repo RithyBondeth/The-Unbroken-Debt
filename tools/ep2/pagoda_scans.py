@@ -24,7 +24,7 @@ SCANS = ROOT / 'art-source/library/scans'
 # 'high' re-bakes the full scan's colour onto the reduced mesh (for scans whose
 # texture atlas is too fragmented to survive decimation).
 SPEC = {
-    'monk_seated': dict(rot=(-90, 0, 120), ratio=.07, bake=None),
+    'monk_seated': dict(rot=(-90, 0, 120), ratio=.07, bake=None, motion='monk'),
     'buddha_seated': dict(rot=(0, 0, 180), ratio=1.0, bake=None),
     'buddha_reclining': dict(rot=(0, 0, 0), ratio=.6, bake='self'),
     'monk_alms_standing': dict(rot=(0, 0, 0), ratio=.18, bake=None),
@@ -41,22 +41,165 @@ SPEC = {
         'Spine_011': [((1, 0, 0), 9)],
         'neck_020': [((1, 0, 0), 10)],
         'Head_021': [((0, 1, 0), 20), ((1, 0, 0), 14)],
+    }, pose_keys={
+        # Both arms flung up and out at the viewer, head lifting out of the hair.
+        'reach': {'LeftArm_013': [((1, 0, 0), -78)], 'RightArm_017': [((1, 0, 0), -72)],
+                  'LeftForeArm_014': [((1, 0, 0), 14)], 'RightForeArm_018': [((1, 0, 0), 10)],
+                  'Spine_011': [((1, 0, 0), 8)], 'Head_021': [((1, 0, 0), -30)]},
+        # The neck snapping over to one side, then the other: too far for a living neck.
+        'snap_a': {'neck_020': [((0, 1, 0), 14)], 'Head_021': [((0, 1, 0), 40), ((1, 0, 0), -8)]},
+        'snap_b': {'neck_020': [((0, 1, 0), -16)], 'Head_021': [((0, 1, 0), -62), ((1, 0, 0), -6)]},
+        # Folded forward, face turned up from under the hair to stare.
+        'hunch': {'Spine01_010': [((1, 0, 0), 12)], 'Spine_011': [((1, 0, 0), 22)], 'Head_021': [((1, 0, 0), -38)],
+                  'LeftArm_013': [((1, 0, 0), -14)], 'RightArm_017': [((1, 0, 0), -14)]},
+        'breathe': {'Spine_011': [((1, 0, 0), -3)], 'LeftShoulder_012': [((0, 1, 0), 4)],
+                    'RightShoulder_016': [((0, 1, 0), -4)]},
     }),
     # A corpse bound in its burial shroud, tied at head, neck, waist and feet.
-    'pocong': dict(rot=(0, 0, 0), ratio=.6, bake=None),
+    'pocong': dict(rot=(0, 0, 0), ratio=.6, bake=None, motion='pocong'),
 }
+
+
+def _turn_pose(rig, pose, after=False):
+    """Turns bones about armature-space axes: by default ahead of their current pose
+    (as from the rest pose); `after` turns the bone from where it now points."""
+    for bone_name, turns in pose.items():
+        b = rig.pose.bones[bone_name]
+        b.rotation_mode = 'QUATERNION'
+        q = b.bone.matrix_local.to_quaternion()
+        for axis, deg in turns:
+            turn = q.inverted() @ Quaternion(Vector(axis), math.radians(deg)) @ q
+            b.rotation_quaternion = turn @ b.rotation_quaternion if after else b.rotation_quaternion @ turn
+
+
+def _pose_keys(objects, spec):
+    """Like _pose, but also bakes each of spec['pose_keys'] (turns added to the base
+    pose) into a shape key, so the frozen figure can still move in game. The mesh is
+    reduced first, so every key matches the final vertices."""
+    rig = next(o for o in objects if o.type == 'ARMATURE')
+    mesh = next(o for o in objects if o.type == 'MESH')
+    bpy.context.view_layer.objects.active = mesh
+    # Reduce the rest mesh with the rig switched off, or the pose is baked in twice.
+    rigs = [m for m in mesh.modifiers if m.type == 'ARMATURE']
+    for mod in rigs:
+        mod.show_viewport = False
+    dec = mesh.modifiers.new('budget', 'DECIMATE')
+    dec.ratio = spec['ratio']
+    bpy.ops.object.modifier_apply(modifier=dec.name)
+    for mod in rigs:
+        mod.show_viewport = True
+
+    # The importer leaves each bone in its own starting pose; every shape builds on it.
+    start = {}
+    for b in rig.pose.bones:
+        b.rotation_mode = 'QUATERNION'
+        start[b.name] = (b.rotation_quaternion.copy(), b.location.copy(), b.scale.copy())
+
+    def shape(extra):
+        for b in rig.pose.bones:
+            b.rotation_quaternion, b.location, b.scale = (v.copy() for v in start[b.name])
+        _turn_pose(rig, spec['pose'])
+        _turn_pose(rig, extra, after=True)
+        bpy.context.view_layer.update()
+        ev = mesh.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        out = ev.to_mesh()
+        co = [v.co.copy() for v in out.vertices]
+        ev.to_mesh_clear()
+        return co
+
+    rest = shape({})
+    keys = {name: shape(extra) for name, extra in spec['pose_keys'].items()}
+    for mod in [m for m in mesh.modifiers if m.type == 'ARMATURE']:
+        mesh.modifiers.remove(mod)
+    for v, c in zip(mesh.data.vertices, rest):
+        v.co = c
+    mesh.shape_key_add(name='Basis')
+    for name, co in keys.items():
+        key = mesh.shape_key_add(name=name)
+        key.value = 0
+        for d, c in zip(key.data, co):
+            d.co = c
+
+
+def _turned(co, pivot, axis, degrees, weight):
+    """`co` turned about `pivot` and `axis` by `degrees` scaled by `weight` (0..1)."""
+    if weight <= 0:
+        return co.copy()
+    return pivot + Quaternion(Vector(axis), math.radians(degrees) * weight) @ (co - pivot)
+
+
+def _smooth(lo, hi, x):
+    t = min(1.0, max(0.0, (x - lo) / (hi - lo)))
+    return t * t * (3 - 2 * t)
+
+
+def _monk_motion(co):
+    """A seated monk (base at 0, facing -Y): head turns either way and nods from the
+    neck, the chest rises with breath, the body bows from the hips."""
+    top = max(c.z for c in co)
+    head = [c for c in co if c.z > top - .2]
+    hx, hy = sum(c.x for c in head) / len(head), sum(c.y for c in head) / len(head)
+    neck = Vector((hx, hy + .02, top - .25))
+
+    def w_head(c):
+        reach = math.hypot(c.x - hx, c.y - hy)
+        # The head and neck only: the shoulders and robe stay where they are.
+        return _smooth(top - .29, top - .2, c.z) * (1 - _smooth(.11, .16, reach))
+    band = [c for c in co if top - .62 < c.z < top - .3]
+    tx, ty = sum(c.x for c in band) / len(band), sum(c.y for c in band) / len(band)
+
+    def breathe(c):
+        b = math.sin(math.pi * min(1, max(0, (c.z - (top - .62)) / .32)))
+        r = Vector((c.x - tx, c.y - ty, 0))
+        lift = .004 * _smooth(top - .34, top - .28, c.z)
+        return c + r * .018 * b * (1 - _smooth(.25, .32, r.length)) + Vector((0, 0, lift))
+    hip = Vector((tx, ty, .28))
+    return {
+        'look_pos': [_turned(c, neck, (0, 0, 1), 34, w_head(c)) for c in co],
+        'look_neg': [_turned(c, neck, (0, 0, 1), -34, w_head(c)) for c in co],
+        'nod': [_turned(c, neck, (1, 0, 0), 16, w_head(c)) for c in co],
+        'breathe': [breathe(c) for c in co],
+        'bow': [_turned(c, hip, (1, 0, 0), 11, _smooth(.28, .5, c.z)) for c in co],
+    }
+
+
+def _pocong_motion(co):
+    """A shrouded corpse (base at 0, facing -Y): squashed as it lands from a hop and
+    stretched as it leaves the ground, head jerking over to either side, leaning,
+    the shroud filling and emptying over the chest."""
+    h = max(c.z for c in co)
+    cx, cy = sum(c.x for c in co) / len(co), sum(c.y for c in co) / len(co)
+    neck = Vector((cx, cy, h - .4))
+
+    def spread(c, z, k):
+        b = math.sin(math.pi * min(1, max(0, c.z / h)))
+        return Vector((cx + (c.x - cx) * (1 + k * b), cy + (c.y - cy) * (1 + k * b), z))
+
+    def w_head(c):
+        return _smooth(h - .46, h - .32, c.z)
+
+    def breathe(c):
+        b = math.sin(math.pi * min(1, max(0, (c.z - .95) / .5)))
+        return Vector((cx + (c.x - cx) * (1 + .03 * b), cy + (c.y - cy) * (1 + .03 * b), c.z))
+    base = Vector((cx, cy, 0))
+    return {
+        'squash': [spread(c, c.z * .9, .07) for c in co],
+        'stretch': [spread(c, c.z * 1.07, -.035) for c in co],
+        'head_a': [_turned(_turned(c, neck, (0, 1, 0), 30, w_head(c)), neck, (0, 0, 1), 14, w_head(c)) for c in co],
+        'head_b': [_turned(_turned(c, neck, (0, 1, 0), -30, w_head(c)), neck, (0, 0, 1), -14, w_head(c)) for c in co],
+        'lean': [_turned(c, base, (1, 0, 0), 11 * c.z / h, 1) for c in co],
+        'breathe': [breathe(c) for c in co],
+    }
+
+
+MOTIONS = {'monk': _monk_motion, 'pocong': _pocong_motion}
 
 
 def _pose(objects, pose):
     """Poses a rigged scan (rotations about armature-space axes) and freezes the
     meshes in that pose, removing the armature."""
     rig = next(o for o in objects if o.type == 'ARMATURE')
-    for bone_name, turns in pose.items():
-        b = rig.pose.bones[bone_name]
-        b.rotation_mode = 'QUATERNION'
-        q = b.bone.matrix_local.to_quaternion()
-        for axis, deg in turns:
-            b.rotation_quaternion = b.rotation_quaternion @ (q.inverted() @ Quaternion(Vector(axis), math.radians(deg)) @ q)
+    _turn_pose(rig, pose)
     bpy.context.view_layer.update()
     for o in objects:
         if o.type != 'MESH':
@@ -147,7 +290,9 @@ def scan(coll, key, name, height=None, at=(0, 0, 0), yaw=0.0, ratio=None, extra_
     for o in [o for o in new if o.name.split('.')[0] in spec.get('skip', ())]:
         new.remove(o)
         bpy.data.objects.remove(o, do_unlink=True)
-    if spec.get('pose'):
+    if spec.get('pose_keys'):
+        _pose_keys(new, spec)
+    elif spec.get('pose'):
         _pose(new, spec['pose'])
     meshes = [o for o in new if o.type == 'MESH']
     leftovers = [o.name for o in new if o.type != 'MESH']
@@ -156,9 +301,12 @@ def scan(coll, key, name, height=None, at=(0, 0, 0), yaw=0.0, ratio=None, extra_
     for o in meshes:
         o.select_set(True)
     bpy.context.view_layer.objects.active = meshes[0]
-    # Bake parents' transforms into the meshes, then join them into one.
+    # Bake parents' transforms into the meshes (shape keys too, which transform_apply
+    # would leave behind), then join them into one.
     bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in meshes:
+        o.data.transform(o.matrix_world.copy(), shape_keys=True)
+        o.matrix_world = Matrix.Identity(4)
     if len(meshes) > 1:
         bpy.ops.object.join()
     obj = bpy.context.view_layer.objects.active
@@ -172,8 +320,9 @@ def scan(coll, key, name, height=None, at=(0, 0, 0), yaw=0.0, ratio=None, extra_
     me = obj.data
     rx, ry, rz = (a + b for a, b in zip(spec['rot'], extra_rot))
     me.transform(Matrix.Rotation(math.radians(rz), 4, 'Z') @ Matrix.Rotation(math.radians(ry), 4, 'Y')
-                 @ Matrix.Rotation(math.radians(rx), 4, 'X'))
-    r = spec['ratio'] if ratio is None else ratio
+                 @ Matrix.Rotation(math.radians(rx), 4, 'X'), shape_keys=True)
+    # A posed rig was reduced before its shape keys were baked.
+    r = 1.0 if spec.get('pose_keys') else spec['ratio'] if ratio is None else ratio
     high = None
     if spec['bake'] == 'high':
         high = obj.copy()
@@ -194,9 +343,18 @@ def scan(coll, key, name, height=None, at=(0, 0, 0), yaw=0.0, ratio=None, extra_
     hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
     s = height / (hi.z - lo.z) if height else length / max(hi.x - lo.x, hi.y - lo.y)
     centre = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))
-    me.transform(Matrix.Scale(s, 4) @ Matrix.Translation(-centre))
+    me.transform(Matrix.Scale(s, 4) @ Matrix.Translation(-centre), shape_keys=True)
+    # Motion shapes are built in the scan's own true space, before the mirror below.
+    if spec.get('motion'):
+        rest = [v.co.copy() for v in me.vertices]
+        obj.shape_key_add(name='Basis')
+        for key_name, co in MOTIONS[spec['motion']](rest).items():
+            key = obj.shape_key_add(name=key_name)
+            key.value = 0
+            for d, c in zip(key.data, co):
+                d.co = c
     # The world root mirrors X for Babylon: mirror the scan first, so it reads true in game.
-    me.transform(Matrix.Scale(-1, 4, (1, 0, 0)))
+    me.transform(Matrix.Scale(-1, 4, (1, 0, 0)), shape_keys=True)
     me.flip_normals()
     for p in me.polygons:
         p.use_smooth = True
@@ -207,9 +365,10 @@ def scan(coll, key, name, height=None, at=(0, 0, 0), yaw=0.0, ratio=None, extra_
     return obj
 
 
-def instance(coll, src, name, at, yaw=0.0, scale=1.0):
-    """Another placement of an imported scan, sharing its mesh."""
-    o = bpy.data.objects.new(name, src.data)
+def instance(coll, src, name, at, yaw=0.0, scale=1.0, own=False):
+    """Another placement of an imported scan, sharing its mesh (or with its `own`
+    copy, for figures whose shape keys move independently)."""
+    o = bpy.data.objects.new(name, src.data.copy() if own else src.data)
     coll.objects.link(o)
     o.location = at
     o.rotation_euler = (0, 0, yaw)
