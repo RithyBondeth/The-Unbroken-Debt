@@ -1,0 +1,1734 @@
+{
+  "props": [
+    {
+      "name": "real_bedside_stool_0",
+      "support": 0.02,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_bedside_stool_2",
+      "support": 0.02,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_bedside_stool_5",
+      "support": 0.02,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_WoodenTable_02",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_WoodenTable_02.001",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_lok_lamp_stool",
+      "support": 0.71,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_0",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_0",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_water_vessel_0",
+      "support": 0.3093,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_1",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_1",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_2",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_2",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_water_vessel_2",
+      "support": 0.3093,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_3",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_3",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_4",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_4",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_scanned_ward_frame_5",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_chipped_bed_basin_5",
+      "support": 0.035,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_water_vessel_5",
+      "support": 0.3093,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_trolley_enamel_tray",
+      "support": 0.91,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_trolley_enamel_tray.001",
+      "support": 0.91,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_trolley_enamel_tray.002",
+      "support": 0.91,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_clinic_chinese_cabinet",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_chinese_stool",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_wooden_bucket_01",
+      "support": 0.0,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_vintage_suitcase",
+      "support": 0.06,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_clinic_wicker_basket_01",
+      "support": 0.02,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_ceramic_pot",
+      "support": 0.2317,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_book_encyclopedia_set_01",
+      "support": 0.2317,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_wooden_bucket_01.001",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_vintage_suitcase.001",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_clinic_book_encyclopedia_set_01.001",
+      "support": 3.5817,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_doctor_iron_cot",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_market_woven_basket",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.001",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.001",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_wooden_bucket_01",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_pot_enamel_01",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_jug_01",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_ceramic_pot",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.002",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.002",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.003",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.003",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_wooden_bucket_01.001",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_pot_enamel_01.001",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_jug_01.001",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_ceramic_pot.001",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.004",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.004",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.005",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.005",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_wooden_bucket_01.002",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_pot_enamel_01.002",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_jug_01.002",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_ceramic_pot.002",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.006",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.006",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.007",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.007",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_wooden_bucket_01.003",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_pot_enamel_01.003",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_jug_01.003",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_ceramic_pot.003",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.008",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.008",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_woven_basket.009",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_bananas.009",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_wooden_bucket_01.004",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_pot_enamel_01.004",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_jug_01.004",
+      "support": 1.48,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_market_ceramic_pot.004",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_deck_wicker_basket_02",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_deck_wooden_bucket_01",
+      "support": 0.65,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_deck_vintage_suitcase",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_deck_wooden_ladder_02",
+      "support": 0.65,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_practical_lantern_entry",
+      "support": 2.09,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_practical_lantern_ward",
+      "support": 1.92,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_practical_lantern_attic",
+      "support": 4.11,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_practical_lantern_deck",
+      "support": 4.62,
+      "previousGap": -0.0
+    },
+    {
+      "name": "real_practical_lantern_vault",
+      "support": -0.06,
+      "previousGap": 0.0
+    },
+    {
+      "name": "real_practical_lantern_lok_lamp",
+      "support": 1.0214,
+      "previousGap": 0.2686
+    },
+    {
+      "name": "sora_moored_boat_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "market_sampan_0_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "market_sampan_1_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "market_sampan_2_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "market_sampan_3_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "market_sampan_4_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "lok_sampan_real_fishing_basket",
+      "support": -0.12,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_market_meal",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.001",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_luggage",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_water_ladder",
+      "support": -0.12,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.002",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.003",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_luggage.001",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_water_ladder.001",
+      "support": -0.12,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.004",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.005",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_luggage.002",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_water_ladder.002",
+      "support": -0.12,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.006",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.007",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_luggage.003",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_water_ladder.003",
+      "support": -0.12,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.008",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_meal.009",
+      "support": 1.445,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_market_luggage.004",
+      "support": 0.72,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_water_ladder.004",
+      "support": -0.12,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_finish_ritual_hanging_lamp",
+      "support": 5.2,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_water_vessel",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_offering",
+      "support": 3.37,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_basket",
+      "support": 3.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_candle_foot",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_candle_foot.001",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_candle_foot.002",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_finish_ritual_candle_foot.003",
+      "support": 3.35,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.001",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.002",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.001",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.003",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.004",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.005",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.002",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.006",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.007",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.003",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.001",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.008",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.009",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.004",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.010",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.005",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.011",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.012",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.006",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.002",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.013",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.007",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.014",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.015",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.008",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.003",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.016",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.009",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.004",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.017",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.010",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.018",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.019",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.011",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.005",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.020",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.012",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.021",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.013",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.022",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.014",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.023",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.024",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.025",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.015",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.006",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.026",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.027",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.016",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.028",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.029",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.017",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.007",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.030",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.031",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.032",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.018",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.033",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.034",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.019",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.008",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.035",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.036",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.020",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.037",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.038",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.021",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.009",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.039",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.022",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.040",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.041",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.023",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.042",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.043",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.024",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.010",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.044",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.045",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.025",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.011",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.046",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.026",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.047",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.048",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.027",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.012",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.049",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.050",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.028",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.051",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.052",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.029",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.013",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.053",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.054",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.055",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.030",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.014",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.056",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.057",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.031",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.058",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.059",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.032",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.015",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.060",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.061",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.062",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.033",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.016",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.063",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.034",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.064",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.065",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.035",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.017",
+      "support": -0.7,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.066",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.067",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.036",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.068",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.069",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.037",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.018",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.070",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.038",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.071",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.072",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.039",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.019",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.073",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.074",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.040",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.075",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.041",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.020",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.076",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.077",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.042",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.078",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.043",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.079",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.080",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.044",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.021",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.081",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.082",
+      "support": -1.15,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.045",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.083",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.084",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.046",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_broken_trunk.022",
+      "support": -0.7,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.085",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.086",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.087",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_tree.088",
+      "support": -1.15,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_forest_roots.047",
+      "support": -0.36,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_far_forest",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.001",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.002",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.003",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.004",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.005",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.006",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.007",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.008",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.009",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.010",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.011",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.012",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.013",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.014",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.015",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.016",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.017",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.018",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.019",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.020",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.021",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.022",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.023",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.024",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.025",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.026",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.027",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.028",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.029",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.030",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.031",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.032",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.033",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.034",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.035",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.036",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.037",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.038",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.039",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.040",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.041",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.042",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.043",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.044",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.045",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.046",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.047",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.048",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.049",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.050",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.051",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.052",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_far_forest.053",
+      "support": -1.3,
+      "previousGap": 0.0
+    },
+    {
+      "name": "ep3_dread_market_lamp",
+      "support": 1.5,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_market_lamp.001",
+      "support": 1.5,
+      "previousGap": -0.0
+    },
+    {
+      "name": "ep3_dread_market_lamp.002",
+      "support": 1.5,
+      "previousGap": -0.0
+    }
+  ],
+  "maxResidual": 1.9073486345888568e-07,
+  "boatDrafts": [
+    {
+      "boat": "market_sampan_0",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "market_sampan_1",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "market_sampan_2",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "market_sampan_3",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "market_sampan_4",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "lok_sampan",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    },
+    {
+      "boat": "sora_moored_boat",
+      "keel": -0.22,
+      "water": -0.08,
+      "correction": 0.0
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "file": "asian-male-child.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/asian-male-child.target",
+    "sha256": "c1b56e9cc549cd7c463f407557d7adceaa217b528c600d34c19df98bc3d6472e",
+    "license": "MakeHuman exported art assets CC0"
+  },
+  {
+    "file": "universal-male-child-averagemuscle-averageweight.target",
+    "url": "https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/targets/macrodetails/universal-male-child-averagemuscle-averageweight.target",
+    "sha256": "4ba5396ddabda448ece15650a566fbebfbb10239256ccb201e8f883429e12249",
+    "license": "MakeHuman exported art assets CC0"
+  }
+]

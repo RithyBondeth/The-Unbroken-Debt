@@ -1,0 +1,10 @@
+Episode 3 sky lighting:
+Kloofendal Overcast (Pure Sky) — Greg Zaal / Poly Haven
+https://polyhaven.com/a/kloofendal_overcast_puresky
+CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/
+
+The scene also uses the existing CC0 Poly Haven and MakeHuman library.
+Additional scene geometry, cloth, water and weathering are authored in this project.
+
+Pich's child anatomy uses official MakeHuman child macro targets, CC0 art assets.
+Source URLs and SHA-256 checksums: art-source/characters/ep3/sources.json

@@ -92,6 +92,8 @@ npm run dev
 
 Episode 2 includes the pagoda story, animated cinematics, English subtitles, aged Chea hands and tuned stealth/escape encounters. Continue from Episode 1’s credits, or open `/?episode=2` with a completed Episode 1 save. For an isolated scene review and scripted journey test, open `/tests/browser/pagoda.html` in development. See [Episode 2 implementation and verification](docs/production/episode-2-implementation.md).
 
+Episode 3, **The Drowned Village**, continues from Episode 2’s credits into the floating market and flooded Tonle Sap clinic. It includes the guided rowboat crossing, aquatic stealth and warmth, window repairs, drainage pump, Khmer-numbered safe, playable Sok memory, Kanha/Pich choice and rooftop escape. In development, use `/?start=ep3&profile=ep3-play` for isolated play or `/tests/browser/drowned-village.html` for scene, story and physical-route review. Production entry at `/?episode=3` requires Episode 2 completion. See [Episode 3 implementation and review](docs/production/episode-3-implementation.md).
+
 ## 📚 Documentation
 
 | No. | Document                                                                                       |

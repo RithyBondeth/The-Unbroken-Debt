@@ -57,7 +57,7 @@ async function boot(): Promise<void> {
   const game = new Game(
     engine,
     import.meta.env.DEV && isQualityName(forced) ? { ...device, quality: forced } : device,
-    import.meta.env.DEV && params.get("profile") === "ep2-play"
+    import.meta.env.DEV && ["ep2-play", "ep3-play"].includes(params.get("profile") ?? "")
       ? `boon-sop-${params.get("profile")}`
       : undefined,
   );
