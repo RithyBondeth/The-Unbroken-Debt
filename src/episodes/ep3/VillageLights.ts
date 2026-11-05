@@ -39,7 +39,6 @@ export class VillageLights {
   private readonly environment: VillageEnvironment;
   private readonly heldFill: PointLight;
   private readonly ritualCandles: PointLight[] = [];
-  private readonly foliage: FoliageWind[] = [];
   private readonly visibleFlames: Mesh[] = [];
   constructor(
     private readonly game: Game,
@@ -222,7 +221,7 @@ export class VillageLights {
           mat.clearCoat.roughness = 0.46;
         }
         if (mat.name.startsWith("M_ep3_real_drowned_skin")) mat.albedoColor.set(0.42, 0.5, 0.47);
-        if (/leaf|leaves/.test(mat.name)) this.foliage.push(new FoliageWind(mat));
+        if (/leaf|leaves/.test(mat.name)) new FoliageWind(mat, game.wind, "leaf");
         if (mat.name.startsWith("M_ep3_real_corroded_steel")) {
           mat.backFaceCulling = false;
           mat.twoSidedLighting = true;
@@ -230,6 +229,9 @@ export class VillageLights {
       }
   }
   begin(): void {
+    // Episodes share the game's wind, so set it here rather than inherit the last one's.
+    this.game.wind.base = 0.3;
+    this.game.wind.calm = 0;
     this.game.addFlameLights(this.lamp, ...this.flames.slice(0, 3));
     this.setStage(this.stage);
   }
@@ -298,7 +300,6 @@ export class VillageLights {
   }
   update(dt: number, flame: number): void {
     this.time += dt;
-    for (const wind of this.foliage) wind.seconds = this.time;
     this.visibleFlames.forEach((flame, i) => {
       flame.scaling.y = 0.9 + 0.1 * Math.sin(this.time * 17 + i * 2.7);
     });
