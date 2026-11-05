@@ -215,6 +215,67 @@
   width: 100%;
   margin-top: var(--ui-space-6);
 }
+/* The current objective, top left: a small checklist in the title's spaced capitals. */
+.story-objectives {
+  position: fixed;
+  z-index: var(--ui-z-hud);
+  top: var(--ui-safe-bottom);
+  left: var(--ui-safe-x);
+  max-width: min(24rem, calc(100vw - 2 * var(--ui-safe-x)));
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border-left: 2px solid var(--ui-accent);
+  border-radius: var(--ui-radius);
+  background: linear-gradient(90deg, rgb(var(--ui-bg-rgb) / 0.82), rgb(var(--ui-bg-rgb) / 0));
+  color: var(--ui-text);
+  font-size: var(--ui-small);
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ui-motion-fade) ease;
+}
+.story-objectives.shown {
+  opacity: 1;
+}
+.story-objectives ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.story-objectives li:first-child:not(.sub) {
+  color: var(--ui-text);
+  font-size: var(--ui-caption);
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: uppercase;
+}
+.story-objectives li.sub {
+  position: relative;
+  margin-top: var(--ui-space-1);
+  padding-left: 1.25em;
+  color: var(--ui-muted);
+}
+.story-objectives li.sub::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.55em;
+  height: 0.55em;
+  border: 1px solid var(--ui-accent-bright);
+}
+.story-objectives li.done {
+  color: var(--ui-subtle);
+  text-decoration: line-through;
+  text-decoration-color: var(--ui-accent);
+}
+.story-objectives li.sub.done::before {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-objectives {
+    transition: none;
+  }
+}
 .story-saving {
   position: fixed;
   z-index: var(--ui-z-hud);

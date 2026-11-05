@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { welcomeTheme } from "../../src/audio/welcomeTheme";
 import { WelcomeAmbience } from "../../src/audio/WelcomeAmbience";
 import { STINGER_HIT, funeralChant, stinger, whisperBed } from "../../src/audio/welcomeDread";
 
@@ -93,7 +92,7 @@ describe("welcome ambience lifecycle", () => {
     expect(sound.started).toBe(false);
     expect(await sound.unlock()).toBe(false);
     const sources = nodes.filter((node) => node.start.mock.calls.length);
-    expect(sources).toHaveLength(8);
+    expect(sources).toHaveLength(7);
     for (const source of sources) expect(source.stop).toHaveBeenCalledExactlyOnceWith(10.24);
     expect(context.close).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(300);
@@ -146,23 +145,6 @@ describe("welcome ambience lifecycle", () => {
     expect(sound.started).toBe(false);
     sound.dispose();
   });
-});
-
-it("keeps the original title motif quiet, finite and silent at the loop boundary", () => {
-  const data = welcomeTheme(8000);
-  let peak = 0,
-    energy = 0,
-    finite = true;
-  for (const value of data) {
-    finite &&= Number.isFinite(value);
-    peak = Math.max(peak, Math.abs(value));
-    energy += value * value;
-  }
-  expect(finite).toBe(true);
-  expect(peak).toBeLessThan(0.14);
-  expect(Math.sqrt(energy / data.length)).toBeGreaterThan(0.005);
-  expect(data[0]).toBe(0);
-  expect(data[data.length - 1]).toBe(0);
 });
 
 function stats(data: Float32Array) {

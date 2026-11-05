@@ -7,6 +7,7 @@ under old trees; sema boundary stones round an ordination hall; lotus-bud temple
 Original geometry: no photograph is used as a texture.
 """
 import math
+from mathutils import Matrix
 
 import bmesh
 import bpy
@@ -67,10 +68,16 @@ def erode(objs, amp=.012, freq=7.0, seed=0.0):
 
 
 def lean(objs, x, y, ax, ay):
-    """Tilts world-space geometry about its foot (x, y, 0): ax about east, ay about north."""
+    """Tilts world-space geometry about its foot (x, y, 0): ax about east, ay about north.
+    Kit pieces share their mesh with others, so those lean as whole objects instead."""
     cx, sx, cy, sy = math.cos(ax), math.sin(ax), math.cos(ay), math.sin(ay)
+    tilt = (Matrix.Translation((x, y, 0)) @ Matrix.Rotation(ay, 4, 'Y') @ Matrix.Rotation(ax, 4, 'X')
+            @ Matrix.Translation((-x, -y, 0)))
     for o in objs:
         if o.type != 'MESH':
+            continue
+        if o.get('kit_piece'):
+            o.matrix_basis = tilt @ o.matrix_basis  # basis: world matrices are stale until an update
             continue
         for v in o.data.vertices:
             px, py, pz = v.co.x - x, v.co.y - y, v.co.z
@@ -156,33 +163,59 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
     faces, fuse into a net, then grip the ground. `surface(z)` gives the radius the
     roots must keep outside at each height; `around` limits their bearing."""
     parts, strands = [], []
+    n = int(n * 1.5)  # more, thinner roots: a net, not a few logs
     for j in range(n):
         a = around[0] + (around[1] - around[0]) * (j + rng.uniform(.15, .85)) / n
         pts = []
-        steps = 18
+        steps = 30
         phase = rng.uniform(0, math.tau)
         for i in range(steps + 1):
             t = i / steps
             z = top * (1 - t) + .06
             # Roots creep sideways as they descend, hugging the masonry.
             a += .05 * math.sin(t * 9 + phase) + rng.normal(0, .02)
-            r = surface(z) + .03 + .025 * math.sin(t * 13 + phase * 2)
+            r = surface(z) + .02 + .012 * math.sin(t * 13 + phase * 2)
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, z))
         for i in range(1, 4):
             r = surface(.06) + spread * i / 3 * rng.uniform(.6, 1.1)
             a += rng.normal(0, .12)
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, .04 - .03 * i))
         strands.append(pts)
-        thick = rng.uniform(.06, .12)
-        parts.append(tube(f'{name}_root_{j}', coll, pts, thick * .35, m['bark'], sides=7, radius_end=thick))
+        thick = rng.uniform(.035, .085)
+        root = tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick)
+        for f in root.data.polygons:
+            f.use_smooth = True
+        parts.append(root)
+        # Fine rootlets feeling their way off the main root over the masonry.
+        for _ in range(int(rng.integers(1, 4))):
+            i = int(rng.integers(5, steps - 4))
+            p = pts[i]
+            da = rng.choice([-1, 1]) * rng.uniform(.15, .4)
+            ra = math.atan2(p[1] - cy, p[0] - cx)
+            twig = [p]
+            for k in range(1, 5):
+                z = p[2] - k * rng.uniform(.06, .14)
+                rr = surface(max(z, .06)) + .012
+                twig.append((cx + math.cos(ra + da * k / 4) * rr, cy + math.sin(ra + da * k / 4) * rr, max(z, .04)))
+            parts.append(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003))
     # Neighbouring roots fuse into the lattice that makes figs look like they crawl.
     for j in range(n):
         a, b = strands[j], strands[(j + 1) % n]
         for _ in range(int(rng.integers(1, 3))):
             i = int(rng.integers(4, 17))
-            p, q = a[i], b[min(len(b) - 1, i + int(rng.integers(-1, 2)))]
-            mid = ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2 - .08)
-            parts.append(tube(f'{name}_web_{j}', coll, [p, mid, q], .028, m['bark'], sides=5, radius_end=.022))
+            i = min(i, len(a) - 5)
+            p, q = a[i], b[min(len(b) - 5, i + int(rng.integers(-2, 3)))]
+            # The link hugs the surface between the two roots instead of cutting across.
+            link = []
+            a0 = math.atan2(p[1] - cy, p[0] - cx)
+            turn = (math.atan2(q[1] - cy, q[0] - cx) - a0 + math.pi) % math.tau - math.pi  # the short way round
+            for k in range(7):
+                t = k / 6
+                ang = a0 + turn * t
+                z = p[2] * (1 - t) + q[2] * t - .05 * math.sin(math.pi * t)
+                rr = surface(max(z, .06)) + .016
+                link.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr, z))
+            parts.append(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014))
     if crown:
         lean_a = rng.uniform(0, math.tau)
         trunk = [(cx + math.cos(lean_a) * .4 * t * t, cy + math.sin(lean_a) * .4 * t * t, top + crown * t) for t in np.linspace(0, 1, 6)]
@@ -261,104 +294,52 @@ def candles(coll, m, name, x, y, z, rng):
 # ----------------------------------------------------------- images and shrines
 
 
-def seated_image(coll, m, name, x, y, yaw, scale=1.0, headless=False, damage=0, seed=0):
-    """A seated Buddha image in eroded sandstone, calling the earth to witness.
+def seated_image(coll, m, name, x, y, yaw, scale=1.0, headless=False, damage=0, seed=0, gilt=False):
+    """A seated Buddha image: the real scan in eroded sandstone or worn gilding, from the kit.
     Damaged images are placed respectfully together; none is shown being broken.
     (Advisor review: placement and dressing.)"""
-    s = scale
-    parts = [
-        sphere(name + '_legs', coll, (0, 0, .2 * s), (.42 * s, .3 * s, .13 * s), m['statue']),
-        sphere(name + '_hips', coll, (0, .04 * s, .3 * s), (.27 * s, .2 * s, .15 * s), m['statue']),
-        sphere(name + '_torso', coll, (0, .05 * s, .55 * s), (.22 * s, .15 * s, .26 * s), m['statue']),
-        sphere(name + '_shoulders', coll, (0, .06 * s, .73 * s), (.26 * s, .13 * s, .08 * s), m['statue']),
-    ]
-    for side in (-1, 1):
-        elbow = (side * .27 * s, .02 * s, .5 * s)
-        hand = (side * .2 * s, -.2 * s, .24 * s) if side > 0 else (-.04 * s, -.12 * s, .28 * s)
-        if not (damage and side > 0):
-            parts.append(tube(name + '_arm', coll, [(side * .23 * s, .06 * s, .74 * s), elbow, hand], .055 * s, m['statue'], sides=10, radius_end=.04 * s))
-            parts.append(sphere(name + '_hand', coll, hand, (.06 * s, .045 * s, .03 * s), m['statue']))
-        else:
-            parts.append(tube(name + '_arm', coll, [(side * .23 * s, .06 * s, .74 * s), (side * .26 * s, .05 * s, .63 * s)], .055 * s, m['statue'], sides=10))
-        parts.append(sphere(name + '_knee', coll, (side * .32 * s, -.1 * s, .2 * s), (.13 * s, .14 * s, .09 * s), m['statue']))
-    if headless:
-        parts.append(tube(name + '_neck', coll, [(0, .06 * s, .76 * s), (.01 * s, .06 * s, .83 * s)], .07 * s, m['statue'], sides=10, radius_end=.06 * s))
+    from pagoda_kit import piece
+    if gilt:
+        mesh = 'image_gilt_headless' if headless else 'image_gilt'
     else:
-        parts += [
-            tube(name + '_neck', coll, [(0, .06 * s, .76 * s), (0, .06 * s, .86 * s)], .065 * s, m['statue'], sides=10),
-            sphere(name + '_head', coll, (0, .05 * s, .97 * s), (.105 * s, .115 * s, .14 * s), m['statue']),
-            sphere(name + '_ushnisha', coll, (0, .06 * s, 1.11 * s), (.06 * s, .06 * s, .06 * s), m['statue']),
-            tube(name + '_flame', coll, [(0, .06 * s, 1.14 * s), (0, .06 * s, 1.26 * s)], .025 * s, m['statue'], sides=8, radius_end=.004),
-        ]
-        for side in (-1, 1):
-            parts.append(sphere(name + '_ear', coll, (side * .11 * s, .06 * s, .93 * s), (.022 * s, .035 * s, .1 * s), m['statue']))
-    body = sculpt(parts, name, voxel=.013 * s, smooth=6, ratio=.22, seed=seed)
-    if headless:
-        # A rough break, not a clean cut: chip the neck back.
-        for v in body.data.vertices:
-            if v.co.z > .8 * s:
-                v.co.z = .8 * s + (v.co.z - .8 * s) * .4 + .015 * s * math.sin(v.co.x * 90 + v.co.y * 70)
-    base = lathe(name + '_throne', coll, [(.5 * s, 0), (.52 * s, .04 * s), (.46 * s, .07 * s), (.4 * s, .09 * s), (.47 * s, .12 * s), (.47 * s, .13 * s), (0, .13 * s)],
-                 0, 0, -.13 * s, m['statue'], segments=24)
-    for o in (body, base):
-        place_object(o, x, y, .13 * s if o is body else .13 * s, yaw)
-    return [body, base]
+        mesh = 'image_headless' if headless else 'image_worn' if damage else 'image_whole'
+    return [piece(coll, mesh, name, x, y, .13 * scale, yaw, scale)]
 
 
 def spirit_house(coll, m, name, x, y, yaw, rng, fallen=False):
-    """A worn-out spirit house: post, platform, pavilion with a tiered roof, painted
-    gold and red long ago. Old ones are retired under a big tree; nobody has
-    tended these in a generation. (Advisor review.)"""
-    parts, c = [], Craft()
-    post = 0 if fallen else rng.uniform(.6, 1.1)
-    paint = m[['mould_red', 'mould_white', 'mould_gold', 'mould_grey'][int(rng.integers(0, 4))]]
-    trim = m['mould_gold']
-    if post:
-        c.block(m['mould_grey'], 0, 0, 0, .14, .14, post)
-    z = post
-    c.block(paint, 0, 0, z, .62, .5, .05)
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            c.block(trim, sx * .26, sy * .2, z + .05, .035, .035, .3)
-    c.block(paint, 0, .05, z + .05, .38, .3, .3)
-    c.block(m['void'], 0, -.105, z + .07, .14, .02, .2)
-    parts = c.build(name, coll)
-    rz = z + .38
-    for side in (-1, 1):
-        for tier, (w, h, d) in enumerate(((.36, .2, .62), (.24, .17, .44))):
-            zz = rz + tier * .12
-            verts = [(0, -d / 2, zz + h), (0, d / 2, zz + h), (side * w, d / 2, zz), (side * w, -d / 2, zz)]
-            if side < 0:
-                verts = list(reversed(verts))
-            parts.append(mesh_object(f'{name}_roof', coll, verts, [(0, 1, 2, 3), (3, 2, 1, 0)], m['tiles']))
-        for end in (-1, 1):
-            parts.append(tube(f'{name}_finial', coll, [(side * .36, end * .31, rz), (side * .42, end * .33, rz + .06), (side * .4, end * .33, rz + .14)],
-                              .012, trim, sides=4, radius_end=.003))
-    parts.append(tube(f'{name}_ridge_spire', coll, [(0, 0, rz + .3), (0, 0, rz + .52)], .018, trim, sides=6, radius_end=.002))
-    for j in range(int(rng.integers(1, 4))):
-        fx, fy = rng.uniform(-.2, .2), rng.uniform(-.22, -.12)
-        parts.append(lathe(f'{name}_figure_{j}', coll, [(0, 0), (.025, 0), (.03, .04), (.02, .08), (.028, .1), (0, .13)], fx, fy, z + .05, m['clay'], segments=8))
-    if rng.random() < .6:
-        parts += dead_garland(coll, m, name + '_garland', 0, -.16, z + .06, .11, rng)
-    if rng.random() < .5:
-        parts.append(lathe(name + '_bottle', coll, [(0, 0), (.03, 0), (.032, .12), (.012, .16), (.012, .2), (0, .2)], .2, -.16, z + .05, m['glass'], segments=8))
-    from khmer import join
-    house = join(parts, name)
+    """A worn-out spirit house from the kit: a little board pavilion on a post, its paint long
+    gone. Old ones are retired under a big tree; nobody has tended these in a generation.
+    Inside each, what was left: a small image, clay figures, a garland, sometimes a
+    photograph. (Advisor review.)"""
+    from pagoda_kit import material, piece
+    from pagoda_photos import plaque
+    mesh = ('spirit_house_red', 'spirit_house_ochre', 'spirit_house_stone')[int(rng.integers(0, 3))]
     tilt = (rng.uniform(1.2, 1.5) * rng.choice([-1, 1]), rng.uniform(-.2, .2)) if fallen else (rng.normal(0, .07), rng.normal(0, .07))
-    place_object(house, x, y, 0 if not fallen else .2, yaw, tilt)
+    house = piece(coll, mesh, name, x, y, .2 if fallen else 0, yaw, tilt=tilt)
+    floor = .905  # post .85 + floor boards
+    parts = []
+    if rng.random() < .55:
+        parts += seated_image(coll, m, name + '_image', 0, .02, 0, .13, headless=rng.random() < .3, gilt=True)
+        parts[-1].location.z = floor + .13 * .13
+    for j in range(int(rng.integers(1, 4))):
+        fx, fy = rng.uniform(-.2, .2), rng.uniform(-.22, -.14)
+        parts.append(lathe(f'{name}_figure_{j}', coll, [(0, 0), (.022, 0), (.026, .035), (.017, .07), (.024, .09), (0, .115)], fx, fy, floor, m['clay'], segments=8))
+    if rng.random() < .6:
+        parts += dead_garland(coll, m, name + '_garland', 0, -.17, floor + .01, .1, rng)
+    if rng.random() < .5:
+        parts.append(lathe(name + '_bottle', coll, [(0, 0), (.03, 0), (.032, .12), (.012, .16), (.012, .2), (0, .2)], .2, -.18, floor, m['glass'], segments=8))
+    if rng.random() < .3:
+        parts.append(plaque(coll, material('M_ep2_funeral_photo'), material('M_ep2_funeral_photo_rim'), name + '_photo',
+                            (0, .14, floor + .17), 0, int(rng.choice((4, 5, 8, 10, 0, 3))), height=.16))
+    for o in parts:
+        o.parent = house
     return house
 
 
 def sema_stone(coll, m, name, x, y, yaw):
     """A leaf-shaped sema boundary stone on a lotus pedestal, marking consecrated ground."""
-    parts = [lathe(name + '_pedestal', coll, [(.32, 0), (.33, .08), (.25, .12), (.2, .2), (.27, .26), (.27, .3), (0, .3)], 0, 0, 0, m['mould_grey'], segments=16)]
-    from pagoda_props import extrude
-    outline = [(-.22, 0), (-.26, .2), (-.24, .45), (-.17, .66), (-.07, .8), (0, .9), (.07, .8), (.17, .66), (.24, .45), (.26, .2), (.22, 0)]
-    parts.append(extrude(coll, name + '_leaf', outline, .06, m['statue'], (0, 0, .3)))
-    parts.append(extrude(coll, name + '_boss', [(px * .55, pz * .78 + .07) for px, pz in outline], .085, m['statue'], (0, 0, .3)))
-    from khmer import join
-    stone = join(parts, name)
-    place_object(stone, x, y, 0, yaw, (np.random.default_rng(int(abs(x * 31 + y * 7))).normal(0, .05), 0))
+    from pagoda_kit import piece
+    stone = piece(coll, 'sema_stone', name, x, y, 0, yaw, tilt=(np.random.default_rng(int(abs(x * 31 + y * 7))).normal(0, .05), 0))
     collider(name, coll, x - .34, x + .34, y - .34, y + .34, 0, 1.2, 'stone')
     return stone
 
@@ -477,10 +458,11 @@ def _bell_radius(profile, h, s, _x):
 # ----------------------------------------------------------- the enclosure
 
 
-def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), height=1.6, bay=3.2, collide=True):
+def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), height=1.6, bay=3.2, collide=True, open_bays=()):
     """A Thai/Khmer temple enclosure: plinth, plastered brick body, coping with a
     crest of leaf-shaped merlons, piers with lotus-bud finials. Bays lean, the skin
-    has scabbed to brick, a few bays have fallen. Axis-aligned from a to b."""
+    has scabbed to brick, a few bays have fallen. Axis-aligned from a to b. The
+    fallen bays in `open_bays` can be walked through."""
     made = set(coll.objects)
     ax, ay = a
     bx, by = b
@@ -570,51 +552,23 @@ def temple_wall(coll, m, name, a, b, rng, body='mould_white', breaches=(), heigh
                               px, py, height + .8, mat, segments=14))
         erode(objs, .012, 4, i + 50)
     if collide:
-        x0, x1 = sorted([ax - nx * .36, bx + nx * .36])
-        y0, y1 = sorted([ay - ny * .36, by + ny * .36])
-        collider(name, coll, x0, x1, y0, y1, 0, height + .4, 'stone')
+        # One collider per run of standing bays, leaving the open breaches clear.
+        cuts = [0.0] + [t for i in sorted(open_bays) for t in (i * step, (i + 1) * step)] + [length]
+        for k in range(0, len(cuts), 2):
+            t0, t1 = cuts[k], cuts[k + 1]
+            if t1 - t0 < .01:
+                continue
+            p0, p1 = at(t0, -.36), at(t1, .36)
+            x0, x1 = sorted([p0[0], p1[0]])
+            y0, y1 = sorted([p0[1], p1[1]])
+            collider(name if k == 0 else f'{name}_{k // 2}', coll, x0, x1, y0, y1, 0, height + .4, 'stone')
     return [o for o in coll.objects if o not in made]
 
 
 def guardian(coll, m, name, x, y, yaw, rng, headless=False, seed=0):
-    """A temple guardian (dvarapala/yaksha) on a plinth, both hands on a club. Weather
-    has softened the face to suggestion: bulging eyes, fangs, a tiered crown.
-    (Advisor review: Thai yaksha and Khmer dvarapala are both precedents.)"""
-    parts = []
-    for side in (-1, 1):
-        parts.append(tube(name + '_leg', coll, [(side * .17, 0, 0), (side * .2, -.03, .45), (side * .16, 0, .95)], .12, m['statue'], sides=10, radius_end=.14))
-        parts.append(sphere(name + '_foot', coll, (side * .18, -.1, .05), (.09, .17, .06), m['statue']))
-        parts.append(tube(name + '_arm', coll, [(side * .3, 0, 1.55), (side * .36, -.08, 1.25), (side * .1, -.3, 1.08)], .075, m['statue'], sides=10, radius_end=.065))
-        parts.append(sphere(name + '_hand', coll, (side * .07, -.32, 1.1), (.08, .07, .06), m['statue']))
-    parts += [
-        sphere(name + '_sarong', coll, (0, 0, .95), (.33, .24, .3), m['statue']),
-        # A knee-length sampot, pleated at the front, makes the lower body read as solid stone.
-        lathe(name + '_sampot', coll, [(.3, .42), (.33, .55), (.34, .8), (.32, 1.0), (.28, 1.1), (0, 1.12)], 0, 0, 0, m['statue'], segments=16),
-        tube(name + '_pleat', coll, [(0, -.27, 1.05), (.01, -.33, .7), (0, -.31, .4)], .06, m['statue'], sides=8, radius_end=.09),
-        sphere(name + '_belly', coll, (0, -.04, 1.2), (.3, .23, .26), m['statue']),
-        sphere(name + '_chest', coll, (0, 0, 1.47), (.33, .2, .2), m['statue']),
-        tube(name + '_club', coll, [(0, -.32, .02), (0, -.33, .7), (0, -.32, 1.12)], .07, m['statue'], sides=10, radius_end=.12),
-    ]
-    if not headless:
-        parts += [
-            tube(name + '_neck', coll, [(0, 0, 1.6), (0, -.01, 1.74)], .1, m['statue'], sides=10),
-            sphere(name + '_head', coll, (0, -.03, 1.86), (.15, .15, .17), m['statue']),
-            lathe(name + '_crown', coll, [(.15, 0), (.16, .05), (.12, .1), (.13, .14), (.09, .2), (.1, .24), (.06, .32), (.04, .42), (0, .52)], 0, -.02, 1.96, m['statue'], segments=14),
-        ]
-        for side in (-1, 1):
-            parts.append(sphere(name + '_eye', coll, (side * .06, -.155, 1.89), (.04, .03, .035), m['statue']))
-            parts.append(tube(name + '_fang', coll, [(side * .045, -.16, 1.79), (side * .05, -.17, 1.72)], .016, m['statue'], sides=6, radius_end=.004))
-            parts.append(sphere(name + '_ear', coll, (side * .15, -.02, 1.86), (.03, .05, .09), m['statue']))
-    else:
-        parts.append(tube(name + '_neck', coll, [(0, 0, 1.6), (.01, -.01, 1.69)], .11, m['statue'], sides=10))
-    body = sculpt(parts, name, voxel=.02, ratio=.45, rough=.008, seed=seed)
-    plinth = Craft()
-    plinth.block(m['mould_grey'], 0, 0, -.62, .92, .92, .14)
-    plinth.block(m['mould_white'], 0, 0, -.48, .78, .78, .4)
-    plinth.block(m['mould_grey'], 0, 0, -.08, .88, .88, .08)
-    base = plinth.build(name + '_plinth', coll)
-    for o in [body] + base:
-        place_object(o, x, y, .62, yaw)
-    erode(base, .01, 5, seed)
+    """A temple guardian on its plinth: the real Khmer stone figure scan, from the kit, one
+    of the pair having lost its head. (Advisor review.)"""
+    from pagoda_kit import piece
+    body = piece(coll, 'guardian_headless' if headless else 'guardian_whole', name, x, y, 0, yaw)
     collider(name, coll, x - .46, x + .46, y - .46, y + .46, 0, 2.7, 'stone')
-    return [body] + base
+    return [body]

@@ -33,6 +33,7 @@ function courtyard() {
     entries: [],
     sok: { update: vi.fn() },
     shed: { update: vi.fn() },
+    bell: { update: vi.fn() },
     progress: { update: vi.fn(), ready: () => false },
     arrivalModels: { updateTelephoneCord: vi.fn() },
   }) as ActOneBeats;

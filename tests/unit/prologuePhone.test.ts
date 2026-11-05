@@ -2,6 +2,7 @@ import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
 import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "../../src/episodes/ep1/audio/DreadScore";
+import { PhoneBell } from "../../src/episodes/ep1/audio/PhoneBell";
 import { Flags } from "../../src/core/Flags";
 
 it.each([
@@ -25,7 +26,7 @@ it.each([
   expect(state.game.flags.get("ep1.phone.answered", false)).toBe(false);
 });
 
-it("puts the automatic notebook away before waiting for the ringing phone", async () => {
+it("rings the phone the moment the kit is packed, without opening the notebook", async () => {
   let bookOpen = false;
   let satchelOpen = true;
   const order: string[] = [];
@@ -44,9 +45,14 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
         },
       },
       sketchbook: {
+        written: new Set<string>(),
         write: () => {
           bookOpen = true;
           order.push("write");
+        },
+        restore: (ids: string[]) => {
+          state.game.sketchbook.written = new Set(ids);
+          order.push("restore");
         },
         close: () => {
           bookOpen = false;
@@ -59,7 +65,10 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     ink: { inkLine: vi.fn(), spill: vi.fn() },
     sfx: new Map(),
     score: new DreadScore(null),
+    bell: new PhoneBell(null),
     ringing: false,
+    objectives: { show: vi.fn(), hide: vi.fn() },
+    packingList: () => [],
     makeSounds: vi.fn(),
     idleHints: vi.fn(),
     play: vi.fn(),
@@ -72,18 +81,26 @@ it("puts the automatic notebook away before waiting for the ringing phone", asyn
     used: vi.fn((id: string) => {
       if (id === "interact_telephone") {
         expect(state.ringing).toBe(true);
+        // Only rain and thunder are heard before the phone: no clock, candle or dread sting.
+        expect(state.play).not.toHaveBeenCalled();
+        expect(sting).not.toHaveBeenCalled();
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
+        // No pause between the last item and the ring.
+        expect(state.wait).not.toHaveBeenCalled();
+        expect(state.game.hints.show).toHaveBeenCalledWith("hint.phone", 12);
         order.push("phone");
       }
       return Promise.resolve();
     }),
   };
+  const sting = vi.spyOn(state.score, "sting");
   vi.useFakeTimers();
   try {
     const run = Reflect.get(Prologue.prototype, "run") as (this: typeof state) => Promise<void>;
     await run.call(state);
-    expect(order).toEqual(["write", "close", "phone"]);
+    expect(order).toEqual(["restore", "close", "phone"]);
+    expect(state.game.sketchbook.written.has("SB-01")).toBe(true);
     expect(state.phoneCall).toHaveBeenCalledOnce();
     expect(state.leave).toHaveBeenCalledOnce();
   } finally {

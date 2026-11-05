@@ -314,7 +314,7 @@ def rural_details(coll):
     before=set(coll.objects)
     for name,spec in walls: woven_panel(name,coll,spec)
     stairs_detail(coll,'stairs_front',9,6,10.15,11.35,0,2.5,12,'x')
-    stairs_detail(coll,'stairs_rear',1.95,2.75,21,18,0,2.5,11,'y')
+    stairs_detail(coll,'stairs_rear',1.95,2.75,25,22,0,2.5,11,'y')
     stone=material('clay_plaster','M_house_detail_weathered_footing',(.48,.43,.34))
     for name,(x0,x1,y0,y1,z0,z1) in foot_specs:
         obj=box(name,coll,x0,x1,y0,y1,z0,z1,stone,edge=.018)

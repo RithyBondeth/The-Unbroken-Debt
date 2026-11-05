@@ -20,6 +20,8 @@ export class DreadScore {
   private target = 0;
   private playing = false;
   private stopped = false;
+  /** Told of each sting as it starts, sound or not: the wind gusts with the hit. */
+  onSting: ((kind: Sting, volume: number) => void) | null = null;
 
   constructor(private readonly audio: AudioSystem | null) {}
 
@@ -54,8 +56,10 @@ export class DreadScore {
 
   /** Plays a sting now; its hit lands `lead(kind)` seconds later. */
   sting(kind: Sting, volume = 1): void {
+    if (this.stopped) return;
+    this.onSting?.(kind, volume);
     const sound = this.stings.get(kind);
-    if (!sound || this.stopped) return;
+    if (!sound) return;
     sound.volume = volume;
     sound.play();
   }

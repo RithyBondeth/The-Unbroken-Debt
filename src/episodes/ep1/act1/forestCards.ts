@@ -26,10 +26,11 @@ function leaf(
   ctx.fill();
 }
 
+/** Old-growth night greens: cold, deep and barely saturated. */
 function green(random: () => number, light: number): string {
-  const hue = 82 + random() * 34;
-  const sat = 20 + random() * 22;
-  return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${(light + random() * 6).toFixed(1)}%)`;
+  const hue = 120 + random() * 34;
+  const sat = 10 + random() * 16;
+  return `hsl(${hue.toFixed(0)},${sat.toFixed(0)}%,${(light * 0.8 + random() * 5).toFixed(1)}%)`;
 }
 
 function bark(random: () => number, light = 14): string {

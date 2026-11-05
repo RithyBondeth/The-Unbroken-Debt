@@ -33,7 +33,7 @@ export const TAXI_CONVERSATION: readonly TaxiLine[] = [
   {
     at: 40,
     speaker: "Sora",
-    text: "Wait. There—beside the trees. Did you see that?",
+    text: "Wait—something ran across the road! Did you see that?",
     seconds: 4.2,
   },
   { at: 44.8, speaker: "Driver", text: "Keep your eyes forward. Don't call to it.", seconds: 4 },

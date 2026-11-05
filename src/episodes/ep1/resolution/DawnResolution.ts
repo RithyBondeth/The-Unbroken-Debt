@@ -158,8 +158,7 @@ export class DawnResolution {
     const g = this.game;
     await g.fade.to(1, 0);
     while (true) {
-      const action = await this.view.show(
-        "Boon Sop: The Unbroken Debt",
+      const action = await this.view.credits(
         [
           "Episode 1 · The House of Mourning",
           "Created by Rithy Bondeth",

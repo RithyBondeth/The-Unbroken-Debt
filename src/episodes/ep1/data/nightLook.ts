@@ -26,9 +26,10 @@ export const NIGHT_LOOK: Look = {
   maxExposure: 2.1,
   nightSightIntensity: 1.4,
   nightSightRange: 2.6,
-  fogDensity: 0.019,
-  fogAmbient: [0.006, 0.009, 0.014],
-  clearColor: [0.006, 0.007, 0.01],
+  // Old-growth night: thicker, colder air under the canopy, green-black beyond.
+  fogDensity: 0.024,
+  fogAmbient: [0.005, 0.0095, 0.013],
+  clearColor: [0.005, 0.007, 0.009],
   skyIntensity: 0.22,
   moonIntensity: 0.2,
 };

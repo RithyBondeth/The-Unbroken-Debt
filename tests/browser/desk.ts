@@ -109,7 +109,7 @@ async function verify(): Promise<void> {
     await frame();
   }
   const viewAltar = () =>
-    aim(new Vector3(0, 2.5, -16.25), m.compartment.position.add(new Vector3(0, 0.26, 0.06)), 0.35);
+    aim(new Vector3(0, 2.5, -20.25), m.compartment.position.add(new Vector3(0, 0.26, 0.06)), 0.35);
   const viewDesk = () =>
     aim(
       new Vector3(-4.3, 2.5, -15.8),

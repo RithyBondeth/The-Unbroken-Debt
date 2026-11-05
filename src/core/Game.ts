@@ -25,6 +25,7 @@ import { keepLightBudgets } from "../render/lightBudget";
 import { installSoftLampFalloff } from "../render/softLampFalloff";
 import { renderStallNotice } from "../ui/html/RenderStallNotice";
 import { Atmosphere } from "../render/Atmosphere";
+import { WindState } from "../render/wind";
 import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
 import { PlayerController } from "../player/PlayerController";
 import { FallGuard } from "../player/FallGuard";
@@ -53,6 +54,8 @@ import { ActOne } from "../episodes/ep1/act1/ActOne";
 import type { SaveData } from "../systems/saves/SaveData";
 import { Checkpoints, checkpointName } from "../systems/saves/Checkpoints";
 import { NotebookReader } from "../ui/html/NotebookReader";
+import { PauseMenu } from "../ui/html/PauseMenu";
+import { storyClock } from "../ui/html/StoryUi";
 import { TaxiRide } from "../episodes/ep1/travel/TaxiRide";
 import { WhisperingPagoda } from "../episodes/ep2/WhisperingPagoda";
 import { PagodaProgress, enterPagoda } from "../episodes/ep2/PagodaProgress";
@@ -104,6 +107,10 @@ export class Game {
   /** The lamp from the save being resumed, if any (the act restores it). */
   savedLamp: SaveData["lamp"] | null = null;
   resumedSave: SaveData | null = null;
+  /** Escape has frozen the game under the pause menu. */
+  paused = false;
+  private readonly pauseMenu = new PauseMenu();
+  private started = false;
   /** A scripted moment has Sora's hands: nothing can be used, opened or read. */
   cutscene = false;
   handsHidden = false;
@@ -114,6 +121,8 @@ export class Game {
   pipeline!: PostPipeline;
   atmosphere!: Atmosphere;
   player!: PlayerController;
+  /** The outdoor wind: sections set its strength, the story its calm and tension. */
+  readonly wind = new WindState();
   /** Puts Sora back on solid ground if she ever leaves the world (the area may set walls). */
   readonly fallGuard = new FallGuard();
   private readonly feetNow = new Vector3();
@@ -177,7 +186,19 @@ export class Game {
     this.gated = new GatedInput(this.input);
     this.interaction = new Interaction(this.scene, this.camera, this.bus);
     this.notebook = new NotebookReader(this);
+    // Ahead of every other key handler: while paused nothing else hears the keyboard,
+    // and Escape is weighed before a reader or the wardrobe can take it.
+    window.addEventListener("keydown", (e) => this.pauseKey(e), { capture: true });
     window.addEventListener("keydown", (e) => this.press(e));
+    // Escape while the mouse is captured releases it before the page sees the key:
+    // losing the pointer with nothing open on screen pauses too (and so does alt-tab).
+    document.addEventListener("pointerlockchange", () => {
+      if (document.pointerLockElement || !this.started || this.paused) return;
+      setTimeout(() => {
+        if (!document.pointerLockElement && !this.paused && !this.cutscene && this.nothingOpen())
+          this.pause();
+      }, 120);
+    });
     if (import.meta.env.DEV)
       window.addEventListener(
         "keydown",
@@ -235,7 +256,15 @@ export class Game {
       ]);
     this.scene.onBeforeRenderObservable.add(() => this.update());
     void section.begin();
-    runRenderLoop(this.engine, () => this.scene.render(), renderStallNotice);
+    this.started = true;
+    // Paused, the last frame stays on screen and the world stops (scripts run on frame time).
+    runRenderLoop(
+      this.engine,
+      () => {
+        if (!this.paused) this.scene.render();
+      },
+      renderStallNotice,
+    );
   }
 
   /**
@@ -415,6 +444,12 @@ export class Game {
 
   private update(): void {
     this.guardFall();
+    const eye = this.camera.globalPosition;
+    this.wind.update(this.deltaSeconds, eye.x, eye.z);
+    if (this.wind.push && this.player) {
+      this.wind.push.x = this.feetNow.x;
+      this.wind.push.z = this.feetNow.z;
+    }
     if (
       this.notebook.isOpen &&
       (this.cutscene || this.threatActive || this.hiding || this.satchel.isOpen)
@@ -477,6 +512,78 @@ export class Game {
     void this.fade.to(1, 0).then(() => this.fade.to(0, 0.8));
   }
 
+  /** No book, satchel, reader, title card or entry screen is open over the game. */
+  private nothingOpen(): boolean {
+    const book = this.sketchbook;
+    return (
+      !(book?.isVisible || book?.isBusy) &&
+      !this.notebook.isOpen &&
+      !this.satchel.isOpen &&
+      !document.querySelector(
+        ".document-reader:not([hidden]), .story-fade.waiting, .story-card.shown, .resolution:not([hidden])",
+      )
+    );
+  }
+
+  private pauseKey(e: KeyboardEvent): void {
+    if (this.paused) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.code === "Escape" && !e.repeat) this.pauseMenu.back();
+      return;
+    }
+    if (e.code !== "Escape" || e.repeat || !this.started) return;
+    // Escape first steps back out of whatever has Sora's attention.
+    if (this.inspecting || this.hiding || !this.nothingOpen()) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    this.pause();
+  }
+
+  /** Freezes the world, its sound and its story timing under the pause menu. */
+  pause(): void {
+    if (this.paused || !this.started) return;
+    this.paused = true;
+    storyClock.paused = true;
+    this.input.clear();
+    this.stopInspecting();
+    void (this.audio?.context as AudioContext | undefined)?.suspend?.();
+    if (document.pointerLockElement) document.exitPointerLock();
+    const last = this.checkpoints.last;
+    this.pauseMenu.open({
+      resume: () => this.resume(),
+      restart: last
+        ? () =>
+            void this.checkpoints
+              .prepareRetry()
+              .then(() => this.reload(true))
+              .catch(() => this.reload(true))
+        : null,
+      quit: () => this.reload(false),
+    });
+  }
+
+  resume(): void {
+    if (!this.paused) return;
+    this.pauseMenu.close();
+    this.paused = false;
+    storyClock.paused = false;
+    this.input.clear();
+    void (this.audio?.context as AudioContext | undefined)?.resume?.();
+    this.engine.getRenderingCanvas()?.focus({ preventScroll: true });
+    // The Resume click or key is a fresh gesture: take the mouse back at once.
+    if (!this.cutscene) void this.input.lockPointer();
+  }
+
+  /** Back to the last checkpoint (`?continue`), or to the title screen. */
+  private reload(toCheckpoint: boolean): void {
+    const url = new URL(location.href);
+    url.searchParams.delete("start");
+    if (toCheckpoint) url.searchParams.set("continue", "");
+    else url.searchParams.delete("continue");
+    location.replace(url.toString());
+  }
+
   /** E uses, Tab opens the satchel, Q the sketchbook; A/D and 1–5 turn its pages. */
   private press(e: KeyboardEvent): void {
     if (import.meta.env.DEV) this.debugHandledKey = `${e.code || "no code"} / ${e.key}`;
@@ -487,6 +594,7 @@ export class Game {
     const book = this.sketchbook;
     if (e.code === "KeyE" && this.interaction.use()) this.hints.performed("hint.use");
     if (e.code === "Tab") this.toggleSatchel();
+    if (e.code === "Escape" && this.satchel.isOpen) this.satchel.close();
     if (e.code === "KeyQ") {
       e.preventDefault();
       this.toggleSketchbook();

@@ -23,8 +23,6 @@ def prop_materials():
         'gold_leaf': plain('M_ep2_gold_leaf', (.5, .36, .11), rough=.38, metal=.75),
         'silver_old': plain('M_ep2_silver_old', (.26, .26, .24), rough=.58, metal=.65),
         'slate': library_material('clay_plaster', 'M_ep2_stone_slate', colour=(.085, .085, .08), tile=.6),
-        'rice_cooked': plain('M_ep2_rice_cooked', (.62, .6, .5), rough=.85),
-        'banana_leaf': plain('M_ep2_banana_leaf', (.07, .12, .045), rough=.7),
         'lacquer': library_material('dark_wooden_planks', 'M_ep2_teak_lacquer', tint=(.32, .14, .08)),
         'paint_green': library_material('clay_plaster', 'M_ep2_paint_green', colour=(.05, .15, .09), tile=1.2),
         'paint_yellow': library_material('clay_plaster', 'M_ep2_paint_yellow', colour=(.45, .33, .07), tile=1.2),
@@ -64,64 +62,10 @@ def extrude(coll, name, outline, t, mat, origin=(0, 0, 0)):
 
 
 def hall_buddha(coll, m, x, y, z, s, yaw):
-    """The seated Buddha of the hall, calling the earth to witness: whitened plaster
-    face and hands, saffron robe over the left shoulder, on a red lotus throne."""
-    skin = [
-        sphere('hall_buddha_shoulder_r', coll, (.2 * s, .06 * s, .71 * s), (.1 * s, .1 * s, .09 * s), m['buddha_skin']),
-        tube('hall_buddha_neck', coll, [(0, .06 * s, .74 * s), (0, .06 * s, .88 * s)], .072 * s, m['buddha_skin'], sides=12),
-        sphere('hall_buddha_head', coll, (0, .05 * s, 1.0 * s), (.115 * s, .125 * s, .15 * s), m['buddha_skin']),
-        sphere('hall_buddha_hair', coll, (0, .075 * s, 1.06 * s), (.118 * s, .11 * s, .11 * s), m['buddha_skin']),
-        sphere('hall_buddha_ushnisha', coll, (0, .075 * s, 1.17 * s), (.06 * s, .06 * s, .065 * s), m['buddha_skin']),
-        tube('hall_buddha_flame', coll, [(0, .075 * s, 1.21 * s), (0, .075 * s, 1.38 * s)], .03 * s, m['buddha_skin'], sides=10, radius_end=.003),
-        sphere('hall_buddha_nose', coll, (0, -.068 * s, .99 * s), (.017 * s, .022 * s, .038 * s), m['buddha_skin']),
-        sphere('hall_buddha_brow', coll, (0, -.05 * s, 1.03 * s), (.08 * s, .03 * s, .02 * s), m['buddha_skin']),
-        # The bare right arm hangs by the side, the forearm reaching over the knee to touch the earth.
-        sphere('hall_buddha_upper_arm', coll, (.29 * s, .04 * s, .58 * s), (.075 * s, .075 * s, .15 * s), m['buddha_skin']),
-        tube('hall_buddha_arm_r', coll, [(.27 * s, .06 * s, .7 * s), (.32 * s, .03 * s, .46 * s), (.34 * s, -.12 * s, .3 * s), (.33 * s, -.27 * s, .16 * s)], .08 * s, m['buddha_skin'], sides=14, radius_end=.05 * s),
-        sphere('hall_buddha_hand_r', coll, (.33 * s, -.3 * s, .13 * s), (.055 * s, .075 * s, .032 * s), m['buddha_skin']),
-        sphere('hall_buddha_hand_l', coll, (-.03 * s, -.13 * s, .3 * s), (.075 * s, .055 * s, .028 * s), m['buddha_skin']),
-    ]
-    for side in (-1, 1):
-        skin.append(tube('hall_buddha_ear', coll, [(side * .115 * s, .07 * s, 1.03 * s), (side * .125 * s, .07 * s, .93 * s), (side * .115 * s, .06 * s, .84 * s)],
-                         .02 * s, m['buddha_skin'], sides=8, radius_end=.016 * s))
-    skin.append(sphere('hall_buddha_sole', coll, (.18 * s, -.14 * s, .27 * s), (.065 * s, .11 * s, .028 * s), m['buddha_skin']))
-    face = sculpt(skin, 'hall_buddha_skin', voxel=.011 * s, smooth=5, ratio=.35, rough=.001, seed=5)
-    # The robe covers the lap, body and left shoulder; its hem crosses under the right arm.
-    robe = [
-        sphere('hall_buddha_lap', coll, (0, -.03 * s, .2 * s), (.47 * s, .31 * s, .13 * s), m['robe']),
-        sphere('hall_buddha_hips', coll, (0, .04 * s, .32 * s), (.29 * s, .22 * s, .16 * s), m['robe']),
-        sphere('hall_buddha_torso', coll, (-.01 * s, .06 * s, .55 * s), (.23 * s, .165 * s, .27 * s), m['robe']),
-        sphere('hall_buddha_shoulder_l', coll, (-.19 * s, .06 * s, .71 * s), (.12 * s, .12 * s, .09 * s), m['robe']),
-        tube('hall_buddha_arm_l', coll, [(-.24 * s, .06 * s, .7 * s), (-.31 * s, .02 * s, .48 * s), (-.24 * s, -.08 * s, .32 * s), (-.1 * s, -.14 * s, .3 * s)], .085 * s, m['robe'], sides=14, radius_end=.07 * s),
-        tube('hall_buddha_drape', coll, [(-.2 * s, -.1 * s, .72 * s), (-.19 * s, -.15 * s, .5 * s), (-.15 * s, -.2 * s, .3 * s)], .06 * s, m['robe'], sides=10, radius_end=.08 * s),
-    ]
-    for side in (-1, 1):
-        robe.append(sphere('hall_buddha_knee', coll, (side * .35 * s, -.12 * s, .2 * s), (.15 * s, .16 * s, .1 * s), m['robe']))
-    cloth = sculpt(robe, 'hall_buddha_robe', voxel=.012 * s, smooth=6, ratio=.35, rough=.001, seed=6)
-    for v in cloth.data.vertices:
-        # Shallow folds running down and round the lap.
-        v.co += v.normal * .005 * s * math.sin(v.co.x * 50 / s + v.co.z * 14 / s)
-    # The lotus throne: drum, double ring of faded crimson petals, cushion.
-    throne = [lathe('hall_buddha_throne', coll, [(.62 * s, -.32 * s), (.6 * s, -.26 * s), (.48 * s, -.2 * s), (.46 * s, -.1 * s), (.55 * s, -.04 * s), (.55 * s, 0), (0, 0)],
-                    0, 0, 0, m['gilt'], segments=40)]
-    for row, (r, z0, h, n) in enumerate([(.6 * s, -.22 * s, .2 * s, 22), (.55 * s, -.12 * s, .16 * s, 22)]):
-        ring = lathe(f'hall_buddha_lotus_{row}', coll, [(r - .04 * s, 0), (r + .05 * s, h * .3), (r + .03 * s, h * .75), (r - .03 * s, h)],
-                     0, 0, z0, m['lotus_petal'], segments=n * 8)
-        for v in ring.data.vertices:
-            a = math.atan2(v.co.y, v.co.x) + (math.pi / n if row else 0)
-            petal = abs(math.cos(a * n / 2))
-            rad = math.hypot(v.co.x, v.co.y)
-            k = (rad + .03 * s * petal) / max(rad, 1e-6)
-            v.co.x *= k
-            v.co.y *= k
-            if (v.co.z - z0) / h > .9:
-                v.co.z -= h * .45 * (1 - petal ** 2)
-        throne.append(ring)
-    for o in throne:
-        place_object(o, x, y, z + .32 * s, yaw)
-    for o in (face, cloth):
-        place_object(o, x, y, z + .25 * s, yaw)
-    return [face, cloth] + throne
+    """The lotus throne of the hall's seated Buddha, from the kit: worn gilding over red."""
+    # The image itself is a real scan (tools/ep2/build-cinematics.py).
+    from pagoda_kit import piece
+    return [piece(coll, 'hall_throne', 'hall_buddha_throne', x, y, z + .32 * s, yaw, s / 1.2)]
 
 
 def relief_deva(coll, m, name, x, y, z, h, end):
@@ -256,73 +200,16 @@ def footed_tray(coll, m, name, x, y, z, r=.3):
                  x, y, z, m['bronze'], segments=32)
 
 
-def rice_ball(coll, m, name, x, y, z, rng):
-    """Pressed sticky rice: a lumpy, grain-pitted mound, not a sphere."""
-    ball = sphere(name, coll, (x, y, z + .045), (.07, .065, .05), m['rice_cooked'], segments=20, rings=14)
-    seed = rng.uniform(0, 9)
-    for v in ball.data.vertices:
-        n = v.co.normalized()
-        v.co *= 1 + .08 * math.sin(n.x * 9 + seed) * math.cos(n.y * 7) + .04 * math.sin(n.z * 23 + n.x * 17)
-        if v.co.z < -.4:
-            v.co.z = -.4
-    return ball
-
-
-def banana_leaf(coll, m, name, x, y, z, w=.34, l=.5, yaw=0.0):
-    nx, ny = 6, 4
-    verts, faces = [], []
-    for j in range(ny + 1):
-        for i in range(nx + 1):
-            u, t = i / nx - .5, j / ny - .5
-            verts.append((u * l, t * w, .012 * (u * 2) ** 2 + .01 * (t * 2) ** 2))
-    for j in range(ny):
-        for i in range(nx):
-            a = j * (nx + 1) + i
-            faces.append((a, a + 1, a + nx + 2, a + nx + 1))
-    leaf = mesh_object(name, coll, verts, faces, m['banana_leaf'], smooth=True)
-    return place_object(leaf, x, y, z, yaw)
-
-
 # ------------------------------------------------------------------ guardians of the way
 
 
 def naga_rail(coll, m, name, x, rng, y0=-31.2, y1=-25.7):
-    """A naga balustrade in old grey stone: a stepped base, a scaled body rising to a
-    fan of five hooded heads with a flame crest, all fused into one carving."""
-    side = 1 if x > 0 else -1
-    c = Craft()
-    c.block(m['mould_grey'], x, (y0 + y1) / 2 - .15, 0, .62, y1 - y0 + .3, .18)
-    c.block(m['mould_white'], x, (y0 + y1) / 2 - .15, .18, .48, y1 - y0 + .2, .22)
-    base = c.build(name + '_base', coll)
-    erode(base, .01, 5)
-    lx = 0.0
-    body_pts = [(0, -5.3, 0), (0, -3.6, .02), (0, -1.8, .05), (0, -.7, .15), (0, -.25, .45), (0, -.05, .85), (0, .03, 1.15)]
-    parts = [tube(name + '_body', coll, body_pts, .17, m['mould_grey'], sides=14, radius_end=.16)]
-    parts.append(sphere(name + '_tail', coll, (0, -5.45, .02), (.1, .2, .08), m['mould_grey']))
-    hh = 1.3
-    heads = []
-    for k in range(5):
-        a = (k - 2) * .45
-        hx, hz = math.sin(a) * .66, hh + math.cos(a) * .36 - .1
-        heads.append((hx, hz))
-        parts.append(tube(name + '_neck', coll, [(0, .03, 1.05), (hx * .5, 0, (1.05 + hz) / 2 - .05), (hx, -.04, hz - .12)], .085, m['mould_grey'], sides=10, radius_end=.075))
-        # The cobra hood flares wide and flat behind each head.
-        parts.append(sphere(name + '_hood', coll, (hx, .0, hz), (.18, .055, .26), m['mould_grey']))
-        parts.append(sphere(name + '_head', coll, (hx, -.09, hz + .05), (.085, .1, .07), m['mould_grey']))
-        parts.append(sphere(name + '_snout', coll, (hx, -.2, hz + .03), (.055, .09, .045), m['mould_grey']))
-        parts.append(tube(name + '_crest', coll, [(hx, .04, hz + .22), (hx * 1.08, .05, hz + .4), (hx * 1.02, .04, hz + .55)], .04, m['mould_grey'], sides=6, radius_end=.004))
-    naga = sculpt(parts, name, voxel=.018, smooth=4, ratio=.45, rough=.004, seed=int(x))
-    for v in naga.data.vertices:
-        if v.co.z < 1.2 and v.co.y < .1:
-            # Overlapping scale rows along the body.
-            v.co += v.normal * .006 * (abs(math.sin(v.co.y * 38 + math.atan2(v.co.x, v.co.z - .4) * 3)) - .5)
-    place_object(naga, x, y1 - .1, .4, 0)
-    eyes = []
-    for hx, hz in heads:
-        for e in (-1, 1):
-            eyes.append(sphere(name + '_eye', coll, (x + hx + e * .055, y1 - .1 - .17, .4 + hz + .1), (.018, .012, .015), m['void']))
+    """A naga balustrade from the kit: stepped stone base, a scaled body rising to the real
+    naga finial's fan of hoods, all one weathered carving."""
+    from pagoda_kit import piece
+    naga = piece(coll, 'naga_rail', name, x, y1 - .1, .4, 0)
     collider(name, coll, x - .31, x + .31, y0 - .3, y1 + .1, 0, 1.4, 'stone')
-    return [naga] + base + eyes
+    return [naga]
 
 
 # ------------------------------------------------------------------ the family marks
@@ -370,79 +257,6 @@ def inscribed_tablet(coll, m, name, x, y, z, rng):
                 objs.append(tube(name + '_line', coll, pts, .0025, m['void'], sides=3))
             px += length + rng.uniform(.008, .03)
     return objs
-
-
-# ------------------------------------------------------------------ the hungry dead
-
-
-def hungry_ghost(coll, m, name, seed):
-    """A preta as temple murals show them: very tall and starved to the bone, hunched,
-    a swollen belly, a needle-thin neck and pinhole mouth, arms long enough to drag,
-    hair hanging lank. Feet at the origin, facing -Y. One fused sculpt."""
-    rng = np.random.default_rng(seed)
-    sk = m['skin']
-    parts = [
-        # Swollen, sagging belly under a caved-in ribcage.
-        # The belly sags like a filled sack, heaviest low down.
-        sphere('pret_belly', coll, (0, -.14, 1.98), (.3, .3, .28), sk),
-        sphere('pret_belly_sag', coll, (0, -.2, 1.74), (.37, .36, .3), sk),
-        sphere('pret_belly_fold', coll, (0, -.27, 1.62), (.3, .26, .14), sk),
-        sphere('pret_pelvis', coll, (0, .02, 1.6), (.22, .16, .14), sk),
-        sphere('pret_ribcage', coll, (0, -.2, 2.42), (.23, .19, .3), sk),
-        sphere('pret_shoulders', coll, (0, -.22, 2.66), (.27, .13, .07), sk),
-        tube('pret_spine', coll, [(0, .1, 1.62), (0, .08, 2.0), (0, .0, 2.4), (0, -.12, 2.68)], .07, sk, sides=10),
-        # A long thin neck thrust forward, the skull hanging low.
-        tube('pret_neck', coll, [(0, -.22, 2.7), (0, -.36, 2.95), (0, -.52, 3.06)], .045, sk, sides=10, radius_end=.035),
-        sphere('pret_skull', coll, (0, -.62, 3.08), (.145, .175, .18), sk),
-        sphere('pret_jaw', coll, (0, -.74, 2.95), (.08, .09, .075), sk),
-    ]
-    for side in (-1, 1):
-        parts += [
-            sphere('pret_cheek', coll, (side * .075, -.74, 3.06), (.035, .03, .03), sk),
-            sphere('pret_brow', coll, (side * .06, -.75, 3.14), (.05, .03, .025), sk),
-            tube('pret_collarbone', coll, [(side * .03, -.32, 2.66), (side * .25, -.26, 2.7)], .025, sk, sides=6),
-            # Arms reaching nearly to the knees, knobbed at the elbow, with long clawed fingers.
-            tube('pret_upper_arm', coll, [(side * .27, -.22, 2.66), (side * .36, -.3, 2.25), (side * .4, -.36, 1.92)], .045, sk, sides=10, radius_end=.035),
-            sphere('pret_elbow', coll, (side * .4, -.36, 1.92), (.05, .05, .055), sk),
-            tube('pret_forearm', coll, [(side * .4, -.36, 1.92), (side * .42, -.5, 1.5), (side * .4, -.6, 1.18)], .035, sk, sides=10, radius_end=.026),
-            sphere('pret_hand', coll, (side * .4, -.62, 1.14), (.045, .03, .06), sk),
-            # Legs: bone and tendon, the knees standing out.
-            tube('pret_thigh', coll, [(side * .17, .0, 1.62), (side * .22, -.14, 1.2), (side * .23, -.2, .9)], .065, sk, sides=10, radius_end=.045),
-            sphere('pret_knee', coll, (side * .23, -.21, .9), (.065, .06, .07), sk),
-            tube('pret_shin', coll, [(side * .23, -.2, .9), (side * .2, -.08, .45), (side * .19, .0, .1)], .04, sk, sides=10, radius_end=.03),
-            tube('pret_foot', coll, [(side * .19, .04, .06), (side * .2, -.14, .04), (side * .21, -.3, .025)], .035, sk, sides=8, radius_end=.02),
-        ]
-        for rib in range(6):
-            z = 2.22 + rib * .065
-            parts.append(tube('pret_rib', coll, [(side * .02, -.38, z + .02), (side * .16, -.37, z), (side * .25, -.24, z - .02), (side * .22, -.05, z - .03)], .016, sk, sides=6))
-        for f in range(4):
-            spread = (f - 1.5) * .022
-            parts.append(tube('pret_finger', coll, [(side * .4 + spread, -.63, 1.1), (side * .4 + spread * 1.4, -.67, .92), (side * .4 + spread * 1.6, -.62, .76)],
-                              .011, sk, sides=6, radius_end=.003))
-    for j in range(7):
-        parts.append(sphere('pret_vertebra', coll, (0, .13 - j * .02, 1.7 + j * .14), (.03, .03, .03), sk))
-    body = sculpt(parts, name, voxel=.02, smooth=3, ratio=.5, rough=.003, seed=seed)
-    # Skin hanging in loose folds over the belly and drawn tight over bone elsewhere.
-    for v in body.data.vertices:
-        sag = max(0.0, 1 - abs(v.co.z - 1.75) / .35) * (v.co.y < -.1)
-        v.co += v.normal * (.006 * math.sin(v.co.z * 70 + v.co.x * 20) * sag + .002 * math.sin(v.co.x * 90) * math.sin(v.co.z * 80))
-    extras = []
-    for side in (-1, 1):
-        extras.append(sphere('pret_eye_socket', coll, (side * .05, -.765, 3.09), (.035, .02, .03), m['void']))
-        extras.append(sphere('pret_blind_eye', coll, (side * .05, -.775, 3.09), (.009, .004, .008), m['eye']))
-    extras.append(sphere('pret_pinhole_mouth', coll, (0, -.795, 2.97), (.008, .005, .01), m['void']))
-    # Lank hair hanging from the scalp over the face and down the back.
-    for j in range(80):
-        a = rng.uniform(-math.pi, math.pi)
-        top = (math.sin(a) * .13, -.62 + math.cos(a) * .15, 3.18 + rng.uniform(-.03, .05))
-        front = math.cos(a) < -.2
-        length = rng.uniform(.6, 1.4) if not front else rng.uniform(.35, .75)
-        out = (top[0] * 1.5, top[1] + (-.1 if front else .12))
-        phase = rng.uniform(0, math.tau)
-        pts = [top] + [(out[0] + .03 * math.sin(t * 9 + phase) + rng.normal(0, .01), out[1] + .02 * math.cos(t * 7 + phase), top[2] - length * t)
-                       for t in (.2, .4, .6, .8, 1.0)]
-        extras.append(tube('pret_hair', coll, pts, rng.uniform(.003, .006), m['hair'], sides=3, radius_end=.0015))
-    return [body] + extras
 
 
 # ------------------------------------------------------------------ the ground
@@ -704,6 +518,28 @@ def mosquito_net(coll, m, name, x0, x1, y0, y1, z0, z1, rng):
     return [net] + strings
 
 
+def reed_seat(coll, mat, name, x, y, floor, rng, half=.62, pad=.034):
+    """A monk's sitting place: an old woven reed mat over a thin kapok pad, sagging down
+    to the boards at its hem, frayed unevenly, its corners starting to curl."""
+    n = 30
+    verts, faces = [], []
+    for j in range(n + 1):
+        for i in range(n + 1):
+            u, v = i / n * 2 - 1, j / n * 2 - 1
+            hem = min(1 - abs(u), 1 - abs(v)) * half
+            t = min(1.0, hem / .15)
+            t = t * t * (3 - 2 * t)
+            corner = max(0.0, abs(u) * abs(v) - .86) / .14
+            z = floor + .004 + pad * t + corner * rng.uniform(.012, .03) + rng.normal(0, .0016)
+            fray = rng.normal(0, .014) if (i in (0, n) or j in (0, n)) else rng.normal(0, .002)
+            verts.append((x + u * half + fray, y + v * half + fray, z))
+    for j in range(n):
+        for i in range(n):
+            a = j * (n + 1) + i
+            faces.append((a, a + 1, a + n + 2, a + n + 1))
+    return mesh_object(name, coll, verts, faces, mat, smooth=True)
+
+
 def kuti_furnishings(coll, m, x, y, floor, rng):
     """The monk's room as he lives in it: altar shelf with a small image, sleeping mat
     under a mosquito net, robes on a pole, alms bowl, water jar, manuscripts, sandals,
@@ -771,10 +607,9 @@ def kuti_furnishings(coll, m, x, y, floor, rng):
 
 def seated_image_small(coll, m, name, x, y, z):
     from pagoda_ruin import seated_image
-    objs = seated_image(coll, m, name, x, y, 0, .3, seed=77)
+    objs = seated_image(coll, m, name, x, y, 0, .3, seed=77, gilt=True)
     for o in objs:
         o.location.z = z + .13 * .3
-        o.data.materials[0] = m['gold_leaf']
     return objs
 
 

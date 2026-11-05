@@ -290,7 +290,7 @@ async function run() {
       () => game.flags.get("ep1.arrival.callComplete", false) && !game.cutscene,
       "phone duties",
     );
-    await aim(new Vector3(-0.65, 2.5, -16.6), new Vector3(-0.65, 3.614, -17.5));
+    await aim(new Vector3(-0.65, 2.5, -20.6), new Vector3(-0.65, 3.614, -21.5));
     await ray("interact_blessed_matches");
     await free();
     await act.beats.saveProgress();
@@ -448,7 +448,7 @@ async function run() {
     const d = act.desk,
       m = d.models;
     await aim(
-      new Vector3(0, 2.5, -16.25),
+      new Vector3(0, 2.5, -20.25),
       m.compartment.position.add(new Vector3(0, 0.26, 0.06)),
       0.35,
     );

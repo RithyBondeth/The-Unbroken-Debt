@@ -16,6 +16,11 @@ import { EP1_GRADE } from "../ep1/data/grade";
 import { PagodaLights } from "./PagodaLights";
 import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
+import { PagodaApparition, type ScareContext } from "./PagodaApparition";
+import { PagodaWatchers } from "./PagodaWatchers";
+import { GhostRig } from "./GhostRig";
+import { ShroudedDead } from "./ShroudedDead";
+import { buildFarForest } from "./PagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
 import { CheaHands } from "./cinematics/CheaHands";
 import { COLLAPSE_KEEP } from "./cinematics/LibraryCollapse";
@@ -43,6 +48,8 @@ import {
 export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
+  private apparition!: PagodaApparition;
+  private watchers!: PagodaWatchers;
   equipment!: PagodaEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
@@ -54,7 +61,9 @@ export class WhisperingPagoda {
   readonly cheaHands: CheaHands;
   readonly escapeClock = new EscapeClock();
   private contactGrace: number = B.loadGrace;
-  private readonly actors: TransformNode[] = [];
+  private readonly rigs: GhostRig[] = [];
+  /** How the shrouded dead move, twitch and vanish. */
+  private dead!: ShroudedDead;
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -92,18 +101,12 @@ export class WhisperingPagoda {
     const g = this.game;
     this.area = await loadArea(g.scene, "ep2", "ep2_area_pagoda", {
       cellSize: 8,
-      keep: [
-        /^pret_\d+$/,
-        /^mirror_disc_/,
-        /^bridge_symbol_/,
-        "hall_chain",
-        /^bridge_plank/,
-        ...COLLAPSE_KEEP,
-      ],
+      keep: [/^mirror_disc_/, /^bridge_symbol_/, "hall_chain", /^bridge_plank/, ...COLLAPSE_KEEP],
       beforeBatch: (container) => {
-        // The fully authored seated monk replaces the first-pass sculpt.
+        // The fully authored seated monk replaces the first-pass sculpt, and the walking
+        // dead (their own asset) replace the shrouds built into older area exports.
         for (const mesh of container.meshes)
-          if (/^sophal_/.test(mesh.name)) {
+          if (/^(sophal_|pret_shroud_)/.test(mesh.name)) {
             mesh.isVisible = false;
             mesh.setEnabled(false);
           }
@@ -111,15 +114,17 @@ export class WhisperingPagoda {
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
     });
     g.fallGuard.bounds = BOUNDS;
-    g.camera.maxZ = 95;
+    // The far forest runs on into the fog in every direction.
+    g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
-    for (let i = 0; i < 5; i++) {
-      const actor = this.node("pret_" + i);
-      if (!actor) throw new Error("Missing Pret " + i);
-      actor.rotationQuaternion = null;
-      for (const mesh of actor.getChildMeshes()) mesh.isPickable = false;
-      this.actors.push(actor);
-    }
+    buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
+    const kmaoch = await GhostRig.load(g.scene, "ep2_kmaoch", {
+      M_ep2_kmaoch_skin: new Color3(0.46, 0.46, 0.44),
+      M_ep2_kmaoch_head: new Color3(0.5, 0.5, 0.47),
+      M_ep2_kmaoch_cloth: new Color3(0.42, 0.4, 0.35),
+    });
+    for (let i = 0; i < PATROLS.length; i++) this.rigs.push(new GhostRig(kmaoch, "kmaoch_" + i));
+    this.dead = new ShroudedDead(g.scene, this.rigs, this.sounds, this.lights);
     await ShadowFigure.prepare(g.scene);
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
@@ -127,6 +132,10 @@ export class WhisperingPagoda {
     this.equipment = new PagodaEquipment(g, this.lights);
     await this.equipment.load();
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
+    this.apparition = new PagodaApparition(g, this.sounds, this.lights);
+    await this.apparition.load();
+    this.watchers = new PagodaWatchers(g, this.sounds);
+    this.watchers.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
       if (light !== this.lights.lamp)
         light.excludedMeshes.push(...this.equipment.held.meshes, ...g.hands.meshes);
@@ -905,25 +914,83 @@ export class WhisperingPagoda {
     const active = !this.paused;
     if (active) this.contactGrace = Math.max(0, this.contactGrace - simDt);
     this.cinematics.collapse.update(dt, active && p.stage === "escape");
-    this.actors.forEach((actor, i) => {
-      const visible =
-        (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
-      actor.setEnabled(visible);
-      if (!visible) return;
+    const shown = (i: number) =>
+      (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
+    this.rigs.forEach((_, i) => {
+      if (!shown(i)) {
+        this.dead.hide(i);
+        return;
+      }
       const brain = this.ghosts[i];
+      const was = { x: brain.position.x, z: brain.position.z };
       if (active && p.stage === "garden") brain.update(simDt);
-      actor.setAbsolutePosition(
-        new Vector3(brain.position.x, Math.sin(this.time * 1.2 + i) * 0.035, brain.position.z),
+      const moved = Math.hypot(brain.position.x - was.x, brain.position.z - was.z) > 1e-4;
+      this.dead.update(
+        active ? simDt : 0,
+        i,
+        brain.position,
+        brain.yaw,
+        moved,
+        brain.mode,
+        g.player.feet,
       );
-      actor.rotation.y = brain.yaw;
-      actor.rotation.z = Math.sin(this.time * 0.8 + i) * 0.018;
     });
+    if (active && !g.cutscene)
+      this.dead.watch(simDt, (i) => {
+        if (!shown(i)) return null;
+        const at = this.ghosts[i].position,
+          feet = g.player.feet;
+        const dx = at.x - feet.x,
+          dz = at.z - feet.z,
+          distance = Math.hypot(dx, dz) || 1;
+        return {
+          facing: (Math.sin(g.player.yaw) * dx + Math.cos(g.player.yaw) * dz) / distance,
+          distance,
+          at: new Vector3(at.x, 0, at.z),
+        };
+      });
     this.sounds.update(
       dt,
       this.ghosts.slice(0, p.pretCount).map((b) => b.position),
       active && p.stage === "garden",
       active && p.stage === "escape",
     );
+    // The horror layer and the apparition: silent and still in readers, menus and cinematics.
+    const feet = g.player.feet;
+    const haunting = active && !g.cutscene;
+    const nearestPret =
+      p.stage === "garden"
+        ? Math.min(
+            ...this.ghosts
+              .slice(0, p.pretCount)
+              .map((b) => Math.hypot(b.position.x - feet.x, b.position.z - feet.z)),
+          )
+        : 99;
+    this.sounds.haunt(
+      dt,
+      {
+        x: feet.x,
+        z: feet.z,
+        yaw: g.player.yaw,
+        stage: p.stage,
+        safe: inKuti(feet),
+        inHall: feet.x > 17.6 && feet.x < 26.4 && feet.z > -8.4 && feet.z < 6.4,
+        fear: g.atmosphere.mood.fear,
+        moving: g.player.speed > 0.2,
+      },
+      haunting,
+    );
+    const scareContext: ScareContext = {
+      stage: p.stage,
+      feet,
+      yaw: g.player.yaw,
+      offerings: p.offerings,
+      inKuti: inKuti(feet),
+      mirrorsTurned: p.mirrors.some((turn) => turn !== 0),
+      nearestPret,
+    };
+    this.apparition.update(dt, scareContext, haunting);
+    this.watchers.update(dt, scareContext, haunting);
     if (!active) return;
     if (p.stage === "garden") {
       if (this.breath.update(simDt, g.input.isHeld("Space"))) {
