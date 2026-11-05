@@ -62,27 +62,10 @@ def extrude(coll, name, outline, t, mat, origin=(0, 0, 0)):
 
 
 def hall_buddha(coll, m, x, y, z, s, yaw):
-    """The red lotus throne of the hall's seated Buddha."""
-    # The image itself is a real seated body cast as plaster (tools/ep2/build-cinematics.py).
-    # The lotus throne: drum, double ring of faded crimson petals, cushion.
-    throne = [lathe('hall_buddha_throne', coll, [(.62 * s, -.32 * s), (.6 * s, -.26 * s), (.48 * s, -.2 * s), (.46 * s, -.1 * s), (.55 * s, -.04 * s), (.55 * s, 0), (0, 0)],
-                    0, 0, 0, m['gilt'], segments=40)]
-    for row, (r, z0, h, n) in enumerate([(.6 * s, -.22 * s, .2 * s, 22), (.55 * s, -.12 * s, .16 * s, 22)]):
-        ring = lathe(f'hall_buddha_lotus_{row}', coll, [(r - .04 * s, 0), (r + .05 * s, h * .3), (r + .03 * s, h * .75), (r - .03 * s, h)],
-                     0, 0, z0, m['lotus_petal'], segments=n * 8)
-        for v in ring.data.vertices:
-            a = math.atan2(v.co.y, v.co.x) + (math.pi / n if row else 0)
-            petal = abs(math.cos(a * n / 2))
-            rad = math.hypot(v.co.x, v.co.y)
-            k = (rad + .03 * s * petal) / max(rad, 1e-6)
-            v.co.x *= k
-            v.co.y *= k
-            if (v.co.z - z0) / h > .9:
-                v.co.z -= h * .45 * (1 - petal ** 2)
-        throne.append(ring)
-    for o in throne:
-        place_object(o, x, y, z + .32 * s, yaw)
-    return throne
+    """The lotus throne of the hall's seated Buddha, from the kit: worn gilding over red."""
+    # The image itself is a real scan (tools/ep2/build-cinematics.py).
+    from pagoda_kit import piece
+    return [piece(coll, 'hall_throne', 'hall_buddha_throne', x, y, z + .32 * s, yaw, s / 1.2)]
 
 
 def relief_deva(coll, m, name, x, y, z, h, end):
@@ -221,42 +204,12 @@ def footed_tray(coll, m, name, x, y, z, r=.3):
 
 
 def naga_rail(coll, m, name, x, rng, y0=-31.2, y1=-25.7):
-    """A naga balustrade in old grey stone: a stepped base, a scaled body rising to a
-    fan of five hooded heads with a flame crest, all fused into one carving."""
-    side = 1 if x > 0 else -1
-    c = Craft()
-    c.block(m['mould_grey'], x, (y0 + y1) / 2 - .15, 0, .62, y1 - y0 + .3, .18)
-    c.block(m['mould_white'], x, (y0 + y1) / 2 - .15, .18, .48, y1 - y0 + .2, .22)
-    base = c.build(name + '_base', coll)
-    erode(base, .01, 5)
-    lx = 0.0
-    body_pts = [(0, -5.3, 0), (0, -3.6, .02), (0, -1.8, .05), (0, -.7, .15), (0, -.25, .45), (0, -.05, .85), (0, .03, 1.15)]
-    parts = [tube(name + '_body', coll, body_pts, .17, m['mould_grey'], sides=14, radius_end=.16)]
-    parts.append(sphere(name + '_tail', coll, (0, -5.45, .02), (.1, .2, .08), m['mould_grey']))
-    hh = 1.3
-    heads = []
-    for k in range(5):
-        a = (k - 2) * .45
-        hx, hz = math.sin(a) * .66, hh + math.cos(a) * .36 - .1
-        heads.append((hx, hz))
-        parts.append(tube(name + '_neck', coll, [(0, .03, 1.05), (hx * .5, 0, (1.05 + hz) / 2 - .05), (hx, -.04, hz - .12)], .085, m['mould_grey'], sides=10, radius_end=.075))
-        # The cobra hood flares wide and flat behind each head.
-        parts.append(sphere(name + '_hood', coll, (hx, .0, hz), (.18, .055, .26), m['mould_grey']))
-        parts.append(sphere(name + '_head', coll, (hx, -.09, hz + .05), (.085, .1, .07), m['mould_grey']))
-        parts.append(sphere(name + '_snout', coll, (hx, -.2, hz + .03), (.055, .09, .045), m['mould_grey']))
-        parts.append(tube(name + '_crest', coll, [(hx, .04, hz + .22), (hx * 1.08, .05, hz + .4), (hx * 1.02, .04, hz + .55)], .04, m['mould_grey'], sides=6, radius_end=.004))
-    naga = sculpt(parts, name, voxel=.018, smooth=4, ratio=.45, rough=.004, seed=int(x))
-    for v in naga.data.vertices:
-        if v.co.z < 1.2 and v.co.y < .1:
-            # Overlapping scale rows along the body.
-            v.co += v.normal * .006 * (abs(math.sin(v.co.y * 38 + math.atan2(v.co.x, v.co.z - .4) * 3)) - .5)
-    place_object(naga, x, y1 - .1, .4, 0)
-    eyes = []
-    for hx, hz in heads:
-        for e in (-1, 1):
-            eyes.append(sphere(name + '_eye', coll, (x + hx + e * .055, y1 - .1 - .17, .4 + hz + .1), (.018, .012, .015), m['void']))
+    """A naga balustrade from the kit: stepped stone base, a scaled body rising to the real
+    naga finial's fan of hoods, all one weathered carving."""
+    from pagoda_kit import piece
+    naga = piece(coll, 'naga_rail', name, x, y1 - .1, .4, 0)
     collider(name, coll, x - .31, x + .31, y0 - .3, y1 + .1, 0, 1.4, 'stone')
-    return [naga] + base + eyes
+    return [naga]
 
 
 # ------------------------------------------------------------------ the family marks
@@ -565,6 +518,28 @@ def mosquito_net(coll, m, name, x0, x1, y0, y1, z0, z1, rng):
     return [net] + strings
 
 
+def reed_seat(coll, mat, name, x, y, floor, rng, half=.62, pad=.034):
+    """A monk's sitting place: an old woven reed mat over a thin kapok pad, sagging down
+    to the boards at its hem, frayed unevenly, its corners starting to curl."""
+    n = 30
+    verts, faces = [], []
+    for j in range(n + 1):
+        for i in range(n + 1):
+            u, v = i / n * 2 - 1, j / n * 2 - 1
+            hem = min(1 - abs(u), 1 - abs(v)) * half
+            t = min(1.0, hem / .15)
+            t = t * t * (3 - 2 * t)
+            corner = max(0.0, abs(u) * abs(v) - .86) / .14
+            z = floor + .004 + pad * t + corner * rng.uniform(.012, .03) + rng.normal(0, .0016)
+            fray = rng.normal(0, .014) if (i in (0, n) or j in (0, n)) else rng.normal(0, .002)
+            verts.append((x + u * half + fray, y + v * half + fray, z))
+    for j in range(n):
+        for i in range(n):
+            a = j * (n + 1) + i
+            faces.append((a, a + 1, a + n + 2, a + n + 1))
+    return mesh_object(name, coll, verts, faces, mat, smooth=True)
+
+
 def kuti_furnishings(coll, m, x, y, floor, rng):
     """The monk's room as he lives in it: altar shelf with a small image, sleeping mat
     under a mosquito net, robes on a pole, alms bowl, water jar, manuscripts, sandals,
@@ -632,10 +607,9 @@ def kuti_furnishings(coll, m, x, y, floor, rng):
 
 def seated_image_small(coll, m, name, x, y, z):
     from pagoda_ruin import seated_image
-    objs = seated_image(coll, m, name, x, y, 0, .3, seed=77)
+    objs = seated_image(coll, m, name, x, y, 0, .3, seed=77, gilt=True)
     for o in objs:
         o.location.z = z + .13 * .3
-        o.data.materials[0] = m['gold_leaf']
     return objs
 
 

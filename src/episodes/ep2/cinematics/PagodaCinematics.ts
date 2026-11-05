@@ -72,7 +72,6 @@ export class PagodaCinematics {
         /^harvest_/,
         /^sophal_living/,
         /^memory_basket_/,
-        /^pagoda_ghost/,
         /^pagoda_watcher_/,
         /^pagoda_goddess/,
       ],

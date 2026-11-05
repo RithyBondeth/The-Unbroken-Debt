@@ -25,7 +25,8 @@ function findGlbs(dir) {
 const DETAIL_MAPS = "@(*_N|*_nor_gl*|*_ORM|*_arm*)";
 
 /** Ink on paper: Sora's drawings and the printed charts (rendered by `npm run drawings`). */
-const LINE_ART = "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*)";
+const LINE_ART =
+  "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";
 
 // Hero assets and player items get 4K textures; everything else 2K (Art Bible, section 6).
 function maxTextureSize(file) {

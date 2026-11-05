@@ -19,6 +19,7 @@ from pagoda_gateway import build_gateway, overgrow_gateway
 from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image, spirit_house, sema_stone,
                          sash, incense_pot, candles, fig_roots, lean, rubble)
 from pagoda_stupa import memorial
+from pagoda_kit import piece
 from pagoda_forest import giant, outer_forest
 from pagoda_pond import build_pond, pond_materials
 from pagoda_offerings import (offering_materials, sticky_rice_ball, banana_leaf_piece, lotus_bud, lotus_bunch,
@@ -242,10 +243,15 @@ for k,monument in enumerate(layout['stupas']):
     memorial(AREA,m,x,z,k,h,name,stupa_rng)
     collider(name,AREA,x-.7,x+.7,z-.7,z+.7,0,h+.8,'stone')
     if name in ['chea','wife','chhun','kanha']:
-        family_emblem(AREA,m,name+'_emblem',x,z-.47,1.21)
-        usable('stupa_'+name,x,z-.8,.25,lambda x=x,z=z:lathe('offering_bowl',AREA,[(.15,0),(.2,.03),(.23,.1),(.21,.11),(.16,.04)],x,z-.85,.23,m['bronze']))
-        inscribed_tablet(AREA,m,name+'_inscription',x,z-.5,.54,stupa_rng)
-        lamp('ancestor_'+name,x+.55,z-.6,.4)
+        # The silver flower above the niche, the worn tablet in the dado, a stone offering
+        # stand before the plinth with the bowl on it, a small lamp on the plinth's step.
+        family_emblem(AREA,m,name+'_emblem',x,z-.53,1.58)
+        offering_stand=Craft()
+        offering_stand.block(m['mould_grey'],x,z-.9,0,.5,.34,.2);offering_stand.block(m['mould_grey'],x,z-.9,.2,.56,.4,.03)
+        offering_stand.build(name+'_offering_stand',AREA)
+        usable('stupa_'+name,x,z-.8,.25,lambda x=x,z=z:lathe('offering_bowl',AREA,[(.15,0),(.2,.03),(.23,.1),(.21,.11),(.16,.04)],x,z-.9,.23,m['bronze']))
+        inscribed_tablet(AREA,m,name+'_inscription',x,z-.52,.44,stupa_rng)
+        lamp('ancestor_'+name,x+.5,z-.66,.33)
 for k,p in enumerate(layout['trees']):
     giant(AREA,m,p['x'],-p['z'],12+k,300+k,rng,reach=.66,crown=1.05)
     collider('garden_tree_'+str(k),AREA,p['x']-.7,p['x']+.7,-p['z']-.7,-p['z']+.7,0,8)
@@ -322,7 +328,7 @@ for x in [20.85,23.15]:lamp('hall_altar_'+str(x),x,5.2,.53)
 for j,(px,py) in enumerate([(21.05,5.4),(22.95,5.4),(21.05,6.6),(22.95,6.6)]):
     money_tree(AREA,m,'altar_money_tree_'+str(j),px,py,.87,.62,rng)
 for j,px in enumerate([21.6,22.4]):
-    for o in seated_image(AREA,m,'altar_small_image_'+str(j),px,5.25,0,.3,headless=j==1,seed=30+j):o.location.z=.53+.13*.3
+    for o in seated_image(AREA,m,'altar_small_image_'+str(j),px,5.25,0,.3,headless=j==1,seed=30+j,gilt=True):o.location.z=.53+.13*.3
 candles(AREA,m,'altar_candle_stubs',22,5.15,.53,rng)
 for k,x in enumerate([18.4,19.4,20.4]):
     usable('bell_'+str(k),x,-9,1.8,lambda x=x,k=k:lathe('bronze_bell',AREA,[(.23+k*.03,0),(.27+k*.03,.08),(.22,.13),(.17,.38),(.09,.48),(.03,.5)],x,-9,1.8,m['bronze'],segments=32))
@@ -418,7 +424,7 @@ for j in range(6):
     px=-16.4+j*1.2;s=.8
     for o in seated_image(AREA,m,'terrace_image_'+str(j),px,-25.5,math.pi,s,headless=j in (0,2,4),damage=j==3,seed=j):
         o.location.z=.4+.13*s
-    if j%2==0:sash(AREA,m,'terrace_image_sash_'+str(j),px,-25.47,.4+.13*s+.5*s,.25*s,m['saffron'],ruin_rng,tail=.35)
+    if j%2==0:piece(AREA,'image_cloth','terrace_image_sash_'+str(j),px,-25.5,.4+.13*s,math.pi,s)
     incense_pot(AREA,m,'terrace_incense_'+str(j),px+.25,-24.92,.4,ruin_rng)
     if j%3==1:candles(AREA,m,'terrace_candle_'+str(j),px-.25,-24.95,.4,ruin_rng)
 # Sema boundary stones mark the hall's consecrated ground.
@@ -455,7 +461,7 @@ sorcery_altar(AREA,m,'forest_altar',30.6,-14.6,math.pi/2,rit)
 for j,(py,headless) in enumerate([(-1.85,True),(-.15,False),(6.15,False),(7.85,True),(10.15,True),(11.85,False)]):
     seated_image(AREA,m,'cloister_image_'+str(j),-25.35,py,math.pi/2,.7,headless=headless,damage=j==2,seed=10+j)
     collider('cloister_image_'+str(j),AREA,-25.75,-24.95,py-.4,py+.4,0,1.1,'stone')
-    if not headless:sash(AREA,m,'cloister_image_sash_'+str(j),-25.35,py,.13*.7+.5*.7,.25*.7,m['saffron'],ruin_rng,tail=.3)
+    if not headless:piece(AREA,'image_cloth','cloister_image_sash_'+str(j),-25.35,py,.13*.7,math.pi/2,.7)
 # Layered forest: three ranks of old growth outside, inner emergents, bamboo, understory.
 avoid=[(x,y,1.0) for x,y in forgotten]+[(4.8,-37.6,.8)]
 outer_forest(AREA,m,np.random.default_rng(6241910),avoid,clear=[(ANNEX[0],ANNEX[1]-1.6,ANNEX[2]+1.4,ANNEX[3]-1.4)])
@@ -500,19 +506,7 @@ for k in range(15):
 for x in [79.5,80,80.5]:lathe('memory_shrine_stone',AREA,[(.3,0),(.35,.4),(.25,.7),(.05,.9)],x,8,0,m['stone'])
 usable('memory_shrine',80,7,.4,lambda:cube('memory_betel_box',80,7,.4,.5,.35,.2,m['silver']))
 lamp('memory',80,8,.6)
-# The hungry dead of the garden: corpses bound in their burial shrouds (the Pocong
-# scan), tied at head, neck, waist and feet as the dead are wrapped for the pyre.
-# Feet at each root's origin; the runtime moves and hops each root independently.
-sys.path.insert(0,os.path.join(ROOT,'tools/ep2'))
-from pagoda_scans import scan,instance
-shroud=None
-for i in range(5):
-    root=anchor('pret_'+str(i),0,0)
-    if shroud is None:shroud=body=scan(AREA,'pocong','pret_shroud_'+str(i),height=1.78)
-    # Each its own mesh: their hops, lean and twitching head are shape keys that move apart.
-    else:body=instance(AREA,shroud,'pret_shroud_'+str(i),(0,0,0),0,scale=1+.04*((i*7)%3-1),own=True)
-    adopt(root,[body])
-    root.location=(12+i*2,12,0)
+# The hungry dead of the garden are their own rigged asset: tools/ep2/build-ghosts.py.
 # Babylon's glTF import mirrors X. Compensate once, on the authored world root,
 # so gameplay, notebook and Blender's named coordinates all use X east/Z south.
 world=empty('pagoda_axes',AREA,(0,0,0))
