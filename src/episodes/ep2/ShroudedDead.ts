@@ -1,38 +1,52 @@
-import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { MorphTargetManager } from "@babylonjs/core/Morph/morphTargetManager";
+import type { Scene } from "@babylonjs/core/scene";
+import type { Observer } from "@babylonjs/core/Misc/observable";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { PAGODA_BALANCE as B } from "./data/balance";
+import type { GhostRig } from "./GhostRig";
+import type { PretMode } from "./PretBrain";
 import type { PagodaSoundscape } from "./PagodaSoundscape";
 import type { PagodaLights } from "./PagodaLights";
 
-/** How a bound corpse's body is shaped at one point of a hop (shape-key weights). */
-export interface HopPose {
-  /** Metres off the ground. */
-  lift: number;
-  squash: number;
-  stretch: number;
+/** What each clip was performed at, and where in its loop a foot comes down. */
+export const GAITS = {
+  walk: { speed: 0.5, steps: [0.131, 0.345, 0.643, 0.845] },
+  lurch: { speed: 1.12, steps: [0, 0.41, 0.754] },
+} as const;
+
+/** Which clip suits what the corpse is doing. */
+export function gaitFor(moved: boolean, mode: PretMode): "walk" | "lurch" | "listen" {
+  if (!moved) return "listen";
+  return mode === "investigate" ? "lurch" : "walk";
 }
 
-/** Hops per second while moving. */
-export const HOP_RATE = 2.1;
-/** Where in each hop cycle the feet strike the ground. */
-export const LANDING = 0.75;
+/** Playback rate so the feet keep pace with the ground: `moving` metres a second. */
+export function playbackRate(gait: keyof typeof GAITS, moving: number): number {
+  return moving / GAITS[gait].speed;
+}
 
-/**
- * One hop, `u` from 0 to 1: a crouch, a stretched leap, a heavy squashed landing.
- * The bound dead cannot walk; this is how they move.
- */
-export function hopPose(u: number): HopPose {
-  if (u < 0.15) return { lift: 0, squash: (u / 0.15) * 0.7, stretch: 0 };
-  if (u < LANDING) {
-    const a = (u - 0.15) / (LANDING - 0.15);
-    return { lift: Math.sin(Math.PI * a) * 0.22, squash: 0, stretch: (1 - a) * 0.9 };
-  }
-  return { lift: 0, squash: 1 - (u - LANDING) / (1 - LANDING), stretch: 0 };
+/** Whether a loop's phase passed one of `steps` between two moments, wrapping at the end. */
+export function steppedOn(before: number, after: number, steps: readonly number[]): boolean {
+  return after >= before
+    ? steps.some((s) => before < s && s <= after)
+    : steps.some((s) => s > before || s <= after);
+}
+
+/** `from` turned towards `to` by at most `limit` radians, the short way round. */
+export function turnToward(from: number, to: number, limit: number): number {
+  const d = Math.atan2(Math.sin(to - from), Math.cos(to - from));
+  return from + Math.sign(d) * Math.min(Math.abs(d), limit);
+}
+
+/** How the neck has gone over, `t` seconds after it jerked: at once, then slowly back. */
+export function headJerk(t: number): number {
+  if (t < 0.1) return t / 0.1;
+  return t < 0.7 ? 1 - (t - 0.1) * 1.05 : Math.max(0, 0.37 - (t - 0.7) * 0.5);
 }
 
 interface Body {
-  morph: MorphTargetManager | null;
+  rig: GhostRig;
+  yaw: number;
+  gait: "walk" | "lurch" | "listen";
   phase: number;
   /** Seconds since the head last jerked over, and to which side. */
   twitch: number;
@@ -44,62 +58,87 @@ interface Body {
   hidden: number;
 }
 
+const HEAD_TILT = 0.75;
+
 /**
- * The garden's shrouded dead (the Pocong scan, one root per PretBrain). They hop,
- * squashing as they land with a thud through the ground; their heads jerk over and
- * crack; they breathe inside the shroud. Look at one too long and it is gone, with
- * a breath sucked in where it stood, and back a moment later wherever it now is.
- * Hearing and catching never change: only what the player sees does.
+ * The garden's hungry dead: starved corpses in rotting white, one per PretBrain, walking on
+ * real human motion. On patrol they drag a bad leg; at a sound they lurch; stopped, they
+ * stand with their arms hanging and listen. Their heads jerk over and crack, and looked at
+ * too long one is gone, with a breath sucked in where it stood, and back a moment later
+ * wherever it now is. Hearing and catching never change: only what the player sees does.
  */
 export class ShroudedDead {
   private readonly bodies: Body[];
   private cooldown = 5;
   private flicker = 0;
+  private readonly lateness: Observer<Scene>;
 
   constructor(
-    actors: readonly TransformNode[],
+    private readonly scene: Scene,
+    rigs: readonly GhostRig[],
     private readonly sounds: PagodaSoundscape,
     private readonly lights: PagodaLights,
   ) {
-    this.bodies = actors.map((actor, i) => {
-      const mesh = actor.getChildMeshes().find((m) => m instanceof Mesh && !!m.morphTargetManager);
-      return {
-        morph: mesh instanceof Mesh ? mesh.morphTargetManager : null,
-        phase: 0,
-        twitch: 9,
-        side: 1,
-        nextTwitch: 2 + i * 1.3,
-        gaze: 0,
-        hidden: 0,
-      };
-    });
+    this.bodies = rigs.map((rig, i) => ({
+      rig,
+      yaw: 0,
+      gait: "listen",
+      phase: 0,
+      twitch: 9,
+      side: 1,
+      nextTwitch: 2 + i * 1.3,
+      gaze: 0,
+      hidden: 0,
+    }));
+    // The neck goes over on top of whatever the clip is doing.
+    this.lateness = scene.onAfterAnimationsObservable.add(() => {
+      for (const b of this.bodies) {
+        if (!b.rig.root.isEnabled() || b.twitch >= 2) continue;
+        b.rig.turn("head", "forward", b.side * HEAD_TILT * headJerk(b.twitch));
+      }
+    })!;
+  }
+
+  dispose(): void {
+    this.scene.onAfterAnimationsObservable.remove(this.lateness);
   }
 
   /**
-   * Poses corpse `i` at `at`, turned to `yaw`, for this frame. `moved` says whether
-   * its brain moved; `feet` is the player's, for how near the sounds are.
+   * Poses corpse `i` at `at`, turned towards `yaw`, for this frame. `moved` says whether
+   * its brain moved, `mode` what it is about; `feet` is the player's, for the sounds.
    */
   update(
     dt: number,
     i: number,
-    actor: TransformNode,
     at: { x: number; z: number },
     yaw: number,
     moved: boolean,
+    mode: PretMode,
     feet: Vector3,
-    time: number,
   ): void {
     const b = this.bodies[i];
-    // The hop: while moving, and to finish a hop already in the air.
-    const before = b.phase % 1;
-    if (moved || (before > 0.05 && before < 0.99)) b.phase += dt * HOP_RATE;
-    const u = b.phase % 1;
-    const hop = moved || u > 0.05 ? hopPose(u) : { lift: 0, squash: 0, stretch: 0 };
+    const root = b.rig.root;
     const here = new Vector3(at.x, 0.2, at.z);
-    const dx = at.x - feet.x,
-      dz = at.z - feet.z,
-      d = Math.hypot(dx, dz) || 1;
-    if (before < LANDING && u >= LANDING && b.hidden <= 0) this.sounds.thud(i, here);
+    const d = Math.hypot(at.x - feet.x, at.z - feet.z) || 1;
+    b.rig.pause(dt === 0);
+    const gait = gaitFor(moved, mode);
+    if (gait === "listen") b.rig.play("listen");
+    else {
+      const speed = mode === "investigate" ? B.investigateSpeed : B.patrolSpeed;
+      b.rig.play(gait, playbackRate(gait, speed));
+    }
+    if (gait !== b.gait) {
+      b.gait = gait;
+      b.phase = b.rig.phase(gait);
+    }
+    b.rig.update(dt);
+    // A foot comes down: heavy, and quieter the further off it is, like all spatial sound.
+    if (gait !== "listen") {
+      const phase = b.rig.phase(gait);
+      if (b.hidden <= 0 && dt > 0 && steppedOn(b.phase, phase, GAITS[gait].steps))
+        this.sounds.thud(i, here, gait === "lurch" ? 0.42 : 0.26);
+      b.phase = phase;
+    }
     // The head jerks over now and then, and sometimes the neck cracks or it moans.
     b.twitch += dt;
     b.nextTwitch -= dt;
@@ -110,29 +149,21 @@ export class ShroudedDead {
       if (d < 9 && Math.random() < 0.4) this.sounds.crack(here.add(new Vector3(0, 1.4, 0)));
       else if (d < 16 && Math.random() < 0.3) this.sounds.groan(i, here);
     }
-    const head =
-      b.twitch < 0.12
-        ? 1
-        : b.twitch < 0.7
-          ? 1 - (b.twitch - 0.12) * 1.1
-          : Math.max(0, 0.36 - (b.twitch - 0.7) * 0.5);
-    this.weights(b, {
-      squash: hop.squash,
-      stretch: hop.stretch,
-      lean: moved ? 0.55 : 0,
-      head_a: b.side > 0 ? head : 0,
-      head_b: b.side < 0 ? head : 0,
-      breathe: 0.5 + 0.5 * Math.sin(time * 1.9 + i),
-    });
-    actor.setAbsolutePosition(new Vector3(at.x, hop.lift, at.z));
-    actor.rotation.y = yaw;
-    actor.rotation.z = Math.sin(time * 0.8 + i) * 0.03;
+    // The body comes round; its path turns square corners, a body does not.
+    b.yaw = turnToward(b.yaw, yaw, dt * (mode === "investigate" ? 5 : 3));
+    root.position.set(at.x, 0, at.z);
+    root.rotation.y = b.yaw;
     // Gone after being looked at too long (see watch), and back where it now is.
     if (b.hidden > 0) {
       b.hidden -= dt;
-      actor.setEnabled(false);
+      root.setEnabled(false);
       if (b.hidden <= 0) this.sounds.thud(i, here, 0.75);
-    } else actor.setEnabled(true);
+    } else root.setEnabled(true);
+  }
+
+  /** Puts corpse `i` away, as when the story has no use for it yet. */
+  hide(i: number): void {
+    this.bodies[i].rig.root.setEnabled(false);
   }
 
   /**
@@ -166,14 +197,5 @@ export class ShroudedDead {
         this.sounds.vanish(v.at.add(new Vector3(0, 1.3, 0)));
       }
     });
-  }
-
-  private weights(b: Body, w: Record<string, number>): void {
-    const m = b.morph;
-    if (!m) return;
-    for (let k = 0; k < m.numTargets; k++) {
-      const target = m.getTarget(k);
-      target.influence = w[target.name] ?? 0;
-    }
   }
 }

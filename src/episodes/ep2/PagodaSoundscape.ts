@@ -69,7 +69,7 @@ export class PagodaSoundscape {
   private laughSound: StaticSound | null = null;
   private crackSound: StaticSound | null = null;
   private vanishSound: StaticSound | null = null;
-  /** One thud and one groan per shrouded corpse, so their hops overlap naturally. */
+  /** One thud and one groan per corpse, so their footfalls overlap naturally. */
   private readonly thuds: StaticSound[] = [];
   private readonly groans: StaticSound[] = [];
   private chantLevel = 0;
@@ -459,12 +459,12 @@ export class PagodaSoundscape {
     this.at(this.vanishSound, at);
   }
 
-  /** Shrouded corpse `i` landing from a hop. */
+  /** Corpse `i`'s foot coming down. */
   thud(i: number, at: Vector3, volume = 0.5): void {
     this.at(this.thuds[i % Math.max(1, this.thuds.length)], at, volume);
   }
 
-  /** Shrouded corpse `i` moaning inside its shroud. */
+  /** Corpse `i` moaning under its cloth. */
   groan(i: number, at: Vector3): void {
     const g = this.groans[i % Math.max(1, this.groans.length)];
     if (g && g.state !== SoundState.Started) this.at(g, at);

@@ -23,6 +23,8 @@ export interface FarTree {
 
 /** The compound's authored forest reaches about this far; cards begin beyond it. */
 const INNER = { x: 46, z: 50 };
+/** The pond's sunken basin, in the gap the compound's ground leaves for it. */
+const POND_BASIN = { minX: -18.6, maxX: 18.6, minZ: -39.2, maxZ: -17.4 };
 
 /**
  * Lays far trees in an elliptical belt from the authored forest out to the fog,
@@ -140,14 +142,41 @@ export function buildFarForest(scene: Scene, wind: WindState, ground: Material |
   }
   applyFoliageWind([material], wind);
   if (ground) {
-    // The forest floor runs on under the far trees, just below the compound's own ground.
+    // The forest floor runs on under the far trees, just below the compound's own ground,
+    // with a hole for the sunken pond, whose water lies lower still.
     const floor = new Mesh("ep2_far_forest_floor", scene);
     const r = 130,
-      data = new VertexData();
-    data.positions = [-r, -0.06, -r, r, -0.06, -r, r, -0.06, r, -r, -0.06, r];
-    data.normals = [0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0];
-    data.uvs = [0, 0, (2 * r) / 3, 0, (2 * r) / 3, (2 * r) / 3, 0, (2 * r) / 3];
-    data.indices = [0, 2, 1, 0, 3, 2];
+      { minX, maxX, minZ, maxZ } = POND_BASIN,
+      positions: number[] = [],
+      normals: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    for (const [x0, x1, z0, z1] of [
+      [-r, r, -r, minZ],
+      [-r, r, maxZ, r],
+      [-r, minX, minZ, maxZ],
+      [maxX, r, minZ, maxZ],
+    ]) {
+      const v = positions.length / 3;
+      for (const [x, z] of [
+        [x0, z0],
+        [x0, z1],
+        [x1, z1],
+        [x1, z0],
+      ]) {
+        positions.push(x, -0.06, z);
+        normals.push(0, 1, 0);
+        uvs.push(x / 3, z / 3);
+      }
+      // Wound to face up under the area's imported materials; the other way round the
+      // floor is culled and the night sky shows through as a dark blue ground.
+      indices.push(v, v + 2, v + 1, v, v + 3, v + 2);
+    }
+    const data = new VertexData();
+    data.positions = positions;
+    data.normals = normals;
+    data.uvs = uvs;
+    data.indices = indices;
     data.applyToMesh(floor);
     floor.material = ground;
     floor.isPickable = false;
