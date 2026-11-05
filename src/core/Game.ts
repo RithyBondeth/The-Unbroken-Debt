@@ -61,6 +61,10 @@ import { WhisperingPagoda } from "../episodes/ep2/WhisperingPagoda";
 import { PagodaProgress, enterPagoda } from "../episodes/ep2/PagodaProgress";
 import { EP2_SKETCHBOOK, pagodaNotebook } from "../episodes/ep2/data/notebook";
 import { EP2_ITEMS } from "../episodes/ep2/data/pagoda";
+import { DrownedVillage } from "../episodes/ep3/DrownedVillage";
+import { VillageProgress, enterVillage } from "../episodes/ep3/VillageProgress";
+import { EP3_SKETCHBOOK, villageNotebook } from "../episodes/ep3/data/notebook";
+import { EP3_ITEMS } from "../episodes/ep3/data/village";
 
 /** A part of an episode with its own area and script (the prologue, an act). */
 interface Section {
@@ -269,6 +273,38 @@ export class Game {
    */
   private async chooseSection(): Promise<Section> {
     const params = new URLSearchParams(location.search);
+    if (params.get("start") === "ep3" || params.get("episode") === "3") {
+      const current = (await this.saves.load("autosave")).save;
+      if (current?.episode === 3) {
+        this.restore(current);
+        await this.checkpoints.load(current);
+        return new DrownedVillage(this);
+      }
+      const previous =
+        current?.episode === 2 && current.flags["ep2.complete"] === true
+          ? current
+          : (await this.saves.load("episode2")).save;
+      if (previous?.episode === 2 && previous.flags["ep2.complete"] === true) {
+        await this.saves.save("episode2", previous);
+        this.restore(enterVillage(previous));
+        return new DrownedVillage(this);
+      }
+      if (import.meta.env.DEV && params.get("start") === "ep3") {
+        this.episode = 3;
+        this.flags.set("ep3.preview", true);
+        this.flags.set("ep3.checkpoint", "CP0");
+        for (const [item, n] of Object.entries({
+          satchel: 1,
+          sketchbook: 1,
+          lamp: 1,
+          matches: 12,
+          oil: 3,
+        }))
+          this.inventory.add(item, n);
+        return new DrownedVillage(this);
+      }
+      throw new Error("Complete Episode 2 before entering The Drowned Village.");
+    }
     // Production handoff requires a real completed Episode 1 save.
     if (params.get("start") === "ep2" || params.get("episode") === "2") {
       const current = (await this.saves.load("autosave")).save;
@@ -307,6 +343,7 @@ export class Game {
     if (resumed) {
       this.restore(resumed);
       await this.checkpoints.load(resumed);
+      if (resumed.episode === 3) return new DrownedVillage(this);
       if (resumed.episode === 2) return new WhisperingPagoda(this);
       if (resumed.flags["ep1.travel.pending"] === true) return new TaxiRide(this);
       if (resumed.checkpoint === "CP0") return new Prologue(this);
@@ -384,7 +421,7 @@ export class Game {
     const height = this.preset.name === "low" ? 1024 : 1536;
     const sketchbook = new Sketchbook(
       this.scene,
-      this.episode === 2 ? EP2_SKETCHBOOK : EP1_SKETCHBOOK,
+      this.episode === 3 ? EP3_SKETCHBOOK : this.episode === 2 ? EP2_SKETCHBOOK : EP1_SKETCHBOOK,
       height,
       this.camera,
       (written) => this.notebookContent(written),
@@ -628,6 +665,12 @@ export class Game {
       : this.flags.get("ep1.checkpoint", "CP0") === "CP0"
         ? "Your first checkpoint will be recorded at the writing desk."
         : "Save at the spirit house beyond the front-right corner of the compound fence. Reach it from the front gate.";
+    if (this.episode === 3)
+      return villageNotebook(
+        new VillageProgress(this.flags, this.inventory),
+        this.player?.feet ?? Vector3.Zero(),
+        last?.episode === 3 ? checkpoint : "The next checkpoint is at Pa Lok’s raft.",
+      );
     if (this.episode === 2)
       return pagodaNotebook(
         new PagodaProgress(this.flags, this.inventory),
@@ -644,7 +687,7 @@ export class Game {
   }
 
   private satchelEntries(): SatchelEntry[] {
-    const items: Record<string, ItemInfo> = { ...ITEMS, ...EP2_ITEMS };
+    const items: Record<string, ItemInfo> = { ...ITEMS, ...EP2_ITEMS, ...EP3_ITEMS };
     return this.inventory
       .list()
       .filter(([id]) => items[id])
