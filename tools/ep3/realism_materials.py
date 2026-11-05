@@ -122,7 +122,12 @@ def make_materials():
     m['metal'].use_backface_culling=False
     # Shared photographic materials remain the visual authority for joinery.
     for key,source in [('wood','M_ep3_wood'),('dark','M_ep3_dark'),('rope','M_ep3_hemp_rope'),('bamboo','M_ep3_bamboo'),('brass','M_ep3_brass'),('ivory','M_ep3_ivory'),('blue','M_ep3_blue')]:
-        m[key]=bpy.data.materials[source]
+        m[key]=bpy.data.materials.get(source)
+        if m[key] is None:
+            # A compacted source legitimately purges unused first-pass colours.
+            # Rebuilding a detail layer must not require those orphan datablocks.
+            palette={'blue':(.1,.21,.25),'ivory':(.67,.62,.48),'brass':(.37,.27,.12)}
+            m[key]=plain(source,palette.get(key,(.12,.1,.075)),rough=.8)
     m['edge']=plain('M_ep3_real_worn_hems',(.23,.20,.14),rough=.96)
     m['void']=plain('M_ep3_real_shadow_gaps',(.015,.018,.015),rough=1)
     m['enamel']=plain('M_ep3_real_chipped_enamel',(.33,.37,.30),rough=.63,metal=.08)

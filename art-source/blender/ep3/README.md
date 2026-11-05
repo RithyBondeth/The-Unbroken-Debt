@@ -19,6 +19,7 @@ purification veranda and the three connected roof bridges to the last stilt.
 Rebuild from the repository root:
 
 ```sh
+python3 tools/ep3/fetch-character-source.py
 blender -b --factory-startup -P tools/ep3/build-village.py
 npm run export -- ep3
 npm run assets -- ep3
@@ -53,3 +54,9 @@ The composition layer is in `tools/ep3/cinematic_scene.py` and is included in th
 same rebuild. The CC0 cloud environment is recorded in `sky-source.json`. See
 `docs/production/episode-3-composition.md` for rendering details and author credits.
 Blender sources save with lossless file compression.
+
+The forest/contact/anatomy revision is documented in
+`docs/production/episode-3-dread-revision.md`. `human_anatomy.py` reconstructs all
+nine actors with fitted eyes, including child-specific MakeHuman targets for
+Pich. `human_finish.py` adds loose clothing, hair and blinking. `dread_scene.py`
+plants the measured forest, dresses the market and checks prop/boat contact.

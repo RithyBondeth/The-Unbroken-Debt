@@ -18,7 +18,7 @@ import type { DrownedVillage } from "../../src/episodes/ep3/DrownedVillage";
 const VIEWS: Record<string, [number[], number[]]> = {
   water: [
     [-68, 0.78, 11.8],
-    [-75, 0.2, 15],
+    [-61, 0.2, 20],
   ],
   market: [
     [-64, 0.78, 8],
@@ -178,6 +178,23 @@ async function boot(): Promise<void> {
     button.onclick = () => look(button.dataset.view!);
   document.getElementById("capture")!.onclick = () => {
     void saveShot(engine, game.camera, "ep3-" + current).then(() => log("Saved ep3-" + current));
+  };
+  document.getElementById("render-check")!.onclick = () => {
+    const lake = game.scene.getMeshByName("tonle_sap_surface");
+    const effect = lake?.subMeshes?.[0]?.effect;
+    log(
+      `Lake material: ${lake?.material?.name}; vertices: ${lake?.getTotalVertices()}; compiled wave slopes: ${effect?.fragmentSourceCode.includes("lakeA")}`,
+    );
+    const eyes = new Set<string>();
+    for (const mesh of game.scene.meshes) {
+      if (!mesh.getTotalVertices()) continue;
+      for (let node = mesh.parent; node; node = node.parent)
+        if (/^ep3_human_.*_eye_[01]$/.test(node.name)) eyes.add(node.name);
+    }
+    log(`Complete eye assemblies: ${eyes.size}`);
+    log(
+      `Rooted forest meshes: ${game.scene.transformNodes.filter((n) => n.name.startsWith("ep3_dread_forest_tree")).length}`,
+    );
   };
   document.getElementById("clean")!.onclick = () => {
     document.getElementById("review")!.hidden = true;

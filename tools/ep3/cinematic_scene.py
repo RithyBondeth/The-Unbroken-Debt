@@ -20,10 +20,10 @@ def hair_material():
     rgb*=1+(height*12)[:,:,None]
     return mapped('fine_wet_hair',rgb,height,.32+np.minimum(height*3,.12),alpha=(alpha>.19).astype(float),tile=.2,normal_strength=.12)
 
-def clothe_people(c,collection):
+def clothe_people(c,collection,reuse_materials=False):
     # Separate cloth shells relax anatomical contours. Original skin remains
     # beneath them; cloth no longer consists of colours painted onto bare bodies.
-    hair=hair_material();cloth=c.m['cotton']
+    hair=(bpy.data.materials.get('M_ep3_real_fine_wet_hair') if reuse_materials else None) or hair_material();cloth=c.m['cotton']
     child=bpy.data.objects.get('pich_body')
     if child and not child.get('ep3_child_proportions'):
         h=max(v.co.z for v in child.data.vertices)
@@ -39,16 +39,20 @@ def clothe_people(c,collection):
         child['ep3_child_proportions']=True
     for obj in list(collection.objects):
         if obj.name.startswith(('pich_wrapped_sampot','pich_cotton_shirt')):bpy.data.objects.remove(obj,do_unlink=True)
-    jacket=cotton('charcoal_work_coat',1981)
+    jacket=(next((m for m in bpy.data.materials if m.name.startswith('M_ep3_real_charcoal_work_coat') and m.users),None) if reuse_materials else None) or cotton('charcoal_work_coat',1981)
     bsdf=jacket.node_tree.nodes.get('Principled BSDF')
     # Dark dye is baked into the base map so glTF retains it.
     tex=next(n.image for n in jacket.node_tree.nodes if n.type=='TEX_IMAGE' and '_BC' in n.image.name)
     px=np.empty(len(tex.pixels),dtype=np.float32);tex.pixels.foreach_get(px)
-    px=px.reshape(-1,4);px[:,:3]*=[.22,.27,.28];tex.pixels.foreach_set(px.ravel());tex.save()
-    wrap=cotton('drowned_indigo_wrap',1941)
+    px=px.reshape(-1,4)
+    if not reuse_materials:
+        px[:,:3]*=[.22,.27,.28];tex.pixels.foreach_set(px.ravel());tex.save()
+    wrap=(next((m for m in bpy.data.materials if m.name.startswith('M_ep3_real_drowned_indigo_wrap') and m.users),None) if reuse_materials else None) or cotton('drowned_indigo_wrap',1941)
     wt=next(n.image for n in wrap.node_tree.nodes if n.type=='TEX_IMAGE' and '_BC' in n.image.name)
     colors=np.empty(len(wt.pixels),dtype=np.float32);wt.pixels.foreach_get(colors)
-    colors=colors.reshape(-1,4);colors[:,:3]*=[.3,.38,.42];wt.pixels.foreach_set(colors.ravel());wt.save()
+    colors=colors.reshape(-1,4)
+    if not reuse_materials:
+        colors[:,:3]*=[.3,.38,.42];wt.pixels.foreach_set(colors.ravel());wt.save()
     for obj in collection.objects:
         if obj.name.startswith('kanha_wet_sampot') and obj.type=='MESH':obj.data.materials.clear();obj.data.materials.append(wrap)
     people=[o for o in collection.objects if o.type=='MESH' and (o.name.endswith('_body') or o.name.startswith('market_resident_') and o.data.shape_keys)]
@@ -67,7 +71,10 @@ def clothe_people(c,collection):
         selected=[]
         for poly in body.data.polygons:
             p=poly.center
-            if (h*.46<p.z<h*.85 and abs(p.x)<.27) or poly.material_index==1:
+            # Bone-region material assignment distinguishes the torso and upper
+            # arms from hands held in front of the abdomen. A height/width box
+            # accidentally made a second cloth copy of the hands.
+            if poly.material_index==1:
                 selected.append(poly)
         used=sorted({i for poly in selected for i in poly.vertices});remap={v:i for i,v in enumerate(used)}
         verts=[body.data.vertices[i].co+body.data.vertices[i].normal*.013 for i in used]
@@ -91,7 +98,8 @@ def clothe_people(c,collection):
             basis=body.data.shape_keys.key_blocks[0]
             for key in list(body.data.shape_keys.key_blocks)[1:]:
                 out=shirt.shape_key_add(name=key.name,from_mix=False);out.value=0
-                for v,idx,rest in zip(out.data,used,data.vertices):v.co=rest.co+key.data[idx].co-basis.data[idx].co
+                points=[rest.co+key.data[idx].co-basis.data[idx].co for idx,rest in zip(used,data.vertices)]
+                out.data.foreach_set('co',np.asarray(points,dtype=np.float32).ravel())
         # The buttoned placket and a real collar break the painted-body silhouette.
         for k in range(4):
             z=h*(.59+k*.055)

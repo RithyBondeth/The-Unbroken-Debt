@@ -69,6 +69,8 @@ class Craft:
         return self.mesh(name,verts,faces,mat,uv,smooth=True,parent=parent)
     def prop(self,id,x,y,z,scale=1,rotation=0,name=None):
         obj=place(self.coll,id,(x,-z,y),rot_deg=-rotation,scale=scale,name=name or 'real_'+id)
+        obj['ep3_support_height']=y
+        obj['ep3_library_asset']=id
         obj.parent=self.root;return obj
     def pot(self,name,x,y,z,r,h,mat):
         profile=[(.68*r,0),(.95*r,h*.03),(r,h*.65),(.78*r,h*.9),(.8*r,h),(.68*r,h),(.65*r,h*.88),(.8*r,h*.1),(0,h*.1)]
@@ -318,7 +320,7 @@ def boat_joinery(c,collection):
         if not obj.modifiers.get('Real_plank_thickness'):
             solid=obj.modifiers.new('Real_plank_thickness','SOLIDIFY');solid.thickness=.026
             bevel=obj.modifiers.new('Rounded_wet_gunwale','BEVEL');bevel.width=.005;bevel.segments=2
-        points=[v.co for v in obj.data.vertices]
+        points=[obj.matrix_local @ v.co for v in obj.data.vertices]
         x=(min(p.x for p in points)+max(p.x for p in points))/2
         z=-(min(p.y for p in points)+max(p.y for p in points))/2
         length=max(p.y for p in points)-min(p.y for p in points)
@@ -336,6 +338,8 @@ def boat_joinery(c,collection):
         c.prop('wicker_basket_02',x,base-.08,z+length*.22,.3,name=name+'_real_fishing_basket')
 
 def apply_realism(collection,parent=None):
+    from human_anatomy import replace_existing
+    replace_existing(collection)
     old=bpy.data.objects.get('ep3_realism')
     if old:
         for obj in list(old.children_recursive)+[old]:bpy.data.objects.remove(obj,do_unlink=True)
@@ -372,4 +376,8 @@ def apply_realism(collection,parent=None):
     boat_joinery(c,collection)
     from cinematic_scene import apply_cinematic_finish
     apply_cinematic_finish(c,collection)
+    from human_finish import finish_people
+    finish_people(c, collection)
+    from dread_scene import apply_dread
+    apply_dread(c,collection)
     return c.root
