@@ -414,3 +414,8 @@ interactions, mother choice and save-code roundtrip. Start from `stage=market`.
 landing, attic stair and doorway, cellar ramp and each roof bridge, with threats
 paused, then checks production interaction rays. Use scene buttons for visual
 inspection; **Save screenshot** writes the rendered frame to `debug-shots/`.
+
+**Inspect rendered assets** reports the actual loaded eye assemblies, nearby
+forest roots and compiled lake wave plugin. Survival and threat simulation pause
+without pointer capture; weather and ambient presentation continue. The current
+forest/anatomy captures are in `docs/production/evidence/2026-11-03-dread/`.

@@ -34,12 +34,12 @@ export class VillageEnvironment {
     surface.specularColor.set(0, 0, 0);
     surface.reflectionTexture = env.clone();
     surface.reflectionTexture.coordinatesMode = Texture.SKYBOX_MODE;
-    surface.reflectionTexture.level = 0.65;
+    surface.reflectionTexture.level = 0.24;
     sky.material = surface;
     scene.onDisposeObservable.addOnce(() => env.dispose());
   }
   setStage(day: boolean, dawn: boolean, memory: boolean): void {
     this.sky.setEnabled(day || dawn);
-    this.scene.environmentIntensity = day ? 0.48 : dawn ? 0.32 : memory ? 0.18 : 0.028;
+    this.scene.environmentIntensity = day ? 0.2 : dawn ? 0.32 : memory ? 0.18 : 0.028;
   }
 }

@@ -103,10 +103,18 @@ export class VillageCinematics {
       "market_resident_0",
       "market_resident_1",
       "market_resident_2",
+      "market_resident_3",
+      "kanha",
+      "pich",
     ]) {
       const root = this.game.scene.getTransformNodeByName(name);
       if (!root || this.director.active) continue;
-      if (!this.reduced.matches) root.rotation.z = Math.sin(seconds * 0.65 + root.uniqueId) * 0.006;
+      const blinkPhase = (seconds + root.uniqueId * 0.27) % 6.4;
+      this.pose(
+        root,
+        "blink",
+        blinkPhase < 0.18 ? Math.sin((Math.PI * blinkPhase) / 0.18) ** 2 : 0,
+      );
       this.pose(
         root,
         "right",

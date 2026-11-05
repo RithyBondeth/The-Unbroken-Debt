@@ -747,6 +747,7 @@ export class DrownedVillage {
       this.pich.rotation.y = Math.atan2(g.player.feet.x + 12.2, g.player.feet.z - 3.1);
     }
     this.pich.setEnabled(s === "clinic" || s === "purification");
+    if (s === "clinic") this.pich.setAbsolutePosition(new Vector3(-10, 3.35, -3));
     this.water?.cellar.position.set(0, g.flags.get("ep3.pump.running", false) ? -1.8 : 0.35, -23);
   }
   private makeBoat(): void {
@@ -922,7 +923,7 @@ export class DrownedVillage {
           -0.35 + Math.sin(this.time * 1.8) * 0.045,
           15 + Math.sin(t * Math.PI) * 8,
         );
-      this.boat.position.set(at.x, 0.1 + Math.sin(this.time * 1.8) * 0.045, at.z);
+      this.boat.position.set(at.x, -0.09 + Math.sin(this.time * 1.8) * 0.045, at.z);
       this.boat.rotation.set(
         0.015 * Math.sin(this.time * 1.4),
         Math.PI / 2,
@@ -979,7 +980,7 @@ export class DrownedVillage {
     );
     const spiritAt = this.kanha.getAbsolutePosition();
     this.kanha.rotation.y = Math.atan2(feet.x - spiritAt.x, feet.z - spiritAt.z);
-    this.kanha.rotation.z = -0.025 + Math.sin(this.time * 0.43) * 0.003;
+    this.kanha.rotation.z = 0;
     if (s === "clinic") {
       const t = (this.activeSeconds % 24) / 24;
       this.pich.setAbsolutePosition(new Vector3(-10 + t * 4, 3.35, -3 - t * 4));

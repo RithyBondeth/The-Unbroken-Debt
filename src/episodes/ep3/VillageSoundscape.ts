@@ -138,10 +138,10 @@ export class VillageSoundscape {
   ): void {
     this.time += dt;
     const storm = !["market", "memory", "dawn", "complete"].includes(stage);
-    if (this.rain) this.rain.volume = storm ? 0.24 : 0;
+    if (this.rain) this.rain.volume = storm ? 0.24 : stage === "market" ? 0.14 : 0;
     if (this.birds)
       this.birds.volume =
-        stage === "market" ? 0.12 : stage === "dawn" || stage === "complete" ? 0.08 : 0;
+        stage === "market" ? 0.025 : stage === "dawn" || stage === "complete" ? 0.08 : 0;
     if (this.breath) {
       this.breath.volume = danger * 0.18;
       this.breath.spatial.position = new Vector3(at.x, 0.1, at.z);

@@ -51,6 +51,31 @@ class LakeWaves extends MaterialPluginBase {
       const vec4 = language === ShaderLanguage.WGSL ? "vec4f" : "vec4";
       const vector4Declaration = language === ShaderLanguage.WGSL ? "let" : "vec4";
       return {
+        CUSTOM_FRAGMENT_DEFINITIONS:
+          language === ShaderLanguage.WGSL
+            ? `
+          fn lakeGradientNoise(p: vec2f) -> vec2f {
+            let cell = floor(p); let f = fract(p);
+            let a = fract(sin(dot(cell, vec2f(127.1,311.7)))*43758.5453);
+            let b = fract(sin(dot(cell+vec2f(1.0,0.0), vec2f(127.1,311.7)))*43758.5453);
+            let c = fract(sin(dot(cell+vec2f(0.0,1.0), vec2f(127.1,311.7)))*43758.5453);
+            let d = fract(sin(dot(cell+vec2f(1.0,1.0), vec2f(127.1,311.7)))*43758.5453);
+            let blend = f*f*(vec2f(3.0)-2.0*f);
+            let derivative = 6.0*f*(vec2f(1.0)-f);
+            return derivative*vec2f((b-a)+(a-b-c+d)*blend.y, (c-a)+(a-b-c+d)*blend.x);
+          }
+        `
+            : `
+          vec2 lakeGradientNoise(vec2 p) {
+            vec2 cell=floor(p), f=fract(p);
+            float a=fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+            float b=fract(sin(dot(cell+vec2(1.0,0.0),vec2(127.1,311.7)))*43758.5453);
+            float c=fract(sin(dot(cell+vec2(0.0,1.0),vec2(127.1,311.7)))*43758.5453);
+            float d=fract(sin(dot(cell+vec2(1.0,1.0),vec2(127.1,311.7)))*43758.5453);
+            vec2 blend=f*f*(vec2(3.0)-2.0*f), derivative=6.0*f*(vec2(1.0)-f);
+            return derivative*vec2((b-a)+(a-b-c+d)*blend.y,(c-a)+(a-b-c+d)*blend.x);
+          }
+        `,
         // Babylon 9.31's projected mirror ignores the surface normal. Disturb
         // that projection with the same normal used for the water's highlights.
         "!return computeProjectionCoords\\(worldPos,([^;]+)\\);": `
@@ -68,6 +93,8 @@ class LakeWaves extends MaterialPluginBase {
             cos(lakeA) * 0.105 - cos(lakeB) * 0.08 + cos(lakeC) * 0.03,
             cos(lakeA) * 0.074 + cos(lakeB) * 0.064 - cos(lakeC) * 0.019
           );
+          lakeSlope += lakeGradientNoise(${language === ShaderLanguage.WGSL ? "vec2f" : "vec2"}(${p}.x*1.3+${p}.z*0.4+${u}lakeTime*0.43, ${p}.z*3.7-${p}.x*0.7-${u}lakeTime*0.17))*0.16;
+          lakeSlope += lakeGradientNoise(${p}.xz*7.1-${language === ShaderLanguage.WGSL ? "vec2f" : "vec2"}(${u}lakeTime*0.61))*0.045;
           normalW = normalize(normalW + ${vec}(lakeSlope.x, 0.0, lakeSlope.y));
         `,
       };
@@ -303,7 +330,7 @@ export class VillageWater {
     this.waves.seconds = this.time;
     this.floodWaves.seconds = this.time;
     this.floodWaves.amplitude = 0.006;
-    this.waves.amplitude = storm ? 0.025 : 0.008;
+    this.waves.amplitude = storm ? 0.1 : 0.055;
     this.normal.uOffset = this.time * 0.0018;
     this.normal.vOffset = this.time * 0.001;
     this.cellar.position.y += (target - this.cellar.position.y) * Math.min(1, dt * 0.6);

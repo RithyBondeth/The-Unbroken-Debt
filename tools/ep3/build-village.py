@@ -154,7 +154,8 @@ def boat(name,x,z,y=.32,length=5,width=1.5):
     for side in [-1,1]:pipe(name+'_gunwale',[(x+side*(width/2*math.sin(math.pi*j/n)**.45+.035),y+.25,z-length/2+j/n*length) for j in range(n+1)],.035,m['wood'])
     pipe(name+'_oar',[(x-.35,y+.3,z-1),(x+.5,y+.32,z+1.5)],.025,m['wood'])
 def human(name,x,y,z,old=False,scale=1):
-    root=anchor(name,x,y,z);body=anatomy(name+'_body',old=old);body.parent=root;body.scale=(scale,)*3
+    from human_anatomy import build_body
+    root=anchor(name,x,y,z);body=build_body(COL,name+'_body',old=old,child=name=='pich');body.parent=root;body.scale=(1,)*3 if name=='pich' else (scale,)*3
     if name!='kanha':
         height=max(v.co.z for v in body.data.vertices)
         polys=[list(p.vertices) for p in body.data.polygons if sum(body.data.vertices[i].co.z for i in p.vertices)/len(p.vertices)>height*.968 or (sum(body.data.vertices[i].co.z for i in p.vertices)/len(p.vertices)>height*.91 and sum(body.data.vertices[i].co.y for i in p.vertices)/len(p.vertices)>.015)]
@@ -318,7 +319,7 @@ for j,(name,x,z,old) in enumerate([('seller',-71,4,False),('vuthy',-63,-3,True),
             pot('lok_hat',x,2.25,z,.25,.12,m['bamboo']);pipe('fishing_pole',[(x-.5,.8,z),(x-.6,3.2,z-.5)],.012,m['wood'])
     usable(name,x,1.6,z,person)
 for j,(x,z) in enumerate([(-56,-6),(-72,-5),(-56,3),(-64,-13)]):human('market_resident_'+str(j),x,.7,z,old=j%2==0,scale=.83 if j==3 else 1)
-usable('boat',-74,.9,14.2,lambda:pipe('borrowed_oar',[(-74,.86,13.6),(-74,.86,14.9)],.03,m['wood']))
+usable('boat',-74,.9,14.2,lambda:pipe('borrowed_oar',[(-74,.73,13.6),(-74,.73,14.9)],.03,m['wood']))
 lamp('lok_lamp',-73.7,1.4,12.3)
 # Net loops, drying fish, woven traps, washing and mooring stakes give the docks human scale.
 for j in range(18):

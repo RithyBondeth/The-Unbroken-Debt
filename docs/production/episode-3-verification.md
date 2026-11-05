@@ -98,3 +98,37 @@ fixture passes all nine physical routes and all six rays again. The final
 production build, typecheck, ESLint, changed-source Prettier and `git diff --check`
 also pass. Episode 1's `StormSky.ts` still matches `main` byte for byte; only the
 Episode 3 instance is enlarged to enclose its open lake.
+
+## Forest, contact and anatomy revision
+
+The current optimized area is 65,223,012 bytes (approximately 65.2 MB), plus the
+existing cloud HDR. All nine actors use the reconstructed anatomy and complete
+eyes; the forest contains 143 measured mature trees. The source and shipped area
+include the final garment/hand and lamp-support corrections. The obsolete second
+hair curtain is removed from both.
+
+- `npm test -- --maxWorkers=1`: **494 tests in 92 files pass** (50.99s), including
+  seven exported-asset checks for support contact, canopy placement, boat draft,
+  lamp/stool contact, actor eyes/neutral morphs, shirt coverage and six story
+  documents' height and footprint against their supporting surfaces.
+- ESLint and the final production build pass; the build also runs TypeScript's
+  no-emit check. Changed-source Prettier, Python compilation and `git diff --check`
+  pass.
+- The High fixture passes all nine real Havok routes and all six production rays
+  after the forest and boat changes. The scripted production story journey also
+  passes rowing, repairs, safe dials, memory, ritual, rescue and completion saves.
+  The final subsequent art correction changes clothing, redundant hair and the
+  supported lamp; it does not change colliders or interaction roots.
+- The loaded High renderer reports all 18 eye assemblies, 89 near-forest roots
+  and the compiled lake wave plugin. The other 54 trees form the distant belt.
+- The final Low ward also loads all 18 eye assemblies and the compiled water
+  plugin without console warnings or errors. The cellar letter's timber support
+  is visibly present in `vault-supported-low.png`.
+
+Fresh browser evidence is in `evidence/2026-11-03-dread/`. Wide ward, attic and
+market environment captures precede the final hand/lamp correction; the final
+character and water captures follow it. The final ritual captures also include
+the complete shirt coverage and waist overlap. These are visual checks on this machine,
+not a cross-device performance or historical-authenticity certification. A human
+balance playtest with active threats is still separate from the scripted checks.
+See `episode-3-dread-revision.md` for the art changes and rebuild instructions.

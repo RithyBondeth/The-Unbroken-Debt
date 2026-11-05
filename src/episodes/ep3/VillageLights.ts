@@ -16,7 +16,7 @@ import { limitLightToRange } from "../../render/RenderSetup";
 import { NIGHT_LOOK } from "../ep1/data/nightLook";
 import { StormSky } from "../ep1/act1/StormSky";
 import { Lightning } from "../ep1/Lightning";
-import { RainStreaks } from "../ep1/Rain";
+import { VillageRain } from "./VillageRain";
 import type { VillageStage } from "./VillageProgress";
 import { VillageEnvironment } from "./VillageEnvironment";
 import { FoliageWind } from "../../render/FoliageWind";
@@ -29,7 +29,7 @@ export class VillageLights {
   readonly flames: PointLight[] = [];
   readonly lightning = new Lightning();
   private readonly clouds: StormSky;
-  private readonly rain: RainStreaks;
+  private readonly rain: VillageRain;
   private readonly flash: DirectionalLight;
   private stage: VillageStage = "market";
   private time = 0;
@@ -143,9 +143,7 @@ export class VillageLights {
     }
     this.clouds = new StormSky(s);
     this.clouds.dome.scaling.setAll(40);
-    this.rain = new RainStreaks(s, game.preset.name === "low" ? 650 : 1600, 0);
-    this.rain.system.minEmitBox.set(-8, 0, -8);
-    this.rain.system.maxEmitBox.set(8, 0, 8);
+    this.rain = new VillageRain(game);
     for (const light of [this.lamp, this.sun, this.sky, this.flash, ...this.flames])
       light.shadowEnabled = false;
     if (game.preset.name !== "low") {
@@ -173,24 +171,14 @@ export class VillageLights {
           mesh instanceof Mesh &&
           mesh.isVisible &&
           mesh.getTotalVertices() &&
-          mesh.renderingGroupId === 0 &&
-          !moving(mesh)
+          mesh.renderingGroupId === 0
         )
           shadows.addShadowCaster(mesh);
       }
       const map = shadows.getShadowMap();
-      // Warm the visible shadow passes before caching the static architecture.
-      let readyFrames = 0;
-      const freeze = s.onAfterRenderObservable.add(() => {
-        // Hidden props may keep the whole scene unready. Give the visible
-        // shadow passes time to compile, then cache this static architecture.
-        if (++readyFrames < 12) return;
-        if (map) {
-          map.refreshRate = 0;
-          map.resetRefreshCounter();
-        }
-        freeze?.remove();
-      });
+      // People and wet foliage must cast shadows where they are now. Updating
+      // this pass periodically keeps contact without a stale actor silhouette.
+      if (map) map.refreshRate = game.preset.name === "medium" ? 12 : 6;
       const ward = this.flames.find((light) => light.name.includes("ward"));
       if (ward && game.preset.name !== "medium") {
         ward.shadowEnabled = true;
@@ -227,6 +215,12 @@ export class VillageLights {
     for (const mat of area.container.materials)
       if (mat instanceof PBRMaterial) {
         mat.maxSimultaneousLights = 8;
+        if (/^M_ep3_(wood|dark)$/.test(mat.name)) {
+          mat.albedoColor.scaleInPlace(0.82);
+          mat.clearCoat.isEnabled = true;
+          mat.clearCoat.intensity = 0.16;
+          mat.clearCoat.roughness = 0.46;
+        }
         if (mat.name.startsWith("M_ep3_real_drowned_skin")) mat.albedoColor.set(0.42, 0.5, 0.47);
         if (/leaf|leaves/.test(mat.name)) this.foliage.push(new FoliageWind(mat));
         if (mat.name.startsWith("M_ep3_real_corroded_steel")) {
@@ -263,31 +257,35 @@ export class VillageLights {
     g.scene.clearColor = bright
       ? new Color4(day ? 0.22 : 0.18, day ? 0.25 : 0.21, 0.23, 1)
       : new Color4(...NIGHT_LOOK.clearColor, 1);
-    this.sky.intensity = day ? 0.42 : dawn ? 0.35 : memory ? 0.3 : NIGHT_LOOK.skyIntensity * 0.45;
-    this.sky.diffuse.set(day ? 0.87 : 0.48, day ? 0.81 : 0.57, day ? 0.67 : 0.65);
+    this.sky.intensity = day ? 0.16 : dawn ? 0.3 : memory ? 0.3 : NIGHT_LOOK.skyIntensity * 0.45;
+    this.sky.diffuse.set(day ? 0.61 : 0.48, day ? 0.7 : 0.57, day ? 0.73 : 0.65);
     this.sky.groundColor.set(0.1, 0.12, 0.11);
     this.sun.diffuse.set(bright ? 1 : 0.54, bright ? 0.77 : 0.65, bright ? 0.5 : 0.8);
-    this.sun.intensity = day ? 0.65 : dawn ? 0.35 : memory ? 0.25 : 0.16;
+    this.sun.intensity = day ? 0.24 : dawn ? 0.35 : memory ? 0.25 : 0.16;
     if (g.atmosphere) {
-      g.atmosphere.baseExposure = bright ? 1.1 : NIGHT_LOOK.baseExposure;
-      g.atmosphere.maxExposure = bright ? 1.8 : NIGHT_LOOK.maxExposure;
+      g.atmosphere.baseExposure = day ? 0.95 : bright ? 1.1 : NIGHT_LOOK.baseExposure;
+      g.atmosphere.maxExposure = day ? 1.35 : bright ? 1.8 : NIGHT_LOOK.maxExposure;
       g.atmosphere.nightSightIntensity = bright ? 0 : NIGHT_LOOK.nightSightIntensity;
       g.atmosphere.nightSight.range = NIGHT_LOOK.nightSightRange;
       g.atmosphere.mood.memory = memory;
     }
-    const density = day ? 0.006 : dawn ? 0.012 : 0.017;
-    const ambient = day ? [0.18, 0.2, 0.2] : bright ? [0.09, 0.11, 0.12] : [0.007, 0.012, 0.015];
+    const density = day ? 0.018 : dawn ? 0.012 : 0.02;
+    const ambient = day
+      ? [0.045, 0.057, 0.06]
+      : bright
+        ? [0.09, 0.11, 0.12]
+        : [0.007, 0.012, 0.015];
     if (g.pipeline?.fog) {
       const near = this.flames.filter((light) =>
         day
-          ? /lok_lamp/.test(light.name)
+          ? /lok_lamp|market_/.test(light.name)
           : stage === "purification"
             ? /ritual_key|deck/.test(light.name)
             : /entry|ward|attic|vault/.test(light.name),
       );
       g.pipeline.fog.lights.splice(0, g.pipeline.fog.lights.length, this.lamp, ...near.slice(0, 4));
       g.pipeline.fog.density = density;
-      g.pipeline.fog.maxDistance = day || dawn ? 240 : 40;
+      g.pipeline.fog.maxDistance = day ? 90 : dawn ? 160 : 55;
       g.pipeline.fog.ambient.set(ambient[0], ambient[1], ambient[2]);
       g.pipeline.fog.setMistPockets([
         { x: 0, z: -4, radiusX: 20, radiusZ: 25, baseY: 0.05, height: 0.7, density: 0.3 },
@@ -309,10 +307,7 @@ export class VillageLights {
     const flash = storm ? this.lightning.update(dt) : 0;
     this.flash.intensity = flash * 2;
     this.clouds.update(flash, g.atmosphere?.eye.exposure ?? 1.45, dt);
-    const outside = Math.abs(g.player.feet.x) > 12 || g.player.feet.z > 10 || g.player.feet.z < -11;
-    this.rain.system.emitRate = storm && outside ? (g.preset.name === "low" ? 450 : 1100) : 0;
-    this.rain.system.emitter = g.camera.globalPosition.add(new Vector3(0, 5, 0));
-    this.rain.light(flash, flame * 0.2, 0.18);
+    this.rain.update(storm || this.stage === "market", this.stage === "market", flash, flame);
     this.shade +=
       (Math.max(0.5, Math.min(1, (g.interaction.distance / 1.3) ** 2)) - this.shade) *
       Math.min(1, dt * 5);
