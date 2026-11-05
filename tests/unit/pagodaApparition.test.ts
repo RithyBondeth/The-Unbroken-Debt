@@ -62,10 +62,10 @@ describe("Episode 2 apparition scares", () => {
       true,
     ]);
   });
-  it("throws her arms out at once in a lunge, and snaps her neck over", () => {
-    expect(ghostPose("lunge", 0.2).reach).toBe(1);
-    expect(ghostPose("lunge", 0.4).snap).toBe(1);
-    expect(ghostPose("lunge", 0.7).snap).toBeLessThan(0);
+  it("rolls her head over in a lunge, then across to the other side", () => {
+    expect(ghostPose("lunge", 0.2).neck).toBe(0);
+    expect(ghostPose("lunge", 0.5).neck).toBe(1);
+    expect(ghostPose("lunge", 0.85).neck).toBeLessThan(0);
   });
   it("blinks out mid-stare and comes back a step nearer", () => {
     expect(ghostPose("stare", 0.95).visible).toBe(false);

@@ -1,8 +1,6 @@
-import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { MorphTargetManager } from "@babylonjs/core/Morph/morphTargetManager";
 import type { Game } from "../../core/Game";
+import { GhostRig } from "./GhostRig";
 import type { PagodaLights } from "./PagodaLights";
 import type { PagodaSoundscape } from "./PagodaSoundscape";
 import type { PagodaStage } from "./PagodaProgress";
@@ -119,6 +117,9 @@ export const SCARES: Scare[] = [
   },
 ];
 
+/** Her head's roll at full lean, in radians: past comfortable, not past human. */
+const NECK_ROLL = 0.72;
+
 /** Seconds each kind of appearance lasts once it shows. */
 const DURATION: Record<ScareKind, number> = {
   glimpse: 1.3,
@@ -128,14 +129,20 @@ const DURATION: Record<ScareKind, number> = {
   rise: 1.3,
 };
 
-/** How her body moves at one moment of an appearance (shape-key weights, 0..1). */
+/** Which performance she gives in each appearance, and how fast. */
+export const CLIPS: Record<ScareKind, { clip: string; rate: number }> = {
+  glimpse: { clip: "glimpse", rate: 1 },
+  lunge: { clip: "lunge", rate: 2.3 },
+  behind: { clip: "behind", rate: 2.1 },
+  stare: { clip: "stare", rate: 0.9 },
+  rise: { clip: "rise", rate: 1.3 },
+};
+
+/** What the timing asks of her at one moment of an appearance. */
 export interface GhostPose {
   visible: boolean;
-  reach: number;
-  hunch: number;
-  /** Neck snapped over: +1 one way, -1 the other. */
-  snap: number;
-  breathe: number;
+  /** How far her head has rolled over: +1 one way, -1 the other. */
+  neck: number;
   /** 0..1 along the appearance's own movement (crossing, lunging, closing in). */
   travel: number;
 }
@@ -143,59 +150,41 @@ export interface GhostPose {
 /** She arrives as a flicker: on, off, on, off, on. */
 const FLICKER = [0, 0.05, 0.09, 0.14, 0.17];
 const flickering = (t: number) => FLICKER.filter((edge) => t >= edge).length % 2 === 1;
-const ramp = (t: number, from: number, to: number) =>
-  Math.min(1, Math.max(0, (t - from) / (to - from)));
+const ramp = (t: number, from: number, to: number) => {
+  const u = Math.min(1, Math.max(0, (t - from) / (to - from)));
+  return u * u * (3 - 2 * u);
+};
 
-/** Her body through an appearance of `kind`, `t` seconds after she shows. */
+/** The timing of an appearance of `kind`, `t` seconds after she shows. */
 export function ghostPose(kind: ScareKind, t: number): GhostPose {
-  const breathe = 0.5 + 0.5 * Math.sin(t * 7);
   switch (kind) {
     case "lunge":
-      // Arms flung at the chains at once; the neck snaps over, then back the other way.
+      // She comes at the chains; her head rolls over, then across to the other side.
       return {
         visible: flickering(t),
-        reach: ramp(t, 0.02, 0.16),
-        hunch: 0.2,
-        snap: t > 0.62 ? -0.8 : t > 0.3 ? 1 : 0,
-        breathe,
-        travel: ramp(t, 0, 0.2) ** 0.5,
+        neck: ramp(t, 0.3, 0.42) - 1.8 * ramp(t, 0.62, 0.8),
+        travel: ramp(t, 0, 0.3),
       };
     case "behind":
-      return {
-        visible: t >= 0,
-        reach: ramp(t, 0, 0.08),
-        hunch: 0,
-        snap: t > 0.25 ? 1 : 0,
-        breathe,
-        travel: t / 0.8,
-      };
+      return { visible: t >= 0, neck: ramp(t, 0.25, 0.42), travel: t / 0.8 };
     case "glimpse":
-      // Crossing the path bent double; she stops dead and her head snaps round at you.
+      // Crossing the path bent over and stumbling; she stops, and her head comes round.
       return {
         visible: flickering(t),
-        reach: 0,
-        hunch: t > 0.82 ? 0.3 : 0.85,
-        snap: t > 0.82 ? -1 : 0,
-        breathe,
+        neck: -ramp(t, 0.82, 1.02),
         travel: Math.min(1, t / 0.82),
       };
     case "stare":
-      // Standing still and breathing; gone for a blink, back a step nearer; the neck goes.
+      // Standing still and breathing; gone for a blink, back a step nearer; the head goes.
       return {
         visible: flickering(t) && !(t > 0.9 && t < 1.02),
-        reach: t > 2.05 ? ramp(t, 2.05, 2.2) : 0,
-        hunch: 0.15,
-        snap: t > 1.5 ? 1 : 0,
-        breathe,
+        neck: ramp(t, 1.5, 1.72),
         travel: t >= 1.02 ? 1 : 0,
       };
     case "rise":
       return {
         visible: flickering(t),
-        reach: ramp(t, 0.4, 0.7),
-        hunch: 1 - ramp(t, 0.4, 0.7),
-        snap: t > 0.9 ? 1 : 0,
-        breathe,
+        neck: ramp(t, 0.9, 1.08),
         travel: Math.min(1, t * 1.6),
       };
   }
@@ -217,15 +206,17 @@ export const BEATS: Record<ScareKind, { at: number; sound: "crack" | "laugh" }[]
 };
 
 /**
- * The woman in red (the Kuntilanak Merah, built in tools/ep2/build-cinematics.py).
- * She never fades: she flickers in, her body moving (arms flung out, bent double,
- * neck snapping over too far), her neck cracking and her laugh ringing out, and
- * then she is simply gone, with a breath sucked in where she stood and the lamps
- * flickering. Each scare happens once and is saved in `ep2.scare.<id>`.
+ * The woman in red (the Kuntilanak Merah, on real human motion: tools/ep2/build-ghosts.py).
+ * She never fades: she flickers in and moves as a person moves, stumbling across the
+ * path, rising from a crouch, coming at you with her arms lifting, her head rolling over
+ * on her neck with a crack and her laugh ringing out, and then she is simply gone, with a
+ * breath sucked in where she stood and the lamps flickering. Each scare happens once and
+ * is saved in `ep2.scare.<id>`.
  */
 export class PagodaApparition {
-  private root: TransformNode | null = null;
-  private body: MorphTargetManager | null = null;
+  private rig: GhostRig | null = null;
+  /** Her head's roll this frame, applied on top of the clip. */
+  private neck = 0;
   private showing: {
     scare: Scare;
     t: number;
@@ -243,43 +234,25 @@ export class PagodaApparition {
     private readonly lights: PagodaLights,
   ) {}
 
-  attach(): void {
-    const root = this.game.scene.getTransformNodeByName("pagoda_ghost");
-    if (!root) return;
-    // Free of the cinematic mirror root, keeping its world transform (and its mirroring).
-    root.setParent(null);
-    root.rotationQuaternion = null;
-    root.setEnabled(false);
-    for (const mesh of root.getChildMeshes()) {
-      mesh.isPickable = false;
-      if (mesh instanceof Mesh && mesh.morphTargetManager) this.body = mesh.morphTargetManager;
-    }
-    this.root = root;
+  /** Loads her own asset, parked out of sight until the first scare. */
+  async load(): Promise<void> {
+    const scene = this.game.scene;
+    const asset = await GhostRig.load(scene, "ep2_red");
+    this.rig = new GhostRig(asset, "pagoda_ghost");
+    this.rig.root.setEnabled(false);
+    scene.onAfterAnimationsObservable.add(() => {
+      if (this.rig?.root.isEnabled()) this.rig.turn("Head_021", "forward", this.neck * NECK_ROLL);
+    });
   }
 
   get visible(): boolean {
     return !!this.showing && !this.showing.armed;
   }
 
-  private pose(p: GhostPose): void {
-    const m = this.body;
-    if (!m) return;
-    const weights: Record<string, number> = {
-      reach: p.reach,
-      hunch: p.hunch,
-      snap_a: Math.max(0, p.snap),
-      snap_b: Math.max(0, -p.snap),
-      breathe: p.breathe * 0.6,
-    };
-    for (let i = 0; i < m.numTargets; i++) {
-      const target = m.getTarget(i);
-      target.influence = weights[target.name] ?? 0;
-    }
-  }
-
   update(dt: number, c: ScareContext, active: boolean): void {
     const g = this.game;
-    if (!this.root) return;
+    const root = this.rig?.root;
+    if (!root) return;
     if (this.afterglow > 0) {
       this.afterglow = Math.max(0, this.afterglow - dt);
       this.lights.scare =
@@ -307,7 +280,8 @@ export class PagodaApparition {
       if (facing(c, s.at) > 0.75) {
         s.armed = false;
         s.t = 0;
-        this.root.setEnabled(true);
+        root.setEnabled(true);
+        this.rig!.start(CLIPS.behind.clip, CLIPS.behind.rate);
         this.sounds.scare(1);
         this.jolt();
       } else if (s.t > 9) this.hide(false);
@@ -317,19 +291,17 @@ export class PagodaApparition {
     s.t += dt;
     const kind = s.scare.kind;
     const pose = ghostPose(kind, s.t);
-    this.pose(pose);
-    this.root.setEnabled(pose.visible);
-    const eye = g.player.feet.y + 1.58;
+    this.neck = pose.neck;
+    root.setEnabled(pose.visible);
     let x = s.at.x,
       z = s.at.z,
-      // She hangs a little off the ground, her face just above Sora's eyes.
-      y = eye - 1.45;
+      y = 0;
     const dx = c.feet.x - s.at.x,
       dz = c.feet.z - s.at.z,
       d = Math.hypot(dx, dz) || 1;
     if (kind === "glimpse") {
-      x += Math.cos(s.heading) * 4 * pose.travel;
-      z -= Math.sin(s.heading) * 4 * pose.travel;
+      x += Math.cos(s.heading) * 3.2 * pose.travel;
+      z -= Math.sin(s.heading) * 3.2 * pose.travel;
     } else if (kind === "lunge") {
       x += (dx / d) * 1.05 * pose.travel;
       z += (dz / d) * 1.05 * pose.travel;
@@ -337,17 +309,19 @@ export class PagodaApparition {
       // Back from the blink a step nearer.
       x += (dx / d) * 1.4 * pose.travel;
       z += (dz / d) * 1.4 * pose.travel;
-    } else if (kind === "rise") y = -1.4 + pose.travel * 1.6 + (eye - 1.58);
+    } else if (kind === "rise")
+      y = -0.8 + pose.travel * 0.7; // getting up out of the black water beside the planks
     else if (kind === "behind") {
-      x += Math.sin(s.heading + Math.PI) * 0.4 * pose.travel;
-      z += Math.cos(s.heading + Math.PI) * 0.4 * pose.travel;
+      x += (dx / d) * 0.4 * pose.travel;
+      z += (dz / d) * 0.4 * pose.travel;
     }
-    // A shudder, not a smooth glide.
-    x += (Math.random() - 0.5) * 0.02;
-    z += (Math.random() - 0.5) * 0.02;
-    this.root.position.set(x, y, z);
-    // Always facing Sora, even as she moves.
-    this.root.rotation.y = -Math.atan2(c.feet.x - x, c.feet.z - z);
+    root.position.set(x, y, z);
+    // She faces Sora, except while she crosses, when she faces where she is going.
+    const toward = Math.atan2(c.feet.x - x, c.feet.z - z);
+    root.rotation.y =
+      kind === "glimpse" && s.t < 0.82
+        ? Math.atan2(Math.cos(s.heading), -Math.sin(s.heading))
+        : toward;
     const here = new Vector3(x, 1.5, z);
     for (const beat of BEATS[kind])
       if (before < beat.at && s.t >= beat.at) {
@@ -364,18 +338,20 @@ export class PagodaApparition {
     g.flags.set(`ep2.scare.${scare.id}`, true);
     const p = scare.place(c);
     const at = new Vector3(p.x, 0, p.z);
-    // She always faces Sora; the cinematic root is mirrored in X, so the heading is too.
     const heading = -Math.atan2(c.feet.x - p.x, c.feet.z - p.z);
     this.showing = { scare, t: 0, at, heading, armed: scare.kind === "behind" };
-    this.root!.position.set(p.x, -50, p.z);
-    this.root!.rotation.y = heading;
+    const root = this.rig!.root;
+    root.position.set(p.x, -50, p.z);
+    root.rotation.y = Math.atan2(c.feet.x - p.x, c.feet.z - p.z);
+    this.neck = 0;
     if (scare.kind === "behind") {
-      this.root!.setEnabled(false);
+      root.setEnabled(false);
       // Steps and a breath behind her, so the player has a reason to turn.
       this.sounds.behind(at);
       return;
     }
-    this.root!.setEnabled(true);
+    root.setEnabled(true);
+    this.rig!.start(CLIPS[scare.kind].clip, CLIPS[scare.kind].rate);
     if (scare.kind === "glimpse" || scare.kind === "stare") this.sounds.unease();
     else {
       this.sounds.scare(1);
@@ -392,12 +368,13 @@ export class PagodaApparition {
 
   /** Gone: abruptly, with a breath sucked in where she was (`vanished`), or quietly. */
   private hide(vanished: boolean): void {
-    if (vanished && this.root) {
-      const p = this.root.position;
+    const root = this.rig?.root;
+    if (vanished && root) {
+      const p = root.position;
       this.sounds.vanish(new Vector3(p.x, 1.5, p.z));
       this.afterglow = 0.45;
     } else this.lights.scare = 0;
     this.showing = null;
-    this.root?.setEnabled(false);
+    root?.setEnabled(false);
   }
 }

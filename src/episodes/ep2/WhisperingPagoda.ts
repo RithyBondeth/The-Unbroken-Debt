@@ -18,6 +18,7 @@ import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
 import { PagodaApparition, type ScareContext } from "./PagodaApparition";
 import { PagodaWatchers } from "./PagodaWatchers";
+import { GhostRig } from "./GhostRig";
 import { ShroudedDead } from "./ShroudedDead";
 import { buildFarForest } from "./PagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
@@ -60,7 +61,7 @@ export class WhisperingPagoda {
   readonly cheaHands: CheaHands;
   readonly escapeClock = new EscapeClock();
   private contactGrace: number = B.loadGrace;
-  private readonly actors: TransformNode[] = [];
+  private readonly rigs: GhostRig[] = [];
   /** How the shrouded dead move, twitch and vanish. */
   private dead!: ShroudedDead;
   private readonly beams: Mesh[] = [];
@@ -100,18 +101,12 @@ export class WhisperingPagoda {
     const g = this.game;
     this.area = await loadArea(g.scene, "ep2", "ep2_area_pagoda", {
       cellSize: 8,
-      keep: [
-        /^pret_\d+$/,
-        /^mirror_disc_/,
-        /^bridge_symbol_/,
-        "hall_chain",
-        /^bridge_plank/,
-        ...COLLAPSE_KEEP,
-      ],
+      keep: [/^mirror_disc_/, /^bridge_symbol_/, "hall_chain", /^bridge_plank/, ...COLLAPSE_KEEP],
       beforeBatch: (container) => {
-        // The fully authored seated monk replaces the first-pass sculpt.
+        // The fully authored seated monk replaces the first-pass sculpt, and the walking
+        // dead (their own asset) replace the shrouds built into older area exports.
         for (const mesh of container.meshes)
-          if (/^sophal_/.test(mesh.name)) {
+          if (/^(sophal_|pret_shroud_)/.test(mesh.name)) {
             mesh.isVisible = false;
             mesh.setEnabled(false);
           }
@@ -123,14 +118,13 @@ export class WhisperingPagoda {
     g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
     buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
-    for (let i = 0; i < 5; i++) {
-      const actor = this.node("pret_" + i);
-      if (!actor) throw new Error("Missing Pret " + i);
-      actor.rotationQuaternion = null;
-      for (const mesh of actor.getChildMeshes()) mesh.isPickable = false;
-      this.actors.push(actor);
-    }
-    this.dead = new ShroudedDead(this.actors, this.sounds, this.lights);
+    const kmaoch = await GhostRig.load(g.scene, "ep2_kmaoch", {
+      M_ep2_kmaoch_skin: new Color3(0.46, 0.46, 0.44),
+      M_ep2_kmaoch_head: new Color3(0.5, 0.5, 0.47),
+      M_ep2_kmaoch_cloth: new Color3(0.42, 0.4, 0.35),
+    });
+    for (let i = 0; i < PATROLS.length; i++) this.rigs.push(new GhostRig(kmaoch, "kmaoch_" + i));
+    this.dead = new ShroudedDead(g.scene, this.rigs, this.sounds, this.lights);
     await ShadowFigure.prepare(g.scene);
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
@@ -139,7 +133,7 @@ export class WhisperingPagoda {
     await this.equipment.load();
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
-    this.apparition.attach();
+    await this.apparition.load();
     this.watchers = new PagodaWatchers(g, this.sounds);
     this.watchers.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
@@ -922,9 +916,9 @@ export class WhisperingPagoda {
     this.cinematics.collapse.update(dt, active && p.stage === "escape");
     const shown = (i: number) =>
       (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
-    this.actors.forEach((actor, i) => {
+    this.rigs.forEach((_, i) => {
       if (!shown(i)) {
-        actor.setEnabled(false);
+        this.dead.hide(i);
         return;
       }
       const brain = this.ghosts[i];
@@ -934,12 +928,11 @@ export class WhisperingPagoda {
       this.dead.update(
         active ? simDt : 0,
         i,
-        actor,
         brain.position,
         brain.yaw,
         moved,
+        brain.mode,
         g.player.feet,
-        this.time,
       );
     });
     if (active && !g.cutscene)

@@ -178,7 +178,13 @@ import numpy as np
 from pagoda_scans import scan,instance
 from pagoda_rituals import ritual_materials,red_string_web,hanging_doll,talisman
 from kit import collider
-monk=scan(COL,'monk_seated','sophal_living',height=.95,at=(-18,-11,.16))
+monk=scan(COL,'monk_seated','sophal_living',height=.82,at=(-18,-11,.195))
+# He sits on an old reed mat over a kapok pad, on the kuti's boards; the pad takes up
+# the rough hem of the scan where the robe met the cloth it was scanned on.
+from pagoda_props import reed_seat
+seat_mat=library_material('bamboo_wall','M_ep2_monk_seat',tint=(.6,.5,.36))
+seat_mat.use_backface_culling=False
+reed_seat(COL,seat_mat,'kuti_seat_mat',-18,-11,.195,np.random.default_rng(1911))
 # The hall image on its red lotus throne.
 scan(COL,'buddha_seated','hall_buddha_image',height=1.75,at=(22,6.15,1.554))
 
@@ -293,12 +299,6 @@ for j in range(4):
     t=talisman(COL,rm,f'pagoda_goddess_tag_{j}',(math.cos(j*1.7)*.22,math.sin(j*1.7)*.15,.65+j*.12),rng,rm['talisman_red'])
     for o in t:o.parent=goddess
 
-# The apparition: the woman in red (the Kuntilanak Merah scan), arms hanging, head
-# dropped. Parked out of sight; PagodaApparition moves her for each scare.
-ghost_root=empty('pagoda_ghost',COL,(0,0,0))
-ghost=scan(COL,'kuntilanak_red','pagoda_ghost_body',height=1.66)
-ghost.parent=ghost_root
-ghost_root.location=(0,0,-60)
 # A world anchor compensates the glTF X reflection, exactly as in the pagoda area.
 axes=empty('cinematic_axes',COL,(0,0,0))
 for obj in list(COL.objects):
