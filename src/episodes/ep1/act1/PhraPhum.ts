@@ -10,15 +10,15 @@ import { RenderTargetTexture } from "@babylonjs/core/Materials/Textures/renderTa
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "../../../core/Game";
-import { addStaticBox } from "../../../core/Physics";
+import { addStaticBox } from "../../../core/physics";
 import { boardCreak, rattlingBreath, seededRandom } from "../../../audio/synth";
-import type { DreadScore } from "../audio/DreadScore";
+import type { DreadScore } from "../../../audio/DreadScore";
 import { spiritRattle } from "../audio/presenceSounds";
 import { ShrineWoodwork } from "./ShrineWoodwork";
 import { agedShrineTimber, mapShrineGrain, ShrineAgeing } from "./ShrineAgeing";
 import { ShrineResponse } from "./ShrineResponse";
 import { ShrineEffigy } from "./ShrineEffigy";
-import { RelicCraft } from "../act3/RelicCraft";
+import { RelicCraft } from "../../../shared/RelicCraft";
 import type { SavePointAppearance } from "../../../systems/saves/SavePoint";
 
 type XYZ = [number, number, number];

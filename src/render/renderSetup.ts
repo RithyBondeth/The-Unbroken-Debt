@@ -14,7 +14,7 @@ import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { SubMesh } from "@babylonjs/core/Meshes/subMesh";
 import type { Material } from "@babylonjs/core/Materials/material";
-import type { QualityPreset } from "./QualityPresets";
+import type { QualityPreset } from "./qualityPresets";
 import { VolumetricFog } from "./VolumetricFog";
 import { LOOK } from "./look";
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";

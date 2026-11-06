@@ -10,11 +10,11 @@ import {
   rattlingBreath,
   boardCreak,
 } from "../../audio/synth";
-import { frogsLoop, cricketsLoop, dawnBirds } from "../ep1/audio/nightSounds";
-import { canopyWind, foliageMovement } from "../ep1/audio/atmosphereSounds";
-import { spiritShriek } from "../ep1/audio/actThreeSounds";
-import { breathOut } from "../ep1/audio/nightSounds";
-import { DreadScore } from "../ep1/audio/DreadScore";
+import { frogsLoop, cricketsLoop, dawnBirds } from "../../audio/sounds/nightSounds";
+import { canopyWind, foliageMovement } from "../../audio/sounds/atmosphereSounds";
+import { spiritShriek } from "../../audio/sounds/spiritSounds";
+import { breathOut } from "../../audio/sounds/nightSounds";
+import { DreadScore } from "../../audio/DreadScore";
 import { harvestMusic } from "./cinematics/harvestMusic";
 import {
   distantSob,

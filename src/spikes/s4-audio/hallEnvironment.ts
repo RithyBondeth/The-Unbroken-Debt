@@ -8,8 +8,8 @@ import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGener
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { enablePhysics } from "../../core/Physics";
-import type { QualityPreset } from "../../render/QualityPresets";
+import { enablePhysics } from "../../core/physics";
+import type { QualityPreset } from "../../render/qualityPresets";
 import {
   createClusteredLights,
   createPostPipeline,
@@ -17,8 +17,8 @@ import {
   FLAME_COLOR,
   limitLightToRange,
   type PostPipeline,
-} from "../../render/RenderSetup";
-import { mergeStaticMeshes } from "../../render/StaticBatcher";
+} from "../../render/renderSetup";
+import { mergeStaticMeshes } from "../../render/staticBatcher";
 import { buildHall, type Hall } from "./hall";
 
 export interface HallEnvironment {

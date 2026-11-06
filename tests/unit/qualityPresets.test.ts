@@ -4,7 +4,7 @@ import {
   isQualityName,
   QUALITY_ORDER,
   QUALITY_PRESETS,
-} from "../../src/render/QualityPresets";
+} from "../../src/render/qualityPresets";
 
 describe("quality presets", () => {
   it("match the TDD minimum-spec targets for Medium", () => {

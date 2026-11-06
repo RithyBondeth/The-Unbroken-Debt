@@ -1,5 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
-import { RelicCraft } from "../act3/RelicCraft";
+import { RelicCraft } from "../../../shared/RelicCraft";
 import { WallTelephone } from "./WallTelephone";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 

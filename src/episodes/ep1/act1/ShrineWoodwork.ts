@@ -2,7 +2,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import type { RelicCraft } from "../act3/RelicCraft";
+import type { RelicCraft } from "../../../shared/RelicCraft";
 
 /** Plain household joinery, measured in metres. */
 export class ShrineWoodwork {

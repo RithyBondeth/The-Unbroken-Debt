@@ -4,7 +4,7 @@ import type { Game } from "../../../core/Game";
 import { seededRandom } from "../../../audio/synth";
 import type { PlantSite, TreeVoice } from "../../../render/plantHeights";
 import { FRONT_SPEED, GUST_RISE, type Gust, type WindState } from "../../../render/wind";
-import type { Sting } from "./dreadSounds";
+import type { Sting } from "../../../audio/sounds/dreadSounds";
 import {
   GUST_SECONDS,
   bambooKnock,

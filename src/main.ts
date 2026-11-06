@@ -1,9 +1,9 @@
 import type { Game } from "./core/Game";
 import { detectDevice } from "./render/detectDevice";
-import { isQualityName } from "./render/QualityPresets";
+import { isQualityName } from "./render/qualityPresets";
 import { hasSpike, runSpike } from "./spikes";
-import { showRequirementsPage } from "./ui/html/RequirementsPage";
-import { readWelcomeSettings, showBootError, showWelcomeScreen } from "./ui/html/WelcomeScreen";
+import { showRequirementsPage } from "./ui/html/requirementsPage";
+import { readWelcomeSettings, showBootError, showWelcomeScreen } from "./ui/html/welcomeScreen";
 
 /**
  * The engine and the game are a separate chunk, so the welcome screen appears

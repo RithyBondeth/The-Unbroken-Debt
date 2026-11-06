@@ -1,4 +1,4 @@
-import { biquad, mix, noise, normalise, wrapLoop } from "../../../audio/synth";
+import { biquad, mix, noise, normalise, wrapLoop } from "../synth";
 
 /** Wet leaves being brushed twice, followed by a smaller movement; no voice or attack cue. */
 export function foliageMovement(rate: number, random: () => number): Float32Array {

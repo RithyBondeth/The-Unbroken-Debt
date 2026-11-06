@@ -9,7 +9,7 @@ import { BoundingInfo } from "@babylonjs/core/Culling/boundingInfo";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DitheredTileFadeMaterialPlugin } from "@babylonjs/core/Materials/ditheredTileFadeMaterialPlugin";
 import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
-import { realiseInstances } from "../../../core/AreaLoader";
+import { realiseInstances } from "../../core/areaLoader";
 
 const templates = new WeakMap<Scene, AssetContainer>();
 const loading = new WeakMap<Scene, Promise<void>>();

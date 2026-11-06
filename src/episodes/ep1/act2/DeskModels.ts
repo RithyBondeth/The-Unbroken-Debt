@@ -1,5 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "../../../core/areaLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";

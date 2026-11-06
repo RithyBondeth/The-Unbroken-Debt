@@ -8,9 +8,9 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Space } from "@babylonjs/core/Maths/math.axis";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
-import { realiseInstances } from "../../../core/AreaLoader";
+import { realiseInstances } from "../../../core/areaLoader";
 import { KrasueDynamics } from "./KrasueDynamics";
-import { krasueScreamMouth } from "./KrasueExpression";
+import { krasueScreamMouth } from "./krasueExpression";
 import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
 
 const assets = new WeakMap<Scene, AssetContainer>();

@@ -9,7 +9,7 @@ import { Game } from "../../src/core/Game";
 import { createEngine } from "../../src/render/createEngine";
 import { detectDevice } from "../../src/render/detectDevice";
 import { useLocalDecoders } from "../../src/render/decoders";
-import { isQualityName } from "../../src/render/QualityPresets";
+import { isQualityName } from "../../src/render/qualityPresets";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { saveShot } from "../../src/debug/saveShot";
 import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";

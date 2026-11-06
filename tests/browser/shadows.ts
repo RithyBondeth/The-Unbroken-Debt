@@ -6,7 +6,7 @@ import { detectDevice } from "../../src/render/detectDevice";
 import { useLocalDecoders } from "../../src/render/decoders";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { saveShot } from "../../src/debug/saveShot";
-import { ShadowFigure } from "../../src/episodes/ep1/entities/ShadowFigure";
+import { ShadowFigure } from "../../src/shared/entities/ShadowFigure";
 import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
 
 async function review(): Promise<void> {

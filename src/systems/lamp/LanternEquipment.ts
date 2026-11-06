@@ -1,5 +1,5 @@
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
-import { Lamp } from "../../systems/lamp/Lamp";
+import { Lamp } from "./Lamp";
 import { HeldLamp } from "../../player/HeldLamp";
 import type { Game } from "../../core/Game";
 import type { PointLight } from "@babylonjs/core/Lights/pointLight";
@@ -10,7 +10,7 @@ export interface ExpeditionLights {
 }
 
 /** The same physical lantern as Episode 1, with Sophal's sliding shutter. */
-export class PagodaEquipment {
+export class LanternEquipment {
   readonly lamp: Lamp;
   held!: HeldLamp;
   memory = false;

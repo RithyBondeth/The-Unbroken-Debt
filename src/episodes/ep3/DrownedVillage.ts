@@ -3,14 +3,14 @@ import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateRibbon } from "@babylonjs/core/Meshes/Builders/ribbonBuilder";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
 import type { Game } from "../../core/Game";
-import { loadArea, type Area } from "../../core/AreaLoader";
+import { loadArea, type Area } from "../../core/areaLoader";
 import type { SaveData } from "../../systems/saves/SaveData";
 import { encodeSaveCode } from "../../systems/saves/saveCode";
-import { ResolutionView } from "../ep1/resolution/ResolutionView";
-import { RelicCraft } from "../ep1/act3/RelicCraft";
-import { ShadowFigure } from "../ep1/entities/ShadowFigure";
-import { PagodaEquipment } from "../ep2/PagodaEquipment";
-import { CheaHands } from "../ep2/cinematics/CheaHands";
+import { ResolutionView } from "../../ui/html/ResolutionView";
+import { RelicCraft } from "../../shared/RelicCraft";
+import { ShadowFigure } from "../../shared/entities/ShadowFigure";
+import { LanternEquipment } from "../../systems/lamp/LanternEquipment";
+import { CheaHands } from "../../player/CheaHands";
 import { VillageLights } from "./VillageLights";
 import { VillageWater } from "./VillageWater";
 import { VillageSoundscape } from "./VillageSoundscape";
@@ -38,7 +38,7 @@ export class DrownedVillage {
   area!: Area;
   lights!: VillageLights;
   water!: VillageWater;
-  equipment!: PagodaEquipment;
+  equipment!: LanternEquipment;
   readonly progress: VillageProgress;
   readonly survival = new WaterSurvival();
   readonly spirit = new DrownedBrain();
@@ -140,7 +140,7 @@ export class DrownedVillage {
       for (const mesh of root.getChildMeshes()) mesh.isPickable = false;
     }
     this.spawn();
-    this.equipment = new PagodaEquipment(
+    this.equipment = new LanternEquipment(
       g,
       this.lights,
       "No dry matches. Pa Lok left a matchbox beside the attic stove.",

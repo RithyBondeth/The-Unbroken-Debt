@@ -10,7 +10,7 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "../../../core/areaLoader";
 import { seededRandom } from "../../../audio/synth";
 import {
   chantDrone,
@@ -22,7 +22,7 @@ import {
   geckoCall,
   owlHoot,
   branchSnap,
-} from "../audio/nightSounds";
+} from "../../../audio/sounds/nightSounds";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
 /**

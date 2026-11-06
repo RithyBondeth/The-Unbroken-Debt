@@ -1,5 +1,5 @@
 import layout from "./village-layout.json";
-import type { ItemInfo } from "../../ep1/data/items";
+import type { ItemInfo } from "../../../systems/inventory/Inventory";
 
 /** Feet planted on the upper veranda, drawn towards the fourth candle. */
 export const RITUAL_FIGURES = {

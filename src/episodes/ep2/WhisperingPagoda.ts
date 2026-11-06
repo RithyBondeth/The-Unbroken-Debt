@@ -7,23 +7,23 @@ import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Game } from "../../core/Game";
-import { loadArea, type Area } from "../../core/AreaLoader";
+import { loadArea, type Area } from "../../core/areaLoader";
 import type { SaveData } from "../../systems/saves/SaveData";
 import { encodeSaveCode } from "../../systems/saves/saveCode";
-import { ResolutionView } from "../ep1/resolution/ResolutionView";
-import { ShadowFigure } from "../ep1/entities/ShadowFigure";
-import { EP1_GRADE } from "../ep1/data/grade";
+import { ResolutionView } from "../../ui/html/ResolutionView";
+import { ShadowFigure } from "../../shared/entities/ShadowFigure";
+import { NIGHT_GRADE } from "../../render/nightGrade";
 import { PagodaLights } from "./PagodaLights";
 import { PagodaZones, zoneOf } from "./PagodaZones";
-import { PagodaEquipment } from "./PagodaEquipment";
+import { LanternEquipment } from "../../systems/lamp/LanternEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
 import { PagodaApparition, type ScareContext } from "./PagodaApparition";
 import { PagodaWatchers } from "./PagodaWatchers";
 import { GhostRig } from "./GhostRig";
 import { ShroudedDead } from "./ShroudedDead";
-import { buildFarForest } from "./PagodaFarForest";
+import { buildFarForest } from "./pagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
-import { CheaHands } from "./cinematics/CheaHands";
+import { CheaHands } from "../../player/CheaHands";
 import { COLLAPSE_KEEP } from "./cinematics/LibraryCollapse";
 import { PAGODA_BALANCE as B, EscapeClock, inKuti, simulationStep } from "./data/balance";
 import { PagodaGate } from "./PagodaGate";
@@ -52,7 +52,7 @@ export class WhisperingPagoda {
   private zones!: PagodaZones;
   private apparition!: PagodaApparition;
   private watchers!: PagodaWatchers;
-  equipment!: PagodaEquipment;
+  equipment!: LanternEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
   readonly view = new ResolutionView("Episode 2 · The Whispering Pagoda");
@@ -135,7 +135,7 @@ export class WhisperingPagoda {
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
     this.spawn();
-    this.equipment = new PagodaEquipment(g, this.lights);
+    this.equipment = new LanternEquipment(g, this.lights);
     await this.equipment.load();
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
@@ -543,7 +543,7 @@ export class WhisperingPagoda {
           ["Return to the library"],
         );
         await g.fade.to(1, 1);
-        g.atmosphere.setGrade(EP1_GRADE);
+        g.atmosphere.setGrade(NIGHT_GRADE);
         g.atmosphere.mood.memory = false;
         g.player.config.walkSpeed = 1.6;
         g.player.config.hurrySpeed = 3.4;
@@ -632,7 +632,7 @@ export class WhisperingPagoda {
     g.player.config.hurrySpeed = 0.85;
     g.player.config.crouchSpeed = 0.65;
     g.atmosphere.setGrade({
-      ...EP1_GRADE,
+      ...NIGHT_GRADE,
       saturation: -0.45,
       midtones: { tint: [1, 0.72, 0.43], strength: 0.4 },
     });

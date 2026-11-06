@@ -8,7 +8,7 @@ import {
   normalise,
   stickSlip,
   wrapLoop,
-} from "../../../audio/synth";
+} from "../synth";
 
 /**
  * Synthesised stand-ins for the village night (Audio Design Document, section 9)

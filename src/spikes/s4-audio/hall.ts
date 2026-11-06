@@ -12,7 +12,7 @@ import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { Scene } from "@babylonjs/core/scene";
-import { addStaticBox } from "../../core/Physics";
+import { addStaticBox } from "../../core/physics";
 import { makeSurfaceTextures } from "./hallTextures";
 
 export interface Hall {

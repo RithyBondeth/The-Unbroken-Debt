@@ -2,7 +2,7 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Material } from "@babylonjs/core/Materials/material";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import type { Scene } from "@babylonjs/core/scene";
-import type { QualityName } from "./QualityPresets";
+import type { QualityName } from "./qualityPresets";
 
 const rainDressed = new WeakSet<PBRMaterial>();
 

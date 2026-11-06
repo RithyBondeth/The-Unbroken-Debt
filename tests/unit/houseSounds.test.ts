@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as house from "../../src/episodes/ep1/audio/houseSounds";
 import * as actThree from "../../src/episodes/ep1/audio/actThreeSounds";
+import * as spirit from "../../src/audio/sounds/spiritSounds";
 import { seededRandom } from "../../src/audio/synth";
 
 const RATE = 22050;
@@ -10,7 +11,7 @@ const LOOPS = new Set(["heartbeat", "shellacNoise", "ritualDrone"]);
 const BEDS = new Set(["roofRain", "shutterWind", "floorDrips"]);
 
 describe("house and Act III placeholder sounds", () => {
-  for (const [name, make] of Object.entries({ ...house, ...actThree })) {
+  for (const [name, make] of Object.entries({ ...house, ...actThree, ...spirit })) {
     it(`${name} is finite, audible and within the peak`, () => {
       const samples = make(RATE, seededRandom(13));
       expect(samples.length).toBeGreaterThan(RATE * 0.3);

@@ -3,10 +3,10 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { decodeHandAsset } from "../../../player/HandAsset";
-import { HandRig } from "../../../player/HandRig";
-import type { Game } from "../../../core/Game";
-import type { PagodaEquipment } from "../PagodaEquipment";
+import { decodeHandAsset } from "./HandAsset";
+import { HandRig } from "./HandRig";
+import type { Game } from "../core/Game";
+import type { LanternEquipment } from "../systems/lamp/LanternEquipment";
 /** Separately authored old male anatomy and photographic skin, on Episode 1's actual grip rig. */
 export class CheaHands {
   readonly left: HandRig;
@@ -58,7 +58,7 @@ export class CheaHands {
     this.left.root.setEnabled(false);
     this.right.root.setEnabled(false);
   }
-  update(dt: number, equipment: PagodaEquipment): void {
+  update(dt: number, equipment: LanternEquipment): void {
     this.time += dt;
     const g = this.game,
       show =

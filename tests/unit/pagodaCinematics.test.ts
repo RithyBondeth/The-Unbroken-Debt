@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CinematicClock, dialogueScript } from "../../src/episodes/ep2/cinematics/Timeline";
+import { CinematicClock, dialogueScript } from "../../src/shared/cinematics/timeline";
 import {
   SOPHAL_SCENE,
   HARVEST_SCENE,

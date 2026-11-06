@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { Flags } from "../../src/core/Flags";
 import { Inventory } from "../../src/systems/inventory/Inventory";
-import { notebookContent } from "../../src/ui/notebook/NotebookContent";
+import { notebookContent } from "../../src/ui/notebook/notebookContent";
 import { mapSvg } from "../../src/ui/notebook/NotebookMap";
 
 const at = { x: -3, y: 0, z: -0.7 };

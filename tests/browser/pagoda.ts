@@ -4,7 +4,7 @@ import { Game } from "../../src/core/Game";
 import { createEngine } from "../../src/render/createEngine";
 import { detectDevice } from "../../src/render/detectDevice";
 import { useLocalDecoders } from "../../src/render/decoders";
-import { isQualityName } from "../../src/render/QualityPresets";
+import { isQualityName } from "../../src/render/qualityPresets";
 import { SaveStore } from "../../src/systems/saves/SaveStore";
 import { newGameSave } from "../../src/systems/saves/SaveData";
 import { saveShot } from "../../src/debug/saveShot";

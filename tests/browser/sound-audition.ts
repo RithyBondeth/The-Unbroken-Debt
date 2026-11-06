@@ -1,12 +1,7 @@
 import { seededRandom } from "../../src/audio/synth";
-import {
-  pressureBed,
-  ringingEars,
-  sting,
-  studioRoom,
-} from "../../src/episodes/ep1/audio/dreadSounds";
+import { pressureBed, ringingEars, sting, studioRoom } from "../../src/audio/sounds/dreadSounds";
 import { taxiMotor, taxiWipers } from "../../src/episodes/ep1/audio/taxiSounds";
-import { villageRain } from "../../src/episodes/ep1/audio/nightSounds";
+import { villageRain } from "../../src/audio/sounds/nightSounds";
 import { thunder } from "../../src/episodes/ep1/audio/prologueSounds";
 import {
   bambooKnock,

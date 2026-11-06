@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { Flags } from "../../src/core/Flags";
-import { passageReady, passageRequired } from "../../src/episodes/ep1/act1/VigilPassage";
+import { passageReady, passageRequired } from "../../src/episodes/ep1/act1/vigilPassage";
 import { dreadBed, spiritRattle } from "../../src/episodes/ep1/audio/presenceSounds";
 import { seededRandom } from "../../src/audio/synth";
 

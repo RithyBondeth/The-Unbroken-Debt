@@ -1,7 +1,7 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "../../../core/areaLoader";
 import { boardCreak, seededRandom, wetStep } from "../../../audio/synth";
 import { newGameSave } from "../../../systems/saves/SaveData";
 import type { SaveData } from "../../../systems/saves/SaveData";

@@ -13,7 +13,7 @@ import {
   canopyWind,
   foliageMovement,
   pavilionCloth,
-} from "../../src/episodes/ep1/audio/atmosphereSounds";
+} from "../../src/audio/sounds/atmosphereSounds";
 import { seededRandom, rms } from "../../src/audio/synth";
 import type { Game } from "../../src/core/Game";
 

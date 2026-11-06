@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutFarForest, floorPieces } from "../../src/episodes/ep2/PagodaFarForest";
+import { layoutFarForest, floorPieces } from "../../src/episodes/ep2/pagodaFarForest";
 import { ZONE_REACH, zoneDistance } from "../../src/episodes/ep2/PagodaZones";
 import {
   BOUNDS,

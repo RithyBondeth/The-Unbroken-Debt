@@ -9,11 +9,11 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Game } from "../../core/Game";
-import type { Area } from "../../core/AreaLoader";
-import { FLAME_COLOR, limitLightToRange } from "../../render/RenderSetup";
+import type { Area } from "../../core/areaLoader";
+import { FLAME_COLOR, limitLightToRange } from "../../render/renderSetup";
 import { softFalloff, useSoftFalloff } from "../../render/softLampFalloff";
 import { applyFoliageWind, type FoliageWind } from "../../render/FoliageWind";
-import { NIGHT_LOOK, DAWN_LOOK } from "../ep1/data/nightLook";
+import { NIGHT_LOOK, DAWN_LOOK } from "../../render/nightLook";
 import { LowGroundMist } from "../../render/LowGroundMist";
 import type { MistPocket } from "../../render/mist";
 

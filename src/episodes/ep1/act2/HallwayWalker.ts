@@ -9,7 +9,7 @@ import type { WalkerModels } from "./WalkerModels";
 import { WardrobeHiding } from "./WardrobeHiding";
 import { CP3_FEET, CP3_YAW } from "../data/walker";
 import { boardCreak, seededRandom, wetStep } from "../../../audio/synth";
-import { breathOut } from "../audio/nightSounds";
+import { breathOut } from "../../../audio/sounds/nightSounds";
 import { heartbeat } from "../audio/houseSounds";
 import { StalkerVoice } from "../audio/StalkerVoice";
 

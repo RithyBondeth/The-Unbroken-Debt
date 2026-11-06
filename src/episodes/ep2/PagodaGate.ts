@@ -1,7 +1,7 @@
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
-import { RelicCraft } from "../ep1/act3/RelicCraft";
+import { RelicCraft } from "../../shared/RelicCraft";
 import { ANCESTORS } from "./data/pagoda";
 import type { PagodaProgress } from "./PagodaProgress";
 

@@ -1,4 +1,4 @@
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "../../audio/synth";
 
 /**
  * The monsoon night's cloud, as two maps for the sky dome (StormSky): a high,

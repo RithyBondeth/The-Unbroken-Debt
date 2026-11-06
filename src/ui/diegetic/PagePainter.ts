@@ -1,5 +1,5 @@
-import { paintNotebookPortrait } from "../notebook/NotebookPortraits";
-import type { NotebookSnapshot } from "../notebook/NotebookContent";
+import { paintNotebookPortrait } from "../notebook/notebookPortraits";
+import type { NotebookSnapshot } from "../notebook/notebookContent";
 import { paintNotebookMap } from "../notebook/NotebookMap";
 import { drawHousePlan, drawNightCircles, drawSketch, INK, seeded, type Pen } from "./drawings";
 import {

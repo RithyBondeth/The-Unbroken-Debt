@@ -7,10 +7,10 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { QualityPreset } from "../../../render/QualityPresets";
-import { createShadowedPointLight, FLAME_COLOR } from "../../../render/RenderSetup";
-import type { Area } from "../../../core/AreaLoader";
-import { Lightning } from "../Lightning";
+import type { QualityPreset } from "../../../render/qualityPresets";
+import { createShadowedPointLight, FLAME_COLOR } from "../../../render/renderSetup";
+import type { Area } from "../../../core/areaLoader";
+import { Lightning } from "../../../render/weather/Lightning";
 import { useSoftFalloff } from "../../../render/softLampFalloff";
 
 /**

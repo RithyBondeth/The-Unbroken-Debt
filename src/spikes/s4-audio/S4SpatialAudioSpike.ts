@@ -8,7 +8,7 @@ import { KeyboardMouseInput, type InputSource } from "../../player/InputSource";
 import type { MoveIntent } from "../../player/movement";
 import { PlayerController } from "../../player/PlayerController";
 import { PerfOverlay } from "../../debug/PerfOverlay";
-import { getPreset, isQualityName, type QualityName } from "../../render/QualityPresets";
+import { getPreset, isQualityName, type QualityName } from "../../render/qualityPresets";
 import type { DeviceProfile } from "../../render/DeviceProfile";
 import { AudioSystem, PANNING } from "../../audio/AudioSystem";
 import { boardCreak, rattlingBreath, seededRandom, wetStep } from "../../audio/synth";
@@ -26,7 +26,7 @@ import { SpikeHud } from "./SpikeHud";
 import { createHallEnvironment } from "./hallEnvironment";
 import { renderEars, type EarLevels } from "./offlineCheck";
 import { runRenderLoop } from "../../render/renderLoop";
-import { renderStallNotice } from "../../ui/html/RenderStallNotice";
+import { renderStallNotice } from "../../ui/html/renderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S4Result {

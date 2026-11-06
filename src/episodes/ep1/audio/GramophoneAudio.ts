@@ -2,7 +2,7 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import type { AudioSystem } from "../../../audio/AudioSystem";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "../../../audio/synth";
-import { chantDrone } from "./nightSounds";
+import { chantDrone } from "../../../audio/sounds/nightSounds";
 import { shellacNoise } from "./houseSounds";
 import { SOK_RECORDING } from "../data/investigation";
 import voiceManifest from "../data/sokVoice.json";

@@ -47,7 +47,7 @@ so it stays dark against a flash. Both drift round the dome at different speeds;
 the scud runs about four times faster. It is a `StandardMaterial` with
 emissive × diffuse, so the WebGPU pre-pass, volumetric fog and TAA are unchanged.
 
-The night's light levels now live in `src/episodes/ep1/data/nightLook.ts` and are
+The night's light levels now live in `src/render/nightLook.ts` and are
 darker:
 
 | Setting | Before | Now |

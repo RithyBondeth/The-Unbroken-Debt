@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { ShrineWoodwork } from "../../src/episodes/ep1/act1/ShrineWoodwork";
-import { RelicCraft } from "../../src/episodes/ep1/act3/RelicCraft";
+import { RelicCraft } from "../../src/shared/RelicCraft";
 import { ShrineResponse } from "../../src/episodes/ep1/act1/ShrineResponse";
 import { mapShrineGrain, ShrineAgeing } from "../../src/episodes/ep1/act1/ShrineAgeing";
 import {

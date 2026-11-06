@@ -9,7 +9,7 @@ import { PhysicsShapeBox, PhysicsShapeMesh } from "@babylonjs/core/Physics/v2/ph
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { Node } from "@babylonjs/core/node";
 import type { Scene } from "@babylonjs/core/scene";
-import type { Surface } from "./Physics";
+import type { Surface } from "./physics";
 import type { Ladder } from "../player/PlayerController";
 import { facingToGltf, isBoxShape, parseNodeName } from "./levelNodes";
 

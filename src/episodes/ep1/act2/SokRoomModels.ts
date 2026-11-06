@@ -12,7 +12,7 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "../../../core/areaLoader";
 import { seededRandom } from "../../../audio/synth";
 import { GOVERNOR } from "../data/investigation";
 

@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { TimingTools } from "@babylonjs/core/Misc/timingTools";
-import { applyRainWetness, keepSurfaceDetail } from "../../src/render/SurfaceDetail";
+import { applyRainWetness, keepSurfaceDetail } from "../../src/render/surfaceDetail";
 
 describe("surface detail", () => {
   const engines: NullEngine[] = [];

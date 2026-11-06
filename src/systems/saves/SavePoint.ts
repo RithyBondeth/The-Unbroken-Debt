@@ -9,7 +9,7 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import { addStaticBox } from "../../core/Physics";
+import { addStaticBox } from "../../core/physics";
 import type { StringKey } from "../../ui/html/StoryUi";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 

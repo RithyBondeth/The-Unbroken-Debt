@@ -6,7 +6,7 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { drawingFrame } from "../../src/player/DrawingPose";
+import { drawingFrame } from "../../src/player/drawingPose";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { FirstPersonHands } from "../../src/player/FirstPersonHands";
 const asset = decodeHandAsset(

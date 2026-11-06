@@ -1,6 +1,6 @@
 import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine";
 import type { Observer } from "@babylonjs/core/Misc/observable";
-import type { QualityPreset } from "./QualityPresets";
+import type { QualityPreset } from "./qualityPresets";
 import { ResolutionGovernor } from "./ResolutionGovernor";
 
 /**

@@ -3,8 +3,8 @@ import type { Game } from "../../../core/Game";
 import type { SaveData } from "../../../systems/saves/SaveData";
 import { encodeSaveCode } from "../../../systems/saves/saveCode";
 import { ResolutionProgress } from "./ResolutionProgress";
-import { ResolutionView } from "./ResolutionView";
-import { RelicCraft } from "../act3/RelicCraft";
+import { ResolutionView } from "../../../ui/html/ResolutionView";
+import { RelicCraft } from "../../../shared/RelicCraft";
 
 /** R01–R05. Save each decision before presenting the next reveal. */
 export class DawnResolution {

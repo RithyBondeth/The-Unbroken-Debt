@@ -9,8 +9,8 @@ import {
   wetStep,
   rattlingBreath,
 } from "../../audio/synth";
-import { villageRain, dawnBirds, branchSnap } from "../ep1/audio/nightSounds";
-import { DreadScore } from "../ep1/audio/DreadScore";
+import { villageRain, dawnBirds, branchSnap } from "../../audio/sounds/nightSounds";
+import { DreadScore } from "../../audio/DreadScore";
 import type { VillageStage } from "./VillageProgress";
 
 /** Positioned water, breathing under the boards, tin rain and timber failure share the series mix. */

@@ -14,7 +14,7 @@ import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlug
 import { PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/v2/physicsShape";
 import type { Scene } from "@babylonjs/core/scene";
 import { seededRandom } from "../../../audio/synth";
-import type { QualityPreset } from "../../../render/QualityPresets";
+import type { QualityPreset } from "../../../render/qualityPresets";
 import { foliageKind } from "../../../render/FoliageWind";
 import { plantPhase, type PlantSite, type TreeVoice } from "../../../render/plantHeights";
 import {
@@ -34,7 +34,7 @@ import {
   type Plant,
   type Species,
 } from "../data/forestBorder";
-import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "./forestCards";
+import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "../../../render/forestCards";
 
 /** One material's geometry from a village plant, its foot at the origin. */
 interface Part {

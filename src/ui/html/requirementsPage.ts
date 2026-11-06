@@ -1,4 +1,4 @@
-import { t } from "../../data/strings";
+import { t } from "../../data/strings/index";
 import type { BlockReason } from "../../render/DeviceProfile";
 
 /** Shown instead of the game when the device can't run it (see DeviceProfile). */

@@ -4,9 +4,9 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import { newGameSave, type SaveData } from "../../../systems/saves/SaveData";
 import { seededRandom } from "../../../audio/synth";
 import { thunder } from "../audio/prologueSounds";
-import { villageRain } from "../audio/nightSounds";
+import { villageRain } from "../../../audio/sounds/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
-import { DreadScore } from "../audio/DreadScore";
+import { DreadScore } from "../../../audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { taxiConversationAt } from "./taxiConversation";

@@ -1,14 +1,5 @@
-import {
-  creak,
-  hall,
-  knock,
-  loopify,
-  place,
-  sweepBand,
-  whisper,
-  type Stereo,
-} from "../../../audio/dread";
-import { biquad, brown, modal, noise, normalise, seededRandom } from "../../../audio/synth";
+import { creak, hall, knock, loopify, place, sweepBand, whisper, type Stereo } from "../dread";
+import { biquad, brown, modal, noise, normalise, seededRandom } from "../synth";
 import { dogBarks } from "./nightSounds";
 
 /**

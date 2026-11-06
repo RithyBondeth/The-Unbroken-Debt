@@ -1,7 +1,7 @@
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
 import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
-import { DreadScore } from "../../src/episodes/ep1/audio/DreadScore";
+import { DreadScore } from "../../src/audio/DreadScore";
 import { PhoneBell } from "../../src/episodes/ep1/audio/PhoneBell";
 import { Flags } from "../../src/core/Flags";
 

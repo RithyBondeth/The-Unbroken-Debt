@@ -1,6 +1,13 @@
 import type { EventBus } from "../../core/EventBus";
 import type { GameEvents } from "../../core/events";
 
+/** How an item shows in the satchel. */
+export interface ItemInfo {
+  name: string;
+  /** Shown under the name in the satchel; `{n}` is replaced by the count. */
+  note?: string;
+}
+
 /**
  * What Sora carries: item id to count (letters 1, matches 10). Items are data
  * (episode files); every change emits `inventory:changed` (TDD section 5).

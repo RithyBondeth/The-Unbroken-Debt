@@ -4,7 +4,7 @@ import type { Vigil } from "./Vigil";
 import type { SaveData } from "../../../systems/saves/SaveData";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import { ShadowFigure } from "../entities/ShadowFigure";
+import { ShadowFigure } from "../../../shared/entities/ShadowFigure";
 import { StalkerVoice } from "../audio/StalkerVoice";
 import { EarlyStealthBrain } from "./EarlyStealthBrain";
 import {
@@ -12,7 +12,7 @@ import {
   passageRequired,
   PASSAGE_SECONDS,
   PASSAGE_WARNING_SECONDS,
-} from "./VigilPassage";
+} from "./vigilPassage";
 import { SpiritPresence } from "../entities/SpiritPresence";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { seededRandom } from "../../../audio/synth";

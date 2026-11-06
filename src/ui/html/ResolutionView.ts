@@ -1,6 +1,6 @@
-import type { ResolutionProgress } from "./ResolutionProgress";
-import "../../../ui/html/resolution.css";
-import { setControlText } from "../../../ui/html/controlText";
+import type { ResolutionProgress } from "../../episodes/ep1/resolution/ResolutionProgress";
+import "./resolution.css";
+import { setControlText } from "./controlText";
 /** Accessible paper overlays: translated slip, seal map, and Sora's closing spread. */
 export class ResolutionView {
   private static nextId = 0;

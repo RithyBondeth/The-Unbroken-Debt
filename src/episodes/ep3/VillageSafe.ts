@@ -1,6 +1,6 @@
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import type { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import { RelicCraft } from "../ep1/act3/RelicCraft";
+import { RelicCraft } from "../../shared/RelicCraft";
 import type { Game } from "../../core/Game";
 import { KHMER_DIGITS } from "./data/village";
 

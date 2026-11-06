@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cloudDeck, cloudScud, elevation } from "../../src/episodes/ep1/act1/stormClouds";
-import { DAWN_LOOK, NIGHT_LOOK } from "../../src/episodes/ep1/data/nightLook";
+import { cloudDeck, cloudScud, elevation } from "../../src/render/weather/stormClouds";
+import { DAWN_LOOK, NIGHT_LOOK } from "../../src/render/nightLook";
 
 const W = 256,
   H = 128;

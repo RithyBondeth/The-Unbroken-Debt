@@ -1,4 +1,4 @@
-import { DRAWING_VIEW_RADIUS, drawingFocus } from "../../src/player/DrawingPose";
+import { DRAWING_VIEW_RADIUS, drawingFocus } from "../../src/player/drawingPose";
 import type { InkMarks } from "../../src/episodes/ep1/prologue/InkMarks";
 import { Game } from "../../src/core/Game";
 import { createEngine } from "../../src/render/createEngine";

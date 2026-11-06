@@ -13,9 +13,9 @@ import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import type { AudioSystem } from "../../../audio/AudioSystem";
 import { seededRandom } from "../../../audio/synth";
-import { limitLightToRange } from "../../../render/RenderSetup";
-import { RelicCraft } from "../act3/RelicCraft";
-import { pavilionCloth } from "../audio/atmosphereSounds";
+import { limitLightToRange } from "../../../render/renderSetup";
+import { RelicCraft } from "../../../shared/RelicCraft";
+import { pavilionCloth } from "../../../audio/sounds/atmosphereSounds";
 import { whispers } from "../audio/vigilSounds";
 
 type XYZ = readonly [number, number, number];

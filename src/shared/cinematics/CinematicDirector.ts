@@ -1,5 +1,5 @@
-import type { Game } from "../../../core/Game";
-import { CinematicClock, type CinematicScript, type SubtitleCue } from "./Timeline";
+import type { Game } from "../../core/Game";
+import { CinematicClock, type CinematicScript, type SubtitleCue } from "./timeline";
 import "./cinematics.css";
 export interface CinematicFrame {
   elapsed: number;

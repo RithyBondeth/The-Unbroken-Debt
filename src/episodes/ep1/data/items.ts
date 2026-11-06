@@ -1,8 +1,4 @@
-export interface ItemInfo {
-  name: string;
-  /** Shown under the name in the satchel; `{n}` is replaced by the count. */
-  note?: string;
-}
+import type { ItemInfo } from "../../../systems/inventory/Inventory";
 
 /** Items in the satchel. The satchel itself holds the rest, so it is not listed. */
 export const ITEMS: Record<string, ItemInfo> = {

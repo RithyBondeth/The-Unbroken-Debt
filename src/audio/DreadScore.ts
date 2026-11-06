@@ -1,6 +1,6 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import type { AudioSystem } from "../../../audio/AudioSystem";
-import { STING_HIT, pressureBed, ringingEars, sting, type Sting } from "./dreadSounds";
+import type { AudioSystem } from "./AudioSystem";
+import { STING_HIT, pressureBed, ringingEars, sting, type Sting } from "./sounds/dreadSounds";
 
 /** The pressure bed at full dread: under the voices and the threats, never over them. */
 const BED_MAX = 0.42;

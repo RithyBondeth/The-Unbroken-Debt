@@ -1,4 +1,4 @@
-import type { NotebookSnapshot } from "../../../ui/notebook/NotebookContent";
+import type { NotebookSnapshot } from "../../../ui/notebook/notebookContent";
 import type { NotebookMap, MapShape } from "../../../ui/notebook/NotebookMap";
 import type {
   SketchbookData,
