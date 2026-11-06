@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { taxiMeter, taxiMotor, taxiWipers } from "../../src/episodes/ep1/audio/taxiSounds";
+import { taxiMeter, taxiMotor, taxiWipers } from "@/episodes/ep1/audio/taxiSounds";
 import {
   brakeSlither,
   driverGasp,
@@ -7,8 +7,8 @@ import {
   mudSprint,
   radioStatic,
   windowSlap,
-} from "../../src/episodes/ep1/audio/taxiDreadSounds";
-import { seededRandom } from "../../src/audio/synth";
+} from "@/episodes/ep1/audio/taxiDreadSounds";
+import { seededRandom } from "@/audio/synth";
 it.each([
   taxiMotor,
   taxiWipers,

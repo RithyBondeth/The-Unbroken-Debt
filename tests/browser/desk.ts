@@ -2,15 +2,15 @@
  * Start at /tests/browser/desk.html?continue&case=key and follow the reload links.
  */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { CP4_FEET } from "../../src/episodes/ep1/data/desk";
-import { saveShot } from "../../src/debug/saveShot";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { CP4_FEET } from "@/episodes/ep1/data/desk";
+import { saveShot } from "@/debug/saveShot";
 
 const output = document.getElementById("results")!;
 const report = (s: string) => (output.textContent += `${s}\n`);

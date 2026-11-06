@@ -1,12 +1,12 @@
-import { setControlText } from "../../../ui/html/controlText";
-import type { Game } from "../../../core/Game";
+import { setControlText } from "@/ui/html/controlText";
+import type { Game } from "@/core/Game";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { newGameSave, type SaveData } from "../../../systems/saves/SaveData";
-import { seededRandom } from "../../../audio/synth";
+import { newGameSave, type SaveData } from "@/systems/saves/SaveData";
+import { seededRandom } from "@/audio/synth";
 import { thunder } from "../audio/prologueSounds";
-import { villageRain } from "../audio/nightSounds";
+import { villageRain } from "@/audio/sounds/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
-import { DreadScore } from "../audio/DreadScore";
+import { DreadScore } from "@/audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { taxiConversationAt } from "./taxiConversation";

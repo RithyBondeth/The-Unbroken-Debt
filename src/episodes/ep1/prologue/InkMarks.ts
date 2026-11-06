@@ -5,13 +5,13 @@ import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3, Quaternion } from "@babylonjs/core/Maths/math.vector";
-import type { FirstPersonHands } from "../../../player/FirstPersonHands";
-import { drawingFrame } from "../../../player/DrawingPose";
-import { makeDraftingSurface } from "./DraftingSurface";
+import type { FirstPersonHands } from "@/player/FirstPersonHands";
+import { drawingFrame } from "@/player/drawingPose";
+import { makeDraftingSurface } from "./draftingSurface";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 
 /**
  * Fresh ink on the illustration: the line Sora inks at P02, and the blot that

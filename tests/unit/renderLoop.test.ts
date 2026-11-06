@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FrameFailures, MAX_LOGGED_ERRORS } from "../../src/render/renderLoop";
+import { FrameFailures, MAX_LOGGED_ERRORS } from "@/render/renderLoop";
 
 const FRAME = 1000 / 60;
 

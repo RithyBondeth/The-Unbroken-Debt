@@ -7,10 +7,10 @@ import {
   taxiPassBeat,
   taxiRunnerAt,
   taxiSwerve,
-} from "../../src/episodes/ep1/travel/taxiApparitions";
-import { taxiNightLevels, taxiThrottle } from "../../src/episodes/ep1/travel/TaxiSoundscape";
-import { taxiDistance, taxiRoadPoint, taxiRoadX } from "../../src/episodes/ep1/travel/taxiMotion";
-import { TAXI_CONVERSATION } from "../../src/episodes/ep1/travel/taxiConversation";
+} from "@/episodes/ep1/travel/taxiApparitions";
+import { taxiNightLevels, taxiThrottle } from "@/episodes/ep1/travel/TaxiSoundscape";
+import { taxiDistance, taxiRoadPoint, taxiRoadX } from "@/episodes/ep1/travel/taxiMotion";
+import { TAXI_CONVERSATION } from "@/episodes/ep1/travel/taxiConversation";
 
 /** Signed metres right of the centreline, the inverse of taxiRoadPoint near `along`. */
 function lateral(x: number, z: number): number {

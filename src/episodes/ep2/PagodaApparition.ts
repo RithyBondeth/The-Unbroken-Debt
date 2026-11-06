@@ -1,5 +1,5 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../core/Game";
+import type { Game } from "@/core/Game";
 import { GhostRig } from "./GhostRig";
 import type { PagodaLights } from "./PagodaLights";
 import type { PagodaSoundscape } from "./PagodaSoundscape";

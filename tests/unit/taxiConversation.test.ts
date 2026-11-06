@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  TAXI_CONVERSATION,
-  taxiConversationAt,
-} from "../../src/episodes/ep1/travel/taxiConversation";
+import { TAXI_CONVERSATION, taxiConversationAt } from "@/episodes/ep1/travel/taxiConversation";
 describe("taxi conversation", () => {
   it("gives both characters a readable exchange without overlapping lines or the final fade", () => {
     expect(TAXI_CONVERSATION.filter((l) => l.speaker === "Sora")).toHaveLength(7);

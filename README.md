@@ -66,22 +66,22 @@ npm run dev
 .
 ├── src/                 Game source code (TypeScript, Babylon.js) — see src/README.md
 │   ├── main.ts          Boot: device check, engine, game start
-│   ├── core/            Game, event bus, flags, loading, localisation
-│   ├── player/          Controller, camera, interaction, hands
-│   ├── systems/         Inventory, sketchbook, lamp, saves, settings …
-│   ├── ai/              Perception, state machines, spirit entities
-│   ├── sequences/       Scripted scenes
-│   ├── audio/           Audio engine, buses, ambience
-│   ├── render/          Engine, device check, quality presets, dynamic resolution, post-processing
-│   ├── ui/              Diegetic UI and HTML menus
-│   ├── episodes/ep1/    Episode 1 scripts and data
-│   ├── episodes/ep2/    The Whispering Pagoda: scene, puzzles, Pret and continuation saves
+│   ├── core/            Game, event bus, flags, area loading, physics
+│   ├── player/          Controller, camera, hands, held lamp
+│   ├── systems/         Interaction, inventory, lamp, upkeep, saves
+│   ├── audio/           Audio engine, dread score, shared sound banks (sounds/)
+│   ├── render/          Engine, device check, quality presets, post-processing, weather/
+│   ├── shared/          Gameplay pieces several episodes use (relics, shadow figure, cinematics)
+│   ├── ui/              Diegetic sketchbook, HTML menus and notebook
+│   ├── episodes/ep1/    The Unbroken Debt: prologue, taxi, acts 1–3, dawn
+│   ├── episodes/ep2/    The Whispering Pagoda
+│   ├── episodes/ep3/    The Drowned Village
 │   ├── data/            Shared definitions and strings (en, km)
-│   ├── debug/           Performance overlay (F3) and benchmark
-│   └── spikes/          Phase 1 technical spikes (?spike=s1 to s7)
-├── tests/unit/          Unit tests (Vitest)
+│   ├── debug/           Performance overlay (F3) and dev screenshots
+│   └── spikes/          Phase 1 S4 listening test (?spike=s4)
+├── tests/               unit/ (Vitest), browser/ (dev harness pages), fixtures/
 ├── public/              Static files served as-is
-│   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS
+│   ├── assets/          Optimised game assets (shared/, ep1/, ep2/, ep3/) — Git LFS
 │   └── fonts/           Ubuntu and Preah Vihear, with licences
 ├── art-source/          Editable art: blender/, textures/, audio/ — Git LFS
 ├── art-export/          Unoptimised Blender exports (not committed)

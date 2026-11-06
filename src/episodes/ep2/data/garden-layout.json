@@ -330,5 +330,42 @@
       "x": 4,
       "z": -7.5
     }
+  ],
+  "zones": [
+    {
+      "id": "court",
+      "minX": -81,
+      "maxX": -30,
+      "minY": -30,
+      "maxY": 21
+    },
+    {
+      "id": "tank",
+      "minX": -81,
+      "maxX": -30,
+      "minY": 21,
+      "maxY": 72
+    },
+    {
+      "id": "grove",
+      "minX": -30,
+      "maxX": 31,
+      "minY": 42,
+      "maxY": 97
+    },
+    {
+      "id": "gallery",
+      "minX": 31,
+      "maxX": 63,
+      "minY": 2.2,
+      "maxY": 72
+    },
+    {
+      "id": "terrace",
+      "minX": 30.5,
+      "maxX": 63,
+      "minY": -40,
+      "maxY": -22.5
+    }
   ]
 }

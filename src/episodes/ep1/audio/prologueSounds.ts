@@ -11,7 +11,7 @@ import {
   stickSlip,
   sweep,
   wrapLoop,
-} from "../../../audio/synth";
+} from "@/audio/synth";
 
 /**
  * Synthesised stand-ins for the prologue's sounds (Audio Design Document,
@@ -512,21 +512,4 @@ export function drawerOpen(sampleRate: number, rand: () => number): Float32Array
   for (let i = 0; i < seconds(0.004, sampleRate); i++) stop[i] = rand() * 2 - 1;
   mix(out, modal(stop, sampleRate, box), sampleRate, 0.475, 0.6, () => 1);
   return normalise(out, 0.8);
-}
-
-/** A candle snuffed by a draught: the puff, the flame's flutter, then the wick's thin hiss. */
-export function candleOut(sampleRate: number, rand: () => number): Float32Array {
-  const length = seconds(0.7, sampleRate);
-  const puff = biquad(noise(length, rand), sampleRate, "lowpass", 520, 0.7);
-  const flutter = biquad(noise(length, rand), sampleRate, "bandpass", 180, 2);
-  const wick = biquad(noise(length, rand), sampleRate, "bandpass", 5200, 2);
-  const out = new Float32Array(length);
-  for (let i = 0; i < length; i++) {
-    const t = i / sampleRate;
-    out[i] =
-      puff[i] * Math.min(1, t / 0.04) * Math.exp(-t / 0.12) +
-      flutter[i] * 1.5 * Math.exp(-t / 0.08) * (0.6 + 0.4 * Math.sin(t * 2 * Math.PI * 14)) +
-      wick[i] * 0.05 * Math.min(1, t / 0.15) * Math.max(0, 1 - t / 0.7);
-  }
-  return normalise(out, 0.6);
 }

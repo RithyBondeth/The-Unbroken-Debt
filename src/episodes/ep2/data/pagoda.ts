@@ -6,8 +6,21 @@ export const KUTI = { x: -18, y: 0.22, z: 15, yaw: Math.PI };
 export const LIBRARY = { x: 0, y: 1.4, z: -29, yaw: Math.PI };
 export const DAWN = { x: -12, y: 0.08, z: 8.5, yaw: Math.PI };
 export const MEMORY = { x: 80, y: 0.08, z: 10, yaw: Math.PI };
-/** The compound, and east of it the clearing of the reclining Buddha. */
-export const BOUNDS = { minX: -29, maxX: 44, minZ: -39, maxZ: 40 };
+/** The compound, the clearing of the reclining Buddha and the lost garden round them. */
+export const BOUNDS = { minX: -82, maxX: 64, minZ: -98, maxZ: 41 };
+
+/** One zone of the lost garden, runtime X east, Z south. */
+export type GardenZone = { id: string; minX: number; maxX: number; minZ: number; maxZ: number };
+/** The layout file is authored in Blender's X east, Y north, so its Y is the runtime's -Z. */
+export const LOST_GARDEN: GardenZone[] = layout.zones.map((zone) => ({
+  id: zone.id,
+  minX: zone.minX,
+  maxX: zone.maxX,
+  minZ: -zone.maxY,
+  maxZ: -zone.minY,
+}));
+/** The Sunken Tank's stepped basin, which the far forest's floor has to leave open. */
+export const TANK_BASIN = { minX: -69, maxX: -41, minZ: -60, maxZ: -32 };
 
 export const ANCESTORS = [
   {

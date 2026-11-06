@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { VillageProgress, enterVillage } from "../../src/episodes/ep3/VillageProgress";
-import { FUSE_IDS, LEAK_IDS, SAFE_CODE } from "../../src/episodes/ep3/data/village";
-import { villageNotebook } from "../../src/episodes/ep3/data/notebook";
-import { newGameSave, assertSave } from "../../src/systems/saves/SaveData";
-import { encodeSaveCode, decodeSaveCode } from "../../src/systems/saves/saveCode";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { VillageProgress, enterVillage } from "@/episodes/ep3/VillageProgress";
+import { FUSE_IDS, LEAK_IDS, SAFE_CODE } from "@/episodes/ep3/data/village";
+import { villageNotebook } from "@/episodes/ep3/data/notebook";
+import { newGameSave, assertSave } from "@/systems/saves/SaveData";
+import { encodeSaveCode, decodeSaveCode } from "@/systems/saves/saveCode";
 
 function fresh() {
   return new VillageProgress(new Flags(), new Inventory());

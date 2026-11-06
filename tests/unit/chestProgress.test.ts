@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { ChestProgress, CHEST_ITEMS } from "../../src/episodes/ep1/act3/ChestProgress";
-import { CorpseProgress } from "../../src/episodes/ep1/act3/CorpseProgress";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { ChestProgress, CHEST_ITEMS } from "@/episodes/ep1/act3/ChestProgress";
+import { CorpseProgress } from "@/episodes/ep1/act3/CorpseProgress";
 function setup() {
   const flags = new Flags(),
     inventory = new Inventory();

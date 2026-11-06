@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { subtitleChunks } from "../../src/ui/html/StoryUi";
+import { subtitleChunks } from "@/ui/html/StoryUi";
 
 describe("subtitleChunks", () => {
   it("keeps a short line whole", () => {

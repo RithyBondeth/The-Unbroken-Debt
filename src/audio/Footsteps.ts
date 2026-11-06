@@ -1,8 +1,8 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import type { AudioSystem } from "./AudioSystem";
-import type { EventBus } from "../core/EventBus";
-import type { GameEvents } from "../core/events";
-import type { Surface } from "../core/Physics";
+import type { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import type { Surface } from "@/core/physics";
 import { mudSuction, seededRandom } from "./synth";
 
 /** Recorded takes per surface (tools/audio/make-footsteps.sh). */

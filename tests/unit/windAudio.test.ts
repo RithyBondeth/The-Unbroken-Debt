@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { rms, seededRandom } from "../../src/audio/synth";
-import { FRONT_SPEED, GUST_RISE, WindState, type Gust } from "../../src/render/wind";
-import type { PlantSite } from "../../src/render/plantHeights";
+import { rms, seededRandom } from "@/audio/synth";
+import { FRONT_SPEED, GUST_RISE, WindState, type Gust } from "@/render/wind";
+import type { PlantSite } from "@/render/plantHeights";
 import {
   GUST_SECONDS,
   bambooKnock,
@@ -12,14 +12,14 @@ import {
   leafHiss,
   trunkGroan,
   windRoar,
-} from "../../src/episodes/ep1/audio/windSounds";
+} from "@/episodes/ep1/audio/windSounds";
 import {
   bedLevels,
   gustOffset,
   pickTree,
   stingGust,
   treeSound,
-} from "../../src/episodes/ep1/audio/WindAudio";
+} from "@/episodes/ep1/audio/WindAudio";
 
 const RATE = 22050;
 const peak = (s: Float32Array) => s.reduce((m, v) => Math.max(m, Math.abs(v)), 0);

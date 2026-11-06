@@ -4,7 +4,7 @@ import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
 import type { MistPocket } from "./mist";
-import { seededRandom } from "../audio/synth";
+import { seededRandom } from "@/audio/synth";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
 /** Low preset: one draw, 40 faint, flattened wisps; no extra depth/pre-pass. */

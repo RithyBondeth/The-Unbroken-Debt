@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { HuntProgress } from "../../src/episodes/ep1/act3/HuntProgress";
-import { HuntNavigation } from "../../src/episodes/ep1/act3/HuntNavigation";
-import { RoamerBrain } from "../../src/episodes/ep1/act3/RoamerBrain";
-import { JARS, ROAMER_ROUTE, FRAGMENT_IDS, CP5_FEET } from "../../src/episodes/ep1/data/hunt";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { HuntProgress } from "@/episodes/ep1/act3/HuntProgress";
+import { HuntNavigation } from "@/episodes/ep1/act3/HuntNavigation";
+import { RoamerBrain } from "@/episodes/ep1/act3/RoamerBrain";
+import { JARS, ROAMER_ROUTE, FRAGMENT_IDS, CP5_FEET } from "@/episodes/ep1/data/hunt";
 
 function setup() {
   const flags = new Flags(),

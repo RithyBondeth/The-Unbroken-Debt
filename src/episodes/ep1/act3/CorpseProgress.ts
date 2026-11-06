@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 
 const CORPSE_POSES = 5;
 const CORPSE_LOOK_AWAY_SECONDS = 4;

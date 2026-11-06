@@ -3,14 +3,14 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DitheredTileFadeMaterialPlugin } from "@babylonjs/core/Materials/ditheredTileFadeMaterialPlugin";
-import { Game } from "../../src/core/Game";
-import { GatedInput, type InputSource } from "../../src/player/InputSource";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { saveShot } from "../../src/debug/saveShot";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { Game } from "@/core/Game";
+import { GatedInput, type InputSource } from "@/player/InputSource";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { saveShot } from "@/debug/saveShot";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
 
 async function review(): Promise<void> {
   if (!import.meta.env.DEV) return;

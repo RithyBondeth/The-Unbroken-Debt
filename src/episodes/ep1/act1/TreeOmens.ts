@@ -14,10 +14,10 @@ import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/v2/physicsShape";
-import { seededRandom } from "../../../audio/synth";
-import { FoliageWind, type FoliageKind } from "../../../render/FoliageWind";
-import { trunkRadius, type PlantSite, type TrunkProfile } from "../../../render/plantHeights";
-import type { WindState } from "../../../render/wind";
+import { seededRandom } from "@/audio/synth";
+import { FoliageWind, type FoliageKind } from "@/render/FoliageWind";
+import { trunkRadius, type PlantSite, type TrunkProfile } from "@/render/plantHeights";
+import type { WindState } from "@/render/wind";
 import { pathDistance } from "../data/forestBorder";
 import {
   CORD_WEB,

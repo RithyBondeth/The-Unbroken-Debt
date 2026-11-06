@@ -4,9 +4,9 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { RelicCraft } from "../act3/RelicCraft";
-import { seededRandom } from "../../../audio/synth";
-import { TelephoneCord } from "../../../player/TelephoneCord";
+import { RelicCraft } from "@/shared/RelicCraft";
+import { seededRandom } from "@/audio/synth";
+import { TelephoneCord } from "@/player/TelephoneCord";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 /** Wall-mounted rotary phone. The front faces into the hall along negative X. */

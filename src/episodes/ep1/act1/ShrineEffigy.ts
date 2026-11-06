@@ -3,7 +3,7 @@ import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import { realiseInstances } from "../../../core/AreaLoader";
+import { realiseInstances } from "@/core/areaLoader";
 
 const templates = new WeakMap<Scene, AssetContainer>();
 

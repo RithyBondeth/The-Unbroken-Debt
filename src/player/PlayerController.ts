@@ -10,9 +10,9 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Observer } from "@babylonjs/core/Misc/observable";
-import type { EventBus } from "../core/EventBus";
-import type { GameEvents } from "../core/events";
-import { GRAVITY, surfaceOf } from "../core/Physics";
+import type { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import { GRAVITY, surfaceOf } from "@/core/physics";
 import { DEFAULT_PLAYER_CONFIG, type PlayerConfig } from "./PlayerConfig";
 import type { InputSource } from "./InputSource";
 import {

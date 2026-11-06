@@ -12,8 +12,8 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { Plane } from "@babylonjs/core/Maths/math.plane";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import type { Game } from "../../core/Game";
-import { seededRandom } from "../../audio/synth";
+import type { Game } from "@/core/Game";
+import { seededRandom } from "@/audio/synth";
 
 class LakeWaves extends MaterialPluginBase {
   seconds = 0;

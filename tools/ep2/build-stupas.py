@@ -15,7 +15,7 @@ from pathlib import Path
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT / 'tools/areas'), str(ROOT / 'tools/ep2')]
@@ -59,7 +59,7 @@ def behead(obj, neck, radius, seed):
     me.update()
 
 
-def finish(high, name, coll, palette, seed, voxel, scale, faces, size, chamber=False, before=None, scan=None, relief=.0, real_colour=False, **material):
+def finish(high, name, coll, palette, seed, voxel, scale, faces, size, chamber=False, before=None, scan=None, relief=.0, real_colour=False, wear=1.0, **material):
     """Fuse, sculpt, bake, and throw the sculpt and any source scan away, leaving the game mesh."""
     forget(name)
     S.remesh(high, voxel)
@@ -69,7 +69,7 @@ def finish(high, name, coll, palette, seed, voxel, scale, faces, size, chamber=F
         colours = surface.emboss(high, relief, keep_colour=real_colour)
     if before:
         before(high)
-    S.weather(high, seed, palette, scale=scale, chamber=chamber, surface_colours=colours)
+    S.weather(high, seed, palette, scale=scale, chamber=chamber, surface_colours=colours, wear=wear)
     if scan:
         mesh = scan.data
         bpy.data.objects.remove(scan, do_unlink=True)
@@ -81,11 +81,13 @@ def finish(high, name, coll, palette, seed, voxel, scale, faces, size, chamber=F
     return low
 
 
-def build_stupas(coll):
+def build_stupas(coll, only=None):
     for form, seed, broken in STUPAS:
         name = f'stupa_{form}' + ('_broken' if broken else '')
+        if only and name not in only:
+            continue
         high, _ = S.shape(form, coll, name + '_high', height=HEIGHTS[form], broken=broken)
-        finish(high, name, coll, 'lime', seed, .0055, 1.0, 26000, 2048, chamber=True)
+        finish(high, name, coll, 'lime', seed, .0055, 1.0, 16000, 2048, chamber=True)
 
 
 def _lotus_base(s, r=.46, z0=-.13, h=.13, petals=18):
@@ -120,7 +122,7 @@ def seated_image(coll, name, palette, seed, headless=False, worn=False, size=153
                     v.co.y += max(0, (.018 + n * .018)) * min(1, (v.co.z - .7) / .05)
             me.update()
     gilt = palette == 'gilt'
-    return finish(high, name, coll, palette, seed, .0035, .5, 24000, size, before=before, scan=src, relief=.0045,
+    return finish(high, name, coll, palette, seed, .0035, .5, 12000, size, before=before, scan=src, relief=.0045, wear=.55,
                   roughness=.55 if gilt else .92, metallic=.55 if gilt else 0.0)
 
 
@@ -136,7 +138,7 @@ def devata(coll, name, seed, headless=False):
     s.box(0, 0, .14, .78, .78, .4)
     s.box(0, 0, .54, .88, .88, .08)
     high = s.build(name + '_high', coll)
-    return finish(high, name, coll, 'sandstone', seed, .005, .75, 30000, 2048, scan=src, relief=.005, real_colour=True)
+    return finish(high, name, coll, 'sandstone', seed, .005, .75, 18000, 2048, scan=src, relief=.005, real_colour=True, wear=.5)
 
 
 def naga_rail(coll, name, seed):
@@ -150,8 +152,6 @@ def naga_rail(coll, name, seed):
     body = [(0, -5.3, .05), (0, -3.6, .07), (0, -1.8, .1), (0, -.7, .2), (0, -.25, .5), (0, -.05, .85), (0, .03, 1.02)]
     s.tube(body, .165, .15, sides=22)
     s.lathe(0, -5.42, 0, [(.08, 0), (.1, .08), (.04, .15)], 14)
-    src = SC.scan(coll, 'naga_finial', name + '_scan', height=1.15, at=(0, .02, .78))
-    s.add_object(src)
     high = s.build(name + '_high', coll)
 
     def before(o):
@@ -163,7 +163,56 @@ def naga_rail(coll, name, seed):
                 k = .5 + .5 * math.sin(v.co.y * 44 + a * 7) * math.sin(v.co.y * 44 - a * 7)
                 v.co += v.normal * .012 * (k - .5)
         me.update()
-    return finish(high, name, coll, 'sandstone', seed, .0065, .7, 30000, 2048, before=before, scan=src, relief=.004)
+    return finish(high, name, coll, 'sandstone', seed, .0065, .7, 14000, 2048, before=before, wear=.6)
+
+
+def naga_hood(coll, name):
+    """The real naga finial scan with its own mesh and texture, placed on the rail's neck.
+    Fusing it melted the hoods: they are thinner than any voxel the remesh can afford."""
+    forget(name)
+    src = SC.scan(coll, 'naga_finial', name, height=1.15, at=(0, .02, .78))
+    # Kit pieces are placed by mesh alone, so the placement has to be in the vertices.
+    bpy.context.view_layer.update()
+    src.data.transform(src.matrix_world.copy())
+    src.matrix_world = Matrix.Identity(4)
+    # The scan's skin is split along its texture seams: weld it, or simplifying shreds it.
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=.0008)
+    bm.to_mesh(src.data)
+    bm.free()
+    src.data.update()
+    dec = src.modifiers.new('budget', 'DECIMATE')
+    dec.ratio = min(1.0, 40000 / max(1, len(src.data.polygons)))
+    bpy.context.view_layer.objects.active = src
+    bpy.ops.object.modifier_apply(modifier=dec.name)
+    src.data.name = name
+    print('Baked', name, len(src.data.polygons), 'faces (scan)', flush=True)
+    return src
+
+
+def gallery_pier(coll, name, seed, broken=False):
+    """A square plastered brick pier of the Root Gallery, 3.1 m to its capital; or the stump
+    of one, its top rough where it snapped. Origin at its foot."""
+    s = S.Solid()
+    height = 1.45 if broken else 3.1
+    s.box(0, 0, 0, .74, .74, .12)
+    s.box(0, 0, .12, .62, .62, .16)
+    s.box(0, 0, .28, .48, .48, height - .28)
+    if not broken:
+        s.box(0, 0, 2.86, .6, .6, .1)
+        s.box(0, 0, 2.96, .7, .7, .14)
+    high = s.build(name + '_high', coll)
+
+    def before(o):
+        if not broken:
+            return
+        me = o.data
+        for v in me.vertices:
+            if v.co.z > height - .32:
+                v.co.z -= max(0, .18 + S._fbm(Vector((v.co.x, v.co.y, 0)), 3, .16, seed) * .3)
+        me.update()
+    return finish(high, name, coll, 'lime', seed, .0055, .7, 3500, 1024, before=before, wear=.9)
 
 
 def sema(coll, name, seed):
@@ -178,7 +227,7 @@ def sema(coll, name, seed):
         w = .1 - k * .012
         s.prism([(-w, pz), (w, pz), (w * .7, pz + .03), (-w * .7, pz + .03)], (0, -.072, .3), (1, 0, 0), (0, 0, 1), (0, 1, 0), .15)
     high = s.build(name + '_high', coll)
-    return finish(high, name, coll, 'sandstone', seed, .0035, .5, 9000, 1024)
+    return finish(high, name, coll, 'sandstone', seed, .0035, .5, 7000, 1024, wear=.7)
 
 
 def spirit_house(coll, name, palette, seed, post=.85):
@@ -230,7 +279,7 @@ def spirit_house(coll, name, palette, seed, post=.85):
                 s.prism([(side * x, zt) for x, zt in pts], (side * span, sy * length / 2, zz - .012), (1, 0, 0), (0, 0, 1), (0, 1, 0), .012)
     s.tube([(0, 0, z + .3), (0, 0, z + .56)], .018, .003, sides=8)
     high = s.build(name + '_high', coll)
-    return finish(high, name, coll, palette, seed, .0032, .35, 16000, 1024)
+    return finish(high, name, coll, palette, seed, .0032, .35, 9000, 1024)
 
 
 def hall_throne(coll, name, seed, s_=1.2):
@@ -246,7 +295,7 @@ def hall_throne(coll, name, seed, s_=1.2):
             pts = [(-w * .75, 0), (w * .75, 0), (w, h * .42), (w * .5, h * .8), (0, h), (-w * .5, h * .8), (-w, h * .42)]
             s.prism(pts, out * (r - .01) + Vector((0, 0, z0)), along, Vector((0, 0, 1)) + out * .2, -out, .05)
     high = s.build(name + '_high', coll)
-    return finish(high, name, coll, 'gilt', seed, .0045, .5, 16000, 1536, roughness=.55, metallic=.55)
+    return finish(high, name, coll, 'gilt', seed, .0045, .5, 10000, 1536, roughness=.55, metallic=.55)
 
 
 def image_cloth(coll, name):
@@ -285,6 +334,42 @@ def image_cloth(coll, name):
     return sheet
 
 
+def _tear(obj, nx, ny, seed):
+    """Rots the sheet's hem unevenly and eats a few holes. The torn edge is then relaxed and
+    roughened, so it reads as ragged cloth instead of the mesh's grid."""
+    rng = np.random.default_rng(seed)
+    depth = np.convolve(rng.uniform(0, ny * .55, nx + 10), np.ones(11) / 11, 'valid')
+    depth = depth * 1.4 + np.convolve(rng.uniform(-2, 2, nx + 2), np.ones(3) / 3, 'valid')
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    gone = []
+    for f in bm.faces:
+        j, i = divmod(min(v.index for v in f.verts), nx)
+        if j >= ny - 1 - depth[i]:
+            gone.append(f)
+    bmesh.ops.delete(bm, geom=gone, context='FACES')
+    loose = [v for v in bm.verts if not v.link_faces]
+    bmesh.ops.delete(bm, geom=loose, context='VERTS')
+    edge = [v for v in bm.verts if any(e.is_boundary for e in v.link_edges)]
+    keep_top = nx  # the first row is what it hangs from
+    edge = [v for v in edge if v.index >= keep_top]
+    for _ in range(4):
+        moved = {}
+        for v in edge:
+            near = [e.other_vert(v).co for e in v.link_edges if e.is_boundary]
+            if near:
+                moved[v] = v.co * .35 + sum(near, Vector()) / len(near) * .65
+        for v, co in moved.items():
+            v.co = co
+    for v in edge:
+        v.co += Vector(rng.normal(0, .0035, 3))
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+
+
 def stupa_cloth(coll, name):
     """A length of cloth tied round a stupa's upper tier, its end hanging: draped by simulation
     round the tier's real shape. The area colours each copy."""
@@ -301,23 +386,35 @@ def stupa_cloth(coll, name):
     collide.collision.thickness_outer = .006
     collide.collision.cloth_friction = 8
     # The band: a loop round the tier, a little proud, wide and slack, and then a tail.
-    nx, ny = 88, 12
+    nx, ny = 132, 16
     band = np.zeros((ny, nx, 3))
     half = .455
     for i in range(nx):
         u = i / (nx - 1) * 4
         side, f = int(u) % 4, u % 1
         a, b = {0: ((-half, -half), (half, -half)), 1: ((half, -half), (half, half)), 2: ((half, half), (-half, half)), 3: ((-half, half), (-half, -half))}[side]
+        out = {0: (0, -1), 1: (1, 0), 2: (0, 1), 3: (-1, 0)}[side]
         for j in range(ny):
-            band[j, i] = (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, 1.81 - j * .016)
+            # Gathered into pleats where it was tied, sagging between the ties.
+            pleat = .014 * (.5 + .5 * math.sin(u * 44 + j * .22 + math.sin(u * 7) * 2))
+            band[j, i] = (a[0] + (b[0] - a[0]) * f + out[0] * pleat, a[1] + (b[1] - a[1]) * f + out[1] * pleat,
+                          1.81 - j * .012 - .022 * abs(math.sin(u * math.pi * 1.5)))
     sheet = K._sheet(coll, name, band, (0, 0, 4.2, .5), mat)
-    K._simulate(sheet, [i for i in range(nx) if i % 11 == 0], 70, tension=9, bending=.05)
-    tail_grid = np.zeros((42, 11, 3))
-    for j in range(42):
-        for i in range(11):
-            tail_grid[j, i] = (.1 + i * .016 + j * .002, -half - .012, 1.8 - j * .02)
+    K._simulate(sheet, [i for i in range(nx) if i % 16 == 0], 70, tension=9, bending=.05)
+    _tear(sheet, nx, ny, 3)
+    # The tail: gathered where it was knotted, opening out as it falls, its folds uneven.
+    tail_grid = np.zeros((46, 15, 3))
+    fold_rng = np.random.default_rng(11)
+    folds = fold_rng.uniform(.7, 1.8, 3)
+    for j in range(46):
+        opening = min(1, .22 + j / 16)
+        for i in range(15):
+            across = (i - 7) * .013 * opening
+            fold = sum(math.sin(i * k + j * .05 * k + n) for n, k in enumerate(folds)) / 3
+            tail_grid[j, i] = (.18 + across + j * .002, -half - .014 - .012 * opening * fold, 1.8 - j * .02)
     tail = K._sheet(coll, name + '_tail', tail_grid, (0, 0, .5, 2), mat)
-    K._simulate(tail, list(range(11)), 70, tension=9, bending=.05)
+    K._simulate(tail, list(range(15)), 70, tension=9, bending=.05)
+    _tear(tail, 15, 46, 7)
     # One mesh, both pieces.
     bpy.ops.object.select_all(action='DESELECT')
     sheet.select_set(True)
@@ -341,7 +438,10 @@ STATUES = {
     'guardian_whole': lambda c: devata(c, 'guardian_whole', 23.1),
     'guardian_headless': lambda c: devata(c, 'guardian_headless', 29.6, headless=True),
     'naga_rail': lambda c: naga_rail(c, 'naga_rail', 35.2),
+    'naga_hood': lambda c: naga_hood(c, 'naga_hood'),
     'sema_stone': lambda c: sema(c, 'sema_stone', 41.7),
+    'gallery_pier': lambda c: gallery_pier(c, 'gallery_pier', 71.3),
+    'gallery_pier_broken': lambda c: gallery_pier(c, 'gallery_pier_broken', 74.9, broken=True),
     'spirit_house_red': lambda c: spirit_house(c, 'spirit_house_red', 'red', 47.3),
     'spirit_house_ochre': lambda c: spirit_house(c, 'spirit_house_ochre', 'ochre', 53.9),
     'spirit_house_stone': lambda c: spirit_house(c, 'spirit_house_stone', 'sandstone', 58.2),
@@ -365,6 +465,8 @@ if __name__ == '__main__':
         bpy.context.scene.collection.children.link(coll)
     if not args or 'stupas' in args:
         build_stupas(coll)
+    elif any(a.startswith('stupa_') and a != 'stupa_cloth' for a in args):
+        build_stupas(coll, args)
     for name, build in STATUES.items():
         if not args or 'statues' in args or name in args:
             build(coll)

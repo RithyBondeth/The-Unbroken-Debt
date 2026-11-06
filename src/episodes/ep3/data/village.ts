@@ -1,5 +1,5 @@
 import layout from "./village-layout.json";
-import type { ItemInfo } from "../../ep1/data/items";
+import type { ItemInfo } from "@/systems/inventory/Inventory";
 
 /** Feet planted on the upper veranda, drawn towards the fourth candle. */
 export const RITUAL_FIGURES = {
@@ -38,13 +38,6 @@ export const NOTES = {
   },
 } as const;
 export type NoteId = keyof typeof NOTES;
-export const NOTE_POSITIONS: Record<NoteId, readonly [number, number, number]> = {
-  admission: [-3, 1.1, 7],
-  mother: [-7.5, 4.1, -5],
-  calendar: [-4.5, 4.1, -9],
-  letter: [-1.4, -0.55, -26],
-  return: [3, 1.1, -8],
-};
 export const EP3_ITEMS: Record<string, ItemInfo> = {
   clinic_supplies: {
     name: "Planks and folded tarpaulin",

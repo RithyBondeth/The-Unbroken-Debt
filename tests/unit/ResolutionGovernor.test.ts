@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ResolutionGovernor } from "../../src/render/ResolutionGovernor";
+import { ResolutionGovernor } from "@/render/ResolutionGovernor";
 
 const TARGET = 1000 / 60;
 

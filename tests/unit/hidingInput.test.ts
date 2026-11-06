@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GatedInput } from "../../src/player/InputSource";
+import { GatedInput } from "@/player/InputSource";
 describe("wardrobe input", () => {
   it("holds movement and stance while hidden, then releases the underlying controls", () => {
     const gated = new GatedInput({

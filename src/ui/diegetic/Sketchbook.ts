@@ -1,5 +1,5 @@
-import { bookTurnFrame, readingFrame, type BookTurnState } from "./BookMotion";
-import type { NotebookSnapshot } from "../notebook/NotebookContent";
+import { bookTurnFrame, readingFrame, type BookTurnState } from "./bookMotion";
+import type { NotebookSnapshot } from "../notebook/notebookContent";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Node } from "@babylonjs/core/node";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";

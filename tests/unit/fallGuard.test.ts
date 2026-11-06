@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { FallGuard } from "../../src/player/FallGuard";
+import { FallGuard } from "@/player/FallGuard";
 
 describe("FallGuard", () => {
   it("returns to the spawn if she falls before standing anywhere else", () => {

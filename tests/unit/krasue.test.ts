@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { KrasueBrain } from "../../src/episodes/ep1/entities/KrasueBrain";
-import {
-  inKrasueKitchen,
-  KRASUE_WINDOWS,
-  throughKrasueWindow,
-} from "../../src/episodes/ep1/data/krasue";
-import { krasueLament, krasueShriek } from "../../src/episodes/ep1/audio/krasueSounds";
-import { rms, seededRandom } from "../../src/audio/synth";
+import { KrasueBrain } from "@/episodes/ep1/entities/KrasueBrain";
+import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "@/episodes/ep1/data/krasue";
+import { krasueLament, krasueShriek } from "@/episodes/ep1/audio/krasueSounds";
+import { rms, seededRandom } from "@/audio/synth";
 
 const eye = new Vector3(4.8, 4.08, -13);
 function tick(brain: KrasueBrain, seconds: number, seen = true, lamp = false): void {

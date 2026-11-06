@@ -1,16 +1,17 @@
+import { saveWithRetry } from "@/systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateRibbon } from "@babylonjs/core/Meshes/Builders/ribbonBuilder";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
-import type { Game } from "../../core/Game";
-import { loadArea, type Area } from "../../core/AreaLoader";
-import type { SaveData } from "../../systems/saves/SaveData";
-import { encodeSaveCode } from "../../systems/saves/saveCode";
-import { ResolutionView } from "../ep1/resolution/ResolutionView";
-import { RelicCraft } from "../ep1/act3/RelicCraft";
-import { ShadowFigure } from "../ep1/entities/ShadowFigure";
-import { PagodaEquipment } from "../ep2/PagodaEquipment";
-import { CheaHands } from "../ep2/cinematics/CheaHands";
+import type { Game } from "@/core/Game";
+import { loadArea, type Area } from "@/core/areaLoader";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { encodeSaveCode } from "@/systems/saves/saveCode";
+import { ResolutionView } from "@/ui/html/ResolutionView";
+import { RelicCraft } from "@/shared/RelicCraft";
+import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import { LanternEquipment } from "@/systems/lamp/LanternEquipment";
+import { CheaHands } from "@/player/CheaHands";
 import { VillageLights } from "./VillageLights";
 import { VillageWater } from "./VillageWater";
 import { VillageSoundscape } from "./VillageSoundscape";
@@ -38,7 +39,7 @@ export class DrownedVillage {
   area!: Area;
   lights!: VillageLights;
   water!: VillageWater;
-  equipment!: PagodaEquipment;
+  equipment!: LanternEquipment;
   readonly progress: VillageProgress;
   readonly survival = new WaterSurvival();
   readonly spirit = new DrownedBrain();
@@ -140,7 +141,7 @@ export class DrownedVillage {
       for (const mesh of root.getChildMeshes()) mesh.isPickable = false;
     }
     this.spawn();
-    this.equipment = new PagodaEquipment(
+    this.equipment = new LanternEquipment(
       g,
       this.lights,
       "No dry matches. Pa Lok left a matchbox beside the attic stove.",
@@ -619,13 +620,7 @@ export class DrownedVillage {
     if (this.busy) return;
     this.busy = true;
     const g = this.game;
-    g.cutscene = true;
-    g.gated.holdStill = true;
-    g.closeSketchbook();
-    g.satchel.close();
-    g.hints.hide();
-    g.input.clear();
-    document.exitPointerLock();
+    g.enterCutscene();
     try {
       await action();
     } finally {
@@ -689,15 +684,14 @@ export class DrownedVillage {
       this.game.flags.set("ep3.spawn.y", at.y + 0.05);
       this.game.flags.set("ep3.spawn.z", at.z);
     }
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         if (location) await this.game.checkpoints.mark(save, location);
         else await this.game.saves.save("autosave", save);
         if (this.progress.stage === "complete") await this.game.saves.save("episode3", save);
-        return;
-      } catch {
-        document.exitPointerLock();
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           [
@@ -706,8 +700,8 @@ export class DrownedVillage {
           ["Retry save"],
         );
         this.view.hide();
-      }
-    }
+      },
+    );
   }
   private sync(): void {
     const g = this.game,
@@ -1075,7 +1069,7 @@ export class DrownedVillage {
             "Third seal broken · Night 5 of 7",
             `Records found: ${this.progress.lore.length} / 5 · Respect: ${this.game.flags.get("series.respect", 0)}`,
             "Next: Episode 4 · The Rubber Plantation",
-            "Created by Rithy Bondeth. Babylon.js · Havok. Episode 1 and 2’s CC0 materials, anatomy and library credits apply.",
+            "Created by Rithy Bondeth. Babylon.js · Havok. Full third-party credits are on the title screen.",
           ],
           ["Return to title", "Export completion save"],
         );

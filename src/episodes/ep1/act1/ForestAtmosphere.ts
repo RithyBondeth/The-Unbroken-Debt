@@ -1,9 +1,9 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
-import type { Game } from "../../../core/Game";
-import { seededRandom } from "../../../audio/synth";
-import { foliageMovement } from "../audio/atmosphereSounds";
+import type { Game } from "@/core/Game";
+import { seededRandom } from "@/audio/synth";
+import { foliageMovement } from "@/audio/sounds/atmosphereSounds";
 import { forestSource, inUneaseForest } from "../data/forestAtmosphere";
 import { ForestUnease } from "./ForestUnease";
 

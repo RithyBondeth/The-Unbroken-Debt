@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
-import { currentObjective, notebookClues } from "../../src/episodes/ep1/data/notebook";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameEvents } from "../../src/core/events";
+import { currentObjective, notebookClues } from "@/episodes/ep1/data/notebook";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
 const setup = () => ({ flags: new Flags(), items: new Inventory(new EventBus<GameEvents>()) });
 it("names the actual missing studio item and clears it only when it is collected", () => {
   const { flags, items } = setup();

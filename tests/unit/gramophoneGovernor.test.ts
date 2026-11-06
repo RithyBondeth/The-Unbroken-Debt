@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { GramophoneGovernor } from "../../src/episodes/ep1/act2/GramophoneGovernor";
-import { GOVERNOR } from "../../src/episodes/ep1/data/investigation";
+import { Flags } from "@/core/Flags";
+import { GramophoneGovernor } from "@/episodes/ep1/act2/GramophoneGovernor";
+import { GOVERNOR } from "@/episodes/ep1/data/investigation";
 
 describe("Sok’s gramophone governor", () => {
   it("requires sustained active listening and resets when Sora steps away", () => {

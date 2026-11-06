@@ -1,11 +1,11 @@
 /** Real village interaction rays and interrupted-call reloads in an isolated save database. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
 
 const results = document.getElementById("results")!;
 const report = (text: string) => {

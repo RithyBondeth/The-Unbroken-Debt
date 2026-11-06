@@ -1,9 +1,9 @@
 import "./story.css";
 import { setControlText } from "./controlText";
 import "./entry.css";
-import { t, type StringKey } from "../../data/strings";
-import { EntryAmbience } from "../../audio/EntryAmbience";
-import { readWelcomeSettings } from "./WelcomeScreen";
+import { t, type StringKey } from "@/data/strings";
+import { EntryAmbience } from "@/audio/EntryAmbience";
+import { readWelcomeSettings } from "./welcomeScreen";
 
 export type { StringKey };
 

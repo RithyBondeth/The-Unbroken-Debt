@@ -1,5 +1,5 @@
-import { PORTRAIT_ATLAS, PORTRAIT_CELLS } from "../notebook/NotebookPortraits";
-import type { Game } from "../../core/Game";
+import { PORTRAIT_ATLAS, PORTRAIT_CELLS } from "../notebook/notebookPortraits";
+import type { Game } from "@/core/Game";
 import { SECTIONS, type SectionId } from "../diegetic/sketchbookContent";
 import { mapSvg } from "../notebook/NotebookMap";
 import "./notebook.css";

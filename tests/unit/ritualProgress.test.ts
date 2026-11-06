@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { ChestProgress, CHEST_ITEMS } from "../../src/episodes/ep1/act3/ChestProgress";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { ChestProgress, CHEST_ITEMS } from "@/episodes/ep1/act3/ChestProgress";
 import {
   RitualProgress,
   RITUAL_SECONDS,
   RITUAL_TURN_LIMIT,
-} from "../../src/episodes/ep1/act3/RitualProgress";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { encodeSaveCode, decodeSaveCode } from "../../src/systems/saves/saveCode";
+} from "@/episodes/ep1/act3/RitualProgress";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { encodeSaveCode, decodeSaveCode } from "@/systems/saves/saveCode";
 function setup() {
   const flags = new Flags(),
     inventory = new Inventory();

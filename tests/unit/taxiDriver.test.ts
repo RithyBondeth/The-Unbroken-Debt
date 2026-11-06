@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
-import { taxiDriverFace } from "../../src/episodes/ep1/travel/taxiDriver";
-import { TAXI_CONVERSATION } from "../../src/episodes/ep1/travel/taxiConversation";
-import { taxiPass, taxiPassBeat } from "../../src/episodes/ep1/travel/taxiApparitions";
+import { taxiDriverFace } from "@/episodes/ep1/travel/taxiDriver";
+import { TAXI_CONVERSATION } from "@/episodes/ep1/travel/taxiConversation";
+import { taxiPass, taxiPassBeat } from "@/episodes/ep1/travel/taxiApparitions";
 
 it("moves his jaw only while he speaks, opening and closing on syllables", () => {
   for (const line of TAXI_CONVERSATION) {

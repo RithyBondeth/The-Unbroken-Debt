@@ -1,15 +1,15 @@
 /** Isolated browser fixture. Only setup/views are scripted; gameplay and saving use production code. */
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { saveShot } from "../../src/debug/saveShot";
-import type { TaxiRide } from "../../src/episodes/ep1/travel/TaxiRide";
-import { SAVE_SHRINE_POSITION, SAVE_SHRINE_APPROACH } from "../../src/episodes/ep1/data/saveShrine";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { saveShot } from "@/debug/saveShot";
+import type { TaxiRide } from "@/episodes/ep1/travel/TaxiRide";
+import { SAVE_SHRINE_POSITION, SAVE_SHRINE_APPROACH } from "@/episodes/ep1/data/saveShrine";
 const output = document.getElementById("results")!,
   nav = document.getElementById("controls")!;
 const button = (label: string, action: () => void) => {

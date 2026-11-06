@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { Lamp } from "../../src/systems/lamp/Lamp";
-import { Vigil } from "../../src/episodes/ep1/act1/Vigil";
+import { Lamp } from "@/systems/lamp/Lamp";
+import { Vigil } from "@/episodes/ep1/act1/Vigil";
 it("can put out a burning lamp during a threat, without permitting a new match", () => {
   const state = {
     game: { cutscene: false, satchel: { isOpen: false }, sketchbook: { isOpen: false } },

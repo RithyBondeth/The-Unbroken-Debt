@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { Subtitles } from "../../src/ui/html/StoryUi";
+import { Subtitles } from "@/ui/html/StoryUi";
 interface FakeSubtitleNode {
   hidden: boolean;
   className: string;

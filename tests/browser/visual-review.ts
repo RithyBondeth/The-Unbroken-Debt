@@ -1,11 +1,11 @@
 /** Development-only views of the actual game objects, with no writes to player saves. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { KANHA_LAYOUT, OFFERINGS, SLOTS } from "../../src/episodes/ep1/data/betel";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { KANHA_LAYOUT, OFFERINGS, SLOTS } from "@/episodes/ep1/data/betel";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
 
 async function review(): Promise<void> {
   if (!import.meta.env.DEV) return;

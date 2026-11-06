@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
+import { EventBus } from "@/core/EventBus";
 
 type TestEvents = {
   ping: { n: number };

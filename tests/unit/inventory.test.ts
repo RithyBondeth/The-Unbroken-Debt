@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameEvents } from "../../src/core/events";
-import { Inventory } from "../../src/systems/inventory/Inventory";
+import { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import { Inventory } from "@/systems/inventory/Inventory";
 
 describe("Inventory", () => {
   it("counts items and emits a change for each one", () => {

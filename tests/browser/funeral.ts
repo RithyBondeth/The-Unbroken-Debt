@@ -1,13 +1,13 @@
 /** Khmer funeral ensemble in production lighting, with isolated review saves. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { saveShot } from "../../src/debug/saveShot";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { TENT_FLAME_MESH } from "../../src/episodes/ep1/data/arrival";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { saveShot } from "@/debug/saveShot";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { TENT_FLAME_MESH } from "@/episodes/ep1/data/arrival";
 
 async function review(): Promise<void> {
   if (!import.meta.env.DEV) return;

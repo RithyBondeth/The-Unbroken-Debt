@@ -1,7 +1,7 @@
-import type { Game } from "../../../core/Game";
+import type { Game } from "@/core/Game";
 import type { CorpseModels } from "./CorpseModels";
 import { CoffinProgress } from "./CoffinProgress";
-import { boardCreak, seededRandom } from "../../../audio/synth";
+import { boardCreak, seededRandom } from "@/audio/synth";
 import { drawerOpen } from "../audio/prologueSounds";
 import { coffinKnock } from "../audio/actThreeSounds";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";

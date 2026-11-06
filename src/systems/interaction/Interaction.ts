@@ -9,8 +9,8 @@ import { Ray } from "@babylonjs/core/Culling/ray";
 import { Color4 } from "@babylonjs/core/Maths/math.color";
 import "@babylonjs/core/Rendering/edgesRenderer";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { EventBus } from "../../core/EventBus";
-import type { GameEvents } from "../../core/events";
+import type { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
 
 /** How far Sora can reach to use something, in metres. */
 const REACH = 1.8;

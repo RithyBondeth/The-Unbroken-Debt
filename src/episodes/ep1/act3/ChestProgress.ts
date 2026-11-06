@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import type { Inventory } from "../../../systems/inventory/Inventory";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
 
 export const CHEST_ITEMS = ["bronze_token", "seal_map", "folded_slip"] as const;
 export type ChestItem = (typeof CHEST_ITEMS)[number];

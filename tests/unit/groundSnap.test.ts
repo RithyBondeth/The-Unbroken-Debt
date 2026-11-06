@@ -5,8 +5,8 @@ import { AssetContainer } from "@babylonjs/core/assetContainer";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
-import { GROUNDED, clearance, snapToGround } from "../../src/render/groundSnap";
-import { inWalk, layoutBorder, pathDistance } from "../../src/episodes/ep1/data/forestBorder";
+import { GROUNDED, clearance, snapToGround } from "@/render/groundSnap";
+import { inWalk, layoutBorder, pathDistance } from "@/episodes/ep1/data/forestBorder";
 
 describe("ground snap", () => {
   it("measures the smallest gap between points and the ground under each", () => {

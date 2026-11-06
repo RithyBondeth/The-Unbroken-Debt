@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { Checkpoints, checkpointName } from "../../src/systems/saves/Checkpoints";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import type { SaveStore } from "../../src/systems/saves/SaveStore";
+import { Checkpoints, checkpointName } from "@/systems/saves/Checkpoints";
+import { newGameSave } from "@/systems/saves/SaveData";
+import type { SaveStore } from "@/systems/saves/SaveStore";
 const setup = () => {
   const store = {
     save: vi.fn().mockResolvedValue(undefined),

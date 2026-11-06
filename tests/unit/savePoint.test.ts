@@ -3,10 +3,10 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SavePoint } from "../../src/systems/saves/SavePoint";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameEvents } from "../../src/core/events";
-import type { Game } from "../../src/core/Game";
+import { SavePoint } from "@/systems/saves/SavePoint";
+import { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import type { Game } from "@/core/Game";
 
 const engines: NullEngine[] = [];
 afterEach(() => {

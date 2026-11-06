@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { WalkerBrain } from "../../src/episodes/ep1/act2/WalkerBrain";
+import { WalkerBrain } from "@/episodes/ep1/act2/WalkerBrain";
 import {
   doorwayPath,
   hearingRadius,
   throughDoorways,
   WALKER_ROUTE,
-} from "../../src/episodes/ep1/data/walker";
+} from "@/episodes/ep1/data/walker";
 
 const distant = new Vector3(25, 2.5, 25);
 describe("hallway walker", () => {

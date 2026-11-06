@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLEARING_X, GODDESS_PATH } from "../../src/episodes/ep2/PagodaWatchers";
+import { CLEARING_X, GODDESS_PATH } from "@/episodes/ep2/PagodaWatchers";
 
 const HALL_DOOR = { x: 22, z: 6.6 };
 const dist = (a: { x: number; z: number }, b: { x: number; z: number }) =>

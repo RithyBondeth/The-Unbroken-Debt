@@ -1,13 +1,13 @@
 /** Real area / Havok / WebGPU verification, isolated from the player's IndexedDB. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import voiceManifest from "../../src/episodes/ep1/data/sokVoice.json";
-import { SOK_RECORDING } from "../../src/episodes/ep1/data/investigation";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import voiceManifest from "@/episodes/ep1/data/sokVoice.json";
+import { SOK_RECORDING } from "@/episodes/ep1/data/investigation";
 
 const output = document.getElementById("results")!;
 const report = (text: string) => (output.textContent += `${text}\n`);

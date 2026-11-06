@@ -1,10 +1,11 @@
+import { saveWithRetry } from "@/systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
-import type { SaveData } from "../../../systems/saves/SaveData";
-import { encodeSaveCode } from "../../../systems/saves/saveCode";
+import type { Game } from "@/core/Game";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { encodeSaveCode } from "@/systems/saves/saveCode";
 import { ResolutionProgress } from "./ResolutionProgress";
-import { ResolutionView } from "./ResolutionView";
-import { RelicCraft } from "../act3/RelicCraft";
+import { ResolutionView } from "@/ui/html/ResolutionView";
+import { RelicCraft } from "@/shared/RelicCraft";
 
 /** R01–R05. Save each decision before presenting the next reveal. */
 export class DawnResolution {
@@ -138,21 +139,21 @@ export class DawnResolution {
     }
   }
   private async persist(): Promise<void> {
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         await this.game.saves.save("autosave", save);
         if (this.game.flags.get("ep1.complete", false))
           await this.game.saves.save("episode1", save);
-        return;
-      } catch {
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           ["Your progress is still here. Free some browser storage, then retry."],
           ["Retry save"],
         );
-      }
-    }
+      },
+    );
   }
   private async credits(): Promise<void> {
     const g = this.game;

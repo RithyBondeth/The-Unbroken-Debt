@@ -1,5 +1,5 @@
-import { SAVE_SHRINE_POSITION, SAVE_SHRINE_ROUTE } from "../../episodes/ep1/data/saveShrine";
-import { PATH } from "../../episodes/ep1/data/forestBorder";
+import { SAVE_SHRINE_POSITION, SAVE_SHRINE_ROUTE } from "@/episodes/ep1/data/saveShrine";
+import { PATH } from "@/episodes/ep1/data/forestBorder";
 
 export type MapShape =
   | { kind: "rect"; x: number; y: number; w: number; h: number; walls?: boolean; detail?: boolean }

@@ -8,14 +8,14 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import type { Game } from "../../core/Game";
-import type { Area } from "../../core/AreaLoader";
-import { FLAME_COLOR, limitLightToRange } from "../../render/RenderSetup";
-import { softFalloff, useSoftFalloff } from "../../render/softLampFalloff";
-import { applyFoliageWind, type FoliageWind } from "../../render/FoliageWind";
-import { NIGHT_LOOK, DAWN_LOOK } from "../ep1/data/nightLook";
-import { LowGroundMist } from "../../render/LowGroundMist";
-import type { MistPocket } from "../../render/mist";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
+import { FLAME_COLOR, limitLightToRange } from "@/render/renderSetup";
+import { softFalloff, useSoftFalloff } from "@/render/softLampFalloff";
+import { applyFoliageWind, type FoliageWind } from "@/render/FoliageWind";
+import { NIGHT_LOOK, DAWN_LOOK } from "@/render/nightLook";
+import { LowGroundMist } from "@/render/LowGroundMist";
+import type { MistPocket } from "@/render/mist";
 
 const POND_MIST: MistPocket[] = [
   { x: -8, z: -25, radiusX: 9, radiusZ: 12, baseY: 0.04, height: 1, density: 0.5 },

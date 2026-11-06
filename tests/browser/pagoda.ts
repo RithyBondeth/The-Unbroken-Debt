@@ -1,15 +1,15 @@
 /** Real production scene + isolated saves. Scripted story inputs are explicit below. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { isQualityName } from "../../src/render/QualityPresets";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { saveShot } from "../../src/debug/saveShot";
-import { ANCESTORS, MIRROR_TARGETS } from "../../src/episodes/ep2/data/pagoda";
-import type { WhisperingPagoda } from "../../src/episodes/ep2/WhisperingPagoda";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { isQualityName } from "@/render/qualityPresets";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { saveShot } from "@/debug/saveShot";
+import { ANCESTORS, MIRROR_TARGETS } from "@/episodes/ep2/data/pagoda";
+import type { WhisperingPagoda } from "@/episodes/ep2/WhisperingPagoda";
 
 type View = [number[], number[]];
 const VIEWS: Record<string, View> = {

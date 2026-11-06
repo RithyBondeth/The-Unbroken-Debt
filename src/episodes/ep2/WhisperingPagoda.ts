@@ -1,3 +1,4 @@
+import { saveWithRetry } from "@/systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -6,23 +7,24 @@ import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder"
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { Game } from "../../core/Game";
-import { loadArea, type Area } from "../../core/AreaLoader";
-import type { SaveData } from "../../systems/saves/SaveData";
-import { encodeSaveCode } from "../../systems/saves/saveCode";
-import { ResolutionView } from "../ep1/resolution/ResolutionView";
-import { ShadowFigure } from "../ep1/entities/ShadowFigure";
-import { EP1_GRADE } from "../ep1/data/grade";
+import type { Game } from "@/core/Game";
+import { loadArea, type Area } from "@/core/areaLoader";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { encodeSaveCode } from "@/systems/saves/saveCode";
+import { ResolutionView } from "@/ui/html/ResolutionView";
+import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import { NIGHT_GRADE } from "@/render/nightGrade";
 import { PagodaLights } from "./PagodaLights";
-import { PagodaEquipment } from "./PagodaEquipment";
+import { PagodaZones, zoneOf } from "./PagodaZones";
+import { LanternEquipment } from "@/systems/lamp/LanternEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
 import { PagodaApparition, type ScareContext } from "./PagodaApparition";
 import { PagodaWatchers } from "./PagodaWatchers";
 import { GhostRig } from "./GhostRig";
 import { ShroudedDead } from "./ShroudedDead";
-import { buildFarForest } from "./PagodaFarForest";
+import { buildFarForest } from "./pagodaFarForest";
 import { PagodaCinematics } from "./cinematics/PagodaCinematics";
-import { CheaHands } from "./cinematics/CheaHands";
+import { CheaHands } from "@/player/CheaHands";
 import { COLLAPSE_KEEP } from "./cinematics/LibraryCollapse";
 import { PAGODA_BALANCE as B, EscapeClock, inKuti, simulationStep } from "./data/balance";
 import { PagodaGate } from "./PagodaGate";
@@ -48,9 +50,10 @@ import {
 export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
+  private zones!: PagodaZones;
   private apparition!: PagodaApparition;
   private watchers!: PagodaWatchers;
-  equipment!: PagodaEquipment;
+  equipment!: LanternEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
   readonly view = new ResolutionView("Episode 2 · The Whispering Pagoda");
@@ -100,7 +103,10 @@ export class WhisperingPagoda {
   async load(): Promise<void> {
     const g = this.game;
     this.area = await loadArea(g.scene, "ep2", "ep2_area_pagoda", {
-      cellSize: 8,
+      // The pagoda is draw-call bound, not fill or vertex bound: 16 m cells (24 m in the
+      // garden zones) cut its frame from about 39 ms to 28 ms on an M1 Pro without
+      // putting more batches over their light limit.
+      cellSize: 16,
       keep: [/^mirror_disc_/, /^bridge_symbol_/, "hall_chain", /^bridge_plank/, ...COLLAPSE_KEEP],
       beforeBatch: (container) => {
         // The fully authored seated monk replaces the first-pass sculpt, and the walking
@@ -112,12 +118,15 @@ export class WhisperingPagoda {
           }
       },
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
+      group: zoneOf,
+      cellSizeFor: (mesh) => (zoneOf(mesh) ? 24 : undefined),
     });
     g.fallGuard.bounds = BOUNDS;
     // The far forest runs on into the fog in every direction.
     g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
     buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
+    this.zones = new PagodaZones(this.area.container.meshes);
     const kmaoch = await GhostRig.load(g.scene, "ep2_kmaoch", {
       M_ep2_kmaoch_skin: new Color3(0.46, 0.46, 0.44),
       M_ep2_kmaoch_head: new Color3(0.5, 0.5, 0.47),
@@ -129,7 +138,7 @@ export class WhisperingPagoda {
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
     this.spawn();
-    this.equipment = new PagodaEquipment(g, this.lights);
+    this.equipment = new LanternEquipment(g, this.lights);
     await this.equipment.load();
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
@@ -537,7 +546,7 @@ export class WhisperingPagoda {
           ["Return to the library"],
         );
         await g.fade.to(1, 1);
-        g.atmosphere.setGrade(EP1_GRADE);
+        g.atmosphere.setGrade(NIGHT_GRADE);
         g.atmosphere.mood.memory = false;
         g.player.config.walkSpeed = 1.6;
         g.player.config.hurrySpeed = 3.4;
@@ -564,14 +573,7 @@ export class WhisperingPagoda {
     if (this.busy) return;
     this.busy = true;
     const g = this.game;
-    g.cutscene = true;
-    g.gated.holdStill = true;
-    g.stopInspecting();
-    g.closeSketchbook();
-    g.satchel.close();
-    g.hints.hide();
-    g.input.clear();
-    document.exitPointerLock();
+    g.enterCutscene();
     try {
       await action();
     } finally {
@@ -626,7 +628,7 @@ export class WhisperingPagoda {
     g.player.config.hurrySpeed = 0.85;
     g.player.config.crouchSpeed = 0.65;
     g.atmosphere.setGrade({
-      ...EP1_GRADE,
+      ...NIGHT_GRADE,
       saturation: -0.45,
       midtones: { tint: [1, 0.72, 0.43], strength: 0.4 },
     });
@@ -736,7 +738,7 @@ export class WhisperingPagoda {
             `Lore found: ${p.lore.length} / 5 · Respect carried forward: ${g.flags.get("series.respect", 0)}`,
             "The silver inlay and Sophal’s white thread are saved for the last night.",
             "Next: Episode 3 · The Drowned Village",
-            "Created by Rithy Bondeth. Babylon.js · Havok. Shared Episode 1 materials and CC0 library credits apply.",
+            "Created by Rithy Bondeth. Babylon.js · Havok. Full third-party credits are on the title screen.",
           ],
           ["Continue to Episode 3", "Return to title", "Export completion save"],
         );
@@ -790,15 +792,14 @@ export class WhisperingPagoda {
   private async persist(location?: string): Promise<void> {
     const g = this.game;
     if (location) g.flags.set("checkpoint.location", location);
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         if (location) await g.checkpoints.mark(save, location);
         else await g.saves.save("autosave", save);
         if (this.progress.stage === "complete") await g.saves.save("episode2", this.capture());
-        return;
-      } catch {
-        document.exitPointerLock();
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           [
@@ -807,8 +808,8 @@ export class WhisperingPagoda {
           ["Retry save"],
         );
         this.view.hide();
-      }
-    }
+      },
+    );
   }
   private sync(): void {
     const g = this.game,
@@ -908,6 +909,8 @@ export class WhisperingPagoda {
       p = this.progress;
     this.time += dt;
     const simDt = simulationStep(dt);
+    // The memory space lies beyond the Root Gallery, and must not see it.
+    this.zones.update(p.stage === "memory" ? null : g.player.feet);
     this.equipment.update(simDt);
     this.cheaHands.update(dt, this.equipment);
     this.cinematics.update(document.hidden || this.cinematics.director.isPaused ? 0 : dt);

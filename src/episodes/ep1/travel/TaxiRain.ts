@@ -4,7 +4,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 
 const WIDTH = 1024,
   HEIGHT = 512;

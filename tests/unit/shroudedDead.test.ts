@@ -6,7 +6,7 @@ import {
   playbackRate,
   steppedOn,
   turnToward,
-} from "../../src/episodes/ep2/ShroudedDead";
+} from "@/episodes/ep2/ShroudedDead";
 
 describe("how the hungry dead move", () => {
   it("drags on patrol, lurches at a sound, and stands to listen", () => {

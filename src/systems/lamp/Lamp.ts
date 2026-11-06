@@ -1,5 +1,5 @@
-import type { EventBus } from "../../core/EventBus";
-import type { GameEvents, LampState } from "../../core/events";
+import type { EventBus } from "@/core/EventBus";
+import type { GameEvents, LampState } from "@/core/events";
 
 /** Episode 1 Beat Sheet, section 5: "A full tank lasts ~12 min." */
 export const FULL_TANK_SECONDS = 12 * 60;

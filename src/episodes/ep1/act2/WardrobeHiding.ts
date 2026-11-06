@@ -1,8 +1,8 @@
-import type { Game } from "../../../core/Game";
-import type { Lamp } from "../../../systems/lamp/Lamp";
+import type { Game } from "@/core/Game";
+import type { Lamp } from "@/systems/lamp/Lamp";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { HidingWardrobe, WalkerModels } from "./WalkerModels";
-import "../../../ui/html/walker.css";
+import "@/ui/html/walker.css";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
 /** E enters; a narrow view through the real louvres keeps the threat in the world. */

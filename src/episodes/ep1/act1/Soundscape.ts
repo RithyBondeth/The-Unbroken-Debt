@@ -1,11 +1,11 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
-import type { SpaceName } from "../../../audio/acoustics";
-import { seededRandom } from "../../../audio/synth";
+import type { Game } from "@/core/Game";
+import type { SpaceName } from "@/audio/acoustics";
+import { seededRandom } from "@/audio/synth";
 import { floorDrips, houseSettle, roofRain, shutterWind } from "../audio/houseSounds";
 import { inHunt } from "../data/hunt";
-import { canopyWind, pavilionCloth } from "../audio/atmosphereSounds";
+import { canopyWind, pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 
 /** The upper floor of the house, its boards at 2.5 m. */
 const inHouse = (feet: Vector3) =>

@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../src/core/Game";
-import type { Vigil } from "../../src/episodes/ep1/act1/Vigil";
+import type { Game } from "@/core/Game";
+import type { Vigil } from "@/episodes/ep1/act1/Vigil";
 
-vi.mock("../../src/episodes/ep1/entities/KrasueModel", () => ({
+vi.mock("@/episodes/ep1/entities/KrasueModel", () => ({
   KrasueModel: class {
     ready = true;
     root = { setEnabled: vi.fn() };
     pose = vi.fn();
   },
 }));
-import { KrasueEncounter } from "../../src/episodes/ep1/entities/KrasueEncounter";
+import { KrasueEncounter } from "@/episodes/ep1/entities/KrasueEncounter";
 
 async function rig() {
   const doc = Object.assign(new EventTarget(), {

@@ -1,18 +1,19 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
 import type { VillageLights } from "../act1/VillageLights";
 import { RitualProgress, RITUAL_SECONDS } from "./RitualProgress";
-import { RelicCraft } from "./RelicCraft";
+import { RelicCraft } from "@/shared/RelicCraft";
 import { CP6_FEET, RITUAL_BURNER } from "../data/ritual";
 import { TENT_FLAME_MESH } from "../data/arrival";
 import { FAILING_LAMPS } from "../data/desk";
 import { coldGust } from "../audio/actTwoSounds";
 import { matchStrike } from "../audio/vigilSounds";
-import { ritualDrone, spiritShriek } from "../audio/actThreeSounds";
-import { rattlingBreath, seededRandom } from "../../../audio/synth";
+import { ritualDrone } from "../audio/actThreeSounds";
+import { spiritShriek } from "@/audio/sounds/spiritSounds";
+import { rattlingBreath, seededRandom } from "@/audio/synth";
 
 /** A3-07–08. The player keeps mouse look while movement and other interactions are gated. */
 export class FinalRitual {

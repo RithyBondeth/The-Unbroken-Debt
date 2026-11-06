@@ -1,12 +1,12 @@
-import { loadNotebookPortraits } from "../ui/notebook/NotebookPortraits";
+import { loadNotebookPortraits } from "@/ui/notebook/notebookPortraits";
 import {
   notebookContent as buildNotebookContent,
   type NotebookSnapshot,
-} from "../ui/notebook/NotebookContent";
-import { FirstPersonHands } from "../player/FirstPersonHands";
+} from "@/ui/notebook/notebookContent";
+import { FirstPersonHands } from "@/player/FirstPersonHands";
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
 import { Scene } from "@babylonjs/core/scene";
-import { keepSurfaceDetail } from "../render/SurfaceDetail";
+import { keepSurfaceDetail } from "@/render/surfaceDetail";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { Camera } from "@babylonjs/core/Cameras/camera";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
@@ -15,29 +15,29 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { EventBus } from "./EventBus";
 import { Flags } from "./Flags";
 import type { GameEvents } from "./events";
-import { enablePhysics } from "./Physics";
-import type { DeviceProfile } from "../render/DeviceProfile";
-import { getPreset, type QualityPreset } from "../render/QualityPresets";
-import { createPostPipeline, type PostPipeline } from "../render/RenderSetup";
-import { DynamicResolution } from "../render/DynamicResolution";
-import { runRenderLoop } from "../render/renderLoop";
-import { keepLightBudgets } from "../render/lightBudget";
-import { installSoftLampFalloff } from "../render/softLampFalloff";
-import { renderStallNotice } from "../ui/html/RenderStallNotice";
-import { Atmosphere } from "../render/Atmosphere";
-import { WindState } from "../render/wind";
-import { GatedInput, KeyboardMouseInput } from "../player/InputSource";
-import { PlayerController } from "../player/PlayerController";
-import { FallGuard } from "../player/FallGuard";
-import { PerfOverlay } from "../debug/PerfOverlay";
-import { AudioSystem } from "../audio/AudioSystem";
-import { Footsteps } from "../audio/Footsteps";
-import { Inventory } from "../systems/inventory/Inventory";
-import { Interaction } from "../systems/interaction/Interaction";
-import { SaveStore } from "../systems/saves/SaveStore";
-import { Sketchbook } from "../ui/diegetic/Sketchbook";
-import { loadSketchbookFonts } from "../ui/diegetic/fonts";
-import { SECTIONS } from "../ui/diegetic/sketchbookContent";
+import { enablePhysics } from "./physics";
+import type { DeviceProfile } from "@/render/DeviceProfile";
+import { getPreset, type QualityPreset } from "@/render/qualityPresets";
+import { createPostPipeline, type PostPipeline } from "@/render/renderSetup";
+import { DynamicResolution } from "@/render/DynamicResolution";
+import { runRenderLoop } from "@/render/renderLoop";
+import { keepLightBudgets } from "@/render/lightBudget";
+import { installSoftLampFalloff } from "@/render/softLampFalloff";
+import { renderStallNotice } from "@/ui/html/renderStallNotice";
+import { Atmosphere } from "@/render/Atmosphere";
+import { WindState } from "@/render/wind";
+import { GatedInput, KeyboardMouseInput } from "@/player/InputSource";
+import { PlayerController } from "@/player/PlayerController";
+import { FallGuard } from "@/player/FallGuard";
+import { PerfOverlay } from "@/debug/PerfOverlay";
+import { AudioSystem } from "@/audio/AudioSystem";
+import { Footsteps } from "@/audio/Footsteps";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { Interaction } from "@/systems/interaction/Interaction";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { Sketchbook } from "@/ui/diegetic/Sketchbook";
+import { loadSketchbookFonts } from "@/ui/diegetic/fonts";
+import { SECTIONS } from "@/ui/diegetic/sketchbookContent";
 import {
   Hints,
   SatchelPanel,
@@ -45,26 +45,27 @@ import {
   ScreenFade,
   Subtitles,
   type SatchelEntry,
-} from "../ui/html/StoryUi";
-import { EP1_GRADE } from "../episodes/ep1/data/grade";
-import { EP1_SKETCHBOOK } from "../episodes/ep1/data/sketchbook";
-import { ITEMS, type ItemInfo } from "../episodes/ep1/data/items";
-import { Prologue } from "../episodes/ep1/prologue/Prologue";
-import { ActOne } from "../episodes/ep1/act1/ActOne";
-import type { SaveData } from "../systems/saves/SaveData";
-import { Checkpoints, checkpointName } from "../systems/saves/Checkpoints";
-import { NotebookReader } from "../ui/html/NotebookReader";
-import { PauseMenu } from "../ui/html/PauseMenu";
-import { storyClock } from "../ui/html/StoryUi";
-import { TaxiRide } from "../episodes/ep1/travel/TaxiRide";
-import { WhisperingPagoda } from "../episodes/ep2/WhisperingPagoda";
-import { PagodaProgress, enterPagoda } from "../episodes/ep2/PagodaProgress";
-import { EP2_SKETCHBOOK, pagodaNotebook } from "../episodes/ep2/data/notebook";
-import { EP2_ITEMS } from "../episodes/ep2/data/pagoda";
-import { DrownedVillage } from "../episodes/ep3/DrownedVillage";
-import { VillageProgress, enterVillage } from "../episodes/ep3/VillageProgress";
-import { EP3_SKETCHBOOK, villageNotebook } from "../episodes/ep3/data/notebook";
-import { EP3_ITEMS } from "../episodes/ep3/data/village";
+} from "@/ui/html/StoryUi";
+import { NIGHT_GRADE } from "@/render/nightGrade";
+import { EP1_SKETCHBOOK } from "@/episodes/ep1/data/sketchbook";
+import { ITEMS } from "@/episodes/ep1/data/items";
+import type { ItemInfo } from "@/systems/inventory/Inventory";
+import { Prologue } from "@/episodes/ep1/prologue/Prologue";
+import { ActOne } from "@/episodes/ep1/act1/ActOne";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { Checkpoints, checkpointName } from "@/systems/saves/Checkpoints";
+import { NotebookReader } from "@/ui/html/NotebookReader";
+import { PauseMenu } from "@/ui/html/PauseMenu";
+import { storyClock } from "@/ui/html/StoryUi";
+import { TaxiRide } from "@/episodes/ep1/travel/TaxiRide";
+import { WhisperingPagoda } from "@/episodes/ep2/WhisperingPagoda";
+import { PagodaProgress, enterPagoda } from "@/episodes/ep2/PagodaProgress";
+import { EP2_SKETCHBOOK, pagodaNotebook } from "@/episodes/ep2/data/notebook";
+import { EP2_ITEMS } from "@/episodes/ep2/data/pagoda";
+import { DrownedVillage } from "@/episodes/ep3/DrownedVillage";
+import { VillageProgress, enterVillage } from "@/episodes/ep3/VillageProgress";
+import { EP3_SKETCHBOOK, villageNotebook } from "@/episodes/ep3/data/notebook";
+import { EP3_ITEMS } from "@/episodes/ep3/data/village";
 
 /** A part of an episode with its own area and script (the prologue, an act). */
 interface Section {
@@ -148,6 +149,18 @@ export class Game {
       dz = at.z - from.z;
     this.player.yaw = Math.atan2(dx, dz);
     this.player.pitch = Math.atan2(from.y - at.y, Math.hypot(dx, dz));
+  }
+
+  /** Freezes play for a scripted moment: closes the books and satchel, hides hints, releases the mouse. */
+  enterCutscene(): void {
+    this.cutscene = true;
+    this.gated.holdStill = true;
+    this.input.clear();
+    this.stopInspecting();
+    this.closeSketchbook();
+    this.satchel.close();
+    this.hints.hide();
+    document.exitPointerLock();
   }
 
   stopInspecting(): void {
@@ -236,7 +249,7 @@ export class Game {
     const section = await this.chooseSection();
     await section.load();
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
-    this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, EP1_GRADE, this.camera);
+    this.atmosphere = new Atmosphere(this.scene, this.pipeline.main, NIGHT_GRADE, this.camera);
     await loadNotebookPortraits();
     this.createSketchbook();
     if (section.warmup) {

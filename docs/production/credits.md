@@ -10,6 +10,8 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Apple (synthetic voice) | Scratch only | Sok's English scratch recording (fallback) (S1-041) |
 | Aron Łyczek | CC0 1.0 | [Ceramic Pot](https://polyhaven.com/a/ceramic_pot) (V1-094) |
 | Blemonade | CC0 1.0 | [Rusted Spade 01](https://polyhaven.com/a/rusted_spade_01) (V1-121) |
+| Cleveland Museum of Art | CC0 1.0 | [1987.14.2 Naga Finial (adapted: decimated; shapes reused for weathered statues)](https://sketchfab.com/3d-models/1987142-naga-finial-e0d25420037e4e6ba50754aaeb003f38) (V2-006) |
+| CMU Graphics Lab Motion Capture Database | Free for all uses; may be included in sold products; the data must not be resold directly | [Ghost motion (subjects 79, 91, 104, 111; BVH conversion by Bruce Hahne)](https://mocap.cs.cmu.edu/) (V2-009) |
 | colormass & Rico Cilliers | CC0 1.0 | [Rough Linen](https://polyhaven.com/a/rough_linen) (V1-087), [Quatrefoil Jacquard Fabric](https://polyhaven.com/a/quatrefoil_jacquard_fabric) (V1-089) |
 | Dalton Maag for Canonical | Ubuntu Font Licence 1.0 | [Interface font (menus, subtitles)](https://design.ubuntu.com/font) (V1-152) |
 | Danh Hong | SIL OFL 1.1 | [Sora's Khmer handwriting (sketchbook)](https://fonts.google.com/specimen/Freehand) (V1-053) |
@@ -17,7 +19,11 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Dario Barresi & Dimitrios Savva & Rico Cilliers | CC0 1.0 | [Dark Wood](https://polyhaven.com/a/dark_wood) (V1-084) |
 | Dimitrios Savva & Rico Cilliers | CC0 1.0 | [Wood Table Worn](https://polyhaven.com/a/wood_table_worn) (V1-086), [Weathered Brown Planks](https://polyhaven.com/a/weathered_brown_planks) (V1-109) |
 | eye-candy.xyz | CC0 1.0 | [Mud Forest](https://polyhaven.com/a/mud_forest) (V1-137) |
+| fdhlan21 | CC BY 4.0 | [Pocong (Scary) (adapted: head and face on a new body, as the kmaoch ghost)](https://sketchfab.com/3d-models/pocong-scary-d67d45b786cb4b69b345aef43ea4f59b) (V2-007), [Kuntilanak Merah (Scary) (adapted: re-rigged, new motion)](https://sketchfab.com/3d-models/kuntilanak-merah-scary-f403d41cda214c06ab6044d780463b7e) (V2-008) |
 | Fran Calvente | CC0 1.0 | [Wooden Table 02](https://polyhaven.com/a/WoodenTable_02) (V1-068) |
+| Francesco Coldesina | CC BY 4.0 | [Seated Buddha (adapted: decimated; shapes reused for weathered statues)](https://sketchfab.com/3d-models/buddha-22d11b87097644f3a9bb6f6a8015176f) (V2-002) |
+| Greg Zaal | CC0 1.0 | [Kloofendal Overcast (Pure Sky)](https://polyhaven.com/a/kloofendal_overcast_puresky) (V3-001) |
+| High | In progress | Taxi driver (seated; fitted hair (V1-155) |
 | James Ray Cock | CC0 1.0 | [Ceramic Vase 02](https://polyhaven.com/a/ceramic_vase_02) (V1-072), [Hanging Picture Frame 02](https://polyhaven.com/a/hanging_picture_frame_02) (V1-076), [Standing Picture Frame 01](https://polyhaven.com/a/standing_picture_frame_01) (V1-077), [Wooden Bucket 01](https://polyhaven.com/a/wooden_bucket_01) (V1-098) |
 | Jenelle van Heerden | CC0 1.0 | [Teak Veneer](https://polyhaven.com/a/teak_veneer) (V1-085) |
 | Jenelle van Heerden & Rico Cilliers | CC0 1.0 | [Dead Tree Trunk 02](https://polyhaven.com/a/dead_tree_trunk_02) (V1-116), [Root Cluster 01](https://polyhaven.com/a/root_cluster_01) (V1-118) |
@@ -29,9 +35,12 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Kless Gyzen | CC0 1.0 | [Rock Moss Set 01](https://polyhaven.com/a/rock_moss_set_01) (V1-132) |
 | Kuutti Siitonen | CC0 1.0 | [Jug 01](https://polyhaven.com/a/jug_01) (V1-073), [Pot Enamel 01](https://polyhaven.com/a/pot_enamel_01) (V1-074), [Wicker Basket 01](https://polyhaven.com/a/wicker_basket_01) (V1-078), [Wicker Basket 02](https://polyhaven.com/a/wicker_basket_02) (V1-096) |
 | Luca B | CC0 1.0 | [Old Bed Frame](https://polyhaven.com/a/old_bed_frame) (V1-065) |
+| manusainz | CC BY 4.0 | [Thai Monk (adapted: decimated)](https://sketchfab.com/3d-models/thai-monk-59840b1ce83e40c291ffb6d5d730be74) (V2-004) |
 | Maximilian Schuster | CC0 1.0 | [Vintage Suitcase](https://polyhaven.com/a/vintage_suitcase) (V1-067) |
 | Microsoft (synthetic voice) | Unclear for commercial release | Sok's Khmer gramophone recording (A2-05), four paragraphs (S1-040) |
+| Minneapolis Institute of Art | CC0 1.0 | [Prajnaparamita (adapted: decimated; shapes reused for weathered statues)](https://sketchfab.com/3d-models/prajnaparamita-929fa75bd5714802b121564ae32e7c94) (V2-005) |
 | Monsta3D | CC0 1.0 | [Vintage Oil Lamp](https://polyhaven.com/a/vintage_oil_lamp) (V1-066) |
+| Obi.Moz | CC BY 4.0 | [Seated monk (adapted: decimated, animated)](https://sketchfab.com/3d-models/monk-c0348e63db6647e991d63f8aeb1e6cc5) (V2-001) |
 | Oliver Harries | CC0 1.0 | [Wooden Bowl 01](https://polyhaven.com/a/wooden_bowl_01) (V1-093) |
 | Patrick Wagesreiter | SIL OFL 1.1 | [Sora's English handwriting (sketchbook, hints)](https://fonts.google.com/specimen/Patrick+Hand) (V1-052) |
 | Project (from Léon Busy, 1921, A36130 and A35898) | CC0 1.0 (source photograph) | Photographs on the hall wall (family group, mother, eldest daughter; a young monk at Angkor Wat) (V1-140) |
@@ -43,6 +52,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Rob Tuytel | CC0 1.0 | [Floor Tiles 06](https://polyhaven.com/a/floor_tiles_06) (V1-081), [Yellow Plaster](https://polyhaven.com/a/yellow_plaster) (V1-082), [Fabric Pattern 07](https://polyhaven.com/a/fabric_pattern_07) (V1-088), [Red Dirt Mud 01](https://polyhaven.com/a/red_dirt_mud_01) (V1-106), [Old Planks 02](https://polyhaven.com/a/old_planks_02) (V1-110), [Forest Leaves 02](https://polyhaven.com/a/forest_leaves_02) (V1-112), [Dead Tree Trunk](https://polyhaven.com/a/dead_tree_trunk) (V1-115), [Tree Stump 01](https://polyhaven.com/a/tree_stump_01) (V1-117), [Bark Brown 02](https://polyhaven.com/a/bark_brown_02) (V1-123), [Moss 01](https://polyhaven.com/a/moss_01) (V1-131), [Tree Stump 02](https://polyhaven.com/a/tree_stump_02) (V1-133), [Brown Mud Leaves 01](https://polyhaven.com/a/brown_mud_leaves_01) (V1-136), [Moss Wood](https://polyhaven.com/a/moss_wood) (V1-138) |
 | Rob Tuytel & Dimitrios Savva | CC0 1.0 | [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) (V1-102) |
 | Rob Tuytel & Rico Cilliers | CC0 1.0 | [Fancy Picture Frame 01](https://polyhaven.com/a/fancy_picture_frame_01) (V1-075), [Fern 02](https://polyhaven.com/a/fern_02) (V1-099), [Pachira Aquatica 01](https://polyhaven.com/a/pachira_aquatica_01) (V1-120), [Grass Medium 01](https://polyhaven.com/a/grass_medium_01) (V1-129), [Island Tree 02](https://polyhaven.com/a/island_tree_02) (V1-134), [Forest Ground 04](https://polyhaven.com/a/forest_ground_04) (V1-135) |
+| sofiarudi | CC BY 4.0 | [Burmese Buddha in National Museum Ireland (adapted: decimated)](https://sketchfab.com/3d-models/burmese-buddha-in-national-museum-ireland-658fab5464e94f118947c2384121104a) (V2-003) |
 | The Preahvihear Project Authors (Danh Hong) | SIL OFL 1.1 | [Khmer interface font](https://github.com/danhhong/Preahvihear) (V1-153) |
 | Tina | CC0 1.0 | [Brass Candleholders](https://polyhaven.com/a/brass_candleholders) (V1-070) |
 | Ulan Cabanilla | CC0 1.0 | [Machete](https://polyhaven.com/a/machete) (V1-122) |

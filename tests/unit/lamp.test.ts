@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameEvents } from "../../src/core/events";
-import { FULL_TANK_SECONDS, Lamp } from "../../src/systems/lamp/Lamp";
-import { Upkeep } from "../../src/systems/upkeep/Upkeep";
+import { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import { FULL_TANK_SECONDS, Lamp } from "@/systems/lamp/Lamp";
+import { Upkeep } from "@/systems/upkeep/Upkeep";
 
 describe("Lamp", () => {
   it("restores checkpoint oil and flame after a failed encounter", () => {

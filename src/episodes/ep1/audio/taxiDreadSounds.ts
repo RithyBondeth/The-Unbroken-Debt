@@ -9,7 +9,7 @@ import {
   sweep,
   wetStep,
   wrapLoop,
-} from "../../../audio/synth";
+} from "@/audio/synth";
 
 /**
  * Synthesised stand-ins for the ride's dread (Audio Design Document, section 9)

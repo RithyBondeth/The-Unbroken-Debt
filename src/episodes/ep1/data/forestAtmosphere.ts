@@ -1,4 +1,4 @@
-import type { MistPocket } from "../../../render/mist";
+import type { MistPocket } from "@/render/mist";
 
 /** Eye level stays clear; mist collects in understory, paddy edges and below the house. */
 export const GROUND_MIST: readonly MistPocket[] = [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOOK, paperHeight, roundedOutline } from "../../src/ui/diegetic/bookGeometry";
+import { BOOK, paperHeight, roundedOutline } from "@/ui/diegetic/bookGeometry";
 
 describe("bound sketchbook geometry", () => {
   it("has a recessed gutter and an arched page that fits within a physical binding", () => {

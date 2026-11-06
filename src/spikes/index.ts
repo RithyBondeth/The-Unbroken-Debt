@@ -1,5 +1,5 @@
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
-import type { DeviceProfile } from "../render/DeviceProfile";
+import type { DeviceProfile } from "@/render/DeviceProfile";
 
 export type SpikeRunner = (
   engine: WebGPUEngine,
@@ -8,18 +8,13 @@ export type SpikeRunner = (
 ) => Promise<void>;
 
 /**
- * Phase 1 technical spikes (Development Plan, section 2.2). Each is a small
- * scene that answers one risky question. Loaded on demand with `?spike=<id>`,
+ * Phase 1 technical spikes (Development Plan, section 2.2). Only S4, the
+ * spatial-audio listening test, is still open; the rest were retired once the
+ * game covered them. Loaded on demand with `?spike=<id>`,
  * so none of this code is downloaded by the game itself.
  */
 const SPIKES: Record<string, () => Promise<SpikeRunner>> = {
-  s1: async () => (await import("./s1-movement/S1MovementSpike")).runS1,
-  s2: async () => (await import("./s2-lighting/S2LightingSpike")).runS2,
-  s3: async () => (await import("./s3-assets/S3AssetSpike")).runS3,
   s4: async () => (await import("./s4-audio/S4SpatialAudioSpike")).runS4,
-  s5: async () => (await import("./s5-sketchbook/S5SketchbookSpike")).runS5,
-  s6: async () => (await import("./s6-saves/S6SaveSpike")).runS6,
-  s7: async () => (await import("./s7-atmosphere/S7AtmosphereSpike")).runS7,
 };
 
 export function hasSpike(id: string | null): id is string {
