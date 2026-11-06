@@ -4,9 +4,11 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Material } from "@babylonjs/core/Materials/material";
 import { seededRandom } from "@/audio/synth";
+import { addStaticBox } from "@/core/physics";
 import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "@/render/forestCards";
 import { applyFoliageWind } from "@/render/FoliageWind";
 import type { WindState } from "@/render/wind";
@@ -24,6 +26,10 @@ export interface FarTree {
 
 /** The compound's authored forest reaches about this far; cards begin beyond it. */
 const INNER = { x: 46, z: 50 };
+/** Height of the far forest floor, just under the compound's own ground. */
+const FLOOR_Y = -0.06;
+/** Thickness of the invisible slab that makes the floor solid. */
+const FLOOR_SLAB = 0.5;
 /** The pond's sunken basin, in the gap the compound's ground leaves for it. */
 const POND_BASIN = { minX: -18.6, maxX: 18.6, minZ: -39.2, maxZ: -17.4 };
 
@@ -173,6 +179,18 @@ export function buildFarForest(scene: Scene, wind: WindState, ground: Material |
       uvs: number[] = [],
       indices: number[] = [];
     for (const [x0, x1, z0, z1] of floorPieces(130, [POND_BASIN, TANK_BASIN])) {
+      // The floor is walkable where the compound's own ground stops (between the Root
+      // Gallery and the terrace, for one): an invisible slab under it keeps Sora from
+      // dropping through. Its top is the floor, so the compound's ground stays above it.
+      const slab = CreateBox(
+        "col_far_forest_floor",
+        { width: x1 - x0, height: FLOOR_SLAB, depth: z1 - z0 },
+        scene,
+      );
+      slab.position.set((x0 + x1) / 2, FLOOR_Y - FLOOR_SLAB / 2, (z0 + z1) / 2);
+      slab.isVisible = false;
+      slab.isPickable = false;
+      addStaticBox(slab, "leaves");
       const v = positions.length / 3;
       for (const [x, z] of [
         [x0, z0],
@@ -180,7 +198,7 @@ export function buildFarForest(scene: Scene, wind: WindState, ground: Material |
         [x1, z1],
         [x1, z0],
       ]) {
-        positions.push(x, -0.06, z);
+        positions.push(x, FLOOR_Y, z);
         normals.push(0, 1, 0);
         uvs.push(x / 3, z / 3);
       }
