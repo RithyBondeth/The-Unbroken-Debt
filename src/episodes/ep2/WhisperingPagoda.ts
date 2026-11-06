@@ -103,7 +103,10 @@ export class WhisperingPagoda {
   async load(): Promise<void> {
     const g = this.game;
     this.area = await loadArea(g.scene, "ep2", "ep2_area_pagoda", {
-      cellSize: 8,
+      // The pagoda is draw-call bound, not fill or vertex bound: 16 m cells (24 m in the
+      // garden zones) cut its frame from about 39 ms to 28 ms on an M1 Pro without
+      // putting more batches over their light limit.
+      cellSize: 16,
       keep: [/^mirror_disc_/, /^bridge_symbol_/, "hall_chain", /^bridge_plank/, ...COLLAPSE_KEEP],
       beforeBatch: (container) => {
         // The fully authored seated monk replaces the first-pass sculpt, and the walking
@@ -116,8 +119,7 @@ export class WhisperingPagoda {
       },
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
       group: zoneOf,
-      // A zone's stones are far apart and its lamps are few: bigger cells, fewer draw calls.
-      cellSizeFor: (mesh) => (zoneOf(mesh) ? 12 : undefined),
+      cellSizeFor: (mesh) => (zoneOf(mesh) ? 24 : undefined),
     });
     g.fallGuard.bounds = BOUNDS;
     // The far forest runs on into the fog in every direction.
