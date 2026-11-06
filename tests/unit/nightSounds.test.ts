@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import * as sounds from "../../src/episodes/ep1/audio/nightSounds";
-import { seededRandom } from "../../src/audio/synth";
+import * as sounds from "@/audio/sounds/nightSounds";
+import { seededRandom } from "@/audio/synth";
 
 const RATE = 22050;
 const LOOPS = new Set(["chantDrone"]);

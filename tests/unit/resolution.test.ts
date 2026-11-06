@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { ResolutionProgress } from "../../src/episodes/ep1/resolution/ResolutionProgress";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { encodeSaveCode, decodeSaveCode } from "../../src/systems/saves/saveCode";
+import { Flags } from "@/core/Flags";
+import { ResolutionProgress } from "@/episodes/ep1/resolution/ResolutionProgress";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { encodeSaveCode, decodeSaveCode } from "@/systems/saves/saveCode";
 function setup() {
   const flags = new Flags();
   return { flags, p: new ResolutionProgress(flags) };

@@ -8,7 +8,7 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { realiseInstances } from "../../core/AreaLoader";
+import { realiseInstances } from "@/core/areaLoader";
 
 /** In the glTF's own axes, which is the frame its bones' rotations are written in. */
 const FORWARD = new Vector3(0, 0, 1);

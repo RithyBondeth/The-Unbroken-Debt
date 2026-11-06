@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { VigilProgress } from "../../src/episodes/ep1/act1/VigilProgress";
-import { Upkeep } from "../../src/systems/upkeep/Upkeep";
+import { Flags } from "@/core/Flags";
+import { VigilProgress } from "@/episodes/ep1/act1/VigilProgress";
+import { Upkeep } from "@/systems/upkeep/Upkeep";
 
 describe("Act I handover", () => {
   it("requires the offering, a vigil cycle, the tent and free hands", () => {

@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { passageReady, passageRequired } from "../../src/episodes/ep1/act1/VigilPassage";
-import { dreadBed, spiritRattle } from "../../src/episodes/ep1/audio/presenceSounds";
-import { seededRandom } from "../../src/audio/synth";
+import { Flags } from "@/core/Flags";
+import { passageReady, passageRequired } from "@/episodes/ep1/act1/vigilPassage";
+import { dreadBed, spiritRattle } from "@/episodes/ep1/audio/presenceSounds";
+import { seededRandom } from "@/audio/synth";
 
 it("cannot start on arrival, during exploration or before the completed offering and cycle", () => {
   const flags = new Flags();

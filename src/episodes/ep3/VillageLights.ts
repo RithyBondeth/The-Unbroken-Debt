@@ -9,17 +9,17 @@ import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import type { Game } from "../../core/Game";
-import type { Area } from "../../core/AreaLoader";
-import { useSoftFalloff, softFalloff } from "../../render/softLampFalloff";
-import { limitLightToRange } from "../../render/RenderSetup";
-import { NIGHT_LOOK } from "../ep1/data/nightLook";
-import { StormSky } from "../ep1/act1/StormSky";
-import { Lightning } from "../ep1/Lightning";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
+import { useSoftFalloff, softFalloff } from "@/render/softLampFalloff";
+import { limitLightToRange } from "@/render/renderSetup";
+import { NIGHT_LOOK } from "@/render/nightLook";
+import { StormSky } from "@/render/weather/StormSky";
+import { Lightning } from "@/render/weather/Lightning";
 import { VillageRain } from "./VillageRain";
 import type { VillageStage } from "./VillageProgress";
 import { VillageEnvironment } from "./VillageEnvironment";
-import { FoliageWind } from "../../render/FoliageWind";
+import { FoliageWind } from "@/render/FoliageWind";
 
 /** The established Episode 1 exposure, falloff, clouds and storm, with an afternoon opening. */
 export class VillageLights {

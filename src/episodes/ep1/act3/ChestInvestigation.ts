@@ -1,11 +1,11 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import type { Game } from "../../../core/Game";
+import type { Game } from "@/core/Game";
 import { ChestProgress, CHEST_ITEMS, type ChestItem } from "./ChestProgress";
 import type { ChestModels } from "./ChestModels";
 import { CoffinEncounter } from "./CoffinEncounter";
 import { CorpseProgress } from "./CorpseProgress";
 import type { CorpseModels } from "./CorpseModels";
-import { boardCreak, seededRandom } from "../../../audio/synth";
+import { boardCreak, seededRandom } from "@/audio/synth";
 import { drawerOpen, pickUp } from "../audio/prologueSounds";
 
 /** A3-02, A3-05–06. The chest discoveries prepare the later CP6 ritual. */

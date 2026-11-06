@@ -1,13 +1,13 @@
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { encodeSaveCode, decodeSaveCode } from "../../src/systems/saves/saveCode";
-import { CHEST_ITEMS } from "../../src/episodes/ep1/act3/ChestProgress";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { saveShot } from "../../src/debug/saveShot";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { encodeSaveCode, decodeSaveCode } from "@/systems/saves/saveCode";
+import { CHEST_ITEMS } from "@/episodes/ep1/act3/ChestProgress";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { saveShot } from "@/debug/saveShot";
 const output = document.getElementById("results")!;
 const report = (s: string) => (output.textContent += `${s}\n`);
 const assert = (ok: unknown, s: string) => {

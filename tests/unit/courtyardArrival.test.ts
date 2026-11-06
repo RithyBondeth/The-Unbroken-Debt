@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { GatedInput, type InputSource } from "../../src/player/InputSource";
-import { ActOneBeats } from "../../src/episodes/ep1/act1/ActOneBeats";
+import { Flags } from "@/core/Flags";
+import { GatedInput, type InputSource } from "@/player/InputSource";
+import { ActOneBeats } from "@/episodes/ep1/act1/ActOneBeats";
 
 function courtyard() {
   const flags = new Flags();

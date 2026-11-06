@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { notebookContent } from "../../src/ui/notebook/NotebookContent";
-import { mapSvg } from "../../src/ui/notebook/NotebookMap";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { notebookContent } from "@/ui/notebook/notebookContent";
+import { mapSvg } from "@/ui/notebook/NotebookMap";
 
 const at = { x: -3, y: 0, z: -0.7 };
 const model = (flags: Flags, inventory: Inventory, ids: string[] = []) =>

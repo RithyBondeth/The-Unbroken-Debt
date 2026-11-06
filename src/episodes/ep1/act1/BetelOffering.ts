@@ -8,11 +8,11 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
-import type { LevelMarker } from "../../../core/LevelBuilder";
-import { seededRandom } from "../../../audio/synth";
-import type { StringKey } from "../../../ui/html/StoryUi";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
+import type { LevelMarker } from "@/core/levelBuilder";
+import { seededRandom } from "@/audio/synth";
+import type { StringKey } from "@/ui/html/StoryUi";
 import { clockStop, pickUp } from "../audio/prologueSounds";
 import {
   BETEL_ENTRIES,

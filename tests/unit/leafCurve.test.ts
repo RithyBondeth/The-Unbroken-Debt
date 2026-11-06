@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leafProfile } from "../../src/ui/diegetic/leafCurve";
+import { leafProfile } from "@/ui/diegetic/leafCurve";
 
 describe("leafProfile", () => {
   const width = 0.148;

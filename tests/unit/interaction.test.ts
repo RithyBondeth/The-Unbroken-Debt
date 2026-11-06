@@ -8,10 +8,10 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameEvents } from "../../src/core/events";
-import { Interaction } from "../../src/systems/interaction/Interaction";
-import { InteractionHint } from "../../src/systems/interaction/InteractionHint";
+import { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
+import { Interaction } from "@/systems/interaction/Interaction";
+import { InteractionHint } from "@/systems/interaction/InteractionHint";
 
 const engines: NullEngine[] = [];
 afterEach(() => {

@@ -1,5 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "@/core/areaLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
@@ -10,9 +10,9 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 import { WARDROBES } from "../data/walker";
-import { ShadowFigure } from "../entities/ShadowFigure";
+import { ShadowFigure } from "@/shared/entities/ShadowFigure";
 
 export interface HidingWardrobe {
   id: string;

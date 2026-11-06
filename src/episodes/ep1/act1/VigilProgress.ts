@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import { passageRequired } from "./VigilPassage";
+import type { Flags } from "@/core/Flags";
+import { passageRequired } from "./vigilPassage";
 
 /** A1-12: an incense cycle may pass even if Sora renews the sticks early. */
 export class VigilProgress {

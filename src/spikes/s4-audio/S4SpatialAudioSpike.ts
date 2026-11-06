@@ -4,14 +4,14 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { CreateCapsule } from "@babylonjs/core/Meshes/Builders/capsuleBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { KeyboardMouseInput, type InputSource } from "../../player/InputSource";
-import type { MoveIntent } from "../../player/movement";
-import { PlayerController } from "../../player/PlayerController";
-import { PerfOverlay } from "../../debug/PerfOverlay";
-import { getPreset, isQualityName, type QualityName } from "../../render/QualityPresets";
-import type { DeviceProfile } from "../../render/DeviceProfile";
-import { AudioSystem, PANNING } from "../../audio/AudioSystem";
-import { boardCreak, rattlingBreath, seededRandom, wetStep } from "../../audio/synth";
+import { KeyboardMouseInput, type InputSource } from "@/player/InputSource";
+import type { MoveIntent } from "@/player/movement";
+import { PlayerController } from "@/player/PlayerController";
+import { PerfOverlay } from "@/debug/PerfOverlay";
+import { getPreset, isQualityName, type QualityName } from "@/render/qualityPresets";
+import type { DeviceProfile } from "@/render/DeviceProfile";
+import { AudioSystem, PANNING } from "@/audio/AudioSystem";
+import { boardCreak, rattlingBreath, seededRandom, wetStep } from "@/audio/synth";
 import {
   makeTrials,
   relativeAzimuth,
@@ -21,12 +21,12 @@ import {
   type Summary,
   type Trial,
   type TrialResult,
-} from "../../audio/localization";
-import { SpikeHud } from "../SpikeHud";
-import { createHallEnvironment } from "../hallEnvironment";
+} from "@/audio/localization";
+import { SpikeHud } from "./SpikeHud";
+import { createHallEnvironment } from "./hallEnvironment";
 import { renderEars, type EarLevels } from "./offlineCheck";
-import { runRenderLoop } from "../../render/renderLoop";
-import { renderStallNotice } from "../../ui/html/RenderStallNotice";
+import { runRenderLoop } from "@/render/renderLoop";
+import { renderStallNotice } from "@/ui/html/renderStallNotice";
 
 /** Results exposed for automated checks (`window.spikeResult`). */
 export interface S4Result {

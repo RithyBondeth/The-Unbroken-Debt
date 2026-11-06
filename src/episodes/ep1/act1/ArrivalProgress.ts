@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 
 /** Durable arrival state; an interrupted call starts again without granting items. */
 export class ArrivalProgress {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SPACES, impulseResponse, type SpaceName } from "../../src/audio/acoustics";
-import { rms, seededRandom } from "../../src/audio/synth";
-import { spaceAt } from "../../src/episodes/ep1/act1/Soundscape";
+import { SPACES, impulseResponse, type SpaceName } from "@/audio/acoustics";
+import { rms, seededRandom } from "@/audio/synth";
+import { spaceAt } from "@/episodes/ep1/act1/Soundscape";
 
 const RATE = 22050;
 

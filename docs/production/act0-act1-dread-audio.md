@@ -5,8 +5,8 @@ The title screen's horror carried into the studio, the taxi and the village, wit
 ## Shared pieces
 
 - `src/audio/dread.ts`: the title screen's toolkit (moving band-pass, seamless loops, Schroeder hall, wordless whispers, creaks, knocks), now shared by `welcomeDread.ts` and the episode.
-- `src/episodes/ep1/audio/dreadSounds.ts`: four stingers (`rise`, `shock`, `drop`, `swell`), a 32 s pressure bed, the ringing ears after a shock, and the studio's room tone with Phnom Penh beyond the rain.
-- `src/episodes/ep1/audio/DreadScore.ts`: one per scene. The story sets a pressure level (the bed eases in over about 4 s and out over about 6 s, on the music bus) and fires stingers on the threat bus, which is never ducked. Hits are timed with the scene's own game-time waits.
+- `src/audio/sounds/dreadSounds.ts`: four stingers (`rise`, `shock`, `drop`, `swell`), a 32 s pressure bed, the ringing ears after a shock, and the studio's room tone with Phnom Penh beyond the rain.
+- `src/audio/DreadScore.ts`: one per scene. The story sets a pressure level (the bed eases in over about 4 s and out over about 6 s, on the music bus) and fires stingers on the threat bus, which is never ducked. Hits are timed with the scene's own game-time waits.
 
 ## Where they play
 

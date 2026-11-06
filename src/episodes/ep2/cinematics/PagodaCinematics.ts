@@ -9,10 +9,10 @@ import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { CreateGround } from "@babylonjs/core/Meshes/Builders/groundBuilder";
-import { loadArea, type Area } from "../../../core/AreaLoader";
-import type { Game } from "../../../core/Game";
+import { loadArea, type Area } from "@/core/areaLoader";
+import type { Game } from "@/core/Game";
 import type { PagodaSoundscape } from "../PagodaSoundscape";
-import { CinematicDirector } from "./CinematicDirector";
+import { CinematicDirector } from "@/shared/cinematics/CinematicDirector";
 import { LibraryCollapse } from "./LibraryCollapse";
 import {
   HARVEST_SCENE,
@@ -23,7 +23,7 @@ import {
   DAWN_SCENE,
   PHOTO_SCENE,
 } from "./scripts";
-import { RelicCraft } from "../../ep1/act3/RelicCraft";
+import { RelicCraft } from "@/shared/RelicCraft";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
 /** Authored humans and Episode 1's surface kit, all staged in the existing world. */

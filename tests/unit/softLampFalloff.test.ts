@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ShaderStore } from "@babylonjs/core/Engines/shaderStore";
-import { installSoftLampFalloff, softFalloff } from "../../src/render/softLampFalloff";
+import { installSoftLampFalloff, softFalloff } from "@/render/softLampFalloff";
 
 const RANGE = 9;
 /** Calibrated as VillageLights does: equal to plain 1/d² at 4 m. */

@@ -6,12 +6,12 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import type { Area } from "../../../core/AreaLoader";
-import { FLAME_COLOR, limitLightToRange } from "../../../render/RenderSetup";
-import { softFalloff, useSoftFalloff } from "../../../render/softLampFalloff";
-import { applyRainWetness } from "../../../render/SurfaceDetail";
-import { Lightning } from "../Lightning";
-import { DAWN_LOOK, NIGHT_LOOK } from "../data/nightLook";
+import type { Area } from "@/core/areaLoader";
+import { FLAME_COLOR, limitLightToRange } from "@/render/renderSetup";
+import { softFalloff, useSoftFalloff } from "@/render/softLampFalloff";
+import { applyRainWetness } from "@/render/surfaceDetail";
+import { Lightning } from "@/render/weather/Lightning";
+import { DAWN_LOOK, NIGHT_LOOK } from "@/render/nightLook";
 
 /**
  * The village at night (Art Bible, section 3): a dark, rain-heavy sky; the

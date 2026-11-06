@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 import { GOVERNOR } from "../data/investigation";
 
 /** Speed and sustained listening; independent of rendering and audio availability. */

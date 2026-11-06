@@ -1,10 +1,6 @@
-import type { NotebookSnapshot } from "../../../ui/notebook/NotebookContent";
-import type { NotebookMap, MapShape } from "../../../ui/notebook/NotebookMap";
-import type {
-  SketchbookData,
-  SketchEntry,
-  NightMark,
-} from "../../../ui/diegetic/sketchbookContent";
+import type { NotebookSnapshot } from "@/ui/notebook/notebookContent";
+import type { NotebookMap, MapShape } from "@/ui/notebook/NotebookMap";
+import type { SketchbookData, SketchEntry, NightMark } from "@/ui/diegetic/sketchbookContent";
 import type { VillageProgress, VillageStage } from "../VillageProgress";
 import { VILLAGE, NOTES, KHMER_DIGITS } from "./village";
 

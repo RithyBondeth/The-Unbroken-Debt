@@ -1,4 +1,4 @@
-import { biquad, noise, normalise } from "../../../audio/synth";
+import { biquad, noise, normalise } from "@/audio/synth";
 
 /** Wordless pressure: close beating partials, an uneven pulse and bowed air.
  * Whole-number carrier cycles and a periodic envelope keep the 12 s loop clean.

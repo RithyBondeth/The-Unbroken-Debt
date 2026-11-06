@@ -8,18 +8,18 @@ import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Material } from "@babylonjs/core/Materials/material";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
-import type { LevelMarker } from "../../../core/LevelBuilder";
-import { seededRandom } from "../../../audio/synth";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
+import type { LevelMarker } from "@/core/levelBuilder";
+import { seededRandom } from "@/audio/synth";
 import { drawerOpen, pickUp } from "../audio/prologueSounds";
 import { lampWick, matchStrike, pourOil, whispers } from "../audio/vigilSounds";
-import { Lamp } from "../../../systems/lamp/Lamp";
-import { Upkeep } from "../../../systems/upkeep/Upkeep";
-import { BottomScaler, HeldLamp } from "../../../player/HeldLamp";
+import { Lamp } from "@/systems/lamp/Lamp";
+import { Upkeep } from "@/systems/upkeep/Upkeep";
+import { BottomScaler, HeldLamp } from "@/player/HeldLamp";
 import type { VillageLights } from "./VillageLights";
 import "@babylonjs/core/Particles/particleSystemComponent";
-import type { SaveData } from "../../../systems/saves/SaveData";
+import type { SaveData } from "@/systems/saves/SaveData";
 
 /** Episode 1 Beat Sheet, section 5: corner sticks burn down every 10–12 minutes. */
 export const INCENSE_SECONDS = 11 * 60;

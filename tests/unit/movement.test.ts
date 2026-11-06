@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PLAYER_CONFIG } from "../../src/player/PlayerConfig";
+import { DEFAULT_PLAYER_CONFIG } from "@/player/PlayerConfig";
 import {
   approach,
   smoothingFactor,
   targetSpeed,
   wishVelocity,
   type MoveIntent,
-} from "../../src/player/movement";
+} from "@/player/movement";
 
 const intent = (x: number, z: number): MoveIntent => ({ x, z, hurry: false, crouch: false });
 

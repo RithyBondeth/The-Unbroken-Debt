@@ -1,7 +1,7 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { AudioSystem } from "../../../audio/AudioSystem";
-import { rattlingBreath, seededRandom, wetStep } from "../../../audio/synth";
+import type { AudioSystem } from "@/audio/AudioSystem";
+import { rattlingBreath, seededRandom, wetStep } from "@/audio/synth";
 import { sniff } from "./houseSounds";
 
 /** Seconds from one breath to the next at rest: slow, heavy, about 17 a minute. */

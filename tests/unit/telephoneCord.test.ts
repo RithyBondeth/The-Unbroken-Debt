@@ -5,7 +5,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import { TelephoneCord } from "../../src/player/TelephoneCord";
+import { TelephoneCord } from "@/player/TelephoneCord";
 
 const engines: NullEngine[] = [];
 afterEach(() => {

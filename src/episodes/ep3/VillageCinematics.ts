@@ -1,9 +1,9 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import type { Game } from "../../core/Game";
-import { CinematicDirector } from "../ep2/cinematics/CinematicDirector";
-import { dialogueScript } from "../ep2/cinematics/Timeline";
+import type { Game } from "@/core/Game";
+import { CinematicDirector } from "@/shared/cinematics/CinematicDirector";
+import { dialogueScript } from "@/shared/cinematics/timeline";
 import { RITUAL_FIGURES } from "./data/village";
 
 /** The same pausable, skippable, captioned cinematic runtime as the pagoda. */

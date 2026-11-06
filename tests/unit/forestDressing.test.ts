@@ -7,7 +7,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { seededRandom } from "../../src/audio/synth";
+import { seededRandom } from "@/audio/synth";
 import {
   TRUNK_BINS,
   bakePlantHeights,
@@ -16,13 +16,13 @@ import {
   plantPhase,
   treeVoice,
   trunkRadius,
-} from "../../src/render/plantHeights";
-import { grassChance, layoutGrass } from "../../src/episodes/ep1/data/grass";
-import { PATH, ROAD_Z, pathDistance } from "../../src/episodes/ep1/data/forestBorder";
-import { SAVE_SHRINE_POSITION } from "../../src/episodes/ep1/data/saveShrine";
-import { grassClumpData } from "../../src/episodes/ep1/act1/TallGrass";
-import { effigy, tube } from "../../src/episodes/ep1/act1/TreeOmens";
-import { CORD_WEB, DRESSED_TRUNKS, OMEN_FIG } from "../../src/episodes/ep1/data/treeOmens";
+} from "@/render/plantHeights";
+import { grassChance, layoutGrass } from "@/episodes/ep1/data/grass";
+import { PATH, ROAD_Z, pathDistance } from "@/episodes/ep1/data/forestBorder";
+import { SAVE_SHRINE_POSITION } from "@/episodes/ep1/data/saveShrine";
+import { grassClumpData } from "@/episodes/ep1/act1/TallGrass";
+import { effigy, tube } from "@/episodes/ep1/act1/TreeOmens";
+import { CORD_WEB, DRESSED_TRUNKS, OMEN_FIG } from "@/episodes/ep1/data/treeOmens";
 
 describe("plant heights for the wind", () => {
   it("knows how each plant bends and sounds by its name", () => {

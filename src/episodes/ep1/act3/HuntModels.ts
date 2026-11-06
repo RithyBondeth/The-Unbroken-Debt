@@ -1,6 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
-import type { Area } from "../../../core/AreaLoader";
+import type { Area } from "@/core/areaLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
@@ -13,9 +13,9 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 import { JARS } from "../data/hunt";
-import { ShadowFigure } from "../entities/ShadowFigure";
+import { ShadowFigure } from "@/shared/entities/ShadowFigure";
 
 export interface SearchJar {
   id: string;

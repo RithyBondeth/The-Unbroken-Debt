@@ -1,12 +1,12 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { notebookMap } from "../../src/ui/notebook/NotebookMap";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { saveShot } from "../../src/debug/saveShot";
+import { notebookMap } from "@/ui/notebook/NotebookMap";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { saveShot } from "@/debug/saveShot";
 
 async function review() {
   if (!import.meta.env.DEV) return;

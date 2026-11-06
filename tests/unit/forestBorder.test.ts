@@ -11,7 +11,7 @@ import {
   outside,
   pathDistance,
   roadBank,
-} from "../../src/episodes/ep1/data/forestBorder";
+} from "@/episodes/ep1/data/forestBorder";
 
 const flat = () => 0;
 const options = { nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true };

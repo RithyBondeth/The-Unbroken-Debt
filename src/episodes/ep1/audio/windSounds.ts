@@ -8,8 +8,8 @@ import {
   stickSlip,
   sweep,
   wrapLoop,
-} from "../../../audio/synth";
-import { gustEnvelope } from "../../../render/wind";
+} from "@/audio/synth";
+import { gustEnvelope } from "@/render/wind";
 
 /**
  * The monsoon wind, synthesised until recordings exist (Audio Design Document,

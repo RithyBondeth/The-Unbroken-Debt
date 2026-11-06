@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import type { Inventory } from "../../../systems/inventory/Inventory";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
 
 export const PORTRAIT_TIMEOUT = 120;
 

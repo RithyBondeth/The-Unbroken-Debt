@@ -4,16 +4,10 @@ import { Scene } from "@babylonjs/core/scene";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { ShaderLanguage } from "@babylonjs/core/Materials/shaderLanguage";
-import {
-  FRONT_SPEED,
-  GUST_RISE,
-  WIND_UNIFORMS,
-  WindState,
-  gustEnvelope,
-} from "../../src/render/wind";
-import type { FoliageWind } from "../../src/render/FoliageWind";
-import { applyFoliageWind, foliageKind, foliageWindCode } from "../../src/render/FoliageWind";
-import { seededRandom } from "../../src/audio/synth";
+import { FRONT_SPEED, GUST_RISE, WIND_UNIFORMS, WindState, gustEnvelope } from "@/render/wind";
+import type { FoliageWind } from "@/render/FoliageWind";
+import { applyFoliageWind, foliageKind, foliageWindCode } from "@/render/FoliageWind";
+import { seededRandom } from "@/audio/synth";
 
 const run = (wind: WindState, seconds: number, x = 0, z = 0) => {
   for (let i = 0; i < Math.round(seconds * 60); i++) wind.update(1 / 60, x, z);

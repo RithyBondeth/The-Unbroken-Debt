@@ -7,10 +7,10 @@ import {
   SLOTS,
   type Offering,
   type Tray,
-} from "../../src/episodes/ep1/data/betel";
-import { ITEMS } from "../../src/episodes/ep1/data/items";
-import { EP1_SKETCHBOOK } from "../../src/episodes/ep1/data/sketchbook";
-import strings from "../../src/data/strings/en.json";
+} from "@/episodes/ep1/data/betel";
+import { ITEMS } from "@/episodes/ep1/data/items";
+import { EP1_SKETCHBOOK } from "@/episodes/ep1/data/sketchbook";
+import strings from "@/data/strings/en.json";
 
 const all = () => true;
 

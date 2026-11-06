@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { DeskProgress, PORTRAIT_TIMEOUT } from "../../src/episodes/ep1/act2/DeskProgress";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { DeskProgress, PORTRAIT_TIMEOUT } from "@/episodes/ep1/act2/DeskProgress";
 
 function setup() {
   const flags = new Flags(),

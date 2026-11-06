@@ -1,10 +1,10 @@
-import { bookTurnFrame, type BookTurnState } from "../ui/diegetic/BookMotion";
+import { bookTurnFrame, type BookTurnState } from "@/ui/diegetic/bookMotion";
 import handContact from "../../art-source/characters/sora/sora-hands.drawing.json";
-import { createTelephoneReceiver } from "./TelephoneReceiver";
+import { createTelephoneReceiver } from "./telephoneReceiver";
 import { decodeHandAsset, type HandAsset } from "./HandAsset";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
-import { drawingFrame } from "./DrawingPose";
+import { drawingFrame } from "./drawingPose";
 import { HandRig, type HandGrip } from "./HandRig";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";

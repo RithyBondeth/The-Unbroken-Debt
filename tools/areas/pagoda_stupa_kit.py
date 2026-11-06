@@ -284,10 +284,11 @@ PALETTES = {
 }
 
 
-def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=None):
+def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=None, wear=1.0):
     """Sculpts the fused mass in place and works out its colour, per vertex. `scale` sizes
     the damage to the object: a stupa is 1, a statue perhaps .5. `surface_colours` gives
-    each vertex its own stone colour (a scan's real one) in place of the palette's."""
+    each vertex its own stone colour (a scan's real one) in place of the palette's. `wear` is
+    how much of the carving the damage may take: 1 for masonry, far less for a fine scan."""
     me = obj.data
     pal = PALETTES[palette]
     n = len(me.vertices)
@@ -318,8 +319,10 @@ def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=
         fine[i] = _fbm(p, 3, .022, seed + 3)
         grit[i] = _fbm(p, 2, .006, seed + 23)
         tone[i] = _fbm(p, 3, .38, seed + 7)
-        blot[i] = _fbm(p, 4, .1, seed + 31)
-        lichen[i] = _fbm(p, 2, .028, seed + 41)
+        # Warped by the larger noise: unwarped peaks of Perlin noise show as little diamonds.
+        warped = p + Vector((sheet[i], tone[i], sheet[i] - tone[i])) * .14
+        blot[i] = _fbm(warped, 3, .22, seed + 31)
+        lichen[i] = _fbm(warped, 2, .05, seed + 41)
         # Long in Z, thin across: the grain of running water and of cracks.
         q = Vector((p.x, p.y, p.z * .1))
         streak[i] = _fbm(q, 3, .045, seed + 11)
@@ -328,7 +331,7 @@ def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=
         crack[i] = _fbm(r, 3, .13, seed + 17)
         crack2[i] = _fbm(r, 3, .05, seed + 19)
     # The surface falls away in sheets, more readily low down and at corners, raggedly.
-    fall = pal['fall']
+    fall = pal['fall'] + (1 - wear) * .35
     bias = .1 * (1 - np.clip(height / 1.5, 0, 1)) + .12 * convex
     field = sheet + bias + fine * .13 + grit * .05
     fallen = field > fall
@@ -352,10 +355,10 @@ def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=
         push += bare * (each - .5) * .004 + bare * grit * .0016
     # Corners knocked off, whatever is under them.
     knocked = convex * np.clip(fine * 1.1 + grit * .5 + .22, 0, 1)
-    push -= knocked * .016
+    push -= knocked * .016 * wear
     # Cracks: thin dark lines, wandering downwards, the big ones with a family of small.
-    line = np.exp(-((crack / .012) ** 2)) * np.clip((tone + .5) * 1.8, 0, 1)
-    line2 = np.exp(-((crack2 / .007) ** 2)) * np.clip((blot + .15) * 2.2, 0, 1)
+    line = np.exp(-((crack / .012) ** 2)) * np.clip((tone + .5) * 1.8, 0, 1) * wear
+    line2 = np.exp(-((crack2 / .007) ** 2)) * np.clip((blot + .15) * 2.2, 0, 1) * wear
     push -= line * .009 + line2 * .003
     # The skin of old stone: never flat.
     push += grit * .0012 + fine * .0028 + blot * .0016
@@ -375,34 +378,41 @@ def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=
     tree = BVHTree.FromPolygons(verts, polys)
     under = np.full(n, 99.0)
     up_vec = Vector((0, 0, 1))
-    for i in range(0, n, 4):
+    for i in range(n):
         hit = tree.ray_cast(verts[i] + Vector(normal[i]) * .004, up_vec, 3.0)
         if hit[0] is not None:
             under[i] = hit[3] / scale
-    # Spread to the skipped vertices through the mesh edges.
-    for _ in range(3):
-        better = under.copy()
-        np.minimum.at(better, edges[:, 0], under[edges[:, 1]])
-        np.minimum.at(better, edges[:, 1], under[edges[:, 0]])
-        under = better
-    runs = np.exp(-under / .75) * np.clip(streak * 1.5 + streak2 * .8 + .62, 0, 1)
+    runs = np.exp(-under / .75) * np.clip(streak * .35 + streak2 * .2 + .78, 0, 1)
+    # Water spreads as it runs: soften it across the mesh, or each voxel's ledge shows.
+    for _ in range(6):
+        total = runs.copy()
+        seen = np.ones(n)
+        np.add.at(total, edges[:, 0], runs[edges[:, 1]])
+        np.add.at(total, edges[:, 1], runs[edges[:, 0]])
+        np.add.at(seen, edges[:, 0], 1)
+        np.add.at(seen, edges[:, 1], 1)
+        runs = total / seen
     # Colour: the surface gone grey and yellow, what is under it, mould, lichen, moss, earth.
     surface = np.array(pal['base'])
+    streak_strength = 1.0
     if surface_colours is None:
         colour = np.tile(surface, (n, 1))
         colour = colour * (1 + tone[:, None] * .3 + fine[:, None] * .14 + grit[:, None] * .1)
-        colour += (np.array(pal['stain']) - surface)[None, :] * np.clip(tone + .15 + streak * .5, 0, 1)[:, None] * .55
+        colour += (np.array(pal['stain']) - surface)[None, :] * np.clip(tone + .15 + streak * .18, 0, 1)[:, None] * .55
     else:
         colour = surface_colours * (1 + tone[:, None] * .22 + fine[:, None] * .08)
         colour += (np.array(pal['stain'])[None, :] - colour) * np.clip(tone + .1 + streak * .5, 0, 1)[:, None] * .28
+    # Rain runs down fine carving only under its ledges, not as stripes across a face.
+    streak_strength = .35 + .65 * wear
     # Blooms of grey-black mould, away from the runs as well.
-    bloom = np.clip((blot - .05) * 2.4 + fine * .5, 0, 1)
-    colour *= 1 - bloom[:, None] * .62
+    # Soft-edged and faint, or the patches read as camouflage.
+    bloom = _smoothstep(-.2, 1.0, blot)
+    colour *= 1 - bloom[:, None] * .22
     # Pale lichen rosettes.
-    rosette = np.clip((lichen - .42) * 7, 0, 1) * np.clip(1 - bloom * 1.2, 0, 1)
+    rosette = _smoothstep(.35, 1.0, lichen) * np.clip(1 - bloom * 1.2, 0, 1)
     if palette == 'gilt':
         rosette *= 0
-    colour = colour * (1 - rosette[:, None] * .6) + np.array([.5, .52, .42])[None, :] * rosette[:, None] * .6
+    colour = colour * (1 - rosette[:, None] * .16) + np.array([.5, .52, .42])[None, :] * rosette[:, None] * .16
     # The broken edge of the surface shows its thickness, pale and clean.
     colour = colour * (1 - rim[:, None] * .45) + np.array(pal['edge'])[None, :] * rim[:, None] * .45
     if brickwork:
@@ -414,9 +424,9 @@ def weather(obj, seed, palette='lime', scale=1.0, chamber=True, surface_colours=
         beneath = np.array(pal['under'])[None, :] * (1 + fine[:, None] * .3 + grit[:, None] * .2)
     colour = colour * (1 - bare[:, None]) + beneath * bare[:, None]
     black = np.array([.018, .018, .016])
-    low = np.clip(.95 - height / 1.05, 0, .55) * np.clip(streak + .7, 0, 1)
-    mould = np.clip(runs * pal['mould'] + low, 0, 1) ** 1.05
-    colour = colour * (1 - mould[:, None] * .92) + black * mould[:, None] * .92
+    low = np.clip(.95 - height / 1.05, 0, .55) * np.clip(streak * streak_strength + .7, 0, 1)
+    mould = np.clip(runs * pal['mould'] * (.45 + .55 * wear) + low, 0, 1) ** 1.05
+    colour = colour * (1 - mould[:, None] * .72) + black * mould[:, None] * .72
     # Dust and rot lying on every ledge.
     colour *= 1 - (up > .6)[:, None] * np.clip(up * .7, 0, .55)[:, None]
     green = np.array([.052, .085, .022]) * (1 + fine[:, None] * .7 + grit[:, None] * .4)
@@ -557,7 +567,7 @@ def _grain(img, tag, mesh, tile=1.1):
     print('Stupa grain', tag, 'repeats', round(repeats, 1), flush=True)
 
 
-def bake_down(high, name, coll, faces=26000, size=2048, roughness=.92, metallic=0.0):
+def bake_down(high, name, coll, faces=16000, size=2048, roughness=.92, metallic=0.0):
     """A game-ready mesh from the sculpt: fewer faces, fresh UVs, and the sculpt's relief,
     occlusion and colour baked onto it. Returns the low object and its material."""
     sc = bpy.context.scene
@@ -573,7 +583,7 @@ def bake_down(high, name, coll, faces=26000, size=2048, roughness=.92, metallic=
         o.select_set(False)
     high.select_set(True)
     bpy.context.view_layer.objects.active = high
-    sc.cycles.samples = 12
+    sc.cycles.samples = 48
     sc.render.bake.use_selected_to_active = False
     sc.render.bake.target = 'VERTEX_COLORS'
     bpy.ops.object.bake(type='AO')
@@ -584,9 +594,25 @@ def bake_down(high, name, coll, faces=26000, size=2048, roughness=.92, metallic=
     stain = me.color_attributes['stain']
     colour = np.empty(n * 4, np.float32)
     stain.data.foreach_get('color', colour)
-    colour[0::4] *= .22 + .78 * ao[0::4]
-    colour[1::4] *= .22 + .78 * ao[0::4]
-    colour[2::4] *= .22 + .78 * ao[0::4]
+    # Per-vertex occlusion is noisy, and multiplied into the colour its noise reads as
+    # camouflage: smooth it across the mesh first and let it only deepen the crevices.
+    shade = ao[0::4].astype(np.float64)
+    edges = np.empty(len(me.edges) * 2, np.int32)
+    me.edges.foreach_get('vertices', edges)
+    edges = edges.reshape(-1, 2)
+    for _ in range(8):
+        total = shade.copy()
+        seen = np.ones(n)
+        np.add.at(total, edges[:, 0], shade[edges[:, 1]])
+        np.add.at(total, edges[:, 1], shade[edges[:, 0]])
+        np.add.at(seen, edges[:, 0], 1)
+        np.add.at(seen, edges[:, 1], 1)
+        shade = total / seen
+    shade = (.42 + .58 * shade).astype(np.float32)
+    print('Occlusion', name, 'mean', round(float(shade.mean()), 3), 'std', round(float(shade.std()), 3), flush=True)
+    colour[0::4] *= shade
+    colour[1::4] *= shade
+    colour[2::4] *= shade
     stain.data.foreach_set('color', colour)
 
     # The source material: vertex colour into a diffuse.
@@ -619,6 +645,8 @@ def bake_down(high, name, coll, faces=26000, size=2048, roughness=.92, metallic=
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(55), island_margin=.004)
+    # Smart Project leaves much of the sheet empty; every texel saved sharpens the stone.
+    bpy.ops.uv.pack_islands(rotate=True, margin=.002, shape_method='CONCAVE')
     bpy.ops.object.mode_set(mode='OBJECT')
     for p in lm.polygons:
         p.use_smooth = True

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SokInvestigation } from "../../src/episodes/ep1/act2/SokInvestigation";
+import { SokInvestigation } from "@/episodes/ep1/act2/SokInvestigation";
 it("permits tuning a reachable record above its floor root, while preserving distance and book gates", () => {
   const state = {
     available: true,

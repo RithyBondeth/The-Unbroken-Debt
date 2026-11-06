@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { ArrivalProgress } from "../../src/episodes/ep1/act1/ArrivalProgress";
-import { VigilProgress } from "../../src/episodes/ep1/act1/VigilProgress";
+import { Flags } from "@/core/Flags";
+import { ArrivalProgress } from "@/episodes/ep1/act1/ArrivalProgress";
+import { VigilProgress } from "@/episodes/ep1/act1/VigilProgress";
 
 const reload = (flags: Flags) => {
   const restored = new Flags();

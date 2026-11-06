@@ -1,8 +1,8 @@
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
-import type { LevelMarker } from "../../../core/LevelBuilder";
-import { meshesOf } from "../../../systems/interaction/Interaction";
+import type { LevelMarker } from "@/core/levelBuilder";
+import { meshesOf } from "@/systems/interaction/Interaction";
 
 /** The village's north-facing door leaves swing into their rooms, about the south jamb. */
 export class VillageDoor {

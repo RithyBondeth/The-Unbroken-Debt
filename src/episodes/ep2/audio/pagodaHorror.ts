@@ -8,7 +8,7 @@
  * formant synthesis, not intelligible words: a stand-in until a real recorded
  * smot is approved by the cultural advisor (Cultural Guide, section 4).
  */
-import { biquad, mix, noise, normalise, softClip, wrapLoop } from "../../../audio/synth";
+import { biquad, mix, noise, normalise, softClip, wrapLoop } from "@/audio/synth";
 
 const seconds = (s: number, rate: number) => Math.round(s * rate);
 

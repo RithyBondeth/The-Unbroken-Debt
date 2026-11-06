@@ -1,6 +1,6 @@
-import type { Game } from "../../../core/Game";
+import type { Game } from "@/core/Game";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { DocumentReader } from "../../../ui/html/DocumentReader";
+import { DocumentReader } from "@/ui/html/DocumentReader";
 import { GramophoneGovernor } from "./GramophoneGovernor";
 import type { SokRoomModels } from "./SokRoomModels";
 import { JOURNAL_A, SOK_RECORDING } from "../data/investigation";

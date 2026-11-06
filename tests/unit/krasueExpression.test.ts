@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { krasueScreamMouth } from "../../src/episodes/ep1/entities/KrasueExpression";
+import { krasueScreamMouth } from "@/episodes/ep1/entities/krasueExpression";
 
 describe("Krasue scream articulation", () => {
   it("opens with the scream, holds through the rush, then closes on its audio tail", () => {

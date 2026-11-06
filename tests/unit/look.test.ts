@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildLut,
-  gradeColor,
-  NEUTRAL_GRADE,
-  tintFromHex,
-  type GradeParams,
-} from "../../src/render/grade";
-import { decayScare, EyeAdaptation, lookValues, targetExposure } from "../../src/render/look";
-import { EP1_GRADE } from "../../src/episodes/ep1/data/grade";
+import { buildLut, gradeColor, NEUTRAL_GRADE, tintFromHex, type GradeParams } from "@/render/grade";
+import { decayScare, EyeAdaptation, lookValues, targetExposure } from "@/render/look";
+import { NIGHT_GRADE } from "@/render/nightGrade";
 
 describe("grade", () => {
   it("leaves colours alone when neutral", () => {
@@ -39,13 +33,13 @@ describe("grade", () => {
   });
 
   it("gives Episode 1 warm mid-tones and cool shadows while retaining dark detail", () => {
-    const mid = gradeColor([0.5, 0.5, 0.5], EP1_GRADE);
+    const mid = gradeColor([0.5, 0.5, 0.5], NIGHT_GRADE);
     expect(mid[0]).toBeGreaterThan(mid[2] + 0.02);
-    const shadow = gradeColor([0.12, 0.12, 0.12], EP1_GRADE);
+    const shadow = gradeColor([0.12, 0.12, 0.12], NIGHT_GRADE);
     expect(shadow[2]).toBeGreaterThan(shadow[0]);
-    const dark = gradeColor([0.015, 0.015, 0.015], EP1_GRADE);
+    const dark = gradeColor([0.015, 0.015, 0.015], NIGHT_GRADE);
     expect(dark.every((channel) => channel > 0)).toBe(true);
-    expect(gradeColor([0, 0, 0], EP1_GRADE)).toEqual([0, 0, 0]);
+    expect(gradeColor([0, 0, 0], NIGHT_GRADE)).toEqual([0, 0, 0]);
   });
 
   it("desaturates", () => {

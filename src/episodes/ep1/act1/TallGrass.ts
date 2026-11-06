@@ -3,10 +3,10 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { seededRandom } from "../../../audio/synth";
-import { FoliageWind } from "../../../render/FoliageWind";
-import type { QualityPreset } from "../../../render/QualityPresets";
-import type { WindState } from "../../../render/wind";
+import { seededRandom } from "@/audio/synth";
+import { FoliageWind } from "@/render/FoliageWind";
+import type { QualityPreset } from "@/render/qualityPresets";
+import type { WindState } from "@/render/wind";
 import { layoutGrass } from "../data/grass";
 
 /** Grass is batched in square cells this wide (m), each one draw call. */

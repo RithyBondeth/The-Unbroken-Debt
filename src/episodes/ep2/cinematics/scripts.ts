@@ -1,4 +1,4 @@
-import { dialogueScript, type CinematicScript } from "./Timeline";
+import { dialogueScript, type CinematicScript } from "@/shared/cinematics/timeline";
 export const SOPHAL_SCENE = dialogueScript("ep2-sophal", "Sophal’s kuti", [
   ["Sora", "Sok’s map led me here. You kept my great-grandfather’s box."],
   [

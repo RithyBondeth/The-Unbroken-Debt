@@ -1,6 +1,6 @@
 import type { Material } from "@babylonjs/core/Materials/material";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import { foliageKind, type FoliageKind } from "../../../render/FoliageWind";
+import { foliageKind, type FoliageKind } from "@/render/FoliageWind";
 
 /**
  * The old-growth night palette (tools/areas/forest_detail.py) for plants that

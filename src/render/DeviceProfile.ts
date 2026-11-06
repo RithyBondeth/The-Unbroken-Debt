@@ -1,4 +1,4 @@
-import type { QualityName } from "./QualityPresets";
+import type { QualityName } from "./qualityPresets";
 
 /**
  * What the browser tells us about the device, gathered once at boot.

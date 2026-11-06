@@ -1,6 +1,6 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../core/Game";
-import { RainStreaks } from "../ep1/Rain";
+import type { Game } from "@/core/Game";
+import { RainStreaks } from "@/render/weather/Rain";
 
 /** Rain beyond the windows remains visible while Sora shelters indoors. */
 export class VillageRain {

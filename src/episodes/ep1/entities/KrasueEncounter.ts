@@ -3,16 +3,16 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
 import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
-import type { Game } from "../../../core/Game";
+import type { Game } from "@/core/Game";
 import type { Vigil } from "../act1/Vigil";
-import type { SaveData } from "../../../systems/saves/SaveData";
-import { seededRandom } from "../../../audio/synth";
-import { setControlText } from "../../../ui/html/controlText";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { seededRandom } from "@/audio/synth";
+import { setControlText } from "@/ui/html/controlText";
 import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "../data/krasue";
 import { krasueLament, krasueShriek } from "../audio/krasueSounds";
 import { KrasueBrain } from "./KrasueBrain";
 import { KrasueModel } from "./KrasueModel";
-import "../../../ui/html/krasue.css";
+import "@/ui/html/krasue.css";
 
 /** Repeatable kitchen obstacle, independent of story progress and audio availability. */
 export class KrasueEncounter {

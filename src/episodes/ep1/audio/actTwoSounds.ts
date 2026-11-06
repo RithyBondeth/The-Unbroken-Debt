@@ -1,4 +1,4 @@
-import { biquad, brown, mix, modal, noise, normalise, sweep } from "../../../audio/synth";
+import { biquad, brown, mix, modal, noise, normalise, sweep } from "@/audio/synth";
 
 /**
  * A2-01 cold gust, a wordless stand-in until the recorded wind cue exists: air

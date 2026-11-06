@@ -1,21 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { ForestUnease } from "../../src/episodes/ep1/act1/ForestUnease";
-import { ForestAtmosphere } from "../../src/episodes/ep1/act1/ForestAtmosphere";
+import { ForestUnease } from "@/episodes/ep1/act1/ForestUnease";
+import { ForestAtmosphere } from "@/episodes/ep1/act1/ForestAtmosphere";
 import {
   forestSource,
   FOREST_SOURCES,
   GROUND_MIST,
   inUneaseForest,
-} from "../../src/episodes/ep1/data/forestAtmosphere";
-import { mistDensityAt, MAX_MIST_POCKETS } from "../../src/render/mist";
-import {
-  canopyWind,
-  foliageMovement,
-  pavilionCloth,
-} from "../../src/episodes/ep1/audio/atmosphereSounds";
-import { seededRandom, rms } from "../../src/audio/synth";
-import type { Game } from "../../src/core/Game";
+} from "@/episodes/ep1/data/forestAtmosphere";
+import { mistDensityAt, MAX_MIST_POCKETS } from "@/render/mist";
+import { canopyWind, foliageMovement, pavilionCloth } from "@/audio/sounds/atmosphereSounds";
+import { seededRandom, rms } from "@/audio/synth";
+import type { Game } from "@/core/Game";
 
 const advance = (state: ForestUnease, seconds: number, allowed = true, looking = false) => {
   for (let i = 0; i < Math.ceil(seconds * 60); i++) state.update(1 / 60, allowed, looking);

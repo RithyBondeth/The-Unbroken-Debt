@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceStride, bobOffsetX, bobOffsetY, type StrideState } from "../../src/player/headBob";
+import { advanceStride, bobOffsetX, bobOffsetY, type StrideState } from "@/player/headBob";
 
 describe("advanceStride", () => {
   it("lands a footstep at half and full stride", () => {

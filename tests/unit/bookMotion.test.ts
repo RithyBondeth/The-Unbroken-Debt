@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { bookTurnFrame, readingFrame } from "../../src/ui/diegetic/BookMotion";
-import { BOOK } from "../../src/ui/diegetic/bookGeometry";
+import { bookTurnFrame, readingFrame } from "@/ui/diegetic/bookMotion";
+import { BOOK } from "@/ui/diegetic/bookGeometry";
 
 it("reaches and pinches before lifting, then releases before returning to the grip", () => {
   for (const direction of [-1, 1] as const) {

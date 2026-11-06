@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVoiceManifest } from "../../src/episodes/ep1/data/voiceManifest";
+import { parseVoiceManifest } from "@/episodes/ep1/data/voiceManifest";
 describe("recorded dialogue selection", () => {
   const take = {
     language: "km-KH",

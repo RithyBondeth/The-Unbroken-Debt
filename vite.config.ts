@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 
 /**
@@ -33,6 +34,10 @@ function debugShots(): Plugin {
 
 export default defineConfig({
   plugins: [debugShots()],
+  resolve: {
+    // `@/core/Game` is `src/core/Game`: imports across top-level folders use it.
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
   optimizeDeps: {
     // Havok ships a WebAssembly file that must not be pre-bundled.
     exclude: ["@babylonjs/havok"],

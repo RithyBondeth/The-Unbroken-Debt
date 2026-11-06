@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import type { Inventory } from "../../../systems/inventory/Inventory";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
 import { EP1_SKETCHBOOK } from "./sketchbook";
 import { SLOTS, KANHA_LAYOUT } from "./betel";
 import { ITEMS } from "./items";

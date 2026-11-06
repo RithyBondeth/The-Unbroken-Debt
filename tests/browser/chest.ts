@@ -1,15 +1,15 @@
 /** Actual village / interaction / IndexedDB checks, using a separate test database. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { CHEST_ITEMS } from "../../src/episodes/ep1/act3/ChestProgress";
-import { CP5_FEET } from "../../src/episodes/ep1/data/hunt";
-import { saveShot } from "../../src/debug/saveShot";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { CHEST_ITEMS } from "@/episodes/ep1/act3/ChestProgress";
+import { CP5_FEET } from "@/episodes/ep1/data/hunt";
+import { saveShot } from "@/debug/saveShot";
 const output = document.getElementById("results")!;
 const report = (s: string) => (output.textContent += `${s}\n`);
 const assert = (value: unknown, s: string) => {

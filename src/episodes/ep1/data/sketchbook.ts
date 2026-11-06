@@ -1,4 +1,4 @@
-import type { NightMark, SketchbookData } from "../../../ui/diegetic/sketchbookContent";
+import type { NightMark, SketchbookData } from "@/ui/diegetic/sketchbookContent";
 
 /** Night circles from a pattern: "p" pencil, "i" ink, anything else empty. */
 const night = (marks: string): NightMark[] =>

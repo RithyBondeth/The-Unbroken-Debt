@@ -1,18 +1,18 @@
 /** Earned saves only: no seeded story flags or inventory. Scripted movement / input, real runtime. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import type { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
-import { KANHA_LAYOUT, SLOTS } from "../../src/episodes/ep1/data/betel";
-import { CP3_FEET } from "../../src/episodes/ep1/data/walker";
-import { CP4_FEET } from "../../src/episodes/ep1/data/desk";
-import { CP5_FEET, JARS } from "../../src/episodes/ep1/data/hunt";
-import { CP6_FEET, CP6_YAW, RITUAL_BURNER } from "../../src/episodes/ep1/data/ritual";
-import { CHEST_ITEMS } from "../../src/episodes/ep1/act3/ChestProgress";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import type { Prologue } from "@/episodes/ep1/prologue/Prologue";
+import { KANHA_LAYOUT, SLOTS } from "@/episodes/ep1/data/betel";
+import { CP3_FEET } from "@/episodes/ep1/data/walker";
+import { CP4_FEET } from "@/episodes/ep1/data/desk";
+import { CP5_FEET, JARS } from "@/episodes/ep1/data/hunt";
+import { CP6_FEET, CP6_YAW, RITUAL_BURNER } from "@/episodes/ep1/data/ritual";
+import { CHEST_ITEMS } from "@/episodes/ep1/act3/ChestProgress";
 const params = new URLSearchParams(location.search),
   step = params.get("step") ?? (params.has("continue") ? "act1" : "start");
 const logKey = "boon-sop-journey-report";

@@ -2,17 +2,17 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/AreaLoader";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
 import type { Vigil } from "../act1/Vigil";
 import type { VillageLights } from "../act1/VillageLights";
-import { DocumentReader } from "../../../ui/html/DocumentReader";
+import { DocumentReader } from "@/ui/html/DocumentReader";
 import { DeskProgress } from "./DeskProgress";
 import type { DeskModels } from "./DeskModels";
 import { JOURNAL_B, FAILING_LAMPS } from "../data/desk";
 import { drawerOpen, pickUp } from "../audio/prologueSounds";
-import { branchSnap, breathOut } from "../audio/nightSounds";
-import { boardCreak, seededRandom } from "../../../audio/synth";
+import { branchSnap, breathOut } from "@/audio/sounds/nightSounds";
+import { boardCreak, seededRandom } from "@/audio/synth";
 
 /** Altar key → locked desk → final instructions → ash / portrait → CP4. */
 export class DeskInvestigation {

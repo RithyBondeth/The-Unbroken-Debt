@@ -1,6 +1,6 @@
-import type { Flags } from "../../core/Flags";
-import type { Inventory } from "../../systems/inventory/Inventory";
-import type { SaveData } from "../../systems/saves/SaveData";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
+import type { SaveData } from "@/systems/saves/SaveData";
 import {
   FUSE_IDS,
   LEAK_IDS,

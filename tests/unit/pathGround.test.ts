@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bakeGroundMask, groundMix, MASK_RESOLUTION } from "../../src/episodes/ep1/data/pathGround";
-import { PATH, TERRAIN } from "../../src/episodes/ep1/data/forestBorder";
+import { bakeGroundMask, groundMix, MASK_RESOLUTION } from "@/episodes/ep1/data/pathGround";
+import { PATH, TERRAIN } from "@/episodes/ep1/data/forestBorder";
 
 describe("village path ground", () => {
   it("is mud down the middle of the path and litter well off it", () => {

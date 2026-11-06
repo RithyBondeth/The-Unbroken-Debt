@@ -1,19 +1,19 @@
 /** Real production area, Havok, UI and interactions. Review saves never touch the player database. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { isQualityName } from "../../src/render/QualityPresets";
-import type { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { encodeSaveCode, decodeSaveCode } from "../../src/systems/saves/saveCode";
-import { saveShot } from "../../src/debug/saveShot";
-import { FUSE_IDS, LEAK_IDS, SAFE_CODE, VILLAGE } from "../../src/episodes/ep3/data/village";
-import { VillageProgress } from "../../src/episodes/ep3/VillageProgress";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import type { DrownedVillage } from "../../src/episodes/ep3/DrownedVillage";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { isQualityName } from "@/render/qualityPresets";
+import type { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { encodeSaveCode, decodeSaveCode } from "@/systems/saves/saveCode";
+import { saveShot } from "@/debug/saveShot";
+import { FUSE_IDS, LEAK_IDS, SAFE_CODE, VILLAGE } from "@/episodes/ep3/data/village";
+import { VillageProgress } from "@/episodes/ep3/VillageProgress";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import type { DrownedVillage } from "@/episodes/ep3/DrownedVillage";
 
 const VIEWS: Record<string, [number[], number[]]> = {
   water: [

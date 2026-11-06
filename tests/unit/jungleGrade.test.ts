@@ -3,7 +3,7 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
-import { JUNGLE_TINT, gradeJungle } from "../../src/episodes/ep1/act1/jungleGrade";
+import { JUNGLE_TINT, gradeJungle } from "@/episodes/ep1/act1/jungleGrade";
 
 describe("jungle grade", () => {
   it("cools library plants once, leaves repainted forest surfaces and props alone", () => {

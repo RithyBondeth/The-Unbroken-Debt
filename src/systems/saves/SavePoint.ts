@@ -1,4 +1,4 @@
-import type { Game } from "../../core/Game";
+import type { Game } from "@/core/Game";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
@@ -9,8 +9,8 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import { addStaticBox } from "../../core/Physics";
-import type { StringKey } from "../../ui/html/StoryUi";
+import { addStaticBox } from "@/core/physics";
+import type { StringKey } from "@/ui/html/StoryUi";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 
 export interface SavePointAppearance {
