@@ -1,10 +1,6 @@
-import type { NotebookSnapshot } from "../../../ui/notebook/notebookContent";
-import type { NotebookMap, MapShape } from "../../../ui/notebook/NotebookMap";
-import type {
-  SketchbookData,
-  SketchEntry,
-  NightMark,
-} from "../../../ui/diegetic/sketchbookContent";
+import type { NotebookSnapshot } from "@/ui/notebook/notebookContent";
+import type { NotebookMap, MapShape } from "@/ui/notebook/NotebookMap";
+import type { SketchbookData, SketchEntry, NightMark } from "@/ui/diegetic/sketchbookContent";
 import type { PagodaProgress } from "../PagodaProgress";
 import { ANCESTORS, NOTES, MIRROR_CLUES, STUPAS, GARDEN_TREES } from "./pagoda";
 

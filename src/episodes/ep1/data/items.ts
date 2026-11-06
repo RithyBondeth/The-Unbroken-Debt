@@ -1,4 +1,4 @@
-import type { ItemInfo } from "../../../systems/inventory/Inventory";
+import type { ItemInfo } from "@/systems/inventory/Inventory";
 
 /** Items in the satchel. The satchel itself holds the rest, so it is not listed. */
 export const ITEMS: Record<string, ItemInfo> = {

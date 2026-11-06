@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Footsteps, pickTake, stepUrls, stepVolume } from "../../src/audio/Footsteps";
-import { mudSuction, seededRandom } from "../../src/audio/synth";
+import { Footsteps, pickTake, stepUrls, stepVolume } from "@/audio/Footsteps";
+import { mudSuction, seededRandom } from "@/audio/synth";
 
 describe("footsteps", () => {
   it("never plays the same take twice in a row, and uses them all", () => {

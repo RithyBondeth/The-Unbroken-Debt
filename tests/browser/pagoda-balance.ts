@@ -1,12 +1,12 @@
 /** Physical route with live hearing/catches. Only the initial CP1 spawn is teleported. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import type { WhisperingPagoda } from "../../src/episodes/ep2/WhisperingPagoda";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
+import type { WhisperingPagoda } from "@/episodes/ep2/WhisperingPagoda";
 const output = document.getElementById("results")!;
 const log = (s: string) => {
   output.textContent += "\n" + s;

@@ -1,8 +1,8 @@
-import { seededRandom } from "../../src/audio/synth";
-import { pressureBed, ringingEars, sting, studioRoom } from "../../src/audio/sounds/dreadSounds";
-import { taxiMotor, taxiWipers } from "../../src/episodes/ep1/audio/taxiSounds";
-import { villageRain } from "../../src/audio/sounds/nightSounds";
-import { thunder } from "../../src/episodes/ep1/audio/prologueSounds";
+import { seededRandom } from "@/audio/synth";
+import { pressureBed, ringingEars, sting, studioRoom } from "@/audio/sounds/dreadSounds";
+import { taxiMotor, taxiWipers } from "@/episodes/ep1/audio/taxiSounds";
+import { villageRain } from "@/audio/sounds/nightSounds";
+import { thunder } from "@/episodes/ep1/audio/prologueSounds";
 import {
   bambooKnock,
   carBuffet,
@@ -12,7 +12,7 @@ import {
   leafHiss,
   trunkGroan,
   windRoar,
-} from "../../src/episodes/ep1/audio/windSounds";
+} from "@/episodes/ep1/audio/windSounds";
 
 /** Plays each new or rebuilt Act 0 and Act 1 sound on its own, without loading the game. */
 type Make = (rate: number) => Float32Array | Float32Array[];

@@ -11,11 +11,11 @@ import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
-import type { AudioSystem } from "../../../audio/AudioSystem";
-import { seededRandom } from "../../../audio/synth";
-import { limitLightToRange } from "../../../render/renderSetup";
-import { RelicCraft } from "../../../shared/RelicCraft";
-import { pavilionCloth } from "../../../audio/sounds/atmosphereSounds";
+import type { AudioSystem } from "@/audio/AudioSystem";
+import { seededRandom } from "@/audio/synth";
+import { limitLightToRange } from "@/render/renderSetup";
+import { RelicCraft } from "@/shared/RelicCraft";
+import { pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 import { whispers } from "../audio/vigilSounds";
 
 type XYZ = readonly [number, number, number];

@@ -1,6 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
-import type { Area } from "../../../core/areaLoader";
+import type { Area } from "@/core/areaLoader";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { MorphTargetManager } from "@babylonjs/core/Morph/morphTargetManager";
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
@@ -9,8 +9,8 @@ import { BoundingBox } from "@babylonjs/core/Culling/boundingBox";
 import { Frustum } from "@babylonjs/core/Maths/math.frustum";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import { extrasOf } from "../../../core/levelBuilder";
-import { RelicCraft } from "../../../shared/RelicCraft";
+import { extrasOf } from "@/core/levelBuilder";
+import { RelicCraft } from "@/shared/RelicCraft";
 
 /** Anatomical, textured funeral body with five baked, instantaneous offscreen poses. */
 export class CorpseModels {

@@ -4,8 +4,8 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Scene } from "@babylonjs/core/scene";
-import { seededRandom } from "../../../audio/synth";
-import type { RelicCraft } from "../../../shared/RelicCraft";
+import { seededRandom } from "@/audio/synth";
+import type { RelicCraft } from "@/shared/RelicCraft";
 
 type XYZ = [number, number, number];
 

@@ -5,8 +5,8 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { decodeHandAsset } from "./HandAsset";
 import { HandRig } from "./HandRig";
-import type { Game } from "../core/Game";
-import type { LanternEquipment } from "../systems/lamp/LanternEquipment";
+import type { Game } from "@/core/Game";
+import type { LanternEquipment } from "@/systems/lamp/LanternEquipment";
 /** Separately authored old male anatomy and photographic skin, on Episode 1's actual grip rig. */
 export class CheaHands {
   readonly left: HandRig;

@@ -1,10 +1,10 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
-import type { Area } from "../../../core/areaLoader";
-import { boardCreak, seededRandom, wetStep } from "../../../audio/synth";
-import { newGameSave } from "../../../systems/saves/SaveData";
-import type { SaveData } from "../../../systems/saves/SaveData";
+import type { Game } from "@/core/Game";
+import type { Area } from "@/core/areaLoader";
+import { boardCreak, seededRandom, wetStep } from "@/audio/synth";
+import { newGameSave } from "@/systems/saves/SaveData";
+import type { SaveData } from "@/systems/saves/SaveData";
 import { ACT_TWO_OPENING, ARRIVAL, ARRIVAL_NOTE, TENT_FLAME_MESH } from "../data/arrival";
 import type { Line } from "../data/prologue";
 import { coldGust } from "../audio/actTwoSounds";
@@ -17,11 +17,11 @@ import { VigilProgress } from "./VigilProgress";
 import { VillageDoor } from "./VillageDoor";
 import type { ArrivalModels } from "./ArrivalModels";
 import { ArrivalProgress } from "./ArrivalProgress";
-import { DocumentReader } from "../../../ui/html/DocumentReader";
+import { DocumentReader } from "@/ui/html/DocumentReader";
 import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
 import { PhoneBell } from "../audio/PhoneBell";
-import { checkpointName } from "../../../systems/saves/Checkpoints";
+import { checkpointName } from "@/systems/saves/Checkpoints";
 
 /** CP2's clear aisle at the south end of the pavilion, facing the house. */
 export const CP2_FEET = new Vector3(0, 0, -2);

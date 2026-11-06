@@ -1,8 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { newGameSave } from "../../src/systems/saves/SaveData";
+import { newGameSave } from "@/systems/saves/SaveData";
 const idb = vi.hoisted(() => ({ setMany: vi.fn(), createStore: vi.fn(() => ({})) }));
 vi.mock("idb-keyval", () => ({ ...idb, get: vi.fn(), set: vi.fn(), del: vi.fn() }));
-import { SaveStore } from "../../src/systems/saves/SaveStore";
+import { SaveStore } from "@/systems/saves/SaveStore";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();

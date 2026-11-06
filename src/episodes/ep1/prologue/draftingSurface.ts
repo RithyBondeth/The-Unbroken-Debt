@@ -5,7 +5,7 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 
 /** Fine cotton paper, with an actual lifted edge rather than a thick white box. */
 export function makeDraftingSurface(scene: Scene, anchor: AbstractMesh): void {

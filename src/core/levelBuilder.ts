@@ -10,7 +10,7 @@ import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlug
 import type { Node } from "@babylonjs/core/node";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Surface } from "./physics";
-import type { Ladder } from "../player/PlayerController";
+import type { Ladder } from "@/player/PlayerController";
 import { facingToGltf, isBoxShape, parseNodeName } from "./levelNodes";
 
 /** Custom properties from Blender arrive as glTF extras. */

@@ -1,15 +1,15 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
-import type { SaveData } from "../../../systems/saves/SaveData";
+import type { Game } from "@/core/Game";
+import type { SaveData } from "@/systems/saves/SaveData";
 import type { Vigil } from "../act1/Vigil";
 import type { SokInvestigation } from "./SokInvestigation";
 import { WalkerBrain } from "./WalkerBrain";
 import type { WalkerModels } from "./WalkerModels";
 import { WardrobeHiding } from "./WardrobeHiding";
 import { CP3_FEET, CP3_YAW } from "../data/walker";
-import { boardCreak, seededRandom, wetStep } from "../../../audio/synth";
-import { breathOut } from "../../../audio/sounds/nightSounds";
+import { boardCreak, seededRandom, wetStep } from "@/audio/synth";
+import { breathOut } from "@/audio/sounds/nightSounds";
 import { heartbeat } from "../audio/houseSounds";
 import { StalkerVoice } from "../audio/StalkerVoice";
 

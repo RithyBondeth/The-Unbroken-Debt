@@ -1,8 +1,8 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { Area } from "../../../core/areaLoader";
+import type { Area } from "@/core/areaLoader";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { RelicCraft } from "../../../shared/RelicCraft";
+import { RelicCraft } from "@/shared/RelicCraft";
 import { CHEST_ITEMS, type ChestItem } from "./ChestProgress";
 
 const CHEST_AT = [-4.5, 2.16, -12.52] as const;

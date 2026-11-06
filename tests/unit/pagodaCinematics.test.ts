@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CinematicClock, dialogueScript } from "../../src/shared/cinematics/timeline";
+import { CinematicClock, dialogueScript } from "@/shared/cinematics/timeline";
 import {
   SOPHAL_SCENE,
   HARVEST_SCENE,
@@ -8,18 +8,18 @@ import {
   COLLAPSE_SCENE,
   DAWN_SCENE,
   PHOTO_SCENE,
-} from "../../src/episodes/ep2/cinematics/scripts";
-import { fallingHeight } from "../../src/episodes/ep2/cinematics/LibraryCollapse";
-import { harvestMusic } from "../../src/episodes/ep2/cinematics/harvestMusic";
+} from "@/episodes/ep2/cinematics/scripts";
+import { fallingHeight } from "@/episodes/ep2/cinematics/LibraryCollapse";
+import { harvestMusic } from "@/episodes/ep2/cinematics/harvestMusic";
 import {
   PAGODA_BALANCE as B,
   EscapeClock,
   inKuti,
   hearingRadius,
   simulationStep,
-} from "../../src/episodes/ep2/data/balance";
-import { gardenClear, gardenPath, PretBrain } from "../../src/episodes/ep2/PretBrain";
-import { PATROLS } from "../../src/episodes/ep2/data/pagoda";
+} from "@/episodes/ep2/data/balance";
+import { gardenClear, gardenPath, PretBrain } from "@/episodes/ep2/PretBrain";
+import { PATROLS } from "@/episodes/ep2/data/pagoda";
 
 describe("Episode 2 cinematic playback", () => {
   it("keeps every English caption visible at a readable pace, without overlapping cues", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { EarlyStealthBrain, RoadNavigation } from "../../src/episodes/ep1/act1/EarlyStealthBrain";
+import { EarlyStealthBrain, RoadNavigation } from "@/episodes/ep1/act1/EarlyStealthBrain";
 describe("listening presence and navigation", () => {
   it("requires both real line of sight and sustained exposure; cover blocks a catch", () => {
     const b = new EarlyStealthBrain(),

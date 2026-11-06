@@ -1,5 +1,5 @@
-import { t } from "../../data/strings/index";
-import type { RenderLoopOptions } from "../../render/renderLoop";
+import { t } from "@/data/strings/index";
+import type { RenderLoopOptions } from "@/render/renderLoop";
 
 let notice: HTMLElement | null = null;
 

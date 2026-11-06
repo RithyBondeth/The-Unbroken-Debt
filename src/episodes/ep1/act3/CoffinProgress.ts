@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 export type CoffinPhase = "waiting" | "rattle" | "opening" | "open" | "closing" | "closed";
 /** Saved milestones; transient movement resumes safely open after an interrupted scare. */
 export class CoffinProgress {

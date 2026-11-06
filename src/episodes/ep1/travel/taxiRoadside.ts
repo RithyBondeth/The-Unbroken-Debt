@@ -2,9 +2,9 @@ import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import type { Scene } from "@babylonjs/core/scene";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { realiseInstances } from "../../../core/areaLoader";
-import { mergeStaticMeshes } from "../../../render/staticBatcher";
-import { bakePlantHeights } from "../../../render/plantHeights";
+import { realiseInstances } from "@/core/areaLoader";
+import { mergeStaticMeshes } from "@/render/staticBatcher";
+import { bakePlantHeights } from "@/render/plantHeights";
 
 /** One continuous authored route. Plants never recycle through the camera's view. */
 export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {

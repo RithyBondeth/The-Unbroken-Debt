@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getPreset,
-  isQualityName,
-  QUALITY_ORDER,
-  QUALITY_PRESETS,
-} from "../../src/render/qualityPresets";
+import { getPreset, isQualityName, QUALITY_ORDER, QUALITY_PRESETS } from "@/render/qualityPresets";
 
 describe("quality presets", () => {
   it("match the TDD minimum-spec targets for Medium", () => {

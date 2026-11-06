@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import type { Inventory } from "../../../systems/inventory/Inventory";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
 
 export const RITUAL_SECONDS = 25;
 export const RITUAL_TURN_LIMIT = (100 * Math.PI) / 180;

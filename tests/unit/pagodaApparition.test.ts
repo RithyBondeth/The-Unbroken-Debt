@@ -5,7 +5,7 @@ import {
   facing,
   ghostPose,
   type ScareContext,
-} from "../../src/episodes/ep2/PagodaApparition";
+} from "@/episodes/ep2/PagodaApparition";
 
 const base: ScareContext = {
   stage: "garden",

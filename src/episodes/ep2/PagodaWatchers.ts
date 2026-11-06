@@ -1,6 +1,6 @@
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../core/Game";
+import type { Game } from "@/core/Game";
 import type { PagodaSoundscape } from "./PagodaSoundscape";
 import { facing, type ScareContext } from "./PagodaApparition";
 

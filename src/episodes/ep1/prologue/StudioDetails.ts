@@ -1,5 +1,5 @@
-import { createTelephoneReceiver } from "../../../player/telephoneReceiver";
-import { TelephoneCord } from "../../../player/TelephoneCord";
+import { createTelephoneReceiver } from "@/player/telephoneReceiver";
+import { TelephoneCord } from "@/player/TelephoneCord";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -14,9 +14,9 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Scene } from "@babylonjs/core/scene";
-import type { Area } from "../../../core/areaLoader";
-import { mergeStaticMeshes } from "../../../render/staticBatcher";
-import { seededRandom } from "../../../audio/synth";
+import type { Area } from "@/core/areaLoader";
+import { mergeStaticMeshes } from "@/render/staticBatcher";
+import { seededRandom } from "@/audio/synth";
 
 /** Close-range studio craftsmanship. Existing anchors, colliders and story IDs remain authoritative. */
 export class StudioDetails {

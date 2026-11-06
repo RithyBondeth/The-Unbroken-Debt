@@ -1,7 +1,7 @@
-import type { Flags } from "../../core/Flags";
-import type { Inventory } from "../../systems/inventory/Inventory";
-import { currentObjective, notebookClues } from "../../episodes/ep1/data/notebook";
-import { EP1_SKETCHBOOK } from "../../episodes/ep1/data/sketchbook";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
+import { currentObjective, notebookClues } from "@/episodes/ep1/data/notebook";
+import { EP1_SKETCHBOOK } from "@/episodes/ep1/data/sketchbook";
 import type { NightMark, SectionId, SketchEntry } from "../diegetic/sketchbookContent";
 import { notebookMap, type NotebookMap } from "./NotebookMap";
 

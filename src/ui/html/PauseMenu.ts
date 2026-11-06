@@ -1,6 +1,6 @@
 import "./pause.css";
-import { t } from "../../data/strings";
-import { EntryAmbience } from "../../audio/EntryAmbience";
+import { t } from "@/data/strings";
+import { EntryAmbience } from "@/audio/EntryAmbience";
 import { readWelcomeSettings } from "./welcomeScreen";
 
 export interface PauseActions {

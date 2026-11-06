@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import { Flags } from "../../src/core/Flags";
-import type { GameEvents } from "../../src/core/events";
+import { EventBus } from "@/core/EventBus";
+import { Flags } from "@/core/Flags";
+import type { GameEvents } from "@/core/events";
 
 describe("Flags", () => {
   it("returns the fallback for unknown keys", () => {

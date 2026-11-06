@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildLut,
-  gradeColor,
-  NEUTRAL_GRADE,
-  tintFromHex,
-  type GradeParams,
-} from "../../src/render/grade";
-import { decayScare, EyeAdaptation, lookValues, targetExposure } from "../../src/render/look";
-import { NIGHT_GRADE } from "../../src/render/nightGrade";
+import { buildLut, gradeColor, NEUTRAL_GRADE, tintFromHex, type GradeParams } from "@/render/grade";
+import { decayScare, EyeAdaptation, lookValues, targetExposure } from "@/render/look";
+import { NIGHT_GRADE } from "@/render/nightGrade";
 
 describe("grade", () => {
   it("leaves colours alone when neutral", () => {

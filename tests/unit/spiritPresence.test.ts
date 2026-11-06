@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SpiritPresence } from "../../src/episodes/ep1/entities/SpiritPresence";
+import { SpiritPresence } from "@/episodes/ep1/entities/SpiritPresence";
 
 describe("spirit emergence", () => {
   it("emerges before settling, then recedes before being disabled", () => {

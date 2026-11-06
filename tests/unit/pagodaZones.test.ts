@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { layoutFarForest, floorPieces } from "../../src/episodes/ep2/pagodaFarForest";
-import { ZONE_REACH, zoneDistance } from "../../src/episodes/ep2/PagodaZones";
+import { layoutFarForest, floorPieces } from "@/episodes/ep2/pagodaFarForest";
+import { ZONE_REACH, zoneDistance } from "@/episodes/ep2/PagodaZones";
 import {
   BOUNDS,
   ENTRY,
@@ -9,7 +9,7 @@ import {
   LOST_GARDEN,
   MEMORY,
   TANK_BASIN,
-} from "../../src/episodes/ep2/data/pagoda";
+} from "@/episodes/ep2/data/pagoda";
 
 const inside = (x: number, z: number) =>
   LOST_GARDEN.some((g) => x > g.minX && x < g.maxX && z > g.minZ && z < g.maxZ);

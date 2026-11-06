@@ -11,7 +11,7 @@ import {
   stickSlip,
   sweep,
   wrapLoop,
-} from "../../../audio/synth";
+} from "@/audio/synth";
 
 /**
  * Synthesised stand-ins for the prologue's sounds (Audio Design Document,

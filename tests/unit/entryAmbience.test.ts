@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { EntryAmbience, WHISPER_SECONDS } from "../../src/audio/EntryAmbience";
-import { BED_SECONDS, entryBed, entryBreath, entryThud } from "../../src/audio/entryDread";
+import { EntryAmbience, WHISPER_SECONDS } from "@/audio/EntryAmbience";
+import { BED_SECONDS, entryBed, entryBreath, entryThud } from "@/audio/entryDread";
 
 function audioFixture() {
   const param = () => ({

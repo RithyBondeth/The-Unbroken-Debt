@@ -1,4 +1,4 @@
-import type { Game } from "../../core/Game";
+import type { Game } from "@/core/Game";
 import { CinematicClock, type CinematicScript, type SubtitleCue } from "./timeline";
 import "./cinematics.css";
 export interface CinematicFrame {

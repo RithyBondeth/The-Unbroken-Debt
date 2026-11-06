@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
-import { decodeHandAsset } from "../../src/player/HandAsset";
+import { decodeHandAsset } from "@/player/HandAsset";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { afterEach, expect, it } from "vitest";
 import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { drawingFrame } from "../../src/player/drawingPose";
+import { drawingFrame } from "@/player/drawingPose";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { FirstPersonHands } from "../../src/player/FirstPersonHands";
+import { FirstPersonHands } from "@/player/FirstPersonHands";
 const asset = decodeHandAsset(
   new Uint8Array(readFileSync("public/assets/shared/sora_hand.mesh")).buffer,
 );

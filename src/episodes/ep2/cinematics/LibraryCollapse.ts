@@ -3,7 +3,7 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Quaternion } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
+import type { Game } from "@/core/Game";
 const ROOF_PART =
   /^hawtrai_(?:crown_)?(?:roof|gable|bargeboard|ridge|finial|rafter|purlin|eave|ceiling_panel|trusses)/;
 export const COLLAPSE_KEEP = [ROOF_PART, /^archive_cabinet(?:\.|$)/];

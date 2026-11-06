@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WelcomeAmbience } from "../../src/audio/WelcomeAmbience";
-import { STINGER_HIT, funeralChant, stinger, whisperBed } from "../../src/audio/welcomeDread";
+import { WelcomeAmbience } from "@/audio/WelcomeAmbience";
+import { STINGER_HIT, funeralChant, stinger, whisperBed } from "@/audio/welcomeDread";
 
 type FakeNode = ReturnType<typeof audioFixture>["nodes"][number];
 

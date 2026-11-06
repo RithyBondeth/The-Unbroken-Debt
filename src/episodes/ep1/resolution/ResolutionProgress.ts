@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 
 const RESOLUTION_STAGES = ["dawn", "choice", "slip", "map", "title", "summary", "credits"] as const;
 export type ResolutionStage = (typeof RESOLUTION_STAGES)[number];

@@ -1,6 +1,6 @@
 import type { Scene } from "@babylonjs/core/scene";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { RainStreaks } from "../../../render/weather/Rain";
+import { RainStreaks } from "@/render/weather/Rain";
 
 /** Act I's monsoon streaks, with car-relative wind and a denser headlight field. */
 export class TaxiWeather {

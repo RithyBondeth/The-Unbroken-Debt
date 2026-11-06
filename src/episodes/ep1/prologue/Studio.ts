@@ -7,11 +7,11 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
-import type { QualityPreset } from "../../../render/qualityPresets";
-import { createShadowedPointLight, FLAME_COLOR } from "../../../render/renderSetup";
-import type { Area } from "../../../core/areaLoader";
-import { Lightning } from "../../../render/weather/Lightning";
-import { useSoftFalloff } from "../../../render/softLampFalloff";
+import type { QualityPreset } from "@/render/qualityPresets";
+import { createShadowedPointLight, FLAME_COLOR } from "@/render/renderSetup";
+import type { Area } from "@/core/areaLoader";
+import { Lightning } from "@/render/weather/Lightning";
+import { useSoftFalloff } from "@/render/softLampFalloff";
 
 /**
  * The studio's lights (Beat Sheet 4.1): the green glass desk lamp as the key

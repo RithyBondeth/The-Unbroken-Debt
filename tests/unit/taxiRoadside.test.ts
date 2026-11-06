@@ -5,7 +5,7 @@ import { AssetContainer } from "@babylonjs/core/assetContainer";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { buildTaxiRoadside } from "../../src/episodes/ep1/travel/taxiRoadside";
+import { buildTaxiRoadside } from "@/episodes/ep1/travel/taxiRoadside";
 
 describe("taxi landscape batching", () => {
   it("preserves every shared plant and moves its bounds with the road sector", () => {

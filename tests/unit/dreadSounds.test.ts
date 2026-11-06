@@ -6,7 +6,7 @@ import {
   sting,
   studioRoom,
   type Sting,
-} from "../../src/audio/sounds/dreadSounds";
+} from "@/audio/sounds/dreadSounds";
 
 const RATE = 22050;
 

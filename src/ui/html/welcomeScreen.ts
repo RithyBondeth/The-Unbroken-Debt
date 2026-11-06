@@ -1,7 +1,7 @@
-import { SaveStore } from "../../systems/saves/SaveStore";
-import { checkpointName } from "../../systems/saves/Checkpoints";
-import { WelcomeAmbience } from "../../audio/WelcomeAmbience";
-import { STINGER_HIT, type Stinger } from "../../audio/welcomeDread";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { checkpointName } from "@/systems/saves/Checkpoints";
+import { WelcomeAmbience } from "@/audio/WelcomeAmbience";
+import { STINGER_HIT, type Stinger } from "@/audio/welcomeDread";
 import { animateCords, type CordLayer } from "./welcomeCords";
 import "./welcome.css";
 import { setControlText } from "./controlText";

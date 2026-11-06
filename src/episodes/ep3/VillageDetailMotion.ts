@@ -1,5 +1,5 @@
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import type { Game } from "../../core/Game";
+import type { Game } from "@/core/Game";
 
 /** Small movement in suspended fabric, with its actual hangers as pivots. */
 export class VillageDetailMotion {

@@ -1,4 +1,4 @@
-import { formant, noise, normalise, wrapLoop } from "../../../audio/synth";
+import { formant, noise, normalise, wrapLoop } from "@/audio/synth";
 
 /** Wordless female-like lament, breath and subharmonics; original synthesized audio. */
 export function krasueLament(rate: number, rand: () => number): Float32Array {

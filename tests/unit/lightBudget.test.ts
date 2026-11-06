@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { restoreLightLimits, snapshotLightLimits } from "../../src/render/lightBudget";
+import { restoreLightLimits, snapshotLightLimits } from "@/render/lightBudget";
 
 describe("light budgets across glTF loads", () => {
   it("puts back each material's own limit after the loader raises them", () => {

@@ -1,7 +1,7 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { AudioSystem } from "../../audio/AudioSystem";
-import { rms, seededRandom, wetStep } from "../../audio/synth";
-import type { Panning } from "../../audio/localization";
+import { AudioSystem } from "@/audio/AudioSystem";
+import { rms, seededRandom, wetStep } from "@/audio/synth";
+import type { Panning } from "@/audio/localization";
 
 export interface EarLevels {
   azimuth: number;

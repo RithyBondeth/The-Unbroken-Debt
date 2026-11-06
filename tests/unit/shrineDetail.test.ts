@@ -3,17 +3,17 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine";
 import { Scene } from "@babylonjs/core/scene";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
-import { ShrineWoodwork } from "../../src/episodes/ep1/act1/ShrineWoodwork";
-import { RelicCraft } from "../../src/shared/RelicCraft";
-import { ShrineResponse } from "../../src/episodes/ep1/act1/ShrineResponse";
-import { mapShrineGrain, ShrineAgeing } from "../../src/episodes/ep1/act1/ShrineAgeing";
+import { ShrineWoodwork } from "@/episodes/ep1/act1/ShrineWoodwork";
+import { RelicCraft } from "@/shared/RelicCraft";
+import { ShrineResponse } from "@/episodes/ep1/act1/ShrineResponse";
+import { mapShrineGrain, ShrineAgeing } from "@/episodes/ep1/act1/ShrineAgeing";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_APPROACH,
   SAVE_SHRINE_ROUTE,
   inSaveShrineClearing,
-} from "../../src/episodes/ep1/data/saveShrine";
-import { YARD, openGround } from "../../src/episodes/ep1/data/forestBorder";
+} from "@/episodes/ep1/data/saveShrine";
+import { YARD, openGround } from "@/episodes/ep1/data/forestBorder";
 
 const engines: NullEngine[] = [];
 afterEach(() => {

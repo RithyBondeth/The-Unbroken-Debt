@@ -1,14 +1,14 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { AudioSystem } from "../../../audio/AudioSystem";
-import { biquad, seededRandom } from "../../../audio/synth";
-import { cricketsLoop, frogsLoop } from "../../../audio/sounds/nightSounds";
+import type { AudioSystem } from "@/audio/AudioSystem";
+import { biquad, seededRandom } from "@/audio/synth";
+import { cricketsLoop, frogsLoop } from "@/audio/sounds/nightSounds";
 import { whispers } from "../audio/vigilSounds";
-import { pavilionCloth } from "../../../audio/sounds/atmosphereSounds";
+import { pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 import { thunder } from "../audio/prologueSounds";
 import { taxiMeter } from "../audio/taxiSounds";
-import type { DreadScore } from "../../../audio/DreadScore";
+import type { DreadScore } from "@/audio/DreadScore";
 import {
   brakeSlither,
   driverGasp,

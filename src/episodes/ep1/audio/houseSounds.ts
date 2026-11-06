@@ -10,7 +10,7 @@ import {
   stickSlip,
   sweep,
   wrapLoop,
-} from "../../../audio/synth";
+} from "@/audio/synth";
 
 /**
  * Synthesised stand-ins for the house and the ground under it (Audio Design

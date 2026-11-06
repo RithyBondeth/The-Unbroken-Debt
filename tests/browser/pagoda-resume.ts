@@ -1,10 +1,10 @@
 /** Reloads the real archive produced by pagoda.html; never accesses player saves. */
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import type { WhisperingPagoda } from "../../src/episodes/ep2/WhisperingPagoda";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import type { WhisperingPagoda } from "@/episodes/ep2/WhisperingPagoda";
 async function run(): Promise<void> {
   if (!import.meta.env.DEV) return;
   const status = document.getElementById("results")!;

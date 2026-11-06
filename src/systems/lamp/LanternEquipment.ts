@@ -1,7 +1,7 @@
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { Lamp } from "./Lamp";
-import { HeldLamp } from "../../player/HeldLamp";
-import type { Game } from "../../core/Game";
+import { HeldLamp } from "@/player/HeldLamp";
+import type { Game } from "@/core/Game";
 import type { PointLight } from "@babylonjs/core/Lights/pointLight";
 
 export interface ExpeditionLights {

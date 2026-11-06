@@ -1,5 +1,5 @@
-import type { EventBus } from "../../core/EventBus";
-import type { GameEvents } from "../../core/events";
+import type { EventBus } from "@/core/EventBus";
+import type { GameEvents } from "@/core/events";
 
 /** How an item shows in the satchel. */
 export interface ItemInfo {

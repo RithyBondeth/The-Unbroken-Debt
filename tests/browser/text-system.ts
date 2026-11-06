@@ -1,28 +1,22 @@
 /** Real UI components, isolated from graphics initialization and player saves. */
-import {
-  Hints,
-  SaveIndicator,
-  SatchelPanel,
-  ScreenFade,
-  Subtitles,
-} from "../../src/ui/html/StoryUi";
-import { setControlText } from "../../src/ui/html/controlText";
-import { DocumentReader } from "../../src/ui/html/DocumentReader";
-import { ARRIVAL_NOTE } from "../../src/episodes/ep1/data/arrival";
-import { NotebookReader } from "../../src/ui/html/NotebookReader";
-import { ResolutionView } from "../../src/ui/html/ResolutionView";
-import { ResolutionProgress } from "../../src/episodes/ep1/resolution/ResolutionProgress";
-import { showWelcomeScreen, showBootError } from "../../src/ui/html/welcomeScreen";
-import { showRequirementsPage } from "../../src/ui/html/requirementsPage";
-import { renderStallNotice } from "../../src/ui/html/renderStallNotice";
-import { newGameSave } from "../../src/systems/saves/SaveData";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { EventBus } from "../../src/core/EventBus";
-import { notebookContent } from "../../src/ui/notebook/notebookContent";
-import type { Game } from "../../src/core/Game";
-import type { SectionId } from "../../src/ui/diegetic/sketchbookContent";
-import "../../src/ui/html/walker.css";
+import { Hints, SaveIndicator, SatchelPanel, ScreenFade, Subtitles } from "@/ui/html/StoryUi";
+import { setControlText } from "@/ui/html/controlText";
+import { DocumentReader } from "@/ui/html/DocumentReader";
+import { ARRIVAL_NOTE } from "@/episodes/ep1/data/arrival";
+import { NotebookReader } from "@/ui/html/NotebookReader";
+import { ResolutionView } from "@/ui/html/ResolutionView";
+import { ResolutionProgress } from "@/episodes/ep1/resolution/ResolutionProgress";
+import { showWelcomeScreen, showBootError } from "@/ui/html/welcomeScreen";
+import { showRequirementsPage } from "@/ui/html/requirementsPage";
+import { renderStallNotice } from "@/ui/html/renderStallNotice";
+import { newGameSave } from "@/systems/saves/SaveData";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { EventBus } from "@/core/EventBus";
+import { notebookContent } from "@/ui/notebook/notebookContent";
+import type { Game } from "@/core/Game";
+import type { SectionId } from "@/ui/diegetic/sketchbookContent";
+import "@/ui/html/walker.css";
 
 async function preview(): Promise<void> {
   if (!import.meta.env.DEV) return;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { WaterSurvival } from "../../src/episodes/ep3/WaterSurvival";
-import { DrownedBrain } from "../../src/episodes/ep3/DrownedBrain";
+import { WaterSurvival } from "@/episodes/ep3/WaterSurvival";
+import { DrownedBrain } from "@/episodes/ep3/DrownedBrain";
 describe("Water, warmth and the drowned spirit", () => {
   it("gets wet and cold in water, recovers under a safe lamp, and never advances on pause", () => {
     const s = new WaterSurvival();

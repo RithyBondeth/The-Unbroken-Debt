@@ -1,17 +1,17 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import type { Game } from "../../../core/Game";
-import type { SaveData } from "../../../systems/saves/SaveData";
+import type { Game } from "@/core/Game";
+import type { SaveData } from "@/systems/saves/SaveData";
 import type { Vigil } from "../act1/Vigil";
-import { wetStep, seededRandom } from "../../../audio/synth";
+import { wetStep, seededRandom } from "@/audio/synth";
 import { jarLid } from "../audio/actThreeSounds";
 import { StalkerVoice } from "../audio/StalkerVoice";
 import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, JARS, inHunt } from "../data/hunt";
 import { HuntProgress } from "./HuntProgress";
 import { RoamerBrain } from "./RoamerBrain";
 import type { HuntModels } from "./HuntModels";
-import "../../../ui/html/walker.css";
+import "@/ui/html/walker.css";
 
 const after = (seconds: number) => new Promise<void>((done) => setTimeout(done, seconds * 1000));
 

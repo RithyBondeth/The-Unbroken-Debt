@@ -1,6 +1,6 @@
 /** Test the real entry screen without loading assets or touching player saves. */
-import { ScreenFade } from "../../src/ui/html/StoryUi";
-import { KeyboardMouseInput } from "../../src/player/InputSource";
+import { ScreenFade } from "@/ui/html/StoryUi";
+import { KeyboardMouseInput } from "@/player/InputSource";
 
 async function verify(): Promise<void> {
   if (!import.meta.env.DEV) return;

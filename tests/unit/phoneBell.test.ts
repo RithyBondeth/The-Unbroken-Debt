@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PhoneBell, RING_CYCLE } from "../../src/episodes/ep1/audio/PhoneBell";
+import { PhoneBell, RING_CYCLE } from "@/episodes/ep1/audio/PhoneBell";
 
 const fakeSound = () => {
   const log: string[] = [];

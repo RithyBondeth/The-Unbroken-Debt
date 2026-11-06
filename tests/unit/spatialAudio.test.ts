@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardCreak, rattlingBreath, rms, seededRandom, wetStep } from "../../src/audio/synth";
+import { boardCreak, rattlingBreath, rms, seededRandom, wetStep } from "@/audio/synth";
 import {
   angleError,
   isFrontBackConfusion,
@@ -8,7 +8,7 @@ import {
   summarize,
   wrapAngle,
   type TrialResult,
-} from "../../src/audio/localization";
+} from "@/audio/localization";
 
 const deg = (d: number) => (d * Math.PI) / 180;
 

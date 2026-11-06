@@ -3,7 +3,7 @@ import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
-import { ShadowFigure } from "../../../shared/entities/ShadowFigure";
+import { ShadowFigure } from "@/shared/entities/ShadowFigure";
 
 /** The lead form and its smear: lag behind the lead (s) and how solid each copy is. */
 const TRAIL = [

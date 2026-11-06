@@ -1,13 +1,13 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { Game } from "../../src/core/Game";
-import { AudioSystem } from "../../src/audio/AudioSystem";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { saveShot } from "../../src/debug/saveShot";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
-import { KRASUE_WINDOWS } from "../../src/episodes/ep1/data/krasue";
+import { Game } from "@/core/Game";
+import { AudioSystem } from "@/audio/AudioSystem";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { saveShot } from "@/debug/saveShot";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
+import { KRASUE_WINDOWS } from "@/episodes/ep1/data/krasue";
 
 const results = document.getElementById("results")!;
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -240,9 +240,8 @@ async function review(): Promise<void> {
     await ensureAudio();
     const audio = game.audio!;
     // Reuse the production source and buffers, with a short opt-in preview.
-    const { krasueLament, krasueShriek } =
-      await import("../../src/episodes/ep1/audio/krasueSounds");
-    const { seededRandom } = await import("../../src/audio/synth");
+    const { krasueLament, krasueShriek } = await import("@/episodes/ep1/audio/krasueSounds");
+    const { seededRandom } = await import("@/audio/synth");
     const at = KRASUE_WINDOWS[selected].center.add(KRASUE_WINDOWS[selected].normal.scale(2.45));
     const sound = await audio.spatialSound(
       "krasue_review",

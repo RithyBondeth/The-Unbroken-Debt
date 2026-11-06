@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { saveWithRetry } from "../../src/systems/saves/saveWithRetry";
+import { saveWithRetry } from "@/systems/saves/saveWithRetry";
 
 describe("saveWithRetry", () => {
   it("writes once when the browser accepts the save", async () => {

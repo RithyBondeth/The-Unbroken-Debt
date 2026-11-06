@@ -3,7 +3,7 @@ import { InstancedMesh } from "@babylonjs/core/Meshes/instancedMesh";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Node } from "@babylonjs/core/node";
-import { mergeStaticMeshes } from "../render/staticBatcher";
+import { mergeStaticMeshes } from "@/render/staticBatcher";
 import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import type { Scene } from "@babylonjs/core/scene";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";

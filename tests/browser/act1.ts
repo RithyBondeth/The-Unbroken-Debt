@@ -6,14 +6,14 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { KANHA_LAYOUT, SLOTS } from "../../src/episodes/ep1/data/betel";
-import { TENT_FLAME_MESH } from "../../src/episodes/ep1/data/arrival";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { KANHA_LAYOUT, SLOTS } from "@/episodes/ep1/data/betel";
+import { TENT_FLAME_MESH } from "@/episodes/ep1/data/arrival";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
 
 const results = document.getElementById("results") as HTMLElement;
 const output: string[] = [];

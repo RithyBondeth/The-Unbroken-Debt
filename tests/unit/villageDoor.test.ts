@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { VillageDoor } from "../../src/episodes/ep1/act1/VillageDoor";
+import { VillageDoor } from "@/episodes/ep1/act1/VillageDoor";
 
 describe("village door under a mirrored glTF parent", () => {
   it("stays in place when rigged, swings into the room, and removes its collider and padlock", () => {

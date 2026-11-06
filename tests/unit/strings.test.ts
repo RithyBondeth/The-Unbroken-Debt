@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import en from "../../src/data/strings/en.json";
-import km from "../../src/data/strings/km.json";
-import { chooseLanguage, lookup, type StringKey } from "../../src/data/strings";
+import en from "@/data/strings/en.json";
+import km from "@/data/strings/km.json";
+import { chooseLanguage, lookup, type StringKey } from "@/data/strings";
 
 /** Keys and controls a hint names, which a translation must keep exactly. */
 const CONTROLS = /\b(?:W A S D|Enter|Tab|Esc|CP\d|[EFQC])\b|←|→/g;

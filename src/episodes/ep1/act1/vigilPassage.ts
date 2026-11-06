@@ -1,4 +1,4 @@
-import type { Flags } from "../../../core/Flags";
+import type { Flags } from "@/core/Flags";
 
 /** A1-11b: the obstruction is a listening presence after the offering and vigil. */
 export const PASSAGE_WARNING_SECONDS = 5;

@@ -1,4 +1,4 @@
-import { seededRandom } from "../audio/synth";
+import { seededRandom } from "@/audio/synth";
 
 /**
  * One wind for an outdoor scene: a direction that veers slowly, a strength

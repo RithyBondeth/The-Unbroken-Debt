@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import * as sounds from "../../src/episodes/ep1/audio/vigilSounds";
-import { seededRandom } from "../../src/audio/synth";
+import * as sounds from "@/episodes/ep1/audio/vigilSounds";
+import { seededRandom } from "@/audio/synth";
 
 const RATE = 22050;
 

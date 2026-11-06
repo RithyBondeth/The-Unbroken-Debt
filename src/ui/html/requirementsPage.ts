@@ -1,5 +1,5 @@
-import { t } from "../../data/strings/index";
-import type { BlockReason } from "../../render/DeviceProfile";
+import { t } from "@/data/strings/index";
+import type { BlockReason } from "@/render/DeviceProfile";
 
 /** Shown instead of the game when the device can't run it (see DeviceProfile). */
 export function showRequirementsPage(root: HTMLElement, reason: BlockReason): void {

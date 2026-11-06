@@ -4,7 +4,7 @@ import { Scene } from "@babylonjs/core/scene";
 import { UniversalCamera } from "@babylonjs/core/Cameras/universalCamera";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { warmSceneViews } from "../../src/render/warmSceneViews";
+import { warmSceneViews } from "@/render/warmSceneViews";
 const engines: NullEngine[] = [];
 afterEach(() => engines.splice(0).forEach((engine) => engine.dispose()));
 function setup() {

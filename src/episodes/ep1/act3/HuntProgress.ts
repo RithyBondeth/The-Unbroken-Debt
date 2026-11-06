@@ -1,5 +1,5 @@
-import type { Flags } from "../../../core/Flags";
-import type { Inventory } from "../../../systems/inventory/Inventory";
+import type { Flags } from "@/core/Flags";
+import type { Inventory } from "@/systems/inventory/Inventory";
 import { JARS, FRAGMENT_IDS } from "../data/hunt";
 
 /** Durable jar contents and a single, atomic three-piece key recipe. */

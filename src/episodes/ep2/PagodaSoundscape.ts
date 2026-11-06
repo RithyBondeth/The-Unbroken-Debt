@@ -1,20 +1,13 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { SoundState } from "@babylonjs/core/AudioV2/soundState";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../core/Game";
-import {
-  modal,
-  normalise,
-  noise,
-  seededRandom,
-  rattlingBreath,
-  boardCreak,
-} from "../../audio/synth";
-import { frogsLoop, cricketsLoop, dawnBirds } from "../../audio/sounds/nightSounds";
-import { canopyWind, foliageMovement } from "../../audio/sounds/atmosphereSounds";
-import { spiritShriek } from "../../audio/sounds/spiritSounds";
-import { breathOut } from "../../audio/sounds/nightSounds";
-import { DreadScore } from "../../audio/DreadScore";
+import type { Game } from "@/core/Game";
+import { modal, normalise, noise, seededRandom, rattlingBreath, boardCreak } from "@/audio/synth";
+import { frogsLoop, cricketsLoop, dawnBirds } from "@/audio/sounds/nightSounds";
+import { canopyWind, foliageMovement } from "@/audio/sounds/atmosphereSounds";
+import { spiritShriek } from "@/audio/sounds/spiritSounds";
+import { breathOut } from "@/audio/sounds/nightSounds";
+import { DreadScore } from "@/audio/DreadScore";
 import { harvestMusic } from "./cinematics/harvestMusic";
 import {
   distantSob,

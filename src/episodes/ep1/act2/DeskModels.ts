@@ -1,5 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { Area } from "../../../core/areaLoader";
+import type { Area } from "@/core/areaLoader";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -14,7 +14,7 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 
 /** Period props at real scale, with separate moving parts and hollow drawer geometry. */
 export class DeskModels {

@@ -1,12 +1,12 @@
-import { DRAWING_VIEW_RADIUS, drawingFocus } from "../../src/player/drawingPose";
-import type { InkMarks } from "../../src/episodes/ep1/prologue/InkMarks";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
+import { DRAWING_VIEW_RADIUS, drawingFocus } from "@/player/drawingPose";
+import type { InkMarks } from "@/episodes/ep1/prologue/InkMarks";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { saveShot } from "../../src/debug/saveShot";
+import { saveShot } from "@/debug/saveShot";
 
 async function review() {
   if (!import.meta.env.DEV) return;

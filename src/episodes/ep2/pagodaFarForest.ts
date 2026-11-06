@@ -6,10 +6,10 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Material } from "@babylonjs/core/Materials/material";
-import { seededRandom } from "../../audio/synth";
-import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "../../render/forestCards";
-import { applyFoliageWind } from "../../render/FoliageWind";
-import type { WindState } from "../../render/wind";
+import { seededRandom } from "@/audio/synth";
+import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "@/render/forestCards";
+import { applyFoliageWind } from "@/render/FoliageWind";
+import type { WindState } from "@/render/wind";
 import { LOST_GARDEN, TANK_BASIN } from "./data/pagoda";
 
 /** One far tree: a pair of crossed painted cards. Runtime X east, Z south. */

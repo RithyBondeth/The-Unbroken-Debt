@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyDevice, type DeviceSignals } from "../../src/render/DeviceProfile";
+import { classifyDevice, type DeviceSignals } from "@/render/DeviceProfile";
 
 const MAC =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/141.0 Safari/537.36";

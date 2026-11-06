@@ -7,7 +7,7 @@ import {
   taxiRouteChunkVisible,
   taxiSpeed,
   taxiWiperAngle,
-} from "../../src/episodes/ep1/travel/taxiMotion";
+} from "@/episodes/ep1/travel/taxiMotion";
 it("uses a continuous distance integral and brakes to a stop without a jump on reload", () => {
   expect(taxiDistance(0)).toBe(0);
   expect(taxiSpeed(72)).toBe(0);

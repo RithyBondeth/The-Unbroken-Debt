@@ -1,4 +1,4 @@
-import { biquad, brown, modal, noise, normalise, stickSlip, wrapLoop } from "../../../audio/synth";
+import { biquad, brown, modal, noise, normalise, stickSlip, wrapLoop } from "@/audio/synth";
 
 /**
  * A 1930s four-cylinder touring car heard from the back seat, 10 s loop: each

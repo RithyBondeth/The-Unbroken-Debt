@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  assertSave,
-  newGameSave,
-  SaveError,
-  type SaveData,
-} from "../../src/systems/saves/SaveData";
-import { migrate } from "../../src/systems/saves/migrations";
-import { crc32, decodeSaveCode, encodeSaveCode } from "../../src/systems/saves/saveCode";
+import { assertSave, newGameSave, SaveError, type SaveData } from "@/systems/saves/SaveData";
+import { migrate } from "@/systems/saves/migrations";
+import { crc32, decodeSaveCode, encodeSaveCode } from "@/systems/saves/saveCode";
 import { endOfEpisodeOne } from "../fixtures/sampleSaves";
 
 const reason = async (p: Promise<unknown>) => {

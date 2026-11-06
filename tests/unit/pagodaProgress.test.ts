@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { Inventory } from "../../src/systems/inventory/Inventory";
-import { assertSave, newGameSave } from "../../src/systems/saves/SaveData";
-import { decodeSaveCode, encodeSaveCode } from "../../src/systems/saves/saveCode";
-import { enterPagoda, PagodaProgress } from "../../src/episodes/ep2/PagodaProgress";
-import { ANCESTORS, MIRROR_TARGETS } from "../../src/episodes/ep2/data/pagoda";
-import { pagodaNotebook } from "../../src/episodes/ep2/data/notebook";
+import { Flags } from "@/core/Flags";
+import { Inventory } from "@/systems/inventory/Inventory";
+import { assertSave, newGameSave } from "@/systems/saves/SaveData";
+import { decodeSaveCode, encodeSaveCode } from "@/systems/saves/saveCode";
+import { enterPagoda, PagodaProgress } from "@/episodes/ep2/PagodaProgress";
+import { ANCESTORS, MIRROR_TARGETS } from "@/episodes/ep2/data/pagoda";
+import { pagodaNotebook } from "@/episodes/ep2/data/notebook";
 
 function state() {
   return new PagodaProgress(new Flags(), new Inventory());

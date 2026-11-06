@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { Flags } from "../../src/core/Flags";
-import { CoffinProgress } from "../../src/episodes/ep1/act3/CoffinProgress";
+import { Flags } from "@/core/Flags";
+import { CoffinProgress } from "@/episodes/ep1/act3/CoffinProgress";
 function tick(p: CoffinProgress, seconds: number, hold = false, visible = true, paused = false) {
   for (let i = 0; i < Math.ceil(seconds * 10); i++)
     p.update(0.1, true, true, visible, hold, paused);

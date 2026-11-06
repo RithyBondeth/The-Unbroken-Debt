@@ -3,7 +3,7 @@ import { Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
-import type { Area } from "../../../core/areaLoader";
+import type { Area } from "@/core/areaLoader";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
 /**

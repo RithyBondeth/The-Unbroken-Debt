@@ -1,11 +1,11 @@
-import { saveWithRetry } from "../../../systems/saves/saveWithRetry";
+import { saveWithRetry } from "@/systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { Game } from "../../../core/Game";
-import type { SaveData } from "../../../systems/saves/SaveData";
-import { encodeSaveCode } from "../../../systems/saves/saveCode";
+import type { Game } from "@/core/Game";
+import type { SaveData } from "@/systems/saves/SaveData";
+import { encodeSaveCode } from "@/systems/saves/saveCode";
 import { ResolutionProgress } from "./ResolutionProgress";
-import { ResolutionView } from "../../../ui/html/ResolutionView";
-import { RelicCraft } from "../../../shared/RelicCraft";
+import { ResolutionView } from "@/ui/html/ResolutionView";
+import { RelicCraft } from "@/shared/RelicCraft";
 
 /** R01–R05. Save each decision before presenting the next reveal. */
 export class DawnResolution {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { facingToGltf, isBoxShape, parseNodeName } from "../../src/core/levelNodes";
-import { orientedBox } from "../../src/core/levelBuilder";
+import { facingToGltf, isBoxShape, parseNodeName } from "@/core/levelNodes";
+import { orientedBox } from "@/core/levelBuilder";
 
 describe("parseNodeName", () => {
   it("reads the prefix and id", () => {

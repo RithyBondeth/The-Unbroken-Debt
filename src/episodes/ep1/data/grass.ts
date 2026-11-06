@@ -1,4 +1,4 @@
-import { seededRandom } from "../../../audio/synth";
+import { seededRandom } from "@/audio/synth";
 import { inSaveShrineClearing } from "./saveShrine";
 import { PLAY, ROAD_Z, YARD, inBelt, inBund, inside, outside, pathDistance } from "./forestBorder";
 

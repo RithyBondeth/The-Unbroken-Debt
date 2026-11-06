@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import * as house from "../../src/episodes/ep1/audio/houseSounds";
-import * as actThree from "../../src/episodes/ep1/audio/actThreeSounds";
-import * as spirit from "../../src/audio/sounds/spiritSounds";
-import { seededRandom } from "../../src/audio/synth";
+import * as house from "@/episodes/ep1/audio/houseSounds";
+import * as actThree from "@/episodes/ep1/audio/actThreeSounds";
+import * as spirit from "@/audio/sounds/spiritSounds";
+import { seededRandom } from "@/audio/synth";
 
 const RATE = 22050;
 /** Loops that fall quiet at their ends. */

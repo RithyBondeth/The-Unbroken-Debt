@@ -1,9 +1,9 @@
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { newGameSave } from "../../src/systems/saves/SaveData";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { newGameSave } from "@/systems/saves/SaveData";
 async function verify() {
   if (!import.meta.env.DEV) return;
   const output = document.getElementById("results")!;

@@ -1,9 +1,9 @@
 import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
-import { Prologue } from "../../src/episodes/ep1/prologue/Prologue";
-import { DreadScore } from "../../src/audio/DreadScore";
-import { PhoneBell } from "../../src/episodes/ep1/audio/PhoneBell";
-import { Flags } from "../../src/core/Flags";
+import { Prologue } from "@/episodes/ep1/prologue/Prologue";
+import { DreadScore } from "@/audio/DreadScore";
+import { PhoneBell } from "@/episodes/ep1/audio/PhoneBell";
+import { Flags } from "@/core/Flags";
 
 it.each([
   ["satchel", "hint.packSatchel"],

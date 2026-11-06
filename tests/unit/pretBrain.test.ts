@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { Breath, gardenClear, gardenPath, PretBrain } from "../../src/episodes/ep2/PretBrain";
-import { ANCESTORS, GARDEN_OBSTACLES, PATROLS, STUPAS } from "../../src/episodes/ep2/data/pagoda";
-import { Lamp } from "../../src/systems/lamp/Lamp";
+import { Breath, gardenClear, gardenPath, PretBrain } from "@/episodes/ep2/PretBrain";
+import { ANCESTORS, GARDEN_OBSTACLES, PATROLS, STUPAS } from "@/episodes/ep2/data/pagoda";
+import { Lamp } from "@/systems/lamp/Lamp";
 
 describe("Pret hearing and navigation", () => {
   it("keeps the clustered cemetery connected to every offering and patrol waypoint", () => {

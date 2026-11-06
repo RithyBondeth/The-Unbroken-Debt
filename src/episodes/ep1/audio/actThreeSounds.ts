@@ -1,4 +1,4 @@
-import { biquad, bubble, mix, modal, noise, normalise, stickSlip } from "../../../audio/synth";
+import { biquad, bubble, mix, modal, noise, normalise, stickSlip } from "@/audio/synth";
 
 /**
  * Synthesised stand-ins for Act III (Audio Design Document, section 8:

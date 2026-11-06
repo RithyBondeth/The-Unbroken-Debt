@@ -1,5 +1,5 @@
 import type { WebGPUEngine } from "@babylonjs/core/Engines/webgpuEngine";
-import type { DeviceProfile } from "../render/DeviceProfile";
+import type { DeviceProfile } from "@/render/DeviceProfile";
 
 export type SpikeRunner = (
   engine: WebGPUEngine,

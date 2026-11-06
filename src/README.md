@@ -21,4 +21,5 @@ Rules:
 
 - No imports between systems (use the event bus and flags). Beat IDs go in comments next to the code that implements them (`// A2-06`).
 - An episode may import from any shared folder, never from another episode. When a second episode needs something, move it to `shared/`, `render/`, `audio/` or `player/`.
+- Imports: relative inside a folder area (one episode, or one top-level folder); `@/` (for `src/`) across areas, e.g. `import { Game } from "@/core/Game"`.
 - File names: `PascalCase.ts` when the file is named after the class or type it exports (`Lamp.ts`, `DeviceProfile.ts`); `camelCase.ts` for modules of functions or data (`physics.ts`, `nightSounds.ts`). Unit tests mirror the module name (`qualityPresets.test.ts`).

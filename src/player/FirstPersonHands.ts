@@ -1,4 +1,4 @@
-import { bookTurnFrame, type BookTurnState } from "../ui/diegetic/bookMotion";
+import { bookTurnFrame, type BookTurnState } from "@/ui/diegetic/bookMotion";
 import handContact from "../../art-source/characters/sora/sora-hands.drawing.json";
 import { createTelephoneReceiver } from "./telephoneReceiver";
 import { decodeHandAsset, type HandAsset } from "./HandAsset";

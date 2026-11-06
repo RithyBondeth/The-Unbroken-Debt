@@ -1,14 +1,14 @@
 /** Real phra phum, light and interaction rays, isolated from player checkpoints. */
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { GatedInput, type InputSource } from "../../src/player/InputSource";
-import { YARD } from "../../src/episodes/ep1/data/forestBorder";
-import { Game } from "../../src/core/Game";
-import { createEngine } from "../../src/render/createEngine";
-import { detectDevice } from "../../src/render/detectDevice";
-import { useLocalDecoders } from "../../src/render/decoders";
-import { SaveStore } from "../../src/systems/saves/SaveStore";
-import { saveShot } from "../../src/debug/saveShot";
-import type { ActOne } from "../../src/episodes/ep1/act1/ActOne";
+import { GatedInput, type InputSource } from "@/player/InputSource";
+import { YARD } from "@/episodes/ep1/data/forestBorder";
+import { Game } from "@/core/Game";
+import { createEngine } from "@/render/createEngine";
+import { detectDevice } from "@/render/detectDevice";
+import { useLocalDecoders } from "@/render/decoders";
+import { SaveStore } from "@/systems/saves/SaveStore";
+import { saveShot } from "@/debug/saveShot";
+import type { ActOne } from "@/episodes/ep1/act1/ActOne";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { PointLight } from "@babylonjs/core/Lights/pointLight";
 
@@ -17,7 +17,7 @@ import {
   SAVE_SHRINE_APPROACH,
   SAVE_SHRINE_LOCATION,
   SAVE_SHRINE_ROUTE,
-} from "../../src/episodes/ep1/data/saveShrine";
+} from "@/episodes/ep1/data/saveShrine";
 
 async function review(): Promise<void> {
   if (!import.meta.env.DEV) return;

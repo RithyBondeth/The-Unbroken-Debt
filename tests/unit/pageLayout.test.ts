@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  layoutPages,
-  wrapText,
-  type Measure,
-  type PageSpec,
-} from "../../src/ui/diegetic/pageLayout";
+import { layoutPages, wrapText, type Measure, type PageSpec } from "@/ui/diegetic/pageLayout";
 
 // One millimetre per character (grapheme cluster for Khmer), whatever the font.
 const graphemes = new Intl.Segmenter("km", { granularity: "grapheme" });

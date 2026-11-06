@@ -1,4 +1,4 @@
-import type { FlagValue } from "../../core/Flags";
+import type { FlagValue } from "@/core/Flags";
 
 /** The save format (Technical Design Document, section 13). Bump it and add a migration when it changes. */
 export const SAVE_VERSION = 1;
