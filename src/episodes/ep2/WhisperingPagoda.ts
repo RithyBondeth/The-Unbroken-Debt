@@ -1,3 +1,4 @@
+import { saveWithRetry } from "../../systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -570,14 +571,7 @@ export class WhisperingPagoda {
     if (this.busy) return;
     this.busy = true;
     const g = this.game;
-    g.cutscene = true;
-    g.gated.holdStill = true;
-    g.stopInspecting();
-    g.closeSketchbook();
-    g.satchel.close();
-    g.hints.hide();
-    g.input.clear();
-    document.exitPointerLock();
+    g.enterCutscene();
     try {
       await action();
     } finally {
@@ -796,15 +790,14 @@ export class WhisperingPagoda {
   private async persist(location?: string): Promise<void> {
     const g = this.game;
     if (location) g.flags.set("checkpoint.location", location);
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         if (location) await g.checkpoints.mark(save, location);
         else await g.saves.save("autosave", save);
         if (this.progress.stage === "complete") await g.saves.save("episode2", this.capture());
-        return;
-      } catch {
-        document.exitPointerLock();
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           [
@@ -813,8 +806,8 @@ export class WhisperingPagoda {
           ["Retry save"],
         );
         this.view.hide();
-      }
-    }
+      },
+    );
   }
   private sync(): void {
     const g = this.game,

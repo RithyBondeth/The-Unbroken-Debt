@@ -151,6 +151,18 @@ export class Game {
     this.player.pitch = Math.atan2(from.y - at.y, Math.hypot(dx, dz));
   }
 
+  /** Freezes play for a scripted moment: closes the books and satchel, hides hints, releases the mouse. */
+  enterCutscene(): void {
+    this.cutscene = true;
+    this.gated.holdStill = true;
+    this.input.clear();
+    this.stopInspecting();
+    this.closeSketchbook();
+    this.satchel.close();
+    this.hints.hide();
+    document.exitPointerLock();
+  }
+
   stopInspecting(): void {
     this.inspection = null;
     this.gated.inspecting = false;

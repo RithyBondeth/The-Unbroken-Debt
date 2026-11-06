@@ -65,15 +65,8 @@ export class CinematicDirector {
     if (this.active) throw new Error("A cinematic is already playing");
     const g = this.game,
       held = { cutscene: g.cutscene, still: g.gated.holdStill, look: g.gated.holdLook };
-    g.cutscene = true;
-    g.gated.holdStill = true;
+    g.enterCutscene();
     g.gated.holdLook = true;
-    g.input.clear();
-    g.stopInspecting();
-    g.closeSketchbook();
-    g.satchel.close();
-    g.hints.hide();
-    document.exitPointerLock();
     const clock = new CinematicClock(script);
     this.clock = clock;
     this.frame = onFrame;

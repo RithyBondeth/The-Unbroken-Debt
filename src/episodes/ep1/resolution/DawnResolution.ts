@@ -1,3 +1,4 @@
+import { saveWithRetry } from "../../../systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "../../../core/Game";
 import type { SaveData } from "../../../systems/saves/SaveData";
@@ -138,21 +139,21 @@ export class DawnResolution {
     }
   }
   private async persist(): Promise<void> {
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         await this.game.saves.save("autosave", save);
         if (this.game.flags.get("ep1.complete", false))
           await this.game.saves.save("episode1", save);
-        return;
-      } catch {
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           ["Your progress is still here. Free some browser storage, then retry."],
           ["Retry save"],
         );
-      }
-    }
+      },
+    );
   }
   private async credits(): Promise<void> {
     const g = this.game;

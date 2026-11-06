@@ -1,3 +1,4 @@
+import { saveWithRetry } from "../../systems/saves/saveWithRetry";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateRibbon } from "@babylonjs/core/Meshes/Builders/ribbonBuilder";
@@ -619,13 +620,7 @@ export class DrownedVillage {
     if (this.busy) return;
     this.busy = true;
     const g = this.game;
-    g.cutscene = true;
-    g.gated.holdStill = true;
-    g.closeSketchbook();
-    g.satchel.close();
-    g.hints.hide();
-    g.input.clear();
-    document.exitPointerLock();
+    g.enterCutscene();
     try {
       await action();
     } finally {
@@ -689,15 +684,14 @@ export class DrownedVillage {
       this.game.flags.set("ep3.spawn.y", at.y + 0.05);
       this.game.flags.set("ep3.spawn.z", at.z);
     }
-    while (true) {
-      try {
+    await saveWithRetry(
+      async () => {
         const save = this.capture();
         if (location) await this.game.checkpoints.mark(save, location);
         else await this.game.saves.save("autosave", save);
         if (this.progress.stage === "complete") await this.game.saves.save("episode3", save);
-        return;
-      } catch {
-        document.exitPointerLock();
+      },
+      async () => {
         await this.view.show(
           "The page could not be saved",
           [
@@ -706,8 +700,8 @@ export class DrownedVillage {
           ["Retry save"],
         );
         this.view.hide();
-      }
-    }
+      },
+    );
   }
   private sync(): void {
     const g = this.game,
