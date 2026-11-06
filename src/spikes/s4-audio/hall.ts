@@ -13,7 +13,7 @@ import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { Scene } from "@babylonjs/core/scene";
 import { addStaticBox } from "../../core/Physics";
-import { makeSurfaceTextures } from "./textures";
+import { makeSurfaceTextures } from "./hallTextures";
 
 export interface Hall {
   /** Meshes that never cast shadows (flames, glass, small detail props). */

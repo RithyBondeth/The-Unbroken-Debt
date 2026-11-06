@@ -8,8 +8,8 @@ import type { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGener
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
-import { enablePhysics } from "../core/Physics";
-import type { QualityPreset } from "../render/QualityPresets";
+import { enablePhysics } from "../../core/Physics";
+import type { QualityPreset } from "../../render/QualityPresets";
 import {
   createClusteredLights,
   createPostPipeline,
@@ -17,9 +17,9 @@ import {
   FLAME_COLOR,
   limitLightToRange,
   type PostPipeline,
-} from "../render/RenderSetup";
-import { mergeStaticMeshes } from "../render/StaticBatcher";
-import { buildHall, type Hall } from "./s2-lighting/hall";
+} from "../../render/RenderSetup";
+import { mergeStaticMeshes } from "../../render/StaticBatcher";
+import { buildHall, type Hall } from "./hall";
 
 export interface HallEnvironment {
   scene: Scene;
@@ -31,13 +31,6 @@ export interface HallEnvironment {
   candles: ReturnType<typeof createClusteredLights>;
   moon: HemisphericLight;
   pipeline: PostPipeline;
-}
-
-/** Renders at exactly `height` (16:9) whatever the window size, for screenshots and benchmarks. */
-export function lockRenderSize(engine: WebGPUEngine, height: number): void {
-  engine.setHardwareScalingLevel(1);
-  engine.setSize(Math.round((height * 16) / 9), height);
-  engine.resize = () => undefined;
 }
 
 /**

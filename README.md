@@ -78,7 +78,7 @@ npm run dev
 │   ├── episodes/ep2/    The Whispering Pagoda: scene, puzzles, Pret and continuation saves
 │   ├── data/            Shared definitions and strings (en, km)
 │   ├── debug/           Performance overlay (F3) and benchmark
-│   └── spikes/          Phase 1 technical spikes (?spike=s1 to s7)
+│   └── spikes/          Phase 1 S4 listening test (?spike=s4)
 ├── tests/unit/          Unit tests (Vitest)
 ├── public/              Static files served as-is
 │   ├── assets/          Optimised game assets (shared/, ep1/) — Git LFS

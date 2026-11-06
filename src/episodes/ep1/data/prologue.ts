@@ -47,9 +47,6 @@ export const LINES = {
   call4: { id: "E1-P06-4", speaker: "Sora", text: "Yay? …Yay!", seconds: 2.4 },
 } satisfies Record<string, Line>;
 
-/** The title card after the journey (P07). The Khmer needs the advisor's review. */
-export const TITLE_CARD = { title: "Night 3", khmer: "យប់ទី ៣" };
-
 /** Seconds between scripted beats. */
 export const TIMING = {
   /** P01: pencil hints appear if the player hasn't looked or moved by then. */

@@ -7,7 +7,7 @@ import {
 } from "../../src/systems/saves/SaveData";
 import { migrate } from "../../src/systems/saves/migrations";
 import { crc32, decodeSaveCode, encodeSaveCode } from "../../src/systems/saves/saveCode";
-import { endOfEpisodeOne } from "../../src/systems/saves/sampleSaves";
+import { endOfEpisodeOne } from "../fixtures/sampleSaves";
 
 const reason = async (p: Promise<unknown>) => {
   try {

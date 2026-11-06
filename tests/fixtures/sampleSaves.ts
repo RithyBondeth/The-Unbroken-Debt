@@ -1,4 +1,4 @@
-import type { SaveData } from "./SaveData";
+import type { SaveData } from "../../src/systems/saves/SaveData";
 
 /**
  * A realistic save at the end of Episode 1, with the flags the Beat Sheet and

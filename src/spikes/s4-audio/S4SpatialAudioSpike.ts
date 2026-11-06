@@ -22,8 +22,8 @@ import {
   type Trial,
   type TrialResult,
 } from "../../audio/localization";
-import { SpikeHud } from "../SpikeHud";
-import { createHallEnvironment } from "../hallEnvironment";
+import { SpikeHud } from "./SpikeHud";
+import { createHallEnvironment } from "./hallEnvironment";
 import { renderEars, type EarLevels } from "./offlineCheck";
 import { runRenderLoop } from "../../render/renderLoop";
 import { renderStallNotice } from "../../ui/html/RenderStallNotice";

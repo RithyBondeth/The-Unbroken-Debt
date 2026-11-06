@@ -38,13 +38,6 @@ export const NOTES = {
   },
 } as const;
 export type NoteId = keyof typeof NOTES;
-export const NOTE_POSITIONS: Record<NoteId, readonly [number, number, number]> = {
-  admission: [-3, 1.1, 7],
-  mother: [-7.5, 4.1, -5],
-  calendar: [-4.5, 4.1, -9],
-  letter: [-1.4, -0.55, -26],
-  return: [3, 1.1, -8],
-};
 export const EP3_ITEMS: Record<string, ItemInfo> = {
   clinic_supplies: {
     name: "Planks and folded tarpaulin",
