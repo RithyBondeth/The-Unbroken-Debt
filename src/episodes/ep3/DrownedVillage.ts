@@ -1075,7 +1075,7 @@ export class DrownedVillage {
             "Third seal broken · Night 5 of 7",
             `Records found: ${this.progress.lore.length} / 5 · Respect: ${this.game.flags.get("series.respect", 0)}`,
             "Next: Episode 4 · The Rubber Plantation",
-            "Created by Rithy Bondeth. Babylon.js · Havok. Episode 1 and 2’s CC0 materials, anatomy and library credits apply.",
+            "Created by Rithy Bondeth. Babylon.js · Havok. Full third-party credits are on the title screen.",
           ],
           ["Return to title", "Export completion save"],
         );

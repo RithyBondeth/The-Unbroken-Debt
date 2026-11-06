@@ -14,6 +14,7 @@ import { ResolutionView } from "../ep1/resolution/ResolutionView";
 import { ShadowFigure } from "../ep1/entities/ShadowFigure";
 import { EP1_GRADE } from "../ep1/data/grade";
 import { PagodaLights } from "./PagodaLights";
+import { PagodaZones, zoneOf } from "./PagodaZones";
 import { PagodaEquipment } from "./PagodaEquipment";
 import { PagodaSoundscape } from "./PagodaSoundscape";
 import { PagodaApparition, type ScareContext } from "./PagodaApparition";
@@ -48,6 +49,7 @@ import {
 export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
+  private zones!: PagodaZones;
   private apparition!: PagodaApparition;
   private watchers!: PagodaWatchers;
   equipment!: PagodaEquipment;
@@ -112,12 +114,16 @@ export class WhisperingPagoda {
           }
       },
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
+      group: zoneOf,
+      // A zone's stones are far apart and its lamps are few: bigger cells, fewer draw calls.
+      cellSizeFor: (mesh) => (zoneOf(mesh) ? 12 : undefined),
     });
     g.fallGuard.bounds = BOUNDS;
     // The far forest runs on into the fog in every direction.
     g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
     buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
+    this.zones = new PagodaZones(this.area.container.meshes);
     const kmaoch = await GhostRig.load(g.scene, "ep2_kmaoch", {
       M_ep2_kmaoch_skin: new Color3(0.46, 0.46, 0.44),
       M_ep2_kmaoch_head: new Color3(0.5, 0.5, 0.47),
@@ -736,7 +742,7 @@ export class WhisperingPagoda {
             `Lore found: ${p.lore.length} / 5 · Respect carried forward: ${g.flags.get("series.respect", 0)}`,
             "The silver inlay and Sophal’s white thread are saved for the last night.",
             "Next: Episode 3 · The Drowned Village",
-            "Created by Rithy Bondeth. Babylon.js · Havok. Shared Episode 1 materials and CC0 library credits apply.",
+            "Created by Rithy Bondeth. Babylon.js · Havok. Full third-party credits are on the title screen.",
           ],
           ["Continue to Episode 3", "Return to title", "Export completion save"],
         );
@@ -908,6 +914,8 @@ export class WhisperingPagoda {
       p = this.progress;
     this.time += dt;
     const simDt = simulationStep(dt);
+    // The memory space lies beyond the Root Gallery, and must not see it.
+    this.zones.update(p.stage === "memory" ? null : g.player.feet);
     this.equipment.update(simDt);
     this.cheaHands.update(dt, this.equipment);
     this.cinematics.update(document.hidden || this.cinematics.director.isPaused ? 0 : dt);

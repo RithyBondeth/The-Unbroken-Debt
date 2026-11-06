@@ -48,7 +48,7 @@ def fallen_log(coll, m, name, x, y, yaw, length, r, rng):
     return parts
 
 
-def outer_forest(coll, m, rng, avoid=(), clear=()):
+def outer_forest(coll, m, rng, avoid=(), clear=(), solid=()):
     """Three ranks of old growth beyond the walls and along the approach track."""
     trees = []
     k = 0
@@ -77,17 +77,27 @@ def outer_forest(coll, m, rng, avoid=(), clear=()):
         # Clearings the player walks into (x0, x1, y0, y1) keep only their ring of trunks.
         if any(x0 < x < x1 and y0 < y < y1 for x0, x1, y0, y1 in clear):
             continue
-        near_track = abs(y) < 40 and abs(x) < 28
+        # `solid` ground can be walked on, so what stands on it has to stop you.
+        near_track = abs(y) < 40 and abs(x) < 28 or any(x0 < x < x1 and y0 < y < y1 for x0, x1, y0, y1 in solid)
         giant(coll, m, x, y, h, 700 + k, rng, reach=1.6 if near_track else None, collision=near_track,
               crown=rng.uniform(1.0, 1.2))
         k += 1
+
+    def stop(name, x, y, r):
+        # Out of bounds until the lost garden: what stands where you can now walk needs a body.
+        if any(x0 < x < x1 and y0 < y < y1 for x0, x1, y0, y1 in solid):
+            collider(name, coll, x - r, x + r, y - r, y + r, 0, 2.2, 'stone')
+
     # Dead giants and rag trees: someone still ties cloth here.
     for j, (x, y) in enumerate([(31.5, -12), (-32, 9), (34, 27), (-33.5, -30), (-6, 46), (18, -44), (-11, -33.2), (11.5, -31.4)]):
         dead_tree(coll, m, x, y, rng.uniform(8, 13), 820 + j, rng)
+        stop(f'dead_tree_{j}', x, y, .6)
     rag_tree(coll, m, -5.6, -35.8, 0, rng)
     rag_tree(coll, m, 31.2, 4, 1, rng)
-    for j, (x, y) in enumerate([(-16, -35), (20, -35.5), (-30.5, -20), (31, 20), (-31, 33), (8.5, -38.6), (-24, -29.8)]):
+    stop('rag_tree', 31.2, 4, .5)
+    for j, (x, y) in enumerate([(-16, -35), (20, -35.5), (-31, -17), (31, 20), (-31, 33), (8.5, -38.6), (-24, -29.8)]):
         termite_mound(coll, m, x, y, rng.uniform(.8, 1.6), 30 + j, rng)
+        stop(f'termite_mound_{j}', x, y, .7)
     for j, (x, y, yaw, length) in enumerate([(-15.5, -31, .3, 7), (14, -30.4, 2.9, 6), (30, -24, 1.6, 9), (-30.5, 18, 1.4, 8), (6, 43, .1, 9)]):
         fallen_log(coll, m, f'fallen_log_{j}', x, y, yaw, length, rng.uniform(.3, .45), rng)
         if abs(x) < 28 and y < -28:
@@ -95,11 +105,13 @@ def outer_forest(coll, m, rng, avoid=(), clear=()):
     # Stranglers gripping the wall from outside, their roots pouring over the coping.
     for j, (x, y, wx, wy, a0) in enumerate([(31.6, -14, 28, -14, math.pi), (-31.4, 26, -28, 26, 0), (-12, 44.2, -12, 41, -math.pi / 2)]):
         banyan(coll, m, x, y, rng, dressing=False)
+        stop(f'wall_banyan_{j}', x, y, 1.4)
         for bearing in (a0, a0 + math.pi):
             fig_roots(coll, m, f'wall_fig_{j}', wx, wy, 1.9, lambda z: .46, rng,
                       n=5, spread=1.0, around=(bearing - .45, bearing + .45), crown=0)
     for j, (x, y) in enumerate([(31, -36), (-31.5, -4), (33, 38), (-34, 40), (26, -44), (-25, -45), (35, 12), (-35, -16)]):
         bamboo_clump(coll, m, x, y, 40 + j, rng)
+        stop(f'outer_bamboo_{j}', x, y, .7)
     # Floor of ferns and dead leaves outside the wall and along the track.
     spots = []
     # Fog swallows the floor beyond a few metres of the wall; keep the budget near it.

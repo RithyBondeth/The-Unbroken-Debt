@@ -10,6 +10,7 @@ import { seededRandom } from "../../audio/synth";
 import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "../ep1/act1/forestCards";
 import { applyFoliageWind } from "../../render/FoliageWind";
 import type { WindState } from "../../render/wind";
+import { LOST_GARDEN, TANK_BASIN } from "./data/pagoda";
 
 /** One far tree: a pair of crossed painted cards. Runtime X east, Z south. */
 export interface FarTree {
@@ -26,6 +27,26 @@ const INNER = { x: 46, z: 50 };
 /** The pond's sunken basin, in the gap the compound's ground leaves for it. */
 const POND_BASIN = { minX: -18.6, maxX: 18.6, minZ: -39.2, maxZ: -17.4 };
 
+type Basin = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+/** Rectangles [x0, x1, z0, z1] covering a square of half-width `r`, minus the basins. */
+export function floorPieces(r: number, basins: readonly Basin[]): number[][] {
+  let pieces = [[-r, r, -r, r]];
+  for (const { minX, maxX, minZ, maxZ } of basins)
+    pieces = pieces.flatMap(([x0, x1, z0, z1]) => {
+      if (minX >= x1 || maxX <= x0 || minZ >= z1 || maxZ <= z0) return [[x0, x1, z0, z1]];
+      const out: number[][] = [];
+      if (z0 < minZ) out.push([x0, x1, z0, minZ]);
+      if (maxZ < z1) out.push([x0, x1, maxZ, z1]);
+      const top = Math.max(z0, minZ),
+        bottom = Math.min(z1, maxZ);
+      if (x0 < minX) out.push([x0, minX, top, bottom]);
+      if (maxX < x1) out.push([maxX, x1, top, bottom]);
+      return out;
+    });
+  return pieces;
+}
+
 /**
  * Lays far trees in an elliptical belt from the authored forest out to the fog,
  * densest near, thinning far away, so the jungle seems to go on without end.
@@ -41,6 +62,8 @@ export function layoutFarForest(seed = 6242202, count = 760, outer = 118): FarTr
       ez = INNER.z + (outer - INNER.z) * t;
     const x = Math.cos(a) * ex,
       z = Math.sin(a) * ez + 1;
+    // The lost garden has its own trees; a card standing in a lane would look flat.
+    if (LOST_GARDEN.some((g) => x > g.minX && x < g.maxX && z > g.minZ && z < g.maxZ)) continue;
     trees.push({
       x,
       z,
@@ -143,20 +166,13 @@ export function buildFarForest(scene: Scene, wind: WindState, ground: Material |
   applyFoliageWind([material], wind);
   if (ground) {
     // The forest floor runs on under the far trees, just below the compound's own ground,
-    // with a hole for the sunken pond, whose water lies lower still.
+    // with holes for the sunken pond and tank, whose water lies lower still.
     const floor = new Mesh("ep2_far_forest_floor", scene);
-    const r = 130,
-      { minX, maxX, minZ, maxZ } = POND_BASIN,
-      positions: number[] = [],
+    const positions: number[] = [],
       normals: number[] = [],
       uvs: number[] = [],
       indices: number[] = [];
-    for (const [x0, x1, z0, z1] of [
-      [-r, r, -r, minZ],
-      [-r, r, maxZ, r],
-      [-r, minX, minZ, maxZ],
-      [maxX, r, minZ, maxZ],
-    ]) {
+    for (const [x0, x1, z0, z1] of floorPieces(130, [POND_BASIN, TANK_BASIN])) {
       const v = positions.length / 3;
       for (const [x, z] of [
         [x0, z0],

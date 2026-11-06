@@ -6,6 +6,31 @@ import { animateCords, type CordLayer } from "./welcomeCords";
 import "./welcome.css";
 import { setControlText } from "./controlText";
 
+/** Third-party scans, adapted for the game. CC BY 4.0 requires this credit wherever they ship. */
+const MODEL_CREDITS = `<p class="welcome-note">3D scans, adapted for this game (decimated, weathered, re-rigged or partly reused). CC BY 4.0: ${[
+  ["Monk", "Obi.Moz", "monk-c0348e63db6647e991d63f8aeb1e6cc5"],
+  ["Buddha", "Francesco Coldesina", "buddha-22d11b87097644f3a9bb6f6a8015176f"],
+  [
+    "Burmese Buddha in National Museum Ireland",
+    "sofiarudi",
+    "burmese-buddha-in-national-museum-ireland-658fab5464e94f118947c2384121104a",
+  ],
+  ["Thai Monk", "manusainz", "thai-monk-59840b1ce83e40c291ffb6d5d730be74"],
+  ["Pocong (Scary)", "fdhlan21", "pocong-scary-d67d45b786cb4b69b345aef43ea4f59b"],
+  [
+    "Kuntilanak Merah (Scary)",
+    "fdhlan21",
+    "kuntilanak-merah-scary-f403d41cda214c06ab6044d780463b7e",
+  ],
+]
+  .map(
+    ([title, author, slug]) =>
+      `<a href="https://sketchfab.com/3d-models/${slug}" target="_blank" rel="noopener">${title}</a> by ${author}`,
+  )
+  .join(
+    "; ",
+  )} (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">licence</a>). CC0: Prajnaparamita, Minneapolis Institute of Art; 1987.14.2 Naga Finial, Cleveland Museum of Art.</p><p class="welcome-note">The motion capture data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.</p>`;
+
 export interface WelcomeSettings {
   sound: boolean;
   sensitivity: number;
@@ -220,7 +245,7 @@ export async function showWelcomeScreen(
           case "credits":
             open(
               "Boon Sop",
-              `<p>The Unbroken Debt</p><p>A game by Rithy Bondeth.</p><p class="welcome-note">Built with Babylon.js and Havok. Ubuntu font by Canonical; Preah Vihear by Danh Hong. Patrick Hand and Freehand are used in Sora’s sketchbook.</p><p class="welcome-note">Library assets from Poly Haven, character bases from the MakeHuman Community and sounds from Kenney (all CC0). Archive photographs by Léon Busy, 1921, Albert Kahn Museum (CC0).</p><p class="welcome-note">Title scene rendered from the game’s own house in Blender Cycles; title lettering painted procedurally for this game. Original title music synthesized for this game.</p>`,
+              `<p>The Unbroken Debt</p><p>A game by Rithy Bondeth.</p><p class="welcome-note">Built with Babylon.js and Havok. Ubuntu font by Canonical; Preah Vihear by Danh Hong. Patrick Hand and Freehand are used in Sora’s sketchbook.</p><p class="welcome-note">Library assets from Poly Haven, character bases from the MakeHuman Community and sounds from Kenney (all CC0). Archive photographs by Léon Busy, 1921, Albert Kahn Museum (CC0).</p>${MODEL_CREDITS}<p class="welcome-note">Title scene rendered from the game’s own house in Blender Cycles; title lettering painted procedurally for this game. Original title music synthesized for this game.</p>`,
             );
             break;
           case "fullscreen":

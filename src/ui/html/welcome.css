@@ -365,6 +365,10 @@
   color: var(--ui-muted);
   font-size: var(--ui-small);
 }
+.welcome-dialog .welcome-note a {
+  color: inherit;
+  text-decoration: underline;
+}
 .welcome button:not(.ui-button):enabled:active {
   transform: translateY(1px);
 }

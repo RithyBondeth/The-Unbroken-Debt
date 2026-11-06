@@ -19,6 +19,7 @@ from pagoda_gateway import build_gateway, overgrow_gateway
 from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image, spirit_house, sema_stone,
                          sash, incense_pot, candles, fig_roots, lean, rubble)
 from pagoda_stupa import memorial
+from pagoda_lost_garden import build_lost_garden, WEST_BREACH_Y, NORTH_BREACH_X, SALA_NORTH_X, SALA_SOUTH_X
 from pagoda_kit import piece
 from pagoda_forest import giant, outer_forest
 from pagoda_pond import build_pond, pond_materials
@@ -112,10 +113,10 @@ def sphere(name,at,size,mat):
     for f in o.data.polygons:f.use_smooth=True
     return o
 
-def lamp(name,x,z,y):
+def lamp(name,x,z,y,intensity=2.6):
     lathe(name+'_cup',AREA,[(0,0),(.14,0),(.17,.04),(.13,.085),(0,.07)],x,z,y,m['bronze'])
     flame(name+'_flame',AREA,x,z,y+.11,.12,m['flame'])
-    empty('light_flame_'+name,AREA,(x,z,y+.18),radius=5,intensity=2.6)
+    empty('light_flame_'+name,AREA,(x,z,y+.18),radius=5,intensity=intensity)
 
 def roof(name,x,z,w,d,eave,ridge):
     temple_roof(AREA,m,name,x,z,w,d,eave,ridge,gable_relief=name in ('vihear','hawtrai'))
@@ -168,23 +169,31 @@ collider('earth',AREA,-30,30,-40,42,-.18,-.01,'dirt')
 for name,(gx0,gx1,gy0,gy1) in {'earth':(-30,30,-40,17.4),'earth_north':(-30,30,39.2,42),
                                 'earth_west':(-30,-18.6,17.4,39.2),'earth_east':(18.6,30,17.4,39.2)}.items():
     box(name,AREA,gx0,gx1,gy0,gy1,-.18,-.01,m['earth'])
-cube('col_boundary',-30,1,-.2,1,84,5,None,True)
+# The west limit, open at the breach into the Court of the Forgotten.
+cube('col_boundary',-30,(-41+WEST_BREACH_Y[0])/2,-.2,1,WEST_BREACH_Y[0]+41,5,None,True)
+cube('col_boundary',-30,(WEST_BREACH_Y[1]+43)/2,-.2,1,43-WEST_BREACH_Y[1],5,None,True)
 # East of the fallen bay the forest opens into the clearing of the reclining Buddha
 # (the sala, its images and its watchers are authored in tools/ep2/build-cinematics.py).
 ANNEX=(28.4,44.6,-21,1.2)
 cube('col_boundary',30,-30.6,-.2,1,22.8,5,None,True)
 cube('col_boundary',30,21.6,-.2,1,40.8,5,None,True)
 cube('col_boundary',45,-9.9,-.2,1,23.2,5,None,True)
-for z in [-21.5,1.7]:cube('col_boundary',37,z,-.2,16,1,5,None,True)
+# The clearing's north and south sides, open into the Root Gallery and the Bone Terrace.
+for z,(x0,x1) in [(-21.5,SALA_SOUTH_X),(1.7,SALA_NORTH_X)]:
+    cube('col_boundary',(29+x0)/2,z,-.2,x0-29,1,5,None,True)
+    cube('col_boundary',(x1+45)/2,z,-.2,45-x1,1,5,None,True)
 collider('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,'dirt')
 box('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,m['earth'])
-for z in [-40,42]:cube('col_boundary',0,z,-.2,60,1,5,None,True)
+cube('col_boundary',0,-40,-.2,60,1,5,None,True)
+# The north limit, open at the breach into the Spirit Grove.
+cube('col_boundary',(-30+NORTH_BREACH_X[0])/2,42,-.2,NORTH_BREACH_X[0]+30,1,5,None,True)
+cube('col_boundary',(NORTH_BREACH_X[1]+30)/2,42,-.2,30-NORTH_BREACH_X[1],1,5,None,True)
 # Low masonry compound walls and breathing foliage beyond them.
 # Old lotus-crested temple walls: leaning bays, scabbed plaster, fallen sections, creepers.
 wall_rng=np.random.default_rng(1767)
-temple_wall(AREA,m,'compound_wall_west',(-28,-39.5),(-28,41.5),wall_rng,'mould_white',breaches=(4,13,21))
+temple_wall(AREA,m,'compound_wall_west',(-28,-39.5),(-28,41.5),wall_rng,'mould_white',breaches=(4,5,13,21),open_bays=(5,))
 temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_grey',breaches=(9,17),open_bays=(9,))
-temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(5,))
+temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(5,16),open_bays=(16,))
 temple_wall(AREA,m,'gateway_boundary_west',(-28,-27),(-7.6,-27),wall_rng,'mould_red',breaches=(2,))
 temple_wall(AREA,m,'gateway_boundary_east',(7.6,-27),(28,-27),wall_rng,'mould_red')
 # Reference-led red-and-gold ceremonial arch and pedestrian portals, now overgrown.
@@ -193,7 +202,10 @@ overgrow_gateway(AREA,m)
 for x in [-2.3,2.3]:
     # Naga balustrades: one fused stone carving, scaled body rising to a fan of five hoods.
     naga_rail(AREA,m,'naga_'+('west' if x<0 else 'east'),x,rng)
-    lamp('gate_'+str(x),x,-26,1)
+    # On its own post outside the rail: the serpent's neck is no lamp stand.
+    lamp_x=x+(.82 if x>0 else -.82)
+    cube('gate_lamp_post_'+str(x),lamp_x,-26,0,.2,.2,.95,m['stone'],True)
+    lamp('gate_'+str(x),lamp_x,-26,.95)
 anchor('spawn_player',0,-33)
 anchor('marker_kuti_spawn',-17,-17)
 # Stone path from threshold, branching to the kuti and prayer hall.
@@ -251,7 +263,8 @@ for k,monument in enumerate(layout['stupas']):
         offering_stand.build(name+'_offering_stand',AREA)
         usable('stupa_'+name,x,z-.8,.25,lambda x=x,z=z:lathe('offering_bowl',AREA,[(.15,0),(.2,.03),(.23,.1),(.21,.11),(.16,.04)],x,z-.9,.23,m['bronze']))
         inscribed_tablet(AREA,m,name+'_inscription',x,z-.52,.44,stupa_rng)
-        lamp('ancestor_'+name,x+.5,z-.66,.33)
+        # Low and off to the side, so it rakes across the carving instead of blowing it out.
+        lamp('ancestor_'+name,x+.72,z-1.05,.02,1.2)
 for k,p in enumerate(layout['trees']):
     giant(AREA,m,p['x'],-p['z'],12+k,300+k,rng,reach=.66,crown=1.05)
     collider('garden_tree_'+str(k),AREA,p['x']-.7,p['x']+.7,-p['z']-.7,-p['z']+.7,0,8)
@@ -464,12 +477,17 @@ for j,(py,headless) in enumerate([(-1.85,True),(-.15,False),(6.15,False),(7.85,T
     if not headless:piece(AREA,'image_cloth','cloister_image_sash_'+str(j),-25.35,py,.13*.7,math.pi/2,.7)
 # Layered forest: three ranks of old growth outside, inner emergents, bamboo, understory.
 avoid=[(x,y,1.0) for x,y in forgotten]+[(4.8,-37.6,.8)]
-outer_forest(AREA,m,np.random.default_rng(6241910),avoid,clear=[(ANNEX[0],ANNEX[1]-1.6,ANNEX[2]+1.4,ANNEX[3]-1.4)])
+# The lost garden's zones plant their own trees, and these have no collision out there.
+# Their front rank stays, outside the zones' switches: it hides a zone that is switched off.
+zone_rects=[(z['minX'],z['maxX'],z['minY'],z['maxY']) for z in layout['zones']]
+behind_front_rank=[(-81,-32.6,-30,72),(-30,31,47.6,97),(33,63,2.2,72),(33,63,-40,-22.5)]
+avoid+=[(-31,sum(WEST_BREACH_Y)/2,3.5),(sum(NORTH_BREACH_X)/2,44,3.5)]
+outer_forest(AREA,m,np.random.default_rng(6241910),avoid,clear=[(ANNEX[0],ANNEX[1]-1.6,ANNEX[2]+1.4,ANNEX[3]-1.4)]+behind_front_rank,solid=zone_rects)
 inner=[(-24,-25),(24,-23),(-24,15),(24,20),(-12,40),(12,40),(-7,-24),(8,-22),(-21,3),(-23,22),(20,28),(-23,35),(25,35),(-9,-34),(8,-35)]
 for k,(x,z) in enumerate(inner):
     giant(AREA,m,x,z,rng.uniform(10,15),120+k,rng,reach=1.8,collision=True)
 banyan(AREA,m,-23,-22,rng,dressing=False)
-for k,(x,z) in enumerate([(-26,-16),(26,14),(-24,30),(22,36),(-25,-31),(25,-32),(-20,23),(20,20),(-8,-37),(10,-38)]):
+for k,(x,z) in enumerate([(-26,-16),(26,14),(-24,30),(-25,-31),(25,-32),(-20,23),(20,20),(-8,-37),(10,-38)]):
     bamboo_clump(AREA,m,x,z,k,rng)
 spots=[]
 for k in range(1400):
@@ -498,6 +516,8 @@ grass_geometry('pagoda_grasses',AREA,[(x,z,.015) for x,z in spots],rng,size=(.35
 for k,(x,z) in enumerate(inner):
     if abs(x)>20:
         tube('fallen_bough',AREA,[(x-.8,z+.4,.1),(x+.2,z+.7,.16),(x+1.8,z+1.2,.08)],.13,m['bark'],sides=9,radius_end=.045)
+# The lost garden: five zones round the compound, joined in a loop through its walls.
+build_lost_garden(AREA,m,layout['zones'],lamp)
 # Memory space: forest-shrine walk kept outside the present's view and collision bounds.
 cube('memory_ground',80,0,-.2,22,34,.2,m['earth'],True,surface='dirt')
 for k in range(15):

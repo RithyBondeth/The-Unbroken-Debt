@@ -30,6 +30,10 @@ export interface AreaOptions {
   cellSize?: number;
   /** A larger cell size for meshes whose material name matches (scattered plants). */
   coarse?: { pattern: RegExp; cellSize: number };
+  /** A cell size for other meshes that want one (checked after `coarse`). */
+  cellSizeFor?: (mesh: Mesh) => number | undefined;
+  /** Keeps meshes apart while batching, so a script can show or hide a whole group. */
+  group?: (mesh: Mesh) => string;
   /** Reads the loaded meshes before batching merges them (e.g. to copy plants as templates). */
   beforeBatch?: (container: AssetContainer) => void;
 }
@@ -52,7 +56,14 @@ export async function loadArea(
   const level = buildLevel(scene, [...container.transformNodes, ...container.meshes]);
   for (const warning of level.warnings) console.warn(`[area ${id}] ${warning}`);
   options.beforeBatch?.(container);
-  batchStatics(container, options.keep ?? [], options.cellSize ?? 3, options.coarse);
+  batchStatics(
+    container,
+    options.keep ?? [],
+    options.cellSize ?? 3,
+    options.coarse,
+    options.group,
+    options.cellSizeFor,
+  );
   return {
     id,
     container,
@@ -130,6 +141,8 @@ function batchStatics(
   keep: readonly (string | RegExp)[],
   cellSize: number,
   coarse?: { pattern: RegExp; cellSize: number },
+  group?: (mesh: Mesh) => string,
+  cellSizeFor?: (mesh: Mesh) => number | undefined,
 ): void {
   const statics = container.meshes.filter(
     (m): m is Mesh =>
@@ -138,7 +151,10 @@ function batchStatics(
   const batches = mergeStaticMeshes(statics, {
     cellSize,
     cellSizeFor: (mesh) =>
-      coarse && coarse.pattern.test(mesh.material?.name ?? "") ? coarse.cellSize : undefined,
+      coarse && coarse.pattern.test(mesh.material?.name ?? "")
+        ? coarse.cellSize
+        : cellSizeFor?.(mesh),
+    group,
   });
   const merged = new Set(statics.filter((m) => m.isDisposed()));
   container.meshes = [

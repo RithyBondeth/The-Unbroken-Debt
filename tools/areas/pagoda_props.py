@@ -208,8 +208,9 @@ def naga_rail(coll, m, name, x, rng, y0=-31.2, y1=-25.7):
     naga finial's fan of hoods, all one weathered carving."""
     from pagoda_kit import piece
     naga = piece(coll, 'naga_rail', name, x, y1 - .1, .4, 0)
+    hood = piece(coll, 'naga_hood', name + '_hood', x, y1 - .1, .4, 0)
     collider(name, coll, x - .31, x + .31, y0 - .3, y1 + .1, 0, 1.4, 'stone')
-    return [naga]
+    return [naga, hood]
 
 
 # ------------------------------------------------------------------ the family marks
