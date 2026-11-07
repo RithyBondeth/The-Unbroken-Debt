@@ -9,12 +9,17 @@ import type { SaveData } from "@/systems/saves/SaveData";
 import { seededRandom } from "@/audio/synth";
 import { setControlText } from "@/ui/html/controlText";
 import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "../data/krasue";
-import { krasueLament, krasueShriek } from "../audio/krasueSounds";
+import { krasueLament, krasueShriek, krasueSting } from "../audio/krasueSounds";
 import { KrasueBrain } from "./KrasueBrain";
 import { KrasueModel } from "./KrasueModel";
 import "@/ui/html/krasue.css";
 
-/** Repeatable kitchen obstacle, independent of story progress and audio availability. */
+/**
+ * Repeatable kitchen obstacle, independent of story progress and audio
+ * availability. The Krasue is never seen idling by the house: it waits far out
+ * over the fields and only swoops in, with a sting, when Sora lingers at a
+ * kitchen window.
+ */
 export class KrasueEncounter {
   readonly brain = new KrasueBrain();
   readonly model: KrasueModel;
@@ -23,6 +28,8 @@ export class KrasueEncounter {
   private readonly sightHit = new PhysicsRaycastResult();
   private lament: StaticSound | null = null;
   private shriek: StaticSound | null = null;
+  private sting: StaticSound | null = null;
+  private lastArrival = 0;
   private soundOn = false;
   private recovering = false;
   private ownsThreat = false;
@@ -72,6 +79,7 @@ export class KrasueEncounter {
       this.warning.remove();
       this.lament?.dispose();
       this.shriek?.dispose();
+      this.sting?.dispose();
     });
   }
 
@@ -92,6 +100,14 @@ export class KrasueEncounter {
       "threat",
       this.brain.position,
       { minDistance: 2, maxDistance: 16, volume: 0.5 },
+    );
+    this.sting = await audio.spatialSound(
+      "krasue_sting",
+      audio.buffer(krasueSting(rate, seededRandom(743)), rate),
+      "threat",
+      this.brain.position,
+      // Loud from far off: the scare lands as it swoops, not once it has arrived.
+      { minDistance: 30, maxDistance: 60, volume: 0.75 },
     );
   }
 
@@ -120,12 +136,17 @@ export class KrasueEncounter {
     const near = Vector3.DistanceSquared(eye, this.brain.window.center) < 100;
     const inKitchen = inKrasueKitchen(eye);
     g.camera.getDirectionToRef(Axis.Z, this.forward);
-    if (!this.brain.active && inKitchen) {
-      const window = KRASUE_WINDOWS.find((w) => Vector3.Dot(this.forward, w.normal) > 0.45);
-      if (window) this.brain.selectWindow(window);
+    const facing = inKitchen
+      ? KRASUE_WINDOWS.find((w) => Vector3.Dot(this.forward, w.normal) > 0.45)
+      : undefined;
+    if (facing) this.brain.selectWindow(facing);
+    const visible = !this.brain.hidden && this.canSeePlayer();
+    this.brain.update(dt, eye, visible, this.vigil.lamp.state === "open", facing !== undefined);
+    if (this.brain.arrivals !== this.lastArrival) {
+      if (this.sting) this.sting.spatial.position = this.brain.position.clone();
+      this.sting?.play();
+      this.lastArrival = this.brain.arrivals;
     }
-    const visible = this.canSeePlayer();
-    this.brain.update(dt, eye, visible, this.vigil.lamp.state === "open");
     if (this.brain.active && !this.ownsThreat) {
       this.ownsThreat = true;
       g.threatActive = true;
@@ -135,7 +156,7 @@ export class KrasueEncounter {
       g.bus.emit("sequence:start", { id: "krasue-window" });
     } else if (!this.brain.active) this.releaseThreat();
     if (this.ownsThreat) g.threatActive = true;
-    this.model.root.setEnabled(near || this.brain.active);
+    this.model.root.setEnabled(!this.brain.hidden);
     const attack = this.brain.state === "charging" || this.brain.state === "caught";
     if (this.brain.sightings !== this.lastSighting) {
       this.screamAt = this.brain.elapsed;
@@ -152,7 +173,7 @@ export class KrasueEncounter {
       this.brain.active,
       this.brain.elapsed - this.screamAt,
     );
-    const audible = near && (inKitchen || this.brain.active);
+    const audible = !this.brain.hidden && (near || this.brain.active);
     this.volume +=
       ((audible ? (attack ? 0.2 : this.brain.active ? 0.25 : 0.13) : 0) - this.volume) *
       Math.min(1, dt * 5);
@@ -210,6 +231,7 @@ export class KrasueEncounter {
     this.model.root.setEnabled(false);
     this.warning.hidden = true;
     this.lastSighting = this.brain.sightings;
+    this.lastArrival = this.brain.arrivals;
     this.releaseThreat();
     this.silence();
   }
@@ -225,6 +247,7 @@ export class KrasueEncounter {
     this.screamAt = -Infinity;
     this.lament?.stop();
     this.shriek?.stop();
+    this.sting?.stop();
     this.soundOn = false;
     this.volume = 0;
   }
