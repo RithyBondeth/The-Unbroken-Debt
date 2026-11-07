@@ -18,9 +18,9 @@ import numpy as np
 import fit
 
 from kit import lathe, tube
-from pagoda_kit import coloured, material, piece
+from pagoda_kit import material, piece
 from pagoda_photos import plaque
-from pagoda_ruin import candles, dead_garland, fig_roots, incense_pot, lean, place_object
+from pagoda_ruin import candles, dead_garland, fig_roots, incense_pot, lean, place_object, tied_cloth
 
 FAMILY = ('chea', 'wife', 'chhun', 'kanha')
 FORMS = ('stupa_spire', 'stupa_bell', 'stupa_bud', 'stupa_prang')
@@ -59,7 +59,7 @@ def memorial(coll, m, x, y, k, height, ident, rng):
         if cell is not None:
             photo(cell, True)
         # The family still comes: a fresh-ish cloth, kept candle stubs at the side.
-        dressing.append(coloured(piece(coll, 'stupa_cloth', f'stupa_sash_{k}', x, y, 0, 0, (1, 1, stretch)), m['white_cloth']))
+        dressing += tied_cloth(coll, m, f'stupa_sash_{k}', [body], x, y, 1.15 * stretch, 2.0 * stretch, m['white_cloth'], rng)
         dressing += candles(coll, m, f'stupa_candle_{k}', x - .45, y - .86, 0, rng)
     else:
         if rng.random() < .4:
@@ -67,7 +67,8 @@ def memorial(coll, m, x, y, k, height, ident, rng):
             pool = DEFACED if r < .4 else ROTTED if r < .6 else INTACT
             photo(int(rng.choice(pool)), rng.random() < .5, int(rng.integers(0, 4)))
         if rng.random() < .35:
-            dressing.append(coloured(piece(coll, 'stupa_cloth', f'stupa_sash_{k}', x, y, 0, turn * math.pi / 2, (1, 1, stretch)), m[['saffron', 'white_cloth', 'red_cloth'][k % 3]]))
+            dressing += tied_cloth(coll, m, f'stupa_sash_{k}', [body], x, y, 1.15 * stretch, (2.0 if not broken else 1.85) * stretch,
+                                   m[['saffron', 'white_cloth', 'red_cloth'][k % 3]], rng)
         if rng.random() < .45:
             dressing += incense_pot(coll, m, f'stupa_incense_{k}', x + rng.uniform(-.25, .25), y - .86, 0, rng)
         if rng.random() < .3:
@@ -80,7 +81,7 @@ def memorial(coll, m, x, y, k, height, ident, rng):
             # roots alone pour down the masonry, the tree that sent them long dead.
             crown = rng.uniform(1.1, 1.8)
             dressing += fig_roots(coll, m, f'stupa_fig_{k}', x, y, (TIER_Z + .5) * stretch, lambda z: .62 if z < 1.5 else .46, rng, n=7,
-                                  spread=.08, crown=crown if broken else 0)
+                                  spread=.08, crown=crown if broken else 0, support=[body])
     if not family and 'red_thread' in m:
         horror = rng.random()
         if horror < .16:
@@ -101,7 +102,8 @@ def memorial(coll, m, x, y, k, height, ident, rng):
             dressing += fit.rest([lathe(f'stupa_ash_{k}', coll, [(0, 0), (.22, 0), (.12, .012), (0, .015)], x, y - .66, .34, m['ash'], segments=12)])
         elif horror < .36:
             # Bound with red cord, round and round the plinth, a paper tag knotted in.
-            # Laid round a nominal circle, then pulled onto the plinth's real faces (fit.wrap).
+            # Laid round a nominal circle, then pulled onto the plinth's real faces after the build
+            # (fit.wrap), measured against the stupa alone.
             pts = [(x + math.cos(t) * .62, y + math.sin(t) * .62, .36 + t / math.tau * .05) for t in np.linspace(0, math.tau * 6, 140)]
             dressing.append(fit.wrap(tube(f'stupa_red_cord_{k}', coll, pts, .004, m['red_thread'], sides=3), x, y, .62))
             from pagoda_rituals import talisman

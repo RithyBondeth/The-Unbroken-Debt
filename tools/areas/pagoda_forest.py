@@ -103,12 +103,14 @@ def outer_forest(coll, m, rng, avoid=(), clear=(), solid=()):
         if abs(x) < 28 and y < -28:
             collider(f'fallen_log_{j}', coll, *sorted([x, x + math.cos(yaw) * length]), *sorted([y - .4, y + math.sin(yaw) * length + .4]), 0, .8)
     # Stranglers gripping the wall from outside, their roots pouring over the coping.
-    for j, (x, y, wx, wy, a0) in enumerate([(31.6, -14, 28, -14, math.pi), (-31.4, 26, -28, 26, 0), (-12, 44.2, -12, 41, -math.pi / 2)]):
+    for j, (x, y, wx, wy, a0) in enumerate([(31.6, -14, 28, -14, math.pi), (-31.4, 26, -28, 26, 0), (-12, 44.2, -12, 41.5, -math.pi / 2)]):
         banyan(coll, m, x, y, rng, dressing=False)
         stop(f'wall_banyan_{j}', x, y, 1.4)
+        wall = [o for o in coll.all_objects if o.name.startswith('compound_wall') and o.type == 'MESH'
+                and _holds(o, wx, wy)]
         for bearing in (a0, a0 + math.pi):
             fig_roots(coll, m, f'wall_fig_{j}', wx, wy, 1.9, lambda z: .46, rng,
-                      n=5, spread=1.0, around=(bearing - .45, bearing + .45), crown=0)
+                      n=5, spread=1.0, around=(bearing - .45, bearing + .45), crown=0, support=wall, seat=0)
     for j, (x, y) in enumerate([(31, -36), (-31.5, -4), (33, 38), (-34, 40), (26, -44), (-25, -45), (35, 12), (-35, -16)]):
         bamboo_clump(coll, m, x, y, 40 + j, rng)
         stop(f'outer_bamboo_{j}', x, y, .7)
@@ -129,3 +131,11 @@ def outer_forest(coll, m, rng, avoid=(), clear=(), solid=()):
         tube(f'approach_liana_{j}', coll, pts, .045, m['bark'], sides=5)
         creeper(coll, m, f'approach_liana_leaves_{j}', pts[3:9], rng, density=3)
     return spots
+
+
+def _holds(o, x, y, margin=.4):
+    """Whether object `o`'s footprint covers (x, y)."""
+    from mathutils import Vector
+    pts = [o.matrix_basis @ Vector(c) for c in o.bound_box]
+    return (min(p.x for p in pts) - margin < x < max(p.x for p in pts) + margin
+            and min(p.y for p in pts) - margin < y < max(p.y for p in pts) + margin)

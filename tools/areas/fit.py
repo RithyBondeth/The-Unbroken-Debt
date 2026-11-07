@@ -1,18 +1,21 @@
-"""Fits dressing to the geometry it belongs on, after an area is built (run inside Blender).
+"""Fits dressing to the geometry it belongs on (run inside Blender).
 
-Generators place cords, roots and offerings from nominal sizes (a trunk "about .6 m"
-across, a plinth edge "at y -25"), but trunks are squeezed and buttressed, stupas lean
-and scans are not cylinders, so dressing ends up floating beside its support or sunk in
-it. Tag dressing while building it, then call `fit_dressing(coll)` once at the end:
+Generators place cords, roots, cloth and offerings from nominal sizes (a trunk "about .6 m"
+across, a plinth edge "at y -25"), but trunks are buttressed, stupas lean and scans are not
+cylinders, so dressing ends up floating beside its support or sunk in it. Fitting must only
+ever look at the thing the dressing belongs to: measured against everything nearby, a root
+reaching for a stupa catches a tree branch two metres off and is dragged out into the air.
 
-- `wrap(obj, cx, cy, r)`: the object was laid round a vertical axis at nominal radius
-  `r(z)` (cord round a trunk, roots down a stupa). Each vertex is moved out or in along
-  its bearing so it keeps its offset from the real surface instead of from `r`.
-- `rest(objs)`: the objects form one prop that must sit on what is under it (a pot and
-  its sticks, a candle cluster). The group is lowered or raised onto its support, and
-  slid back onto it if it overhangs an edge.
-- `crown(obj, cx, cy)`: a fig trunk that grows out of a monument's top: it is moved
-  down or up so its foot meets the masonry at the axis.
+- `Support(objs)`: the masonry or trunk a piece belongs to, measured while it is built. Roots
+  and cloth trace its real outline (`radius`, `drape`) and start on its real top (`top`).
+- `wrap(obj, cx, cy, r)`: for a cord laid round a trunk that is planted later. After the
+  build, each vertex is moved out or in along its bearing to keep its offset from the real
+  surface instead of from `r`, measured only against what stands on that axis.
+- `rest(objs)`: the objects form one prop that must sit on what is under it (a pot and its
+  sticks, a candle cluster). The group is lowered or raised onto its support, and slid back
+  onto it if it overhangs an edge.
+
+Call `fit_dressing(coll)` once, after everything in the area exists.
 """
 
 import math
@@ -21,20 +24,83 @@ import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
 
-WRAP, REST, CROWN = "fit_wrap", "fit_rest", "fit_crown"
-_GROUP = "fit_group"
+WRAP, REST = "fit_wrap", "fit_rest"
 _groups = 0
 _scope = []
 
+# Grass, understory and leaf cards are not something a pot or a cord rests on.
+_SOFT = ("grass", "understory", "leaves", "leaf", "canopy", "spray", "fern", "moss_", "litter_leaves", "hair", "flame")
 
-def wrap(obj, cx, cy, r, top=None):
-    """`r` is the nominal radius the generator used: a number or a function of z. With
-    `top` (the nominal height of the monument's top), the object is also stretched or
-    squashed in height so it starts on the real top."""
+
+def _world(o):
+    """The object's world matrix now, without a depsgraph update (generators move objects
+    by their basis many times while building)."""
+    if o.parent is None:
+        return o.matrix_basis.copy()
+    return _world(o.parent) @ o.matrix_parent_inverse @ o.matrix_basis
+
+
+class Support:
+    """A world-space BVH of the given objects only: what a piece of dressing belongs to."""
+
+    def __init__(self, objs):
+        verts, polys = [], []
+        for o in objs:
+            if o is None or o.type != 'MESH':
+                continue
+            mw = _world(o)
+            base = len(verts)
+            verts += [mw @ v.co for v in o.data.vertices]
+            polys += [[base + i for i in p.vertices] for p in o.data.polygons]
+        self.tree = BVHTree.FromPolygons(verts, polys, epsilon=0.0) if polys else None
+
+    @classmethod
+    def standing(cls, coll, x, y, margin=.05):
+        """Whatever stands on the ground at (x, y): the trunk or masonry whose footprint holds it."""
+        return cls(_standing(list(coll.all_objects), x, y, margin))
+
+    def __bool__(self):
+        return self.tree is not None
+
+    def radius(self, cx, cy, z, a, reach=3.0):
+        """Distance from the axis (cx, cy) to the outside of the support along bearing `a`."""
+        if self.tree is None:
+            return None
+        d = Vector((math.cos(a), math.sin(a), 0))
+        hit = self.tree.ray_cast(Vector((cx, cy, z)) + d * reach, -d, reach)
+        return None if hit[0] is None else reach - hit[3]
+
+    def drape(self, cx, cy, z, a, above=.12, reach=3.0):
+        """The outline as cloth or a root hanging down it sees it: the widest point from `z` up
+        to `above` higher, so it bridges under a ledge instead of tucking into it."""
+        best = None
+        for k in range(4):
+            r = self.radius(cx, cy, z + above * k / 3, a, reach)
+            if r is not None and (best is None or r > best):
+                best = r
+        return best
+
+    def top(self, cx, cy, start=30.0):
+        """Height of the support's top on the axis."""
+        if self.tree is None:
+            return None
+        hit = self.tree.ray_cast(Vector((cx, cy, start)), Vector((0, 0, -1)), start + 2)
+        return None if hit[0] is None else hit[0].z
+
+
+def outward(radii):
+    """Smooths a run of radii outward only: a path traced over masonry loses its sawtooth
+    without ever cutting into what it lies on."""
+    r = list(radii)
+    for _ in range(3):
+        r = [r[0]] + [max(r[i], (r[i - 1] + r[i + 1]) / 2) for i in range(1, len(r) - 1)] + [r[-1]]
+    return r
+
+
+def wrap(obj, cx, cy, r):
+    """`r` is the nominal radius the generator laid the cord at."""
     obj[WRAP] = (cx, cy)
-    if top is not None:
-        obj["fit_top"] = float(top)
-    obj["fit_r"] = [float(r(z / 20)) if callable(r) else float(r) for z in range(0, 121)]
+    obj["fit_r"] = float(r)
     return obj
 
 
@@ -46,44 +112,41 @@ def rest(objs):
     return objs
 
 
-def crown(objs, cx, cy, top):
-    """A fig's trunk, leaves and aerial roots, grown from a nominal `top`: they move
-    together so the trunk's foot meets the monument's real top."""
-    for o in objs:
-        o[CROWN] = (cx, cy)
-        o["fit_top"] = float(top)
-    return objs
-
-
-def _nominal(obj, z):
-    table = obj["fit_r"]
-    i = min(len(table) - 1, max(0, int(round(z * 20))))
-    return table[i]
-
-
-# Grass, understory and leaf cards are not something a pot or a cord rests on.
-_SOFT = ("grass", "understory", "leaves", "leaf", "canopy", "spray", "fern", "moss_", "litter_leaves", "hair", "flame")
-
-
 def _solid(o):
     if o.type != "MESH" or o.hide_render or o.name.startswith("col_"):
         return False
     if any(k in o.name.lower() for k in _SOFT):
         return False
-    return not any(k in o for k in (WRAP, REST, CROWN))
+    return not any(k in o for k in (WRAP, REST))
+
+
+def _bbox(o):
+    corners = [_world(o) @ Vector(c) for c in o.bound_box]
+    return (min(c.x for c in corners), max(c.x for c in corners), min(c.y for c in corners),
+            max(c.y for c in corners), min(c.z for c in corners))
+
+
+def _standing(objs, x, y, margin=.05):
+    out = []
+    for o in objs:
+        if not _solid(o):
+            continue
+        x0, x1, y0, y1, z0 = _bbox(o)
+        # Standing here: its footprint holds the axis and it reaches down to the ground. A
+        # branch or a canopy arching over the axis does not.
+        if x0 - margin < x < x1 + margin and y0 - margin < y < y1 + margin and z0 < .5:
+            out.append(o)
+    return out
 
 
 _boxes = {}
-_trees = {}
 _grid = {}
 CELL = 4.0
 
 
-def _bbox(o):
+def _box(o):
     if o.name not in _boxes:
-        corners = [o.matrix_world @ Vector(c) for c in o.bound_box]
-        _boxes[o.name] = (min(c.x for c in corners), max(c.x for c in corners),
-                          min(c.y for c in corners), max(c.y for c in corners))
+        _boxes[o.name] = _bbox(o)
     return _boxes[o.name]
 
 
@@ -91,48 +154,13 @@ def _index(solids):
     """Buckets solids by the 4 m cells their footprints cover, for quick neighbour lookups."""
     _grid.clear()
     for o in solids:
-        x0, x1, y0, y1 = _bbox(o)
+        x0, x1, y0, y1, _ = _box(o)
         for i in range(math.floor(x0 / CELL), math.floor(x1 / CELL) + 1):
             for j in range(math.floor(y0 / CELL), math.floor(y1 / CELL) + 1):
                 _grid.setdefault((i, j), []).append(o)
 
 
-def _tree(o):
-    """A world-space BVH of one object, built once."""
-    if o.name not in _trees:
-        dg = bpy.context.evaluated_depsgraph_get()
-        me = o.evaluated_get(dg).to_mesh()
-        mw = o.matrix_world
-        verts = [mw @ v.co for v in me.vertices]
-        polys = [list(p.vertices) for p in me.polygons]
-        o.evaluated_get(dg).to_mesh_clear()
-        _trees[o.name] = BVHTree.FromPolygons(verts, polys, epsilon=0.0) if polys else None
-    return _trees[o.name]
-
-
-class _Trees:
-    """Several BVHs answering a ray as one: the nearest hit wins."""
-
-    def __init__(self, trees):
-        self.trees = trees
-
-    def ray_cast(self, origin, direction, distance):
-        best = (None, None, None, None)
-        for t in self.trees:
-            hit = t.ray_cast(origin, direction, distance)
-            if hit[0] is not None and (best[3] is None or hit[3] < best[3]):
-                best = hit
-        return best
-
-
-def _bvh(objs):
-    trees = [t for t in (_tree(o) for o in objs) if t is not None]
-    return _Trees(trees) if trees else None
-
-
-def _near(objs, x, y, reach):
-    """Solids whose footprint comes within `reach` of (x, y). `objs` is ignored in favour of
-    the grid built from the same solids."""
+def _near(x, y, reach):
     seen, out = set(), []
     for i in range(math.floor((x - reach) / CELL), math.floor((x + reach) / CELL) + 1):
         for j in range(math.floor((y - reach) / CELL), math.floor((y + reach) / CELL) + 1):
@@ -140,99 +168,34 @@ def _near(objs, x, y, reach):
                 if o.name in seen:
                     continue
                 seen.add(o.name)
-                x0, x1, y0, y1 = _bbox(o)
+                x0, x1, y0, y1, _ = _box(o)
                 if x0 - reach < x < x1 + reach and y0 - reach < y < y1 + reach:
                     out.append(o)
     return out
 
 
-def _on_axis(objs, x, y, margin=.05):
-    """Objects standing on the axis (x, y): the trunk or monument a dressing wraps."""
-    out = []
-    for o in objs:
-        x0, x1, y0, y1 = _bbox(o)
-        if x0 - margin < x < x1 + margin and y0 - margin < y < y1 + margin:
-            out.append(o)
-    return out
-
-
-def _surface_radius(tree, cx, cy, z, a, guess):
-    """Distance from the axis to the outside of whatever stands on it, along bearing `a`."""
-    if tree is None:
-        return None
-    d = Vector((math.cos(a), math.sin(a), 0))
-    far = max(3.0, guess * 3)
-    origin = Vector((cx, cy, z)) + d * far
-    hit = tree.ray_cast(origin, -d, far)
-    if hit[0] is None:
-        return None
-    return (hit[0] - Vector((cx, cy, z))).length
-
-
-def _fit_wrapped(solids):
+def _fit_wrapped():
     for o in [o for o in _scope if WRAP in o]:
         cx, cy = o[WRAP]
-        tree = _bvh(_on_axis(_near(solids, cx, cy, 1.5), cx, cy))
+        nominal = o["fit_r"]
+        support = Support(_standing(_near(cx, cy, 1.0), cx, cy))
+        if not support:
+            continue
+        reach = max(.5, nominal * 2)
         mw, mwi = o.matrix_world, o.matrix_world.inverted()
-        scale = 1.0
-        if "fit_top" in o:
-            top = _real_top(solids, cx, cy, o["fit_top"])
-            if top is not None and o["fit_top"] > .2:
-                scale = top / o["fit_top"]
         for v in o.data.vertices:
             p = mw @ v.co
-            if p.z < .08:
-                continue  # the part already in the ground stays where it grips
-            z0 = p.z
-            p.z = .08 + (p.z - .08) * scale
             a = math.atan2(p.y - cy, p.x - cx)
             r = math.hypot(p.x - cx, p.y - cy)
-            nominal = _nominal(o, z0)
-            real = _surface_radius(tree, cx, cy, p.z, a, nominal)
+            real = support.radius(cx, cy, p.z, a, reach)
             if real is None:
-                v.co = mwi @ p  # nothing there at this height (root tips on the ground)
                 continue
             r2 = max(real + .004, real + (r - nominal))
-            p2 = Vector((cx + math.cos(a) * r2, cy + math.sin(a) * r2, p.z))
-            v.co = mwi @ p2
+            v.co = mwi @ Vector((cx + math.cos(a) * r2, cy + math.sin(a) * r2, p.z))
         o.data.update()
 
 
-_tops = {}
-
-
-def _real_top(solids, cx, cy, nominal):
-    """Height of the masonry's top on the axis (cached per axis). The ray starts a little above
-    the nominal top and only meets things standing on the ground there, so the canopy of a
-    tree arching over a stupa is never taken for its top."""
-    key = (round(cx, 3), round(cy, 3))
-    if key not in _tops:
-        standing = [o for o in _on_axis(_near(solids, cx, cy, .8), cx, cy) if _zmin(o) < .3]
-        tree = _bvh(standing)
-        start = nominal * 1.8 + 1.0  # above any spire, below the canopies
-        hit = None if tree is None else tree.ray_cast(Vector((cx, cy, start)), Vector((0, 0, -1)), start + 1)
-        _tops[key] = None if hit is None or hit[0] is None else hit[0].z
-    return _tops[key]
-
-
-_zmins = {}
-
-
-def _zmin(o):
-    if o.name not in _zmins:
-        _zmins[o.name] = min((o.matrix_world @ Vector(c)).z for c in o.bound_box)
-    return _zmins[o.name]
-
-
-def _fit_crowns(solids):
-    for o in [o for o in _scope if CROWN in o]:
-        cx, cy = o[CROWN]
-        top = _real_top(solids, cx, cy, o["fit_top"])
-        if top is not None:
-            o.location.z += top - o["fit_top"]
-
-
-def _fit_rests(solids):
+def _fit_rests():
     groups = {}
     for o in _scope:
         if REST in o:
@@ -243,7 +206,7 @@ def _fit_rests(solids):
         lo = Vector((min(p.x for p in pts), min(p.y for p in pts)))
         hi = Vector((max(p.x for p in pts), max(p.y for p in pts)))
         c = (lo + hi) / 2
-        tree = _bvh(_near(solids, c.x, c.y, 1.0))
+        tree = Support(_near(c.x, c.y, 1.0)).tree
         if tree is None:
             continue
 
@@ -291,23 +254,19 @@ def _fit_rests(solids):
 def fit_dressing(coll):
     """Call once, after everything in the area's collection `coll` exists."""
     global _scope
+    import time
     bpy.context.view_layer.update()
     _scope = list(coll.all_objects)
     solids = [o for o in _scope if _solid(o)]
     _boxes.clear()
-    _tops.clear()
-    _zmins.clear()
-    _trees.clear()
     _index(solids)
-    import time
     t = time.time()
-    _fit_crowns(solids)
-    _fit_wrapped(solids)
-    _fit_rests(solids)
-    print("FIT: %d solids, %d tagged, %.1fs" % (len(solids), sum(1 for o in _scope if any(k in o for k in (WRAP, REST, CROWN))), time.time() - t))
+    _fit_wrapped()
+    _fit_rests()
+    print("FIT: %d solids, %d tagged, %.1fs" % (len(solids), sum(1 for o in _scope if WRAP in o or REST in o), time.time() - t))
     # The tags were only for this pass: keep them out of the exported glTF extras.
     for o in _scope:
-        for key in (WRAP, REST, CROWN, "fit_r", "fit_top"):
+        for key in (WRAP, REST, "fit_r"):
             if key in o:
                 del o[key]
     bpy.context.view_layer.update()

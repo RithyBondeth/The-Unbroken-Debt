@@ -139,6 +139,10 @@ def build_pond(coll, m, rng):
     from pagoda_stupa import memorial
     drowned = memorial(coll, m, -11.5, 34.5, 400, 2.6, 'drowned', rng)
     for o in drowned:
+        if o.get('kit_piece'):
+            # Its mesh is shared with every stupa of its form: move the copy, not the mesh.
+            o.location.z -= .9
+            continue
         for v in o.data.vertices:
             v.co.z -= .9
     lean(drowned, -11.5, 34.5, .16, -.1)

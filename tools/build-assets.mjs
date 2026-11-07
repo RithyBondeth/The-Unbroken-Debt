@@ -27,7 +27,7 @@ const DETAIL_MAPS = "@(*_N|*_nor_gl*|*_ORM|*_arm*)";
 /** Ink on paper: Sora's drawings and the printed charts (rendered by `npm run drawings`). */
 /** Episode 2's big carved stone, seen at arm's length: ETC1S blocks read as blocks on it. */
 const KIT_STONE =
-  "@(T_ep2_stupa_*_BC|T_ep2_image_whole_BC|T_ep2_image_worn_BC|T_ep2_image_headless_BC|T_ep2_guardian_*_BC|T_ep2_naga_rail_BC)";
+  "@(T_ep2_stupa_*_BC|T_ep2_image_whole_BC|T_ep2_image_worn_BC|T_ep2_image_headless_BC|T_ep2_guardian_*_BC)";
 
 const LINE_ART =
   "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";

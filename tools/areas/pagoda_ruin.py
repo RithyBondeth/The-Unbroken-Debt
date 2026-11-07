@@ -8,7 +8,7 @@ Original geometry: no photograph is used as a texture.
 """
 import fit
 import math
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 import bmesh
 import bpy
@@ -159,31 +159,50 @@ def place_object(obj, x, y, z=0.0, yaw=0.0, tilt=(0.0, 0.0)):
 
 
 def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around=(0, math.tau),
-              crown=2.5, hang=0.0):
+              crown=2.5, hang=0.0, support=None, seat=.3):
     """A strangler fig seeded on a monument: roots pour over its top and down its
-    faces, fuse into a net, then grip the ground. `surface(z)` gives the radius the
-    roots must keep outside at each height; `around` limits their bearing."""
+    faces, fuse into a net, then grip the ground. `support` lists the objects it grows on
+    (the stupa, the pier, the wall); the roots trace their real outline and a tree stands on
+    their real top. Without it, whatever stands on the axis is used, and `surface(z)` (the
+    nominal radius at each height) only where nothing is found. `around` limits bearings;
+    roots without a tree start `seat` below the top, where a seed could lodge."""
+    sup = fit.Support(support) if support is not None else fit.Support.standing(coll, cx, cy)
+    real_top = sup.top(cx, cy) if sup else None
+    if real_top is not None:
+        # A tree stands on the break itself; roots alone never start above the masonry.
+        top = real_top if crown else min(top, real_top - seat)
+
+    def outline(z, a, extra):
+        """Radius a strand of thickness `extra` keeps at height z on bearing a."""
+        r = sup.drape(cx, cy, min(z, top - .04), a) if sup else None
+        return (surface(z) if r is None else r) + extra
+
     parts, strands = [], []
     n = int(n * 1.5)  # more, thinner roots: a net, not a few logs
+    steps = 30
     for j in range(n):
         a = around[0] + (around[1] - around[0]) * (j + rng.uniform(.15, .85)) / n
-        pts = []
-        steps = 30
+        thick = rng.uniform(.035, .085)
         phase = rng.uniform(0, math.tau)
+        bearings, heights, radii = [], [], []
         for i in range(steps + 1):
             t = i / steps
             z = top * (1 - t) + .06
             # Roots creep sideways as they descend, hugging the masonry.
             a += .05 * math.sin(t * 9 + phase) + rng.normal(0, .02)
-            r = surface(z) + .02 + .012 * math.sin(t * 13 + phase * 2)
-            pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, z))
+            here = thick * .3 + thick * .7 * t  # the tube's own radius at this point
+            bearings.append(a)
+            heights.append(z)
+            radii.append(outline(z, a, here + .006 + .006 * (1 + math.sin(t * 13 + phase * 2))))
+        radii = fit.outward(radii)
+        pts = [(cx + math.cos(b) * r, cy + math.sin(b) * r, z) for b, r, z in zip(bearings, radii, heights)]
+        foot = radii[-1]
         for i in range(1, 4):
-            r = surface(.06) + spread * i / 3 * rng.uniform(.6, 1.1)
+            r = foot + spread * i / 3 * rng.uniform(.6, 1.1)
             a += rng.normal(0, .12)
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, .04 - .03 * i))
-        strands.append(pts)
-        thick = rng.uniform(.035, .085)
-        root = fit.wrap(tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick), cx, cy, surface, top)
+        strands.append((pts, bearings, heights))
+        root = tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick)
         for f in root.data.polygons:
             f.use_smooth = True
         parts.append(root)
@@ -192,56 +211,49 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
             i = int(rng.integers(5, steps - 4))
             p = pts[i]
             da = rng.choice([-1, 1]) * rng.uniform(.15, .4)
-            ra = math.atan2(p[1] - cy, p[0] - cx)
+            ra = bearings[i]
             twig = [p]
             for k in range(1, 5):
-                z = p[2] - k * rng.uniform(.06, .14)
-                rr = surface(max(z, .06)) + .012
-                twig.append((cx + math.cos(ra + da * k / 4) * rr, cy + math.sin(ra + da * k / 4) * rr, max(z, .04)))
-            parts.append(fit.wrap(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003), cx, cy, surface, top))
+                z = max(p[2] - k * rng.uniform(.06, .14), .04)
+                rr = outline(max(z, .06), ra + da * k / 4, .016)
+                twig.append((cx + math.cos(ra + da * k / 4) * rr, cy + math.sin(ra + da * k / 4) * rr, z))
+            parts.append(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003))
     # Neighbouring roots fuse into the lattice that makes figs look like they crawl.
     for j in range(n):
-        a, b = strands[j], strands[(j + 1) % n]
+        (a_pts, a_bear, a_z), (b_pts, b_bear, b_z) = strands[j], strands[(j + 1) % n]
         for _ in range(int(rng.integers(1, 3))):
-            i = int(rng.integers(4, 17))
-            i = min(i, len(a) - 5)
-            p, q = a[i], b[min(len(b) - 5, i + int(rng.integers(-2, 3)))]
+            i = min(int(rng.integers(4, 17)), steps - 4)
+            i2 = min(steps - 4, max(0, i + int(rng.integers(-2, 3))))
+            a0, z0 = a_bear[i], a_z[i]
+            turn = (b_bear[i2] - a0 + math.pi) % math.tau - math.pi  # the short way round
             # The link hugs the surface between the two roots instead of cutting across.
-            link = []
-            a0 = math.atan2(p[1] - cy, p[0] - cx)
-            turn = (math.atan2(q[1] - cy, q[0] - cx) - a0 + math.pi) % math.tau - math.pi  # the short way round
-            for k in range(7):
+            link = [a_pts[i]]
+            for k in range(1, 6):
                 t = k / 6
                 ang = a0 + turn * t
-                z = p[2] * (1 - t) + q[2] * t - .05 * math.sin(math.pi * t)
-                rr = surface(max(z, .06)) + .016
+                z = z0 * (1 - t) + b_z[i2] * t - .05 * math.sin(math.pi * t)
+                rr = outline(max(z, .06), ang, .022)
                 link.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr, z))
-            parts.append(fit.wrap(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014), cx, cy, surface, top))
+            link.append(b_pts[i2])
+            parts.append(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014))
     if crown:
         lean_a = rng.uniform(0, math.tau)
-        trunk = [(cx + math.cos(lean_a) * .4 * t * t, cy + math.sin(lean_a) * .4 * t * t, top + crown * t) for t in np.linspace(0, 1, 6)]
-        crown_parts = [tube(f'{name}_fig_trunk', coll, trunk, .16, m['bark'], sides=8, radius_end=.05)]
-        parts += crown_parts
+        trunk = [(cx + math.cos(lean_a) * .4 * t * t, cy + math.sin(lean_a) * .4 * t * t, top - .05 + crown * t) for t in np.linspace(0, 1, 6)]
+        parts.append(tube(f'{name}_fig_trunk', coll, trunk, .16, m['bark'], sides=8, radius_end=.05))
         leaves = []
         for c in range(int(6 + crown * 3)):
             p = trunk[-1]
             leaves.append(((p[0] + rng.normal(0, crown * .45), p[1] + rng.normal(0, crown * .45), p[2] + rng.normal(0, crown * .25)),
                            rng.uniform(1.4, 2.4) * (crown / 3 + .4), rng.uniform(0, math.pi), 0, int(rng.integers(0, 3))))
-        crown_parts.append(canopy_sprays(f'{name}_fig_leaves', coll, leaves, forest_materials()['leaf'], rng, per=12))
-        parts.append(crown_parts[-1])
-    for j in range(int(hang)):
-        a = rng.uniform(0, math.tau)
-        r = surface(top) + rng.uniform(.1, .6)
-        p = (cx + math.cos(a) * r, cy + math.sin(a) * r, top + crown * .6)
-        bottom = max(2.3, top - rng.uniform(1, 3))
-        if not crown:
-            continue  # aerial roots hang from a living tree; with none, they would hang from air
-        aerial = tube(f'{name}_aerial_{j}', coll, [p, (p[0] + .05, p[1], (p[2] + bottom) / 2), (p[0] + .04, p[1] + .03, bottom)],
-                      .015, m['bark'], sides=4, radius_end=.006)
-        fit.crown([aerial], cx, cy, top)
-        parts.append(aerial)
-    if crown:
-        fit.crown(crown_parts, cx, cy, top)
+        parts.append(canopy_sprays(f'{name}_fig_leaves', coll, leaves, forest_materials()['leaf'], rng, per=12))
+        # Aerial roots let down from the tree's lower branches, clear of the masonry.
+        for j in range(int(hang)):
+            a = rng.uniform(0, math.tau)
+            r = outline(top - .1, a, rng.uniform(.15, .6))
+            p = (cx + math.cos(a) * r, cy + math.sin(a) * r, top + crown * .6)
+            bottom = max(2.3, top - rng.uniform(1, 3))
+            parts.append(tube(f'{name}_aerial_{j}', coll, [p, (p[0] + .05, p[1], (p[2] + bottom) / 2), (p[0] + .04, p[1] + .03, bottom)],
+                              .015, m['bark'], sides=4, radius_end=.006))
     return parts
 
 
@@ -260,18 +272,70 @@ def creeper(coll, m, name, path, rng, density=5):
 # ----------------------------------------------------------- dressing
 
 
-def sash(coll, m, name, cx, cy, z, r, mat, rng, tail=.6, squash=1.0):
-    """Cloth knotted round a monument or image, its end hanging; faded and stiff."""
-    profile = [(r, -.05), (r + .018, 0), (r, .05)]
-    band = lathe(name, coll, profile, cx, cy, z, mat, segments=28)
-    for v in band.data.vertices:
-        a = math.atan2(v.co.y - cy, v.co.x - cx)
-        v.co.z += .03 * math.sin(a * 2 + r * 7) + .012 * math.sin(a * 7)
-        v.co.y = cy + (v.co.y - cy) * squash
-    a = rng.uniform(0, math.tau)
-    p = (cx + math.cos(a) * (r + .02), cy + math.sin(a) * (r + .02), z)
-    end = tube(name + '_tail', coll, [p, (p[0] + math.cos(a) * .06, p[1] + math.sin(a) * .06, z - tail * .5),
-                                      (p[0] + math.cos(a) * .08, p[1] + math.sin(a) * .09, z - tail)], .035, mat, sides=3, radius_end=.025)
+def tied_cloth(coll, m, name, support, cx, cy, z0, z1, mat, rng, height=.13, tail=.55, segments=72):
+    """Cloth knotted round a monument: tied at the narrowest course between z0 and z1, so it
+    rests on the ledge below, laid round the real outline and hanging in one tail down the
+    faces. `support` lists the objects it is tied round. Faded, stiff and a little slack."""
+    sup = fit.Support(support)
+    if not sup:
+        return []
+    probe = [k * math.tau / 8 for k in range(8)]
+
+    def mean_r(z):
+        rs = [sup.radius(cx, cy, z, a) for a in probe]
+        return None if None in rs else sum(rs) / len(rs)
+    best = None
+    for z in np.linspace(z0, z1, 28):
+        here, below = mean_r(z), mean_r(z - height * .5 - .03)
+        if here is None or below is None:
+            continue
+        # A neck with a wider course just under it holds a cloth; prefer the deepest.
+        score = here - .6 * max(0.0, below - here)
+        if best is None or score < best[0]:
+            best = (score, z)
+    if best is None:
+        return []
+    zc = best[1]
+    turn = rng.uniform(0, math.tau)
+    rings = []
+    for v, dz in ((0, -height / 2), (.5, 0), (1, height / 2)):
+        ring = []
+        for i in range(segments):
+            a = turn + i / segments * math.tau
+            # Slack between the ties, pleats where it was pulled tight.
+            sag = .022 * math.sin(a * 2 + 1.3) + .008 * math.sin(a * 7)
+            r = sup.drape(cx, cy, zc - height / 2 + sag - .01, a, above=height + .02) or .3
+            pleat = .006 * (1 + math.sin(a * 37 + v * 2))
+            bulge = .008 if v == .5 else 0
+            r += .009 + pleat + bulge
+            ring.append((cx + math.cos(a) * r, cy + math.sin(a) * r, zc + dz + sag))
+        rings.append(ring)
+    verts = [p for ring in rings for p in ring]
+    faces = []
+    for k in range(2):
+        for i in range(segments):
+            j = (i + 1) % segments
+            faces.append((k * segments + i, k * segments + j, (k + 1) * segments + j, (k + 1) * segments + i))
+    band = mesh_object(name, coll, verts, faces, mat, smooth=True)
+    # The tail falls from the knot straight down the faces, over each ledge it meets.
+    a = turn + rng.uniform(0, math.tau)
+    width = .075
+    side = Vector((-math.sin(a), math.cos(a), 0))
+    rows = 9
+    tverts, tfaces = [], []
+    for k in range(rows + 1):
+        t = k / rows
+        z = zc - height * .3 - tail * t
+        r = (sup.drape(cx, cy, z, a, above=zc - z) or .3) + .012 + .01 * t
+        twist = .25 * math.sin(t * 3 + a)
+        w = width * (1 - .3 * t)
+        c = Vector((cx + math.cos(a) * r, cy + math.sin(a) * r, z))
+        for s_ in (-1, 1):
+            p = c + side * (s_ * w / 2 * math.cos(twist)) + Vector((math.cos(a), math.sin(a), 0)) * (abs(s_ * w / 2 * math.sin(twist)) + .002)
+            tverts.append(tuple(p))
+    for k in range(rows):
+        tfaces.append((2 * k, 2 * k + 1, 2 * k + 3, 2 * k + 2))
+    end = mesh_object(name + '_tail', coll, tverts, tfaces, mat, smooth=True)
     return [band, end]
 
 
@@ -430,6 +494,9 @@ def great_chedi(coll, m, x, y, rng, s=1.0, facing=math.pi / 2):
     fallen = lathe('great_chedi_fallen_spire', coll, [(.3 * s, 0), (.26 * s, .4 * s), (.24 * s, .45 * s), (.2 * s, .9 * s), (.16 * s, .95 * s),
                                                        (.1 * s, 1.5 * s), (.02 * s, 1.9 * s)], 0, 0, 0, m['burnt'], segments=16)
     place_object(fallen, x - 2.2 * s, y - 3.1 * s, .25 * s, .4, (0, 1.45))
+    # Weathered before anything is laid on it, so cloth and roots fit the sagging masonry.
+    erode(base_objs + harmika + rings, .02, 3.1, rng.uniform(0, 9))
+    erode([core, skin], .035, 1.7, 2)
     # A headless image set on the upper terrace, facing the garden, with old offerings.
     ca, sa = math.cos(facing), math.sin(facing)
     nx, ny = x + ca * 1.84 * s, y + sa * 1.84 * s
@@ -438,18 +505,17 @@ def great_chedi(coll, m, x, y, rng, s=1.0, facing=math.pi / 2):
         o.location.z = z0 + .13 * .55
     offerings = incense_pot(coll, m, 'great_chedi_incense', nx + ca * .2 - sa * .3, ny + sa * .2 + ca * .3, z0, rng)
     offerings += candles(coll, m, 'great_chedi_candle', nx + ca * .2 + sa * .3, ny + sa * .2 - ca * .3, z0, rng)
-    offerings += sash(coll, m, 'great_chedi_sash', x, y, z0 + 1.4 * s, 1.53 * s, m['saffron'], rng, tail=1.0)
+    offerings += tied_cloth(coll, m, 'great_chedi_sash', [core, skin], x, y, z0 + 1.1 * s, z0 + 1.7 * s, m['saffron'], rng,
+                            height=.2, tail=1.0)
 
     def surface(z):
         if z < z0:
             return [3.0, 2.75, 2.45, 2.2][min(3, int(z / (.3 * s)))] * s
         return .75 * s if z - z0 > 3.15 * s else _bell_radius(bell_profile, z - z0, s, x) + .02
     roots = fig_roots(coll, m, 'great_chedi_fig', x, y, top + .5 * s, surface, rng,
-                      n=14, spread=1.8 * s, crown=4.2 * s, hang=10)
+                      n=14, spread=1.8 * s, crown=4.2 * s, hang=10, support=base_objs + [core, skin] + harmika + rings + shards)
     debris = rubble(coll, m, 'great_chedi_rubble', x + 1.6 * s, y - 2.5 * s, 1.4 * s, 70, rng)
     debris += rubble(coll, m, 'great_chedi_rubble', x - 2.6 * s, y + .8 * s, 1.1 * s, 45, rng)
-    erode(base_objs + harmika + rings, .02, 3.1, rng.uniform(0, 9))
-    erode([core, skin], .035, 1.7, 2)
     lean(base_objs + harmika + rings + [core, skin] + shards + roots, x, y, .012, -.02)
     collider('great_chedi', coll, x - 2.7 * s, x + 2.7 * s, y - 2.7 * s, y + 2.7 * s, 0, 7 * s, 'stone')
     return [o for o in coll.objects if o not in made]

@@ -15,9 +15,9 @@ from khmer import place, join, pole, flame, incense_sticks, lotus_buds
 from forest import tropical_tree, banyan, bamboo_clump, grass_patch
 from forest_detail import understory, grass_geometry
 from pagoda_architecture import painted_materials, stupa, temple_roof, temple_interior, Craft
-from pagoda_gateway import build_gateway, overgrow_gateway
+from pagoda_gateway import build_gateway, haunt_gateway, overgrow_gateway
 from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image, spirit_house, sema_stone,
-                         sash, incense_pot, candles, fig_roots, lean, rubble)
+                         incense_pot, candles, fig_roots, lean, rubble)
 from pagoda_stupa import memorial
 from pagoda_lost_garden import build_lost_garden, WEST_BREACH_Y, NORTH_BREACH_X, SALA_NORTH_X, SALA_SOUTH_X
 from pagoda_kit import piece
@@ -28,7 +28,7 @@ from pagoda_offerings import (offering_materials, sticky_rice_ball, banana_leaf_
 from pagoda_rituals import (ritual_materials, red_string_web, bound_trunk, boundary_stakes, sorcery_altar,
                             hanging_doll)
 from pagoda_props import (prop_materials, hall_buddha, money_tree, curtain_swag, stepped_altar, offering_table,
-                          footed_tray, naga_rail, family_emblem, inscribed_tablet,
+                          footed_tray, family_emblem, inscribed_tablet,
                           leaf_litter, sutra_table, hall_doors, sealed_doorway, verse_board,
                           bell_pavilion, kuti_furnishings, supplies_contents, lore_contents)
 from khmer import rotate_uvs
@@ -196,16 +196,10 @@ temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_gre
 temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(5,16),open_bays=(16,))
 temple_wall(AREA,m,'gateway_boundary_west',(-28,-27),(-7.6,-27),wall_rng,'mould_red',breaches=(2,))
 temple_wall(AREA,m,'gateway_boundary_east',(7.6,-27),(28,-27),wall_rng,'mould_red')
-# Reference-led red-and-gold ceremonial arch and pedestrian portals, now overgrown.
+# Reference-led red-and-gold ceremonial arch and pedestrian portals, now overgrown and bound.
 build_gateway(AREA,m,walls=False)
 overgrow_gateway(AREA,m)
-for x in [-2.3,2.3]:
-    # Naga balustrades: one fused stone carving, scaled body rising to a fan of five hoods.
-    naga_rail(AREA,m,'naga_'+('west' if x<0 else 'east'),x,rng)
-    # On its own post outside the rail: the serpent's neck is no lamp stand.
-    lamp_x=x+(.82 if x>0 else -.82)
-    cube('gate_lamp_post_'+str(x),lamp_x,-26,0,.2,.2,.95,m['stone'],True)
-    lamp('gate_'+str(x),lamp_x,-26,.95)
+haunt_gateway(AREA,m,lamp)
 anchor('spawn_player',0,-33)
 anchor('marker_kuti_spawn',-17,-17)
 # Stone path from threshold, branching to the kuti and prayer hall.
@@ -449,9 +443,10 @@ forgotten=[(-26,16),(-21.5,16.5),(-19,19),(-26.5,19.5),(-21,27),(-26.5,25.5),(-1
 for j,(px,py) in enumerate(forgotten):
     objs=memorial(AREA,m,px,py,200+j,ruin_rng.uniform(2.3,3.5),'forgotten_'+str(j),ruin_rng)
     lean(objs,px,py,ruin_rng.normal(0,.05),ruin_rng.normal(0,.05))
-    if j%3==0:
+    if j%3==0 and not any('_fig_' in o.name for o in objs):
         crown=ruin_rng.uniform(1.8,3.2)  # a fig tree stands only on a snapped stupa
-        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,crown=crown if 'broken' in objs[0].data.name else 0,hang=3)
+        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,
+                  crown=crown if 'broken' in objs[0].data.name else 0,hang=3,support=[objs[0]])
     collider('forgotten_stupa_'+str(j),AREA,px-.7,px+.7,py-.7,py+.7,0,3.2,'stone')
 spirit_house(AREA,m,'roadside_spirit_house',4.8,-37.6,math.pi,ruin_rng)
 # Rituals on the approach: a boundary of stakes and red cord both sides of the track,

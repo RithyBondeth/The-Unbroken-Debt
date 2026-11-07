@@ -1,7 +1,7 @@
 """Episode 2 hall furnishings and gameplay props after the user's Khmer vihara
 references (2 November 2026): a white-faced Buddha in a saffron robe on a lotus throne,
 a stepped altar with gilded bodhi trees and a crimson curtain swag, carved pediment
-devas, low offering tables, a sculpted naga balustrade and the family emblem.
+devas, low offering tables and the family emblem.
 Metres, X east, Y north. Everything is aged: dust, wax, faded cloth, tarnish.
 """
 import math
@@ -198,19 +198,6 @@ def offering_table(coll, m, name, x, y, z0=0.0):
 def footed_tray(coll, m, name, x, y, z, r=.3):
     return lathe(name, coll, [(0, 0), (.12, 0), (.1, .03), (.06, .06), (.07, .09), (r, .1), (r + .04, .13), (r + .03, .15), (r - .02, .12), (0, .12)],
                  x, y, z, m['bronze'], segments=32)
-
-
-# ------------------------------------------------------------------ guardians of the way
-
-
-def naga_rail(coll, m, name, x, rng, y0=-31.2, y1=-25.7):
-    """A naga balustrade from the kit: stepped stone base, a scaled body rising to the real
-    naga finial's fan of hoods, all one weathered carving."""
-    from pagoda_kit import piece
-    naga = piece(coll, 'naga_rail', name, x, y1 - .1, .4, 0)
-    hood = piece(coll, 'naga_hood', name + '_hood', x, y1 - .1, .4, 0)
-    collider(name, coll, x - .31, x + .31, y0 - .3, y1 + .1, 0, 1.4, 'stone')
-    return [naga, hood]
 
 
 # ------------------------------------------------------------------ the family marks

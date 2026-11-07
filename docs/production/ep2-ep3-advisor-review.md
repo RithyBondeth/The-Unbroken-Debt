@@ -25,7 +25,8 @@ For each item, mark **OK**, **Change** (say what) or **Remove**. Items marked **
 - Red cotton cord (sai sin) wound thickly round stupas, with paper tags knotted in. It is deliberately overdone, as if by someone afraid.
 - Incense, candles and dead garlands left at stupas.
 - Placement and dressing of the image terrace, cloister images, spirit houses, sema boundary stones and gate guardians.
-- The naga balustrades at the gate.
+- The gate (`haunt_gateway()` in `tools/areas/pagoda_gateway.py`): its gilded name board, its teak leaves torn open, red cord with paper tags and bells strung across the openings, white funeral cloth caught under the lintel, rust-red handprints dragged down the piers, and incense and candles left at the guardian's feet.
+- The wat's name on the gate board: **វត្តព្រៃស្ងាត់** (Wat Prey Sngat, "pagoda of the silent forest") over **ព.ស. ២៤៥៥** (B.E. 2455, 1912 CE). The wat is fictional. Is the name natural for a rural wat, and is the Buddhist-era year written as a gate board would have it?
 
 ### The hall
 - The altar: a painted-plaster Buddha in saffron, calling the earth to witness, on a red lotus throne, with gilded bodhi trees, small images and old offerings.

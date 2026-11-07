@@ -147,11 +147,11 @@ def court(coll, m, rect, lamp):
             lean(objs, px, py, rng.normal(0, .05), rng.normal(0, .05))
             collider('court_stupa_' + str(k), coll, px - .7, px + .7, py - .7, py + .7, 0, 3.2, 'stone')
             placed.append((px, py))
-            if k % 4 == 0:
+            if k % 4 == 0 and not any('_fig_' in o.name for o in objs):
                 # A fig tree stands only on a snapped stupa; a whole one keeps just the roots.
                 crown = rng.uniform(1.4, 2.2)
                 fig_roots(coll, m, 'court_fig_' + str(k), px, py, 2.4, lambda z: .6 if z < 1.9 else .45, rng, n=7, spread=.9,
-                          crown=crown if 'broken' in objs[0].data.name else 0)
+                          crown=crown if 'broken' in objs[0].data.name else 0, support=[objs[0]])
     # Standing walls that end lanes: walk one, and you have to come back.
     for j, (a, b) in enumerate([((-41, -10), (-41, 2)), ((-46.5, 6), (-46.5, 17)), ((-60, -12), (-60, 1)),
                                 ((-65.5, 5), (-65.5, 16)), ((-71, -14), (-71, -2))]):
@@ -321,10 +321,11 @@ def _walk(coll, m, name, x, y0, y1, rng, images=False):
             px = x + side * width / 2
             broken = rng.random() < .24
             height = 1.45 if broken else 3.1
-            piece(coll, 'gallery_pier_broken' if broken else 'gallery_pier', f'{name}_pier_{j}_{side}', px, py, 0, rng.integers(0, 4) * math.pi / 2)
+            pier = piece(coll, 'gallery_pier_broken' if broken else 'gallery_pier', f'{name}_pier_{j}_{side}', px, py, 0, rng.integers(0, 4) * math.pi / 2)
             collider(f'{name}_pier', coll, px - .24, px + .24, py - .24, py + .24, 0, height, 'stone')
             if rng.random() < .22:
-                fig_roots(coll, m, f'{name}_fig_{j}', px, py, height, lambda z: .34, rng, n=5, spread=.7, crown=rng.uniform(1.2, 2))
+                fig_roots(coll, m, f'{name}_fig_{j}', px, py, height, lambda z: .34, rng, n=5, spread=.7, crown=rng.uniform(1.2, 2),
+                          support=[pier])
         if images and j % 2 == 0:
             side = -1 if j % 4 == 0 else 1
             px = x + side * (width / 2 - .5)
