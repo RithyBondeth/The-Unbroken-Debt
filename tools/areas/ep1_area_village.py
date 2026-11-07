@@ -1549,6 +1549,9 @@ def build():
     house_details(m)
     from house_decay import house_decay
     house_decay(AREA, m)
+    # The kitchen dressed, and what has been feeding in the house (house_dread.py).
+    from house_dread import house_dread
+    house_dread(AREA, m)
     interiors(m)
     under_house(m)
     bathing_corner(m)

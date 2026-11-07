@@ -98,7 +98,8 @@ async function review(): Promise<void> {
   game.scene.onBeforeRenderObservable.add(() => {
     clock += game.deltaSeconds;
     if (!preview) return;
-    encounter.brain.update(game.deltaSeconds, game.camera.globalPosition, false, false);
+    // As if Sora stood at the glass: it swoops in from the fields, hovers, leaves.
+    encounter.brain.update(game.deltaSeconds, game.camera.globalPosition, false, false, true);
     const at = detail ? new Vector3(8.4, 4.08, -13) : encounter.brain.position;
     const rushAge = (clock - rushAt) % 5;
     if (Number.isFinite(rushAt)) {
@@ -106,7 +107,7 @@ async function review(): Promise<void> {
       const travel = Math.min(3, 0.8 * moving + 6.5 * moving * moving);
       at.x += 3 - travel;
     }
-    encounter.model.root.setEnabled(true);
+    encounter.model.root.setEnabled(detail || !encounter.brain.hidden);
     flight.set(Math.sin(clock * 0.7), 0, Math.cos(clock * 0.7));
     encounter.model.pose(
       at,
@@ -137,7 +138,8 @@ async function review(): Promise<void> {
     await game.audio?.unlock();
     results.textContent = "Encounter running · WASD moves; F extinguishes the lamp; Esc pauses";
     if (escape) {
-      await wait(() => encounter.brain.state === "watching", 15);
+      // It rests out over the fields after a reset, then answers a lingering player.
+      await wait(() => encounter.brain.state === "watching", 30);
       if (encounter.activeScreams !== 1)
         throw new Error("Detection did not start one audible scream");
       await wait(() => encounter.model.mouthOpen > 0.9, 1);

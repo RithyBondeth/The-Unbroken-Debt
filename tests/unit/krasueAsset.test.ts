@@ -16,9 +16,9 @@ describe.skipIf(isLfsPointer(PATH))("krasueAsset (needs the real Git LFS asset)"
   });
 
   describe("Krasue is a volumetric, articulated character", () => {
-    it("exports a moving jaw, mouth rim and rigid upper/lower teeth", () => {
+    it("exports a moving jaw and rigid upper/lower teeth", () => {
       const meshes = asset.getRoot().listMeshes();
-      for (const name of ["krasue_sculpted_head", "krasue_lip_rims", "krasue_teeth"]) {
+      for (const name of ["krasue_sculpted_head", "krasue_teeth"]) {
         let max = 0;
         for (const p of meshes.find((m) => m.getName() === name)!.listPrimitives()) {
           const target = p.listTargets()[0];

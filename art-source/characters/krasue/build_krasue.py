@@ -10,6 +10,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / 'public/assets/ep1/krasue'
 OUT.mkdir(parents=True, exist_ok=True)
+# Maps are embedded in the GLB; their working copies stay out of public/.
+WORK = ROOT / 'art-export/krasue'
+WORK.mkdir(parents=True, exist_ok=True)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import krasue_head
 random.seed(73191)
 bpy.context.preferences.filepaths.save_version=0
 bpy.ops.object.select_all(action='SELECT')
@@ -34,7 +39,7 @@ def normal_map(name, strength, seed):
     image = bpy.data.images.new(name, n, n, alpha=False)
     image.colorspace_settings.name = 'Non-Color'
     image.pixels.foreach_set(rgba.ravel())
-    image.filepath_raw = str(OUT / (name + '.png'))
+    image.filepath_raw = str((OUT if name == 'krasue_hair_normal' else WORK) / (name + '.png'))
     image.file_format = 'PNG'; image.save()
     return image
 skin_normal = normal_map('krasue_skin_normal',1.2,19)
@@ -54,10 +59,40 @@ def hair_albedo():
     rgba=np.ones((h,w,4),dtype=np.float32)
     rgba[:,:,:3]=value[:,:,None]*np.array([1,.88,.78])
     img=bpy.data.images.new('krasue_hair_fibers',w,h,alpha=False)
-    img.pixels.foreach_set(rgba.ravel())
-    img.filepath_raw=str(OUT/'krasue_hair_fibers.png');img.file_format='PNG';img.save()
+    img.pixels.foreach_set(rgba.astype(np.float32).ravel())
+    img.filepath_raw=str(WORK/'krasue_hair_fibers.png');img.file_format='PNG';img.save()
     return img
 hair_color=hair_albedo()
+
+def dead_skin():
+    """MakeHuman's CC0 skin photograph (pores, lips, brows) turned to a corpse's:
+    grey-olive and bloodless, mottled with lividity, a net of dark veins under
+    the thin skin of the temples, jaw and throat."""
+    src=bpy.data.images.load(str(krasue_head.SKIN_TEXTURE))
+    w,h=src.size
+    px=np.array(src.pixels[:],dtype=np.float32).reshape(h,w,4)
+    rng=np.random.default_rng(4471)
+    rgb=px[:,:,:3]
+    lum=rgb@np.array([.3,.59,.11],dtype=np.float32)
+    grey=np.repeat(lum[:,:,None],3,axis=2)
+    out=(grey*.8+rgb*.2)*np.array([.6,.64,.57],dtype=np.float32)
+    y,x=np.mgrid[0:h,0:w].astype(np.float32)/max(w,h)
+    blot=sum(np.sin(x*f*6.3+p)*np.cos(y*f*5.1-p) for f,p in ((3,.2),(7,1.9),(13,4.1)))
+    livid=np.clip(.5+.25*blot+rng.normal(0,.04,(h,w)),0,1)
+    out*=(1-.22*livid[:,:,None]*np.array([.35,.55,.25],dtype=np.float32))
+    veins=np.zeros((h,w),dtype=np.float32)
+    for k in range(9):
+        f=rng.uniform(40,90);ph=rng.uniform(0,6.3)
+        line=np.abs(np.sin((x*np.cos(k)+y*np.sin(k))*f+np.sin(y*17+k)*1.6+ph))
+        veins=np.maximum(veins,np.clip(1-line/.035,0,1)*rng.uniform(.3,.7))
+    out=out*(1-veins[:,:,None]*.28)+veins[:,:,None]*np.array([.02,.03,.05],dtype=np.float32)
+    img=bpy.data.images.new('krasue_dead_skin',w,h,alpha=False)
+    rgba=np.concatenate((np.clip(out,0,1),np.ones((h,w,1),dtype=np.float32)),axis=2)
+    img.pixels.foreach_set(rgba.astype(np.float32).ravel())
+    img.filepath_raw=str(WORK/'krasue_dead_skin.png');img.file_format='PNG';img.save()
+    bpy.data.images.remove(src)
+    return img
+skin_photo=dead_skin()
 
 def material(name, color, rough=.7, normal=None, photo=False):
     m=bpy.data.materials.new(name); m.use_nodes=True
@@ -70,8 +105,7 @@ def material(name, color, rough=.7, normal=None, photo=False):
         m.node_tree.links.new(tex.outputs['Color'],p.inputs['Base Color'])
     if photo:
         tex=m.node_tree.nodes.new('ShaderNodeTexImage')
-        tex.image=bpy.data.images.load(str(OUT/'krasue-apparition.png'),check_existing=True)
-        # Only RGB is used: this is the albedo of a solid, closed head.
+        tex.image=photo
         m.node_tree.links.new(tex.outputs['Color'],p.inputs['Base Color'])
     if normal:
         tex=m.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=normal
@@ -80,28 +114,26 @@ def material(name, color, rough=.7, normal=None, photo=False):
         m.node_tree.links.new(tex.outputs['Color'],nm.inputs['Color'])
         m.node_tree.links.new(nm.outputs['Normal'],p.inputs['Normal'])
     return m
-face=material('M_krasue_face',(.28,.25,.22),.73,skin_normal,True)
-skin=material('M_krasue_skin',(.09,.076,.062),.86,skin_normal)
+face=material('M_krasue_face',(.28,.25,.22),.58,skin_normal,skin_photo)
 hair=material('M_krasue_hair',(.009,.007,.006),.64,hair_normal)
 hair_glint=material('M_krasue_hair_glint',(.014,.011,.009),.68,hair_normal)
 hair_roots=material('M_krasue_hair_roots',(.004,.003,.002),.94,hair_normal)
 hair_roots.node_tree.nodes.get('Principled BSDF').inputs['Specular IOR Level'].default_value=.06
-flesh=material('M_krasue_viscera',(.095,.012,.017),.54,organ_normal)
+flesh=material('M_krasue_viscera',(.085,.009,.013),.48,organ_normal)
 liver_mat=material('M_krasue_liver',(.052,.012,.017),.61,organ_normal)
-vessel=material('M_krasue_vessels',(.038,.008,.016),.62,organ_normal)
+vessel=material('M_krasue_vessels',(.045,.004,.008),.3,organ_normal)
 cavity=material('M_krasue_cavity',(.008,.003,.004),.94)
-eye=material('M_krasue_sclera',(.32,.36,.32),.34)
-iris=material('M_krasue_iris',(.029,.036,.032),.4)
-teeth=material('M_krasue_teeth',(.31,.27,.19),.72,skin_normal)
-lip=material('M_krasue_lips',(.075,.033,.032),.62,skin_normal)
+eye=material('M_krasue_sclera',(.32,.36,.32),.12,photo=bpy.data.images.load(str(krasue_head.EYE_TEXTURE)))
+teeth=material('M_krasue_teeth',(.24,.19,.11),.55,skin_normal)
 gum=material('M_krasue_gums',(.065,.018,.023),.48,organ_normal)
 
 # Spatial pigment follows the lobes and folds, rather than one uniform red.
 # Linear vertex colors survive glTF export without a texture-baking shortcut.
 for tissue in [flesh,liver_mat]:
     p=tissue.node_tree.nodes.get('Principled BSDF')
-    p.inputs['Coat Weight'].default_value=.12
-    p.inputs['Coat Roughness'].default_value=.34
+    # Wet: a slick coat over the tissue that catches the moon in streaks.
+    p.inputs['Coat Weight'].default_value=.55
+    p.inputs['Coat Roughness'].default_value=.12
     pigment=tissue.node_tree.nodes.new('ShaderNodeVertexColor')
     pigment.layer_name='TissuePigment'
     tissue.node_tree.links.new(pigment.outputs['Color'],p.inputs['Base Color'])
@@ -156,59 +188,79 @@ def mesh(name, verts, faces, mats, uv=None, slots=None, weights=None):
         obj.vertex_groups.new(name='krasue_head').add(list(range(len(verts))),1,'REPLACE')
     return obj
 
-def gauss(x,z,cx,cz,sx,sz): return math.exp(-((x-cx)/sx)**2-((z-cz)/sz)**2)
-# Continuous asymmetric cranial profile, with actual sculpted facial anatomy.
-profile=[(-.265,.008,.025),(-.24,.060,.080),(-.19,.096,.107),(-.12,.123,.114),(-.04,.141,.128),(.04,.148,.129),(.12,.148,.124),(.19,.132,.108),(.25,.090,.065),(.285,.004,.004)]
+def rigged(obj, shape=None):
+    """Parents a finished object to the head bone; `shape` adds its Scream key."""
+    obj.parent=rig
+    mod=obj.modifiers.new('Krasue skinning','ARMATURE'); mod.object=rig
+    obj.vertex_groups.new(name='krasue_head').add(list(range(len(obj.data.vertices))),1,'REPLACE')
+    for p in obj.data.polygons: p.use_smooth=True
+    if shape is not None:
+        obj.shape_key_add(name='Basis')
+        key=obj.shape_key_add(name='Scream')
+        for v,d,k in zip(obj.data.vertices,shape,key.data): k.co=v.co+d
+    return obj
+
+# A real head from CC0 MakeHuman anatomy (krasue_head.py): skull, ears, lids,
+# lips and teeth, starved gaunt and torn away at the neck. The eyes and mouth
+# close into deep sockets, the neck into a raw stump, so the solid stays closed.
+head_bm,head_gape,head_parts,stump_z=krasue_head.build_head()
+dims=krasue_head.measure(head_bm)
 def dimensions(z):
-    for a,b in zip(profile,profile[1:]):
-        if a[0]<=z<=b[0]:
-            t=(z-a[0])/(b[0]-a[0]); t=t*t*(3-2*t)
-            return a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t
-    return .004,.004
-verts=[]; uv=[]; faces=[]; slots=[]
-R,C=104,144
-for r in range(R+1):
-    z=-.265+r/R*.55; width,depth=dimensions(z)
-    for c in range(C+1):
-        a=-math.pi+2*math.pi*c/C
-        x=math.sin(a)*width; front=max(0,math.cos(a))
-        y=math.cos(a)*(depth if front else depth*1.25)
-        sculpt=0
-        if front:
-            sculpt+=.047*gauss(x,z,0,-.062,.021,.034)+.023*gauss(x,z,0,.001,.014,.078)
-            sculpt+=.013*gauss(x,z,-.024,-.073,.014,.014)+.013*gauss(x,z,.024,-.073,.014,.014)
-            for s in [-1,1]:
-                sculpt-=.030*gauss(x,z,s*.065,.027,.035,.020)
-                sculpt+=.019*gauss(x,z,s*.065,.064,.046,.011)
-                sculpt+=.013*gauss(x,z,s*.091,-.048,.027,.039)
-                sculpt-=.012*gauss(x,z,s*.092,-.104,.034,.039)
-            # A real recessed oral bowl; its material and vertices deform with
-            # the jaw, instead of stretching a painted mouth across the face.
-            oral=(x/.053)**2+((z+.151)/.014)**2
-            sculpt-=.067*max(0,1-oral)**.45
-            for s in [-1,1]:
-                fold=s*(.035+max(0,-z-.08)*.38)
-                sculpt-=.0027*gauss(x,z,fold,-.12,.003,.037)
-                sculpt-=.0017*gauss(x,z,s*.065,.074,.037,.0017)
-                sculpt-=.0014*gauss(x,z,s*.075,.083,.034,.0016)
-            sculpt+=.007*gauss(x,z,0,-.133,.047,.007)+.008*gauss(x,z,0,-.168,.041,.010)
-            sculpt+=.009*gauss(x,z,0,-.222,.047,.023)
-            # Fine irregularity breaks mathematically smooth skin under grazing light.
-            sculpt+=.00045*math.sin(x*331+z*19)*math.sin(z*281)
-            y+=sculpt*front**6
-        verts.append((x,y,z))
-        uv.append((.5+x*.77,1-(310-z*600)/1536) if front>.35 else (c/C,r/R))
-for r in range(R):
-    for c in range(C):
-        a=r*(C+1)+c; faces.append((a,a+1,a+C+2,a+C+1))
-        angle=-math.pi+2*math.pi*(c+.5)/C
-        x=(verts[a][0]+verts[a+1][0])/2
-        z=(verts[a][2]+verts[a+C+1][2])/2
-        oral=(x/.053)**2+((z+.151)/.014)**2
-        slots.append(2 if math.cos(angle)>.8 and oral<.85 else 0 if math.cos(angle)>.35 else 1)
-faces.append(tuple(range(C-1,-1,-1))); slots.append(1)
-faces.append(tuple(R*(C+1)+c for c in range(C))); slots.append(1)
-mesh('krasue_sculpted_head',verts,faces,[face,skin,cavity],uv,slots)
+    w,front,back=dims(z)
+    return w,front
+def back_depth(z):
+    return dims(z)[2]
+head_data=bpy.data.meshes.new('krasue_sculpted_head')
+gape=[v[head_gape].copy() for v in head_bm.verts]
+# Blood and death in the skin: dark sunken orbits, red-rimmed lids, grey lips,
+# and blood run from the mouth over the chin and down the torn throat.
+# The lower lip: the height of the mouth's own teeth.
+LIP_Z=sum(v.z for v in head_parts['lower_teeth'][0])/len(head_parts['lower_teeth'][0])+.01
+stain=[]
+for v in head_bm.verts:
+    x,y,z=v.co
+    c=np.array([1.,1.,1.])
+    for s in (-1,1):
+        d=math.hypot((x-s*.0725)/.05,(z-.027)/.034)
+        c*=1-.55*math.exp(-d*d)*np.array([1,1.1,.95])
+        rim=math.exp(-((math.hypot((x-s*.0725)/.036,(z-.027)/.019)-1)/.35)**2)
+        c*=1-.3*rim*np.array([.1,.75,.7])
+    mouth=math.exp(-((x/.06)**2+((z-LIP_Z)/.025)**2))*(y>.04)
+    c=c*(1-.6*mouth)+.6*mouth*np.array([.3,.06,.06])
+    # Runs from the corners and the middle of the lower lip, down the chin.
+    for cx,length,width in ((-.05,.2,.011),(.052,.15,.009),(.006,.26,.014),(.024,.11,.008)):
+        wob=cx+.006*math.sin(z*70+cx*40)
+        top=LIP_Z-.008
+        if z<top+.01 and z>top-length and y>-.02:
+            t=max(0,(top-z)/length)
+            fade=min(1,(top+.01-z)/.02)*(1-t**2)
+            run=math.exp(-((x-wob)/(width*(1.2-.5*t)))**2)*fade
+            c=c*(1-run)+run*np.array([.3,.02,.018])
+    # Soaked round the torn neck.
+    if z<-.2:
+        soak=min(1,(-.2-z)/.07)
+        c=c*(1-.85*soak)+.85*soak*np.array([.3,.02,.02])
+    stain.append((*c,1))
+from mathutils.bvhtree import BVHTree
+head_tree=BVHTree.FromBMesh(head_bm)
+def on_head(a,z,off):
+    """The point of the real skull (ears included) in direction `a` round it at
+    height `z`, lifted `off` off the skin: the scalp and the hair's roots sit on
+    the head itself, not on an ellipse that the cheeks and ears poke through."""
+    el=math.asin(max(-1,min(1,(z-.02)/.272)))
+    d=Vector((math.sin(a)*math.cos(el),math.cos(a)*math.cos(el),math.sin(el)))
+    centre=Vector((0,0,.02))
+    hit=head_tree.ray_cast(centre+d*.6,-d,.6)[0]
+    if hit is None: hit=centre+d*.27
+    return tuple(hit+d*off)
+head_bm.to_mesh(head_data)
+head_bm.free()
+for m in (face,cavity,flesh): head_data.materials.append(m)
+colors=head_data.color_attributes.new(name='KrasueStain',type='FLOAT_COLOR',domain='POINT')
+for i,c in enumerate(stain): colors.data[i].color=c
+head_obj=bpy.data.objects.new('krasue_sculpted_head',head_data); bpy.context.collection.objects.link(head_obj)
+rigged(head_obj,gape)
+MAKEHUMAN={'krasue_sculpted_head'}
 
 # Closed lobed surfaces for eyes, irregular viscera and roots; not image cards.
 def blob(name, center, size, mat, kind='plain', bone=None, rotation=0):
@@ -240,15 +292,34 @@ def blob(name, center, size, mat, kind='plain', bone=None, rotation=0):
         for c in range(cols):
             a=r*(cols+1)+c; fs.append((a,a+1,a+cols+2,a+cols+1))
     return mesh(name,verts,fs,[mat],uv,weights=weights)
-for s in [-1,1]:
-    blob(f'krasue_eye_{s}',(s*.065,.113,.027),(.032,.029,.019),eye)
-    blob(f'krasue_iris_{s}',(s*.065,.128,.027),(.012,.004,.012),iris)
-    blob(f'krasue_nostril_{s}',(s*.019,.165,-.078),(.012,.006,.007),cavity)
-for row in [0,1]:
-    for i in range(-3,4):
-        # Slightly uneven, curved dental arches, recessed behind the lip.
-        blob(f'krasue_tooth_{row}_{i}',(i*.0105,.114-.009*(abs(i)/3)**2,-.143-row*.016),(.0085,.010,.012+random.random()*.003),teeth)
-blob('krasue_tongue',(0,.084,-.157),(.047,.026,.009),gum)
+tooth_rng=random.Random(5113)
+for name in ('upper_teeth','lower_teeth'):
+    pv,_,_,pd=head_parts.pop(name)
+    xs=[v.x for v in pv];front=max(v.y for v in pv);zc=sum(v.z for v in pv)/len(pv)
+    half=(max(xs)-min(xs))/2*.92;upper=name.startswith('upper')
+    for i in range(10):
+        u=(i+.5)/10*2-1
+        if tooth_rng.random()<.12: continue  # lost
+        canine=abs(abs(u)-.55)<.12
+        # At the creature's scale (about 2.6 times life): long, uneven, yellowed.
+        length=(.036 if canine else .025)*tooth_rng.uniform(.8,1.15)*(1 if abs(u)<.8 else .8)
+        cx=u*half;cy=front-.006-(abs(u)**2)*.03
+        cz=zc+(-1 if upper else 1)*(-.004)-(length/2 if upper else -length/2)
+        tooth=blob(f'krasue_tooth_{name}_{i}',(cx+tooth_rng.uniform(-.001,.001),cy,cz),
+                   (.019*(1-.3*abs(u)),.014,length),teeth,rotation=-u*.9+tooth_rng.uniform(-.12,.12))
+        tooth.shape_key_add(name='Basis');key=tooth.shape_key_add(name='Scream')
+        mean=pd[0]
+        for v,k in zip(tooth.data.vertices,key.data):k.co=v.co+mean
+        MAKEHUMAN.add(tooth.name)
+for name,(pv,pf,puv,pd) in head_parts.items():
+    data=bpy.data.meshes.new('krasue_'+name);data.from_pydata(pv,[],pf);data.update()
+    layer=data.uv_layers.new(name='UVMap')
+    for poly,uvs in zip(data.polygons,puv):
+        for li,u in zip(poly.loop_indices,uvs):layer.data[li].uv=u
+    data.materials.append(eye if name.startswith('eye') else gum)
+    obj=bpy.data.objects.new('krasue_'+name,data);bpy.context.collection.objects.link(obj)
+    rigged(obj,None if name.startswith('eye') else pd)
+    MAKEHUMAN.add(obj.name)
 
 # Tube builder gives a circular cross-section, taper, UVs and interpolated skinning.
 def tubes(name, paths, mat, bones=None):
@@ -275,27 +346,7 @@ def tubes(name, paths, mat, bones=None):
         fs.append(tuple(start+(n-1)*sides+j for j in range(sides)))
     return mesh(name,vs,fs,[mat],uvs,weights=ws)
 
-# Raised lips and eyelid edges catch real light even from the side.
-paths=[]
-for row in [0,1]:
-    path=[]
-    for i in range(41):
-        a=math.pi*i/40
-        x=.054*math.cos(a)
-        z=-.151+(1 if row==0 else -1)*.014*math.sin(a)
-        y=.119-.008*(abs(x)/.054)**2+.003*math.sin(a)
-        path.append((x,y,z))
-    paths.append((path,lambda t:.0024+.0012*math.sin(t*math.pi)))
-tubes('krasue_lip_rims',paths,lip)
-paths=[]
-for row in [0,1]:
-    paths.append(([(i*.0095,.109-.007*(i/3)**2,-.137-row*.030) for i in range(-3,4)],.0038))
-tubes('krasue_dental_gums',paths,gum)
-paths=[]
-for s in [-1,1]:
-    for row in [0,1]:
-        paths.append(([(s*.065+.018*math.cos(a/24*math.pi),.123+.003*math.sin(a/24*math.pi),.027+(1 if row==0 else -1)*.011*math.sin(a/24*math.pi)) for a in range(25)],.0018))
-tubes('krasue_eyelid_rims',paths,skin)
+
 
 # Scalp cap, covering crown and rear skull while preserving the face.
 vs=[]; fs=[]; uvs=[]
@@ -305,9 +356,9 @@ for r in range(25):
         # A dense fitted underlayer extends to the temples, jaw sides and nape.
         # Only the central face remains exposed; the head cannot read as bald
         # between a few isolated strands, including in the profile view.
-        end=-.205+.385*max(0,math.cos(a))**2.5+math.sin(a*7)*.003
-        z=.286+(end-.286)*r/24; w,d=dimensions(min(.284,z))
-        vs.append((math.sin(a)*(w+.010),math.cos(a)*(d+.010 if math.cos(a)>0 else d*1.25+.012),z))
+        end=-.27+.45*max(0,math.cos(a))**2.5+math.sin(a*7)*.003
+        z=.292+(end-.292)*(r/24)**.9
+        vs.append(on_head(a,z,.007))
         uvs.append((c/96,r/24))
 for r in range(24):
     for c in range(96):
@@ -363,10 +414,8 @@ for lock in range(18):
             if t<=.25:
                 f=t/.25
                 phi=root+(1.05-root)*f
-                z=.287-.131*(phi/1.05)**1.7
-                w,d=dimensions(min(.284,z))
-                x=math.sin(angle)*(w+.008)
-                y=math.cos(angle)*(d+.010 if math.cos(angle)>0 else d*1.25+.010)
+                z=.29-.134*(phi/1.05)**1.7
+                x,y,_=on_head(angle,z,.009)
             else:
                 f=(t-.25)/.75
                 x=math.sin(angle)*(.154+.045*math.sin(f*math.pi*.7))*spread
@@ -374,7 +423,7 @@ for lock in range(18):
                 if math.cos(angle)>.7:
                     # A soft asymmetric part leaves an eye visible between
                     # individual wisps while the temples remain densely filled.
-                    x+=(.06 if math.sin(angle)>0 else -.06)*min(1,f/.25)
+                    x+=(.1 if math.sin(angle)>0 else -.1)*min(1,f/.25)
                     if strand%7==0:x-=.025*math.sin(f*math.pi)
                     y+=.015
                 z=.156-f*strand_length
@@ -443,8 +492,23 @@ for loop in range(5):
     vessels=[([(x+.005,y+.008,z) for x,y,z in center],.0014)]
     tubes(f'krasue_intestine_vessel_{loop}',vessels,vessel,bones)
 
+# Blood still running off it: strings of it from the torn neck and the lowest
+# organs, thickening into drops at their ends, swinging behind as it flies.
+drip_rng=random.Random(9127)
+for k in range(9):
+    if k<5:
+        a=k/5*math.tau+drip_rng.uniform(-.3,.3)
+        top=(math.sin(a)*.07,math.cos(a)*.055,stump_z-.01)
+    else:
+        top=(drip_rng.uniform(-.06,.06),drip_rng.uniform(0,.05),-.83-drip_rng.uniform(0,.12))
+    length=drip_rng.uniform(.12,.42)
+    path=[(top[0]+.004*math.sin(t*9+k),top[1]+.003*math.cos(t*7+k),top[2]-t*length) for t in (i/10 for i in range(11))]
+    bones=chain(f'krasue_gut_{5+k}',[path[0],path[4],path[8],path[10],(path[10][0],path[10][1],path[10][2]-.02)])
+    # Thin and stretched where it hangs, a heavy bead at the bottom.
+    tubes(f'krasue_blood_drip_{k}',[(path,lambda t:.0022+.0008*math.sin(t*13)+.0055*max(0,(t-.86)/.14)**.6)],vessel,bones)
+
 # Consolidate static facial detail to avoid a draw for every tooth/eyeball.
-for mat in [eye,iris,cavity,teeth]:
+for mat in [eye,teeth]:
     objs=[o for o in bpy.context.scene.objects if o.type=='MESH' and len(o.data.materials)==1 and o.data.materials[0]==mat]
     if len(objs)>1:
         bpy.ops.object.select_all(action='DESELECT')
@@ -454,46 +518,11 @@ for mat in [eye,iris,cavity,teeth]:
         objs[0].data.name=objs[0].name
 
 for obj in list(bpy.context.scene.objects):
-    if obj.type != 'MESH': continue
+    if obj.type != 'MESH' or obj.data.shape_keys: continue
     bm=bmesh.new(); bm.from_mesh(obj.data)
     bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=.000001)
     bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
     bm.to_mesh(obj.data); bm.free(); obj.data.update()
-
-# Shared jaw displacement makes the closed head, lip margins, dental arches and
-# tongue open as one anatomical form. Cheeks/chin stretch, temples stay fixed.
-def jaw_displacement(v):
-    x,y,z=v
-    front=max(0,min(1,(y-.025)/.065))
-    side=math.exp(-(abs(x)/.088)**6)
-    lower=max(0,min(1,(-z-.143)/.025))
-    chin=max(0,min(1,(z+.272)/.030))
-    influence=front*side*chin
-    lift=.010*math.exp(-((z+.137)/.019)**2)*(1-lower)
-    drop=.073*lower
-    return (x*.025*influence*lower,-.015*influence*lower,(lift-drop)*influence)
-for obj in list(bpy.context.scene.objects):
-    if obj.type!='MESH':continue
-    facial=obj.name=='krasue_sculpted_head' or obj.name in ['krasue_lip_rims','krasue_teeth','krasue_gums','krasue_tongue','krasue_dental_gums']
-    if not facial:continue
-    obj.shape_key_add(name='Basis')
-    opened=obj.shape_key_add(name='Scream')
-    if obj.name=='krasue_teeth':
-        # Teeth translate rigidly with the jaw; unlike skin they cannot stretch.
-        links=[set() for v in obj.data.vertices]
-        for edge in obj.data.edges:
-            a,b=edge.vertices;links[a].add(b);links[b].add(a)
-        remaining=set(range(len(links)))
-        while remaining:
-            stack=[remaining.pop()];island=[]
-            while stack:
-                i=stack.pop();island.append(i)
-                for j in links[i]&remaining:remaining.remove(j);stack.append(j)
-            center=sum((obj.data.vertices[i].co for i in island),Vector())/len(island)
-            delta=Vector(jaw_displacement(center))
-            for i in island:opened.data[i].co=obj.data.vertices[i].co+delta
-    else:
-        for v,p in zip(obj.data.vertices,opened.data):p.co=v.co+Vector(jaw_displacement(v.co))
 
 bpy.ops.object.select_all(action='DESELECT')
 rig.select_set(True)
@@ -503,7 +532,7 @@ bpy.context.view_layer.objects.active=rig
 for image in bpy.data.images:
     if image.filepath and not image.packed_file: image.pack()
 bpy.ops.wm.save_as_mainfile(filepath=str(Path(__file__).with_name('krasue.blend')))
-bpy.ops.export_scene.gltf(filepath=str(OUT/'krasue-creature.glb'),export_format='GLB',use_selection=True,export_animations=False,export_skins=True,export_yup=True,export_normals=True,export_texcoords=True,export_materials='EXPORT',export_image_format='AUTO')
+bpy.ops.export_scene.gltf(filepath=str(OUT/'krasue-creature.glb'),export_format='GLB',use_selection=True,export_animations=False,export_skins=True,export_yup=True,export_normals=True,export_texcoords=True,export_materials='EXPORT',export_image_format='AUTO',export_vertex_color='ACTIVE')
 print('KRASUE_EXPORT',sum(len(o.data.polygons) for o in bpy.context.scene.objects if o.type=='MESH'),'polygons',len(rig.data.bones),'bones')
 
 if '--preview' in sys.argv:

@@ -31,22 +31,23 @@ const X0 = -11.4,
 const XC = (X0 + X1) / 2;
 const EAVE = 2.3,
   RIDGE = 3.35;
-/** The two long tables: centre x, and their shared centre and length along z. */
+/** The two raised bamboo platforms (kré): centre x, and their shared centre and length along z. */
 const TABLES = [-7.95, -9.85];
 const TABLE_Z = (Z0 + Z1) / 2,
   TABLE_LENGTH = 3.0,
-  TABLE_WIDTH = 0.78,
-  TABLE_HEIGHT = 0.74;
-const BENCH_OFFSET = 0.62;
+  TABLE_WIDTH = 1.05,
+  TABLE_HEIGHT = 0.42;
 
 /**
- * A second tent for the mourners who came to sit with the dead, as at every
- * Khmer funeral: two long tables laid with bowls and tea under white and black
- * cloth. Nobody is here. The tea has gone cold, a bench lies on its side, cups
- * are knocked over, and at the head of the near table one bowl of rice has
- * three incense sticks stood upright in it: food set for the dead. A corner of
- * the roof cloth has torn and flaps. The first time Sora steps under it the
- * benches murmur with guests who are not there, and the lantern gutters out.
+ * A second shelter for the mourners who came to sit with the dead, as a 1930s
+ * village raised it: a bamboo frame under palm thatch laid in courses, lined
+ * with white cotton, and two raised bamboo platforms (kré) spread with reed
+ * mats, where the guests sat cross-legged round low trays of rice and tea.
+ * Nobody is here. The tea has gone cold, a stool lies on its side, cups are
+ * knocked over, and at the head of the near platform one bowl of rice has three
+ * incense sticks stood upright in it: food set for the dead. A corner of the
+ * white lining has torn and flaps. The first time Sora steps under it the mats
+ * murmur with guests who are not there, and the oil lamp gutters out.
  */
 export class GuestTent {
   readonly root: TransformNode;
@@ -76,7 +77,12 @@ export class GuestTent {
     const m = {
       bamboo: this.material("M_bamboo", "#8a7a4e", "wood"),
       linen: this.material("M_funeral_linen", "#cfcbbd", "cloth"),
-      black: this.material("M_funeral_black", "#0b0b0b", "cloth"),
+      // Mourning is white here: aged undyed cotton where the pavilion once had black.
+      aged: this.material("M_cotton_dirty", "#8a8476", "cloth"),
+      thatch: this.material("M_wet_thatch", "#5b4a31", "wood"),
+      mat: this.material("M_reed_mat", "#a08b5c", "paper"),
+      clay: this.material("M_clay", "#6a3b22", "wood"),
+      tin: c.mat("guest_tent_tin", "#3a3833", 0.55, 0.6),
       wood: this.material("M_funeral_wood", "#5a3a22", "wood"),
       bench: this.material("M_worn_wood", "#4a3a2a", "wood"),
       porcelain: this.material("M_funeral_porcelain", "#c8c8bc", "paper"),
@@ -84,12 +90,11 @@ export class GuestTent {
       incense: this.material("M_incense", "#7a2a1c", "wood"),
       wax: this.material("M_candle_wax", "#d8cfae", "paper"),
       rattan: this.material("M_rattan", "#7a6038", "wood"),
-      tea: c.mat("guest_tent_cold_tea", "#2a1a0c", 0.12),
-      // Its own copy: the pavilion's lanterns must not gutter with this one.
-      globe: this.material("M_funeral_frosted_globe", "#f0d8a8", "paper").clone(
-        "M_guest_tent_globe",
-      ),
+      tea: c.mat("guest_tent_cold_tea", "#4f3118", 0.15),
+      // Its own smoked glass chimney, lit from inside by the wick (update() dims it).
+      globe: c.mat("guest_tent_lamp_glass", "#6b5a3c", 0.25),
     };
+    m.globe.emissiveColor = new Color3(1, 0.68, 0.36);
     const flame = c.mat("guest_tent_flame", "#000000", 1);
     flame.emissiveColor = new Color3(1, 0.62, 0.26);
     flame.unlit = true;
@@ -97,10 +102,11 @@ export class GuestTent {
     ember.emissiveColor = new Color3(0.9, 0.22, 0.05);
     ember.unlit = true;
 
-    this.buildFrame(m.bamboo, m.black);
-    this.buildRoof(m.linen, m.black);
+    this.buildFrame(m.bamboo, m.linen, m.rattan);
+    this.buildRoof(m.linen, m.aged);
+    this.buildThatch(m.thatch);
     this.flap = this.buildFlap(m.linen);
-    this.buildBackCloth(m.linen, m.black);
+    this.buildBackCloth(m.linen, m.aged);
     for (const [k, x] of TABLES.entries()) this.buildTable(k, x, m, flame, ember);
 
     // The lantern hangs from the ridge between the tables, on a rattan cord.
@@ -115,14 +121,20 @@ export class GuestTent {
       0.006,
       m.rattan,
     );
-    c.cylinder(this.lantern, "guest_tent_lantern_cap", 0.12, 0.04, [0, -0.64, 0], m.black);
+    // A tin oil lamp: a wire bail, a vented cap, a glass chimney over the wick,
+    // and the tin fount below it.
+    c.ring(this.lantern, "guest_tent_lantern_bail", 0.16, 0.004, [0, -0.7, 0], m.tin).rotation.x =
+      Math.PI / 2;
+    c.cylinder(this.lantern, "guest_tent_lantern_cap", 0.1, 0.035, [0, -0.66, 0], m.tin);
     this.globe = c.sphere(
       this.lantern,
       "guest_tent_lantern_globe",
-      [0.19, 0.23, 0.19],
-      [0, -0.78, 0],
+      [0.11, 0.17, 0.11],
+      [0, -0.77, 0],
       m.globe,
     );
+    c.cylinder(this.lantern, "guest_tent_lantern_collar", 0.09, 0.02, [0, -0.86, 0], m.tin);
+    c.sphere(this.lantern, "guest_tent_lantern_fount", [0.15, 0.08, 0.15], [0, -0.9, 0], m.tin);
     this.light = new PointLight("guest_tent_lantern_light", Vector3.Zero(), scene);
     this.light.parent = this.globe;
     this.light.diffuse = new Color3(1, 0.7, 0.42);
@@ -151,7 +163,7 @@ export class GuestTent {
     return stand;
   }
 
-  private buildFrame(bamboo: PBRMaterial, black: PBRMaterial): void {
+  private buildFrame(bamboo: PBRMaterial, band: PBRMaterial, rattan: PBRMaterial): void {
     const c = this.c;
     const zs = [Z0, (Z0 + Z1) / 2, Z1];
     for (const x of [X0, X1])
@@ -164,8 +176,11 @@ export class GuestTent {
           [x, (EAVE + 0.1) / 2, z],
           bamboo,
         );
-        // A strip of black cloth knotted round every post, as on the pavilion.
-        c.cylinder(this.root, "guest_tent_post_mourning_band", 0.1, 0.16, [x, 1.55, z], black);
+        // A strip of white cotton knotted round every post, the colour of mourning.
+        c.cylinder(this.root, "guest_tent_post_mourning_band", 0.1, 0.16, [x, 1.55, z], band);
+        // Rattan lashed where the post meets the eave plate.
+        for (const y of [EAVE - 0.06, EAVE + 0.02])
+          c.cylinder(this.root, "guest_tent_lashing", 0.098, 0.035, [x, y, z], rattan);
         this.solid([0.12, EAVE, 0.12], [x, EAVE / 2, z]);
       }
     for (const z of [Z0, Z1])
@@ -181,8 +196,8 @@ export class GuestTent {
     }
   }
 
-  /** Two sagging cloth slopes, white, the back one torn open at its north corner. */
-  private buildRoof(linen: PBRMaterial, black: PBRMaterial): void {
+  /** The white lining under the thatch, sagging, the back one torn at its north corner. */
+  private buildRoof(linen: PBRMaterial, valance: PBRMaterial): void {
     const half = (X1 - X0) / 2 + 0.3;
     for (const side of [-1, 1]) {
       const torn = side < 0;
@@ -203,7 +218,7 @@ export class GuestTent {
         // A ragged hole where the cloth has torn away from the eave.
         torn ? (u, v) => u > 0.78 && v > 0.42 + 0.25 * Math.sin(u * 37) ** 2 : undefined,
       );
-      // A scalloped black valance along each eave.
+      // A scalloped valance of older cotton along each eave.
       this.cloth(
         `guest_tent_valance_${side}`,
         (u, v) => {
@@ -213,7 +228,7 @@ export class GuestTent {
         },
         90,
         2,
-        black,
+        valance,
         torn ? (u) => u > 0.8 : undefined,
       );
     }
@@ -244,8 +259,8 @@ export class GuestTent {
     return hinge;
   }
 
-  /** The back wall, away from the pavilion: white cloth in folds, black at its posts. */
-  private buildBackCloth(linen: PBRMaterial, black: PBRMaterial): void {
+  /** The back wall, away from the pavilion: white cloth in folds, gathered at its posts. */
+  private buildBackCloth(linen: PBRMaterial, gathered: PBRMaterial): void {
     this.cloth(
       "guest_tent_back_cloth",
       (u, v) => [
@@ -271,8 +286,136 @@ export class GuestTent {
         },
         8,
         16,
-        black,
+        gathered,
       );
+  }
+
+  /**
+   * Palm thatch laid in overlapping courses over each slope, every course's lower
+   * edge ragged where the fronds end, and a capping of bent fronds on the ridge.
+   */
+  private buildThatch(thatch: PBRMaterial): void {
+    const r = seededRandom(4433);
+    const half = (X1 - X0) / 2 + 0.55;
+    const drop = RIDGE - EAVE + 0.36;
+    const run = Math.hypot(half, drop);
+    const za = Z0 - 0.55,
+      zb = Z1 + 0.55;
+    const cols = Math.round((zb - za) / 0.06);
+    for (const side of [-1, 1]) {
+      // Along the slope from the ridge (d = 0) to the eave edge (d = run), lifted off it.
+      const nx = (side * drop) / run,
+        ny = half / run;
+      const at = (z: number, d: number, lift: number): XYZ => [
+        XC + (side * half * d) / run + nx * lift,
+        RIDGE + 0.12 - (drop * d) / run + ny * lift,
+        z,
+      ];
+      const positions: number[] = [],
+        uvs: number[] = [],
+        indices: number[] = [];
+      let course = 0;
+      for (let d = run; d > 0.12; d -= 0.21, course++) {
+        const base = positions.length / 3;
+        for (let i = 0; i <= cols; i++) {
+          const z = za + ((zb - za) * i) / cols + (r() - 0.5) * 0.015;
+          const low = d + r() * 0.07 + 0.03 * Math.sin(i * 0.7 + course);
+          for (const [dd, lift] of [
+            [low, 0.13 + 0.01 * (i % 3)],
+            [low - 0.25, 0.1],
+            [low - 0.55, 0.075],
+          ] as const) {
+            positions.push(...at(z, dd, lift));
+            uvs.push(z * 0.9, dd * 0.9);
+          }
+        }
+        for (let i = 0; i < cols; i++) {
+          const q = base + i * 3;
+          if (side > 0)
+            indices.push(
+              q,
+              q + 3,
+              q + 1,
+              q + 1,
+              q + 3,
+              q + 4,
+              q + 1,
+              q + 4,
+              q + 2,
+              q + 2,
+              q + 4,
+              q + 5,
+            );
+          else
+            indices.push(
+              q,
+              q + 1,
+              q + 3,
+              q + 1,
+              q + 4,
+              q + 3,
+              q + 1,
+              q + 2,
+              q + 4,
+              q + 2,
+              q + 5,
+              q + 4,
+            );
+        }
+      }
+      this.customMesh(`guest_tent_thatch_${side}`, positions, uvs, indices, thatch);
+      // Fronds frayed from the eave course, hanging.
+      for (let k = 0; k < 60; k++) {
+        const z = za + r() * (zb - za);
+        const top = at(z, run + 0.02, 0.12);
+        const length = 0.06 + r() * 0.18;
+        this.c.tube(
+          this.root,
+          "guest_tent_thatch_fray",
+          [top, [top[0] + side * 0.03, top[1] - length, top[2] + (r() - 0.5) * 0.04]],
+          0.005,
+          thatch,
+        );
+      }
+    }
+    // The ridge capping: fronds bent over the ridge pole.
+    const positions: number[] = [],
+      uvs: number[] = [],
+      indices: number[] = [];
+    for (let i = 0; i <= cols; i++) {
+      const z = za + ((zb - za) * i) / cols;
+      for (let j = 0; j <= 6; j++) {
+        const a = (j / 6 - 0.5) * 2.4;
+        const rr = 0.26 + (j === 0 || j === 6 ? r() * 0.04 : 0);
+        positions.push(XC + Math.sin(a) * rr, RIDGE + 0.17 + Math.cos(a) * rr * 0.6, z);
+        uvs.push(z * 0.9, j / 6);
+      }
+    }
+    for (let i = 0; i < cols; i++)
+      for (let j = 0; j < 6; j++) {
+        const q = i * 7 + j;
+        indices.push(q, q + 1, q + 7, q + 1, q + 8, q + 7);
+      }
+    this.customMesh("guest_tent_thatch_ridge", positions, uvs, indices, thatch);
+  }
+
+  private customMesh(
+    name: string,
+    positions: number[],
+    uvs: number[],
+    indices: number[],
+    material: PBRMaterial,
+  ): Mesh {
+    const data = new VertexData();
+    data.positions = positions;
+    data.indices = indices;
+    data.uvs = uvs;
+    const normals: number[] = [];
+    VertexData.ComputeNormals(positions, indices, normals);
+    data.normals = normals;
+    const mesh = new Mesh(name, this.scene);
+    data.applyToMesh(mesh);
+    return this.c.finish(mesh, this.root, [0, 0, 0], material);
   }
 
   private buildTable(
@@ -285,78 +428,83 @@ export class GuestTent {
     const c = this.c;
     const t = c.root(`guest_tent_table_${k}`, [x, 0, TABLE_Z], this.root);
     const r = seededRandom(4410 + k);
-    c.box(
-      t,
-      "guest_table_top",
-      [TABLE_WIDTH, 0.04, TABLE_LENGTH],
-      [0, TABLE_HEIGHT - 0.02, 0],
-      m.wood,
-    );
+    // A raised bamboo platform: a frame of poles on short posts, split bamboo
+    // laid across it, a reed mat spread on top where the guests sat.
+    const hw = TABLE_WIDTH / 2,
+      hl = TABLE_LENGTH / 2;
     for (const sx of [-1, 1])
-      for (const sz of [-1, 1])
-        c.box(
+      for (const sz of [-1, 0, 1])
+        c.cylinder(
           t,
-          "guest_table_leg",
-          [0.06, TABLE_HEIGHT - 0.04, 0.06],
-          [sx * 0.33, (TABLE_HEIGHT - 0.04) / 2, sz * 1.4],
-          m.wood,
+          "guest_platform_post",
+          0.07,
+          TABLE_HEIGHT - 0.04,
+          [sx * (hw - 0.05), (TABLE_HEIGHT - 0.04) / 2, sz * (hl - 0.06)],
+          m.bamboo,
         );
-    // A white cloth laid over it, creased, hanging in folds down the long sides.
-    const clothY = TABLE_HEIGHT + 0.004,
-      hw = TABLE_WIDTH / 2 + 0.02,
-      hl = TABLE_LENGTH / 2 + 0.03;
+    for (const sx of [-1, 1])
+      c.tube(
+        t,
+        "guest_platform_rail",
+        [
+          [sx * (hw - 0.04), TABLE_HEIGHT - 0.06, -hl],
+          [sx * (hw - 0.04), TABLE_HEIGHT - 0.06, hl],
+        ],
+        0.035,
+        m.bamboo,
+      );
+    for (let i = 0; i < 16; i++) {
+      const sx = -hw + 0.03 + ((TABLE_WIDTH - 0.06) * i) / 15;
+      c.tube(
+        t,
+        "guest_platform_slat",
+        [
+          [sx, TABLE_HEIGHT - 0.025, -hl - 0.03],
+          [sx + (r() - 0.5) * 0.01, TABLE_HEIGHT - 0.025, hl + 0.03],
+        ],
+        0.017,
+        m.bamboo,
+      );
+    }
     this.cloth(
-      "guest_table_cloth",
-      (u, v) => [(v - 0.5) * 2 * hw, clothY + 0.003 * Math.sin(u * 61 + v * 7), (u - 0.5) * 2 * hl],
-      40,
+      "guest_platform_mat",
+      (u, v) => [
+        (v - 0.5) * (TABLE_WIDTH - 0.08),
+        TABLE_HEIGHT + 0.004 + 0.003 * Math.sin(u * 37 + v * 5),
+        (u - 0.5) * (TABLE_LENGTH - 0.12),
+      ],
+      30,
       6,
-      m.linen,
+      m.mat,
       undefined,
       t,
     );
-    for (const sx of [-1, 1])
-      this.cloth(
-        "guest_table_cloth_drop",
-        (u, v) => {
-          const fold = Math.sin(u * 47 + sx) * (0.008 + 0.025 * v);
-          return [
-            sx * (hw + 0.004 + fold),
-            clothY - (0.24 + 0.05 * Math.sin(u * 17 + sx * 2) ** 2) * v,
-            (u - 0.5) * 2 * hl,
-          ];
-        },
-        60,
-        6,
-        m.linen,
-        undefined,
-        t,
-      );
     this.solid([TABLE_WIDTH, TABLE_HEIGHT, TABLE_LENGTH], [x, TABLE_HEIGHT / 2, TABLE_Z]);
-
-    // Benches either side; on the far table the inner one has gone over.
-    for (const side of [-1, 1]) {
-      const fallen = k === 1 && side > 0;
-      const bench = c.root(`guest_bench_${k}_${side}`, [side * BENCH_OFFSET, 0, 0], t);
-      c.box(bench, "guest_bench_seat", [0.28, 0.04, 2.8], [0, 0.43, 0], m.bench);
-      for (const sz of [-1.2, 1.2])
-        c.box(bench, "guest_bench_leg", [0.24, 0.41, 0.05], [0, 0.205, sz], m.bench);
-      if (fallen) {
-        bench.position.set(side * (BENCH_OFFSET + 0.32), 0.14, 0.15);
-        bench.rotation.set(0, 0.06, -Math.PI / 2);
-        this.solid([0.45, 0.3, 2.8], [x + side * (BENCH_OFFSET + 0.32), 0.15, TABLE_Z]);
-      } else this.solid([0.3, 0.45, 2.8], [x + side * BENCH_OFFSET, 0.225, TABLE_Z]);
+    // Low round trays down the middle, the guests' places round them.
+    for (const z of [-0.75, 0.75]) {
+      c.cylinder(t, "guest_tray", 0.62, 0.025, [0, TABLE_HEIGHT + 0.02, z], m.wood);
+      c.ring(t, "guest_tray_rim", 0.62, 0.02, [0, TABLE_HEIGHT + 0.035, z], m.rattan);
+    }
+    // A low stool by the far platform, knocked over.
+    if (k === 1) {
+      const stool = c.root("guest_fallen_stool", [hw + 0.45, 0.12, 0.4], t);
+      c.box(stool, "guest_stool_seat", [0.3, 0.03, 0.22], [0, 0, 0], m.bench);
+      for (const sx of [-1, 1])
+        c.box(stool, "guest_stool_leg", [0.03, 0.22, 0.2], [sx * 0.12, -0.11, 0], m.bench);
+      stool.rotation.set(0, 0.5, Math.PI / 2);
+      this.solid([0.3, 0.3, 0.3], [x + hw + 0.45, 0.15, TABLE_Z + 0.4]);
     }
 
     // Places for eight: bowls of rice, cups of tea gone cold. Some cups are over.
-    const top = TABLE_HEIGHT + 0.006;
+    const top = TABLE_HEIGHT + 0.033;
     for (const side of [-1, 1])
       for (const z of [-1.05, -0.35, 0.35, 1.05]) {
-        const px = side * 0.24 + (r() - 0.5) * 0.03,
-          pz = z + (r() - 0.5) * 0.06;
+        const px = side * 0.16 + (r() - 0.5) * 0.03,
+          pz = z * 0.9 + (r() - 0.5) * 0.06;
         this.vessel(t, "guest_bowl", 0.13, 0.055, 0.05, [px, top + 0.025, pz], m.porcelain);
         c.sphere(t, "guest_bowl_rice", [0.11, 0.04, 0.11], [px, top + 0.05, pz], m.rice);
-        const cx = px - side * 0.13,
-          cz = pz + 0.12;
+        const cx = px - side * 0.1,
+          cz = pz + 0.11;
         const over = r() < 0.3;
         const cup = this.vessel(
           t,
@@ -381,8 +529,9 @@ export class GuestTent {
           spill.scaling.z = 0.55;
         } else c.cylinder(t, "guest_tea", 0.048, 0.002, [cx, top + 0.046, cz], m.tea);
       }
-    // A teapot in the middle of each table.
-    const pot = c.sphere(t, "guest_teapot", [0.16, 0.12, 0.16], [0, top + 0.06, 0.02], m.porcelain);
+    // A clay teapot between the trays.
+    const pot = c.sphere(t, "guest_teapot", [0.15, 0.11, 0.15], [0, top + 0.05, 0.02], m.clay);
+    c.cylinder(t, "guest_teapot_lid", 0.06, 0.02, [0, top + 0.11, 0.02], m.clay);
     pot.rotation.y = r() * 3;
     c.tube(
       t,
@@ -392,7 +541,7 @@ export class GuestTent {
         [0.13, top + 0.1, 0.02],
       ],
       0.012,
-      m.porcelain,
+      m.clay,
     );
     c.ring(t, "guest_teapot_handle", 0.09, 0.012, [-0.08, top + 0.07, 0.02], m.rattan).rotation.x =
       Math.PI / 2;

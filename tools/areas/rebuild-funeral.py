@@ -102,6 +102,12 @@ before = set(bpy.data.objects)
 print(f'Rebuilding {len(old_names)} funeral nodes', flush=True)
 ns['funeral'](m)
 ns['funeral_details'](m)
+# funeral_details() draws plain umbrellas; the rural pass owns the grounded,
+# pleated ones and their post binding (rural_detail.py, tests/unit/ruralPropsAsset).
+for obj in [o for o in coll.objects if o not in before and re.fullmatch(r'umbrella_\d+(_handle)?', o.name)]:
+    bpy.data.objects.remove(obj, do_unlink=True)
+from rural_detail import umbrellas
+umbrellas(coll)
 created = {obj for obj in coll.objects if obj not in before}
 # funeral_details() also draws the plain tent cobwebs; keep the finished silk ones.
 for obj in [o for o in created if re.fullmatch(r'tent_web_\d+\.\d+', o.name)]:
