@@ -38,7 +38,15 @@ For each item, mark **OK**, **Change** (say what) or **Remove**. Items marked **
 - The Pali formulas written in Khmer on props, listed in the `KHMER` inventory of the area tools.
 
 ### New lost-garden zones
-The Sunken Tank's drowned images and the Bone Terrace's altar will be added here once built.
+The Sunken Tank's drowned images will be added here once reviewed for build.
+
+The Bone Terrace (`terrace()` in `tools/areas/pagoda_lost_garden.py`, pieces in `tools/areas/pagoda_rituals.py`), all presented as sorcery, not temple practice:
+- Rows of human skulls on the brick tiers, heaps of skulls and long bones in the back corners, and loose bones underfoot.
+- Skulls jammed on bamboo stakes, wound with red cord and tagged, at the way in and either side of the altar.
+- A body rolled in a sleeping mat and tied with cord, lying on a bamboo bier with its hair spilling out, a small oil lamp at its head. Is the mat-and-bier treatment of the poor dead right for 1930s Cambodia?
+- Cremation remains left in the open (ash, charred logs, a skull in the ash), and an open grave with a spade in the spoil beside them.
+- White funeral cloth torn into rags and hung in the trees.
+- A machete laid on the sorcery altar, and red candles burnt down on the bricks.
 
 ## Episode 3: The Drowned Village
 

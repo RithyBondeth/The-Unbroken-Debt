@@ -17,10 +17,12 @@ import { NIGHT_LOOK, DAWN_LOOK } from "@/render/nightLook";
 import { LowGroundMist } from "@/render/LowGroundMist";
 import type { MistPocket } from "@/render/mist";
 
-const POND_MIST: MistPocket[] = [
+const GROUND_MIST: MistPocket[] = [
   { x: -8, z: -25, radiusX: 9, radiusZ: 12, baseY: 0.04, height: 1, density: 0.5 },
   { x: 8, z: -25, radiusX: 9, radiusZ: 12, baseY: 0.04, height: 1, density: 0.5 },
   { x: -8, z: 0, radiusX: 6, radiusZ: 10, baseY: 0.02, height: 0.55, density: 0.2 },
+  // The Bone Terrace: mist lying shin-deep over the bricks and round the skulls.
+  { x: 47, z: 33, radiusX: 12, radiusZ: 7.5, baseY: 0.08, height: 0.75, density: 0.42 },
 ];
 /** Episode 1's calibrated lamp, surfaces, grade and fog, under a clearer moon. */
 export class PagodaLights {
@@ -134,11 +136,11 @@ export class PagodaLights {
     if (g.pipeline.fog) {
       g.pipeline.fog.density = 0.015;
       g.pipeline.fog.ambient.set(...NIGHT_LOOK.fogAmbient);
-      g.pipeline.fog.setMistPockets(POND_MIST);
+      g.pipeline.fog.setMistPockets(GROUND_MIST);
     } else {
       g.scene.fogDensity = 0.015;
       g.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
-      this.mist = new LowGroundMist(g.scene, POND_MIST);
+      this.mist = new LowGroundMist(g.scene, GROUND_MIST);
     }
   }
   update(dt: number, flame: number): void {

@@ -6,6 +6,7 @@ stripped to brick, with rows of damaged Buddha images; worn-out spirit houses le
 under old trees; sema boundary stones round an ordination hall; lotus-bud temple walls.
 Original geometry: no photograph is used as a texture.
 """
+import fit
 import math
 from mathutils import Matrix
 
@@ -182,7 +183,7 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
             pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r, .04 - .03 * i))
         strands.append(pts)
         thick = rng.uniform(.035, .085)
-        root = tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick)
+        root = fit.wrap(tube(f'{name}_root_{j}', coll, pts, thick * .3, m['bark'], sides=10, radius_end=thick), cx, cy, surface, top)
         for f in root.data.polygons:
             f.use_smooth = True
         parts.append(root)
@@ -197,7 +198,7 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
                 z = p[2] - k * rng.uniform(.06, .14)
                 rr = surface(max(z, .06)) + .012
                 twig.append((cx + math.cos(ra + da * k / 4) * rr, cy + math.sin(ra + da * k / 4) * rr, max(z, .04)))
-            parts.append(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003))
+            parts.append(fit.wrap(tube(f'{name}_rootlet_{j}', coll, twig, .012, m['bark'], sides=5, radius_end=.003), cx, cy, surface, top))
     # Neighbouring roots fuse into the lattice that makes figs look like they crawl.
     for j in range(n):
         a, b = strands[j], strands[(j + 1) % n]
@@ -215,24 +216,32 @@ def fig_roots(coll, m, name, cx, cy, top, surface, rng, n=10, spread=1.1, around
                 z = p[2] * (1 - t) + q[2] * t - .05 * math.sin(math.pi * t)
                 rr = surface(max(z, .06)) + .016
                 link.append((cx + math.cos(ang) * rr, cy + math.sin(ang) * rr, z))
-            parts.append(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014))
+            parts.append(fit.wrap(tube(f'{name}_web_{j}', coll, link, .018, m['bark'], sides=6, radius_end=.014), cx, cy, surface, top))
     if crown:
         lean_a = rng.uniform(0, math.tau)
         trunk = [(cx + math.cos(lean_a) * .4 * t * t, cy + math.sin(lean_a) * .4 * t * t, top + crown * t) for t in np.linspace(0, 1, 6)]
-        parts.append(tube(f'{name}_fig_trunk', coll, trunk, .16, m['bark'], sides=8, radius_end=.05))
+        crown_parts = [tube(f'{name}_fig_trunk', coll, trunk, .16, m['bark'], sides=8, radius_end=.05)]
+        parts += crown_parts
         leaves = []
         for c in range(int(6 + crown * 3)):
             p = trunk[-1]
             leaves.append(((p[0] + rng.normal(0, crown * .45), p[1] + rng.normal(0, crown * .45), p[2] + rng.normal(0, crown * .25)),
                            rng.uniform(1.4, 2.4) * (crown / 3 + .4), rng.uniform(0, math.pi), 0, int(rng.integers(0, 3))))
-        parts.append(canopy_sprays(f'{name}_fig_leaves', coll, leaves, forest_materials()['leaf'], rng, per=12))
+        crown_parts.append(canopy_sprays(f'{name}_fig_leaves', coll, leaves, forest_materials()['leaf'], rng, per=12))
+        parts.append(crown_parts[-1])
     for j in range(int(hang)):
         a = rng.uniform(0, math.tau)
         r = surface(top) + rng.uniform(.1, .6)
         p = (cx + math.cos(a) * r, cy + math.sin(a) * r, top + crown * .6)
         bottom = max(2.3, top - rng.uniform(1, 3))
-        parts.append(tube(f'{name}_aerial_{j}', coll, [p, (p[0] + .05, p[1], (p[2] + bottom) / 2), (p[0] + .04, p[1] + .03, bottom)],
-                          .015, m['bark'], sides=4, radius_end=.006))
+        if not crown:
+            continue  # aerial roots hang from a living tree; with none, they would hang from air
+        aerial = tube(f'{name}_aerial_{j}', coll, [p, (p[0] + .05, p[1], (p[2] + bottom) / 2), (p[0] + .04, p[1] + .03, bottom)],
+                      .015, m['bark'], sides=4, radius_end=.006)
+        fit.crown([aerial], cx, cy, top)
+        parts.append(aerial)
+    if crown:
+        fit.crown(crown_parts, cx, cy, top)
     return parts
 
 
@@ -274,12 +283,12 @@ def incense_pot(coll, m, name, x, y, z, rng):
         h = rng.uniform(.04, .2)
         lean_ = rng.normal(0, .03, 2)
         parts.append(tube(f'{name}_stick_{j}', coll, [(bx, by, z + .09), (bx + lean_[0], by + lean_[1], z + .1 + h)], .003, m['red_cloth'], sides=3))
-    return parts
+    return fit.rest(parts)
 
 
 def dead_garland(coll, m, name, cx, cy, z, r, rng):
     pts = [(cx + r * math.cos(t), cy + r * math.sin(t) * .6, z + .015 * math.sin(t * 5)) for t in np.linspace(0, math.tau, 19)]
-    return [tube(name, coll, pts, .025, m['garland_dead'], sides=5)]
+    return fit.rest([tube(name, coll, pts, .025, m['garland_dead'], sides=5)])
 
 
 def candles(coll, m, name, x, y, z, rng):
@@ -287,7 +296,7 @@ def candles(coll, m, name, x, y, z, rng):
     for j in range(int(rng.integers(2, 5))):
         bx, by = x + rng.normal(0, .06), y + rng.normal(0, .04)
         h = rng.uniform(.015, .08)
-        parts.append(lathe(f'{name}_{j}', coll, [(0, 0), (.012, 0), (.012, h), (.016, h + .004), (0, h + .002)], bx, by, z, m['wax'], segments=8))
+        parts.append(fit.rest([lathe(f'{name}_{j}', coll, [(0, 0), (.012, 0), (.012, h), (.016, h + .004), (0, h + .002)], bx, by, z, m['wax'], segments=8)])[0])
     return parts
 
 

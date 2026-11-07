@@ -438,8 +438,8 @@ for j in range(6):
     for o in seated_image(AREA,m,'terrace_image_'+str(j),px,-25.5,math.pi,s,headless=j in (0,2,4),damage=j==3,seed=j):
         o.location.z=.4+.13*s
     if j%2==0:piece(AREA,'image_cloth','terrace_image_sash_'+str(j),px,-25.5,.4+.13*s,math.pi,s)
-    incense_pot(AREA,m,'terrace_incense_'+str(j),px+.25,-24.92,.4,ruin_rng)
-    if j%3==1:candles(AREA,m,'terrace_candle_'+str(j),px-.25,-24.95,.4,ruin_rng)
+    incense_pot(AREA,m,'terrace_incense_'+str(j),px+.25,-25.1,.4,ruin_rng)
+    if j%3==1:candles(AREA,m,'terrace_candle_'+str(j),px-.25,-25.12,.4,ruin_rng)
 # Sema boundary stones mark the hall's consecrated ground.
 for j,(px,py) in enumerate([(16.4,-5.2),(16.4,3.5),(27.6,-6.8),(27.6,1),(27.6,8.6),(22,10),(17.6,10.2)]):
     sema_stone(AREA,m,'sema_'+str(j),px,py,math.atan2(py-1,px-22)+math.pi/2)
@@ -450,7 +450,8 @@ for j,(px,py) in enumerate(forgotten):
     objs=memorial(AREA,m,px,py,200+j,ruin_rng.uniform(2.3,3.5),'forgotten_'+str(j),ruin_rng)
     lean(objs,px,py,ruin_rng.normal(0,.05),ruin_rng.normal(0,.05))
     if j%3==0:
-        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,crown=ruin_rng.uniform(1.8,3.2),hang=3)
+        crown=ruin_rng.uniform(1.8,3.2)  # a fig tree stands only on a snapped stupa
+        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,crown=crown if 'broken' in objs[0].data.name else 0,hang=3)
     collider('forgotten_stupa_'+str(j),AREA,px-.7,px+.7,py-.7,py+.7,0,3.2,'stone')
 spirit_house(AREA,m,'roadside_spirit_house',4.8,-37.6,math.pi,ruin_rng)
 # Rituals on the approach: a boundary of stakes and red cord both sides of the track,
@@ -524,8 +525,12 @@ for k in range(15):
     x,z=80+(-1 if k%2 else 1)*rng.uniform(5,10),rng.uniform(-15,15)
     tropical_tree(AREA,m,x,z,rng.uniform(8,13),100+k,rng,collision=False)
 for x in [79.5,80,80.5]:lathe('memory_shrine_stone',AREA,[(.3,0),(.35,.4),(.25,.7),(.05,.9)],x,8,0,m['stone'])
+cube('memory_shrine_plinth',80,7,0,.7,.55,.4,m['stone'],True)  # the box stands on it, not on air
 usable('memory_shrine',80,7,.4,lambda:cube('memory_betel_box',80,7,.4,.5,.35,.2,m['silver']))
 lamp('memory',80,8,.6)
+# Sit cords, fig roots and offerings on the real trunks, stupas and plinths (tools/areas/fit.py).
+import fit
+fit.fit_dressing(AREA)
 # The hungry dead of the garden are their own rigged asset: tools/ep2/build-ghosts.py.
 # Babylon's glTF import mirrors X. Compensate once, on the authored world root,
 # so gameplay, notebook and Blender's named coordinates all use X east/Z south.
