@@ -21,12 +21,15 @@ import numpy as np
 
 from forest import tropical_tree
 from forest_detail import grass_geometry, understory
-from kit import box, collider, empty, mesh_object, plain, tube
+from khmer import place
+from kit import box, collider, empty, lathe, library_material, mesh_object, plain, tube
 from pagoda_architecture import temple_roof
 from pagoda_forest import giant
 from pagoda_kit import piece
-from pagoda_rituals import (bound_trunk, boundary_stakes, hanging_doll, marigold_garland, red_string_web, skull,
-                            sorcery_altar)
+from pagoda_props import leaf_litter
+from pagoda_rituals import (bier, bound_trunk, boundary_stakes, candle_cluster, drop_protos, funeral_tatter, hanging_doll,
+                            long_bone, marigold_garland, place_copy, pyre_remains, red_string_web, rib, skull, skull_stake,
+                            skull_variants, sorcery_altar, wrapped_dead)
 from pagoda_ruin import fig_roots, guardian, lean, rubble, seated_image, spirit_house, temple_wall
 from pagoda_stupa import memorial
 
@@ -145,8 +148,10 @@ def court(coll, m, rect, lamp):
             collider('court_stupa_' + str(k), coll, px - .7, px + .7, py - .7, py + .7, 0, 3.2, 'stone')
             placed.append((px, py))
             if k % 4 == 0:
+                # A fig tree stands only on a snapped stupa; a whole one keeps just the roots.
+                crown = rng.uniform(1.4, 2.2)
                 fig_roots(coll, m, 'court_fig_' + str(k), px, py, 2.4, lambda z: .6 if z < 1.9 else .45, rng, n=7, spread=.9,
-                          crown=rng.uniform(1.4, 2.2))
+                          crown=crown if 'broken' in objs[0].data.name else 0)
     # Standing walls that end lanes: walk one, and you have to come back.
     for j, (a, b) in enumerate([((-41, -10), (-41, 2)), ((-46.5, 6), (-46.5, 17)), ((-60, -12), (-60, 1)),
                                 ((-65.5, 5), (-65.5, 16)), ((-71, -14), (-71, -2))]):
@@ -367,46 +372,164 @@ def gallery(coll, m, rect, lamp):
 # ------------------------------------------------------------------ Bone Terrace
 
 
+def _tier_collider(coll, name, x0, x1, y0, y1, z0, z1, run=.55):
+    """A raised tier's collider with its edges sloped inwards over `run` metres. Sora's capsule
+    rides over only about 10 cm, so a square-edged 14 cm tier is a wall to her; on the slope
+    her feet sink into the bricks for a step, which the first-person view never shows."""
+    verts = [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
+             (x0 + run, y0 + run, z1), (x1 - run, y0 + run, z1), (x1 - run, y1 - run, z1), (x0 + run, y1 - run, z1)]
+    faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    mesh_object('col_' + name, coll, verts, faces, surface='stone')
+
+
+def _raise(objs, dz):
+    for o in objs:
+        o.location.z += dz
+    return objs
+
+
+def _bone_heap(coll, m, name, x, y, z, rng, skulls, bones, r=.55):
+    """Skulls and long bones heaped against each other, as bones are when someone has
+    gathered them out of the ground and piled them where they will be seen."""
+    k = 0
+    for layer, (count, radius, h) in enumerate([(9, r * .78, 0), (6, r * .45, .12), (3, r * .2, .23), (1, 0, .33)]):
+        for j in range(count):
+            a = math.tau * j / max(count, 1) + rng.normal(0, .2) + layer
+            px, py = x + math.cos(a) * radius, y + math.sin(a) * radius
+            yaw = a + math.pi / 2 + rng.normal(0, .9)
+            place_copy(coll, skulls[k % len(skulls)], px, py, z + h, yaw, (rng.normal(0, .35), rng.normal(0, .35)))
+            k += 1
+    for j in range(12):
+        a = rng.uniform(0, math.tau)
+        d = r * rng.uniform(.6, 1.15)
+        lean = rng.uniform(.15, .7)
+        place_copy(coll, bones[j % len(bones)], x + math.cos(a) * d, y + math.sin(a) * d, z + rng.uniform(.0, .08),
+                   a + math.pi / 2 + rng.normal(0, .4), (lean * math.cos(a + math.pi / 2), lean * math.sin(a + math.pi / 2)))
+    collider(name, coll, x - r * .8, x + r * .8, y - r * .8, y + r * .8, z, z + .45, 'stone')
+
+
 def terrace(coll, m, rect, lamp):
     """The way ends here. A brick terrace with a sorcerer's altar, ringed with skulls on low
-    tiers, bones underfoot and red cord overhead. Nothing here is a temple's practice."""
+    tiers, bones underfoot and red cord overhead. Skulls on stakes warn at the way in; bones
+    are heaped at the back corners; a body rolled in a mat lies on a bier by a burnt-out
+    pyre, and a fresh grave waits for it beyond the bricks. Funeral cloth hangs in rags in
+    the trees. Nothing here is a temple's practice. (Advisor review: every item.)"""
     x0, x1, y0, y1 = rect
     rng = np.random.default_rng(5505)
     zone = Zone(coll, 'terrace')
-    # Old bone is the colour of the earth it has lain in, not of a clean white ball.
-    m = dict(m, bone=plain('M_ep2_bone_old', (.2, .165, .11), rough=.9))
+    # Old bone is stained the colour of the earth it lay in: grimy, with grain, never clean white.
+    m = dict(m, bone=library_material('clay_plaster', 'M_ep2_bone_old', colour=(.27, .22, .15), tile=.35))
     _ground(coll, m, 'earth_terrace', x0, x1, y0, y1)
     cx, cy = 47.0, -33.0
-    for i, (half_x, half_y, top) in enumerate([(11, 6.2, .14), (8.2, 4.6, .28)]):
-        _slab(coll, m, f'terrace_tier_{i}', cx - half_x, cx + half_x, cy - half_y, cy + half_y, -.01, top, 'brick' if i else 'mould_grey', solid=True)
+    gate_x = sum(SALA_SOUTH_X) / 2
+    tiers = [(11, 6.2, -.01, .14), (8.2, 4.6, .13, .28)]
+    for i, (half_x, half_y, base, top) in enumerate(tiers):
+        _slab(coll, m, f'terrace_tier_{i}', cx - half_x, cx + half_x, cy - half_y, cy + half_y, -.01, top, 'brick' if i else 'mould_grey')
+        _tier_collider(coll, f'terrace_tier_{i}', cx - half_x, cx + half_x, cy - half_y, cy + half_y, base, top)
+    t0, t1 = tiers[0][3], tiers[1][3]
     sorcery_altar(coll, m, 'terrace_altar', cx, cy - 1.6, 0, rng)
     collider('terrace_altar', coll, cx - 1, cx + 1, cy - 2.4, cy - .8, 0, 1.2, 'stone')
+    # A machete laid across the altar.
+    knife = place(coll, 'machete', (cx + .05, cy - 1.84, .585), 0)
+    knife.rotation_euler = (math.pi / 2, 0, math.pi / 2 + .25)
+
+    skulls = skull_variants(coll, m, rng, n=6, prefix='terrace_skullv')
+    bones = [long_bone(coll, m, f'terrace_bonev_{k}', rng, length=L) for k, L in enumerate((.46, .4, .3))]
+
     # Skulls in rows along the back tiers, all facing the way in.
     k = 0
-    for row, (span, py, pz) in enumerate([(7.4, cy - 4.2, .28), (10, cy - 5.6, .14)]):
-        for px in np.arange(cx - span, cx + span + .01, .62):
-            if rng.random() < .3:
+    for row, (span, py, pz) in enumerate([(7.4, cy - 4.2, t1), (10, cy - 5.6, t0)]):
+        for px in np.arange(cx - span, cx + span + .01, .5):
+            if rng.random() < .22:
                 continue
             k += 1
-            skull(coll, m, 'terrace_skull_' + str(k), px + rng.normal(0, .08), py + rng.normal(0, .08), pz - rng.uniform(0, .04), math.pi + rng.normal(0, .5), rng)
+            place_copy(coll, skulls[k % len(skulls)], px + rng.normal(0, .07), py + rng.normal(0, .07), pz,
+                       math.pi + rng.normal(0, .45), (rng.normal(0, .1), rng.normal(0, .1)))
+    # Heaped bones in the two back corners.
+    for j, px in enumerate((cx - 7.3, cx + 7.3)):
+        _bone_heap(coll, m, f'terrace_heap_{j}', px, cy - 5.4, t0, rng, skulls, bones, r=.5)
+    # Loose bones underfoot: knuckles and splinters, long bones, ribs.
     for j in range(46):
         bx, by = rng.uniform(cx - 8, cx + 8), rng.uniform(cy - 4, cy + 4.4)
         a = rng.uniform(0, math.tau)
-        length = rng.uniform(.06, .22)
-        tube('terrace_bone', coll, [(bx, by, .3), (bx + math.cos(a) * length, by + math.sin(a) * length, .31)], rng.uniform(.007, .014), m['bone'], sides=5)
+        length = rng.uniform(.04, .16)
+        tube('terrace_bone', coll, [(bx, by, t1 + .012), (bx + math.cos(a) * length, by + math.sin(a) * length, t1 + .016)], rng.uniform(.006, .012), m['bone'], sides=5)
+    for j in range(16):
+        bx, by = rng.uniform(cx - 7.6, cx + 7.6), rng.uniform(cy - 4.2, cy + 4.2)
+        if abs(bx - cx) < 1.6 and by > cy - 2.6:
+            continue  # the walk up to the altar stays clear
+        place_copy(coll, bones[j % len(bones)], bx, by, t1 - .008, rng.uniform(0, math.tau), (0, rng.normal(0, .05)))
+    for j in range(14):
+        rib(coll, m, 'terrace_rib', rng.uniform(cx - 7.6, cx + 7.6), rng.uniform(cy - 4.2, cy + 4.2), t1, rng.uniform(0, math.tau), rng)
+
+    # The dead one, rolled in a mat on a bamboo bier, east of the altar. A little oil lamp
+    # burns at the head; whoever lit it has not gone far.
+    bx, by = cx + 5.6, cy + 1.8
+    bier(coll, m, 'terrace_bier', bx, by, t1, math.pi / 2 + .08)
+    wrapped_dead(coll, m, 'terrace_dead', bx, by, t1 + .088, math.pi / 2 + .08, rng)
+    collider('terrace_bier', coll, bx - 1.2, bx + 1.2, by - .4, by + .4, t1, t1 + .45, 'wood')
+    lamp('terrace_dead', bx - 1.55, by + .45, t1, 1.25)
+    candle_cluster(coll, m, 'terrace_dead_candles', bx - 1.5, by - .35, t1, rng, n=5, r=.16)
+    # Where another was burnt, west of the altar: ash, charred logs, a skull in the ash.
+    pyre_remains(coll, m, 'terrace_pyre', cx - 5.4, cy + 1.6, t1, rng, skulls[2])
+    jug = place(coll, 'jug_01', (cx - 4.1, cy + 2.6, t1 + .08), 40)
+    jug.rotation_euler = (math.pi / 2, 0, .7)
+    # A pot of bones tipped over at the west end of the low tier.
+    pot = place(coll, 'ceramic_pot', (cx - 10, cy + 3.4, t0 + .25), 0, .8)
+    pot.rotation_euler = (math.radians(78), 0, 2.2)
+    for j in range(3):
+        place_copy(coll, bones[j], cx - 9.4 + j * .18, cy + 2.7 - j * .1, t0 - .008, rng.uniform(1.6, 2.4))
+    place_copy(coll, skulls[4], cx - 9.1, cy + 2.4, t0, 2.6, (.3, 0))
+    place(coll, 'wooden_bowl_01', (cx - .9, cy - .55, t1), 0)
+    # Candles burnt down in their puddles in front of the altar and at the ends of the rows.
+    for j, (px, py) in enumerate([(cx - 1.9, cy - .5), (cx + 2.4, cy - .2), (cx - 7.1, cy - 3.7), (cx + 7.1, cy - 3.7)]):
+        candle_cluster(coll, m, f'terrace_candles_{j}', px, py, t1, rng)
+
+    # A grave dug in the earth past the east end of the tiers, the spade left in the spoil.
+    gx, gy = cx + 13.2, cy + .4
+    spoil = lathe('terrace_grave_spoil', coll, [(1.05, 0), (.9, .14), (.6, .3), (.25, .38), (0, .4)], 0, 0, 0, m['mud'], segments=16)
+    spoil.location, spoil.scale = (gx + 1.1, gy, -.02), (1, 1.5, 1)
+    _slab(coll, m, 'terrace_grave_pit', gx - .45, gx + .45, gy - 1, gy + 1, -.012, -.004, 'void')
+    collider('terrace_grave', coll, gx - .5, gx + 2.1, gy - 1.6, gy + 1.6, 0, .4, 'dirt')
+    spade = place(coll, 'rusted_spade_01', (gx + .9, gy - .5, .5), 0)
+    spade.rotation_euler = (math.radians(22), math.radians(-12), .5)
+
+    # The tiers are breaking up: brick heaps where corners have gone, roots over the bricks.
+    for j, (px, py, r, pz) in enumerate([(cx - 11, cy - 6.2, .9, 0), (cx + 11, cy + 6.2, .8, 0), (cx + 11, cy - 6.2, 1.1, 0),
+                                         (cx + 8.2, cy + 4.6, .6, t0), (cx - 8.2, cy - 4.6, .5, t0)]):
+        _raise(rubble(coll, m, f'terrace_rubble_{j}', px, py, r, 40, rng), pz)
+    place(coll, 'root_cluster_01', (cx + 12.4, cy - 6.8, -.05), 210, .75)
+    place(coll, 'dead_tree_trunk', (cx - 4, cy - 6.75, .06), 4)
+    for j, (px, py, rx, ry, pz) in enumerate([(cx - 9.6, cy + 4.6, 1.4, 1, t0), (cx + 6.6, cy - 3.6, 1.2, .7, t1), (cx + 9.8, cy + 5, 1.6, .9, t0)]):
+        _raise(leaf_litter(coll, m, f'terrace_litter_{j}', px, py, rx, ry, rng), pz)
+
+    # The way in: skulls on stakes either side of the path, past the old cord boundary.
+    for j, (side, py) in enumerate([(-1, y1 - 2.4), (1, y1 - 2.9), (-1, y1 - 4.2), (1, y1 - 4.4)]):
+        px = gate_x + side * rng.uniform(2.2, 2.6)
+        skull_stake(coll, m, f'terrace_skull_stake_{j}', skulls[j % len(skulls)], px, py, rng)
+        collider(f'terrace_skull_stake_{j}', coll, px - .07, px + .07, py - .07, py + .07, 0, 1.4, 'wood')
+    for j, px in enumerate((cx - 2.9, cx + 2.9)):
+        skull_stake(coll, m, f'terrace_altar_stake_{j}', skulls[(j + 3) % len(skulls)], px, cy - 3.2, rng, height=1.8)
+        collider(f'terrace_altar_stake_{j}', coll, px - .07, px + .07, cy - 3.27, cy - 3.13, 0, 1.8, 'wood')
+
     anchors = [(cx - 9, cy - 5, 3.2), (cx + 9, cy - 5, 3.4), (cx - 7, cy + 5, 3.1), (cx + 8, cy + 5, 3.3), (cx, cy - 3, 3.0), (cx - 3, cy + 2, 3.2)]
     for j, (px, py, _) in enumerate(anchors[:4]):
         giant(coll, m, px + (2.5 if px > cx else -2.5), py + (1.6 if py > cy else -1.6), rng.uniform(11, 15), 900 + j, rng, reach=1.5, collision=True)
     red_string_web(coll, m, 'terrace_web', anchors, rng, density=1.6)
-    boundary_stakes(coll, m, 'terrace_stakes', [(sum(SALA_SOUTH_X) / 2 + side * 2.2, y1 - 1.4 - t * 1.9) for side in (-1, 1) for t in range(2)], rng)
-    for j, (px, py) in enumerate([(cx - 3, cy - .2), (cx + 3, cy - .2)]):
-        hanging_doll(coll, m, 'terrace_doll_' + str(j), (px, py, 3.0), rng, drop=.9)
-    lamp('terrace_altar', cx + 1.5, cy - .6, .28, 2.0)
-    _edge_forest(coll, m, rect, rng, 920, gaps=[(sum(SALA_SOUTH_X) / 2, y1, 6)])
+    boundary_stakes(coll, m, 'terrace_stakes', [(gate_x + side * 2.2, y1 - 1.4 - t * 1.9) for side in (-1, 1) for t in range(2)], rng)
+    for j, (px, py, top, drop) in enumerate([(cx - 3, cy - .2, 3.0, .9), (cx + 3, cy - .2, 3.0, .9), (bx + .4, by + .2, 3.1, 1.5), (cx - 5.6, cy + 1.2, 3.0, 1.2)]):
+        hanging_doll(coll, m, 'terrace_doll_' + str(j), (px, py, top), rng, drop=drop)
+    # White funeral cloth torn into rags, caught high in the trees and on the cord.
+    for j, (px, py, top) in enumerate(anchors + [(cx - 12.6, cy + 2, 4.4), (cx + 12.2, cy + 1, 4.1), (cx + 1.5, cy + 6.4, 3.8), (gate_x - 1.2, y1 - 3.4, 3.6)]):
+        funeral_tatter(coll, m, f'terrace_tatter_{j}', px + rng.normal(0, .3), py + rng.normal(0, .3), top - .05, rng)
+    lamp('terrace_altar', cx + 1.5, cy - .6, t1, 2.0)
+    _edge_forest(coll, m, rect, rng, 920, gaps=[(gate_x, y1, 6)])
+    drop_protos(coll, skulls + bones)
 
     def clear(x, y):
-        return abs(x - cx) < 11.6 and abs(y - cy) < 6.8 or abs(x - sum(SALA_SOUTH_X) / 2) < 1.8
-    _growth(coll, m, 'terrace', rect, rng, 220, clear)
+        return (abs(x - cx) < 11.6 and abs(y - cy) < 6.8 or abs(x - gate_x) < 1.8
+                or abs(x - gx - .8) < 2 and abs(y - gy) < 2)
+    _growth(coll, m, 'terrace', rect, rng, 260, clear)
     return zone.close()
 
 

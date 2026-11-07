@@ -577,6 +577,8 @@ def kuti_furnishings(coll, m, x, y, floor, rng):
     # Robes drying on a bamboo pole along the east wall.
     px = x + 3.2
     objs.append(tube('kuti_robe_pole', coll, [(px, y + .3, f + 1.85), (px, y + 2.6, f + 1.85)], .025, m['bamboo'], sides=6))
+    for py in (y + .36, y + 2.54):  # short bamboo brackets lashed to the wall carry it
+        objs.append(tube('kuti_robe_bracket', coll, [(px - .02, py, f + 1.85), (x + 3.5, py, f + 1.85)], .018, m['bamboo'], sides=6))
     objs.append(cloth('kuti_hung_robe', coll, y + .5, y + 1.6, f + .55, f + 1.84, px, m['saffron'], folds=5, depth=.035, segments=(20, 10), axis='y'))
     objs.append(cloth('kuti_hung_bathing_cloth', coll, y + 1.75, y + 2.4, f + 1.0, f + 1.84, px, m['white_cloth'], folds=3, depth=.03, segments=(12, 8), axis='y'))
     # Alms bowl in its cover on a stand, beside the monk.

@@ -15,6 +15,8 @@ import math
 
 import numpy as np
 
+import fit
+
 from kit import lathe, tube
 from pagoda_kit import coloured, material, piece
 from pagoda_photos import plaque
@@ -74,28 +76,36 @@ def memorial(coll, m, x, y, k, height, ident, rng):
             dressing += candles(coll, m, f'stupa_candle_{k}', x + rng.uniform(-.4, .4), y - .84, 0, rng)
         if roll < .3:
             # Figs seed high up and send their roots down over the masonry.
+            # Only a snapped stupa has a top a fig tree can stand on; on a whole one the
+            # roots alone pour down the masonry, the tree that sent them long dead.
+            crown = rng.uniform(1.1, 1.8)
             dressing += fig_roots(coll, m, f'stupa_fig_{k}', x, y, (TIER_Z + .5) * stretch, lambda z: .62 if z < 1.5 else .46, rng, n=7,
-                                  spread=.08, crown=rng.uniform(1.1, 1.8))
+                                  spread=.08, crown=crown if broken else 0)
     if not family and 'red_thread' in m:
         horror = rng.random()
         if horror < .16:
-            # Cracked open: the clay urn tipped in its niche, ash and bone spilt down the plinth.
+            # Cracked open: the clay urn pulled out and tipped at the foot, ash and bone spilt
+            # on the plinth. Each piece is settled onto whatever is really under it (fit.rest).
             urn = lathe(f'stupa_urn_{k}', coll, [(0, 0), (.07, 0), (.11, .07), (.1, .16), (.05, .2), (.06, .22), (0, .22)], 0, 0, 0, m['clay'], segments=12)
-            place_object(urn, x + .05, y - .36, CHAMBER_Z * stretch + .05, rng.uniform(0, math.tau), (1.2, .2))
-            dressing.append(urn)
+            place_object(urn, x + .05, y - .9, .11, rng.uniform(0, math.tau), (1.45, .2))
+            # Bake its place into the mesh: lean() below tilts world-space vertices.
+            urn.data.transform(urn.matrix_basis)
+            urn.matrix_basis.identity()
+            dressing += fit.rest([urn])
             for b in range(int(rng.integers(5, 10))):
                 bx, by = x + rng.uniform(-.35, .35), y - rng.uniform(.62, .72)
                 length = rng.uniform(.04, .14)
                 a = rng.uniform(0, math.tau)
-                dressing.append(tube(f'stupa_bone_{k}', coll, [(bx, by, .36), (bx + math.cos(a) * length, by + math.sin(a) * length * .3, .36)],
-                                     rng.uniform(.006, .012), m['bone'], sides=5))
-            dressing.append(lathe(f'stupa_ash_{k}', coll, [(0, 0), (.22, 0), (.12, .012), (0, .015)], x, y - .66, .34, m['ash'], segments=12))
+                dressing += fit.rest([tube(f'stupa_bone_{k}', coll, [(bx, by, .36), (bx + math.cos(a) * length, by + math.sin(a) * length * .3, .36)],
+                                           rng.uniform(.006, .012), m['bone'], sides=5)])
+            dressing += fit.rest([lathe(f'stupa_ash_{k}', coll, [(0, 0), (.22, 0), (.12, .012), (0, .015)], x, y - .66, .34, m['ash'], segments=12)])
         elif horror < .36:
             # Bound with red cord, round and round the plinth, a paper tag knotted in.
-            pts = [(x + math.cos(t) * .62 * (1 + .12 * abs(math.sin(2 * t))), y + math.sin(t) * .62 * (1 + .12 * abs(math.sin(2 * t))), .36 + t / math.tau * .05) for t in np.linspace(0, math.tau * 6, 140)]
-            dressing.append(tube(f'stupa_red_cord_{k}', coll, pts, .004, m['red_thread'], sides=3))
+            # Laid round a nominal circle, then pulled onto the plinth's real faces (fit.wrap).
+            pts = [(x + math.cos(t) * .62, y + math.sin(t) * .62, .36 + t / math.tau * .05) for t in np.linspace(0, math.tau * 6, 140)]
+            dressing.append(fit.wrap(tube(f'stupa_red_cord_{k}', coll, pts, .004, m['red_thread'], sides=3), x, y, .62))
             from pagoda_rituals import talisman
-            dressing += talisman(coll, m, f'stupa_tag_{k}', (x - .68, y - .3, .55), rng)
+            dressing += [fit.wrap(o, x, y, math.hypot(.68, .3) - .02) for o in talisman(coll, m, f'stupa_tag_{k}', (x - .68, y - .3, .55), rng)]
     objs += dressing
     if not family:
         lean(objs, x, y, rng.normal(0, .022), rng.normal(0, .022))
