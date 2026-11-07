@@ -8,7 +8,8 @@
  * pot and burnt-down incense at its roots. Babylon space, metres.
  */
 
-export type ThreadColour = "red" | "white";
+/** Only undyed cotton (sai sin) is wound round trees: no red cord hangs from any of them. */
+export type ThreadColour = "white";
 
 export interface DressedTrunk {
   /** Near the authored tree to dress; the trunk itself is measured at load. */
@@ -21,11 +22,11 @@ export interface DressedTrunk {
 
 /** Real trunks a step or two off the path, from the road to the compound. */
 export const DRESSED_TRUNKS: readonly DressedTrunk[] = [
-  { x: -10.1, z: 47.8, threads: ["red"] },
-  { x: 6.5, z: 44.3, threads: ["white", "red"] },
-  { x: -4.2, z: 37.1, threads: ["red"], blood: "drips" },
-  { x: 3.7, z: 15.4, threads: ["red", "white"] },
-  { x: -3.1, z: 14.9, threads: ["red"], blood: "hand" },
+  { x: -10.1, z: 47.8, threads: ["white"] },
+  { x: 6.5, z: 44.3, threads: ["white", "white"] },
+  { x: -4.2, z: 37.1, threads: ["white"], blood: "drips" },
+  { x: 3.7, z: 15.4, threads: ["white", "white"] },
+  { x: -3.1, z: 14.9, threads: ["white"], blood: "hand" },
 ];
 
 /** The fig, right of the path halfway down the walk. */

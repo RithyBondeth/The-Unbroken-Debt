@@ -208,9 +208,10 @@ interface Kit {
 }
 
 /**
- * The forest marked by the living (data/treeOmens): cotton thread wound
- * tight round the trunks beside the path, its loose ends fluttering in the
- * gusts; a cord strung across the path between bamboo stakes, hung with
+ * The forest marked by the living (data/treeOmens): undyed cotton thread
+ * wound tight round the trunks beside the path and knotted flat against the
+ * bark (nothing red, and nothing left hanging off a tree); a cord strung
+ * across the path between bamboo stakes, hung with
  * ties; blood pressed into the bark and run down it by the rain; and the
  * strangler fig, its roots knotted round a host long dead, wrapped in faded
  * cloth, its aerial roots hanging like hair and swinging in the wind.
@@ -234,10 +235,9 @@ export class TreeOmens {
 
   build(sites: readonly PlantSite[]): void {
     const thread = {
-      red: this.threadMaterial("M_omen_thread_red", new Color3(0.27, 0.012, 0.009)),
       white: this.threadMaterial("M_omen_thread_white", new Color3(0.46, 0.43, 0.35)),
     };
-    const threads = { red: geo(), white: geo() };
+    const threads: Record<ThreadColour, Geo> = { white: geo() };
     for (const dressed of DRESSED_TRUNKS) {
       const site = sites
         .filter((s) => s.trunk && Math.hypot(s.x - dressed.x, s.z - dressed.z) < 2)
@@ -265,8 +265,8 @@ export class TreeOmens {
       ),
     };
     this.cordWeb(kit);
-    this.fig(threads, thread.red, kit);
-    for (const colour of ["red", "white"] as const)
+    this.fig(threads, thread.white);
+    for (const colour of ["white"] as const)
       this.mesh(`omen_thread_${colour}`, threads[colour], thread[colour]);
     this.mesh(
       "omen_cords",
@@ -407,35 +407,11 @@ export class TreeOmens {
     return last;
   }
 
-  /** The knot and two loose ends falling from it, swinging in the wind. */
-  private tails(out: Geo, knot: Vector3, outward: Vector3, random: () => number): void {
-    for (let k = 0; k < 2; k++) {
-      const length = 0.3 + random() * 0.6;
-      const path: Vector3[] = [];
-      const phase = random() * Math.PI * 2;
-      for (let s = 0; s <= 8; s++) {
-        const t = s / 8;
-        path.push(
-          knot.add(
-            new Vector3(
-              outward.x * (0.012 + 0.03 * t) + Math.sin(t * 5 + phase) * 0.012,
-              -t * length,
-              outward.z * (0.012 + 0.03 * t) + Math.cos(t * 4 + phase) * 0.012,
-            ),
-          ),
-        );
-      }
-      tube(
-        out,
-        path,
-        () => 0.0038,
-        4,
-        (i) => (i / 8) * length,
-        phase,
-        1,
-        40,
-      );
-    }
+  /**
+   * The knot, pulled tight against the bark. The ends are tucked under the
+   * winding: nothing is left hanging loose in the air off a tree.
+   */
+  private knot(out: Geo, knot: Vector3, outward: Vector3): void {
     tube(
       out,
       [
@@ -489,7 +465,7 @@ export class TreeOmens {
         facing - 0.3,
       );
       const a = Math.atan2(end.z - trunk.z, end.x - trunk.x);
-      this.tails(threads[colour], end, new Vector3(Math.cos(a), 0, Math.sin(a)), random);
+      this.knot(threads[colour], end, new Vector3(Math.cos(a), 0, Math.sin(a)));
     });
     if (dressed.blood) {
       const material = this.stainMaterial(
@@ -609,7 +585,7 @@ export class TreeOmens {
       for (let d = 0.6 + random() * 0.6; d < span.length - 0.5; d += 0.9 + random() * 0.8)
         tassel(kit.hair, along(d).addInPlaceFromFloats(0, -0.008, 0), random);
       for (let d = 0.3 + random() * 0.3; d < span.length - 0.3; d += 0.45 + random() * 0.35) {
-        const colour: ThreadColour = random() < 0.65 ? "red" : "white";
+        const colour: "red" | "white" = random() < 0.65 ? "red" : "white";
         ribbon(
           ties[colour],
           along(d).addInPlaceFromFloats(0, -0.006, 0),
@@ -686,9 +662,9 @@ export class TreeOmens {
    * crown and have choked it, twisting round one another to a knot of trunk,
    * splaying into bare branches above, aerial roots hanging from them.
    */
-  private fig(threads: Record<ThreadColour, Geo>, red: Material, kit: Kit): void {
+  private fig(threads: Record<ThreadColour, Geo>, fallback: Material): void {
     const random = seededRandom(6242120);
-    const bark = this.scene.getMaterialByName("M_wet_bark") ?? red;
+    const bark = this.scene.getMaterialByName("M_wet_bark") ?? fallback;
     const ground = this.groundAt(OMEN_FIG.x, OMEN_FIG.z);
     const c = new Vector3(OMEN_FIG.x, ground, OMEN_FIG.z);
     const trunk = geo();
@@ -824,31 +800,6 @@ export class TreeOmens {
         1,
       );
     }
-    // Red cords hung from the branches over the path side, tasselled with hair, two dolls among them.
-    const hung = facing.length ? facing : tips;
-    for (let k = 0; k < 11; k++) {
-      const from = hung[Math.floor(random() * hung.length)];
-      const length = Math.min(from.y - ground - 0.7, 1.4 + random() * 2.2);
-      if (length < 0.5) continue;
-      const phase = random() * Math.PI * 2;
-      const path: Vector3[] = [];
-      for (let s = 0; s <= 12; s++) {
-        const t = s / 12;
-        path.push(from.add(new Vector3(Math.sin(t * 4 + phase) * 0.025, -t * length, 0)));
-      }
-      tube(
-        kit.cord,
-        path,
-        () => 0.0045,
-        4,
-        (s) => (s / 12) * length,
-        phase,
-        1,
-        30,
-      );
-      if (k % 2 === 0) tassel(kit.hair, path[12], random);
-      if (k === 3 || k === 8) effigy(kit.effigy, path[12], length, 1.1, random);
-    }
     const trunkMesh = this.mesh("omen_fig_trunk", trunk, bark);
     this.mesh("omen_fig_host", host, this.scene.getMaterialByName("M_wet_bark_dead") ?? bark);
     const rootMaterial = bark.clone("M_omen_fig_aerial_roots");
@@ -897,7 +848,7 @@ export class TreeOmens {
       }
       const centre = new Vector3(c.x, 0, c.z);
       const knot = this.windThread(
-        threads.red,
+        threads.white,
         (a) => outline(y + 0.1, a) + 0.03,
         centre,
         y + 0.04,
@@ -906,7 +857,7 @@ export class TreeOmens {
         random() * 6,
       );
       const a = Math.atan2(knot.z - c.z, knot.x - c.x);
-      this.tails(threads.red, knot, new Vector3(Math.cos(a), 0, Math.sin(a)), random);
+      this.knot(threads.white, knot, new Vector3(Math.cos(a), 0, Math.sin(a)));
     }
     this.mesh("omen_fig_cloth_red", bands, this.clothMaterial("M_omen_cloth_red", [112, 30, 22]));
     this.mesh(

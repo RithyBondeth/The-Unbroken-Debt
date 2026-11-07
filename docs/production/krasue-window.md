@@ -4,6 +4,17 @@ The spirit is a repeatable nighttime obstacle outside the kitchen's west window
 (the opening beside the hearth and bottle shelf) and its front/south window.
 `data/krasue.ts` records their real Blender-to-game opening coordinates.
 
+**Where it waits (2026-11-07).** It is never seen idling by the house. Between
+visits it waits about 34 m out and 7 m up over the fields, hidden and silent.
+Only when Sora stands in the kitchen looking out of one of its two windows does
+it come: after 2.4–5.8 s at the glass (a different wait each visit) it swoops in
+from the dark along a curve, covering most of the distance in the first 0.4 s,
+and brakes 2–3.6 m outside the opening. The arrival plays `krasueSting` (a rush of
+air, a clash of bowed screeches a semitone apart and a low blow), loud from the
+moment it appears. If it does not see Sora within 4.5 s, or she leaves the
+window, it flies back out the way it came, faster and faster, and must rest 14 s
+before it can be called again (7 s after a death or a cutscene).
+
 The Krasue detects an exposed player through the opening after 0.28 s of clear
 sight, independently of the player's camera direction or open inventory. At that
 moment it screams once and turns toward Sora. A short 0.38 s wind-up (0.26 s with

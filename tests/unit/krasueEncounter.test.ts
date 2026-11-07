@@ -74,12 +74,22 @@ async function rig() {
   const tick = (seconds: number) => {
     for (let i = 0; i < Math.ceil(seconds * 60); i++) encounter.update(1 / 60);
   };
+  /** Sora keeps to the side of the window until it has swooped in and stopped. */
+  const arrive = () => {
+    const was = seen;
+    seen = false;
+    for (let i = 0; i < 60 * 30 && encounter.brain.state !== "patrol"; i++)
+      encounter.update(1 / 60);
+    seen = was;
+    expect(encounter.brain.state).toBe("patrol");
+  };
   return {
     encounter,
     game,
     sounds,
     doc,
     tick,
+    arrive,
     see: (value: boolean) => {
       seen = value;
     },
@@ -88,10 +98,25 @@ async function rig() {
 
 describe("Krasue scream and rush integration", () => {
   afterEach(() => vi.unstubAllGlobals());
+  it("stays hidden and silent far away until Sora lingers, then stings as it swoops in", async () => {
+    const r = await rig();
+    const sting = r.sounds.find((s) => s.name === "krasue_sting")!;
+    const root = r.encounter.model.root as unknown as { setEnabled: ReturnType<typeof vi.fn> };
+    const enable = root.setEnabled;
+    r.tick(1);
+    expect(r.encounter.brain.hidden).toBe(true);
+    expect(enable.mock.lastCall?.[0]).toBe(false);
+    expect(sting.play).not.toHaveBeenCalled();
+    r.arrive();
+    expect(sting.play).toHaveBeenCalledOnce();
+    expect(enable.mock.lastCall?.[0]).toBe(true);
+    r.encounter.stop();
+  });
   it("screams once on detection, before moving, with no duplicate at the rush", async () => {
     const r = await rig();
     const scream = r.sounds.find((s) => s.name === "krasue_shriek")!;
     const pose = vi.spyOn(r.encounter.model, "pose");
+    r.arrive();
     r.tick(0.2);
     expect(scream.play).not.toHaveBeenCalled();
     r.tick(0.1);
@@ -119,10 +144,12 @@ describe("Krasue scream and rush integration", () => {
   it("allows a new scream after escape and rearming, while tab hiding stops audio", async () => {
     const r = await rig();
     const scream = r.sounds.find((s) => s.name === "krasue_shriek")!;
+    r.arrive();
     r.tick(0.3);
     r.see(false);
     r.tick(8);
-    expect(r.encounter.brain.state).toBe("patrol");
+    expect(r.encounter.brain.state).toBe("away");
+    r.arrive();
     r.see(true);
     r.tick(0.3);
     expect(scream.play).toHaveBeenCalledTimes(2);
