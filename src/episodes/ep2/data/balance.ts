@@ -17,7 +17,7 @@ export const PAGODA_BALANCE = {
   /** The dead that crawl go slower on patrol and scuttle when they hear something. */
   crawlSpeed: 0.42,
   crawlInvestigateSpeed: 0.95,
-  crawlRushSpeed: 1.7,
+  crawlRushSpeed: 2.1,
   listeningSeconds: 0.75,
   searchSeconds: 9,
   catchRadius: 0.72,

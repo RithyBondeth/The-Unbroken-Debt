@@ -38,6 +38,10 @@ import { PagodaProgress } from "./PagodaProgress";
 import { PretBrain, Breath } from "./PretBrain";
 import { PagodaNav } from "./PagodaNav";
 import { KmaochHaunts, type HauntEvent, type HauntView } from "./KmaochHaunts";
+import { KmaochDescent, type DescentEvent } from "./KmaochDescent";
+import { captureClimbTrees, type ClimbTree } from "./pagodaTrees";
+import { ClimbSounds } from "./audio/climbSounds";
+import { PagodaKrasue } from "./PagodaKrasue";
 import { zoneDistance } from "./PagodaZones";
 import {
   LOST_GARDEN,
@@ -90,6 +94,15 @@ export class WhisperingPagoda {
   private nav!: PagodaNav;
   /** Seconds Sora has stood without moving. */
   private stillFor = 0;
+  /** The one that comes down a tree at her, the trees it may use, and how it sounds. */
+  private readonly descent = new KmaochDescent();
+  private climbTrees: ClimbTree[] = [];
+  private readonly climbSounds = new ClimbSounds(Math.random);
+  /** A climbing or scuttling sound that moves with corpse `i`. */
+  private carried: { i: number; sound: { spatial: { position: Vector3 } } } | null = null;
+  private clinging = -1;
+  /** Episode 1's Krasue, seen far off over the trees, and once low overhead. */
+  private readonly krasue: PagodaKrasue;
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -105,6 +118,7 @@ export class WhisperingPagoda {
   constructor(private readonly game: Game) {
     this.progress = new PagodaProgress(game.flags, game.inventory);
     this.sounds = new PagodaSoundscape(game);
+    this.krasue = new PagodaKrasue(game);
     this.cinematics = new PagodaCinematics(game, this.sounds);
     this.cheaHands = new CheaHands(game);
   }
@@ -147,6 +161,7 @@ export class WhisperingPagoda {
         // creepers on walls and cord stay where they are (pagodaWind.ts).
         bakePlantHeights(container, PAGODA_PLANTS);
         beltTemplates = captureBeltTemplates(container);
+        this.climbTrees = captureClimbTrees(container);
         waterUvs(container);
       },
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
@@ -189,6 +204,7 @@ export class WhisperingPagoda {
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
     await this.apparition.load();
+    await this.krasue.load();
     this.watchers = new PagodaWatchers(g, this.sounds);
     this.watchers.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
@@ -291,6 +307,8 @@ export class WhisperingPagoda {
       void g.audio?.unlock();
     });
     await this.sounds.load();
+    if (g.audio) await this.climbSounds.load(g.audio);
+    g.scene.onDisposeObservable.addOnce(() => this.climbSounds.stop());
     if (!g.flags.get("ep2.started", false)) {
       g.flags.set("ep2.started", true);
       document.exitPointerLock();
@@ -688,6 +706,37 @@ export class WhisperingPagoda {
       dz = at.z - feet.z,
       distance = Math.hypot(dx, dz) || 1;
     return { facing: (Math.sin(yaw) * dx + Math.cos(yaw) * dz) / distance, distance };
+  }
+  /** What the one coming down a tree shows and sounds. */
+  private descentEvent(e: DescentEvent): void {
+    const g = this.game;
+    switch (e.kind) {
+      case "scratch":
+        this.climbSounds.play("scratch", new Vector3(e.at.x, e.at.y, e.at.z), 0.55);
+        break;
+      case "down": {
+        // She has looked: it comes down the trunk, the bark raked all the way.
+        const sound = this.climbSounds.play("climb", new Vector3(e.at.x, e.at.y, e.at.z), 0.8);
+        this.carried = sound ? { i: e.i, sound } : null;
+        this.dead.jerk(e.i);
+        break;
+      }
+      case "land": {
+        const at = new Vector3(e.at.x, 0.1, e.at.z);
+        this.climbSounds.play("drop", at, 0.9);
+        this.dead.jerk(e.i, true);
+        this.dead.gutter(0.6);
+        this.sounds.scare(0.5);
+        g.atmosphere.scare();
+        this.carried = null;
+        break;
+      }
+      case "charge": {
+        const sound = this.climbSounds.play("scuttle", new Vector3(e.at.x, 0.2, e.at.z), 0.7);
+        this.carried = sound ? { i: e.i, sound } : null;
+        break;
+      }
+    }
   }
   /** What the dead's haunting shows and sounds. */
   private hauntEvent(e: HauntEvent): void {
@@ -1109,6 +1158,33 @@ export class WhisperingPagoda {
       ))
         this.hauntEvent(event);
     else if (p.stage !== "garden") this.haunts.reset(this.ghosts);
+    if (active && !g.cutscene && !this.grab && p.stage === "garden")
+      for (const event of this.descent.update(
+        simDt,
+        {
+          feet: { x: g.player.feet.x, z: g.player.feet.z },
+          yaw: g.player.yaw,
+          safe: inKuti(g.player.feet),
+          walkable: (q) => this.nav.walkable(q),
+          clear: (a, b) => this.nav.straight(a, b),
+        },
+        this.climbTrees,
+        this.ghosts,
+        (i) => this.awake(i) && i !== this.haunts.following && i !== this.haunts.looming,
+        (i) => this.viewOf(i),
+      ))
+        this.descentEvent(event);
+    else if (p.stage !== "garden") this.descent.reset(this.ghosts);
+    // The body on the tree, if there is one, is posed against the bark.
+    const pose = this.descent.pose();
+    if (this.clinging >= 0 && this.clinging !== pose?.i) this.dead.cling(this.clinging, null);
+    if (pose) this.dead.cling(pose.i, pose);
+    this.clinging = pose?.i ?? -1;
+    if (this.carried) {
+      const c = this.carried;
+      const at = pose && pose.i === c.i ? pose : { ...this.ghosts[c.i].position, y: 0.4 };
+      c.sound.spatial.position = new Vector3(at.x, at.y + 0.4, at.z);
+    }
     this.rigs.forEach((_, i) => {
       if (!shown(i)) {
         this.dead.hide(i);
@@ -1128,11 +1204,13 @@ export class WhisperingPagoda {
         moved,
         brain.mode,
         g.player.feet,
+        brain.crawls,
       );
     });
     if (active && !g.cutscene)
       for (const gone of this.dead.watch(simDt, (i) => {
-        if (!shown(i)) return null;
+        // The one coming down a tree is not seen off by a stare.
+        if (!shown(i) || i === this.descent.active) return null;
         const at = this.ghosts[i].position;
         return { ...this.viewOf(i), at: new Vector3(at.x, 0, at.z) };
       }))
@@ -1179,8 +1257,23 @@ export class WhisperingPagoda {
       nearestPret,
       zone: visitedZone(feet),
       pickedLotus: g.flags.get("ep2.pickup.lotus", false),
+      pickedRice: g.flags.get("ep2.pickup.rice", false),
+      pickedWater: g.flags.get("ep2.pickup.water", false),
+      verseRead: g.flags.get("ep2.verse.read", false),
     };
     this.apparition.update(dt, scareContext, haunting);
+    this.krasue.update(
+      dt,
+      {
+        stage: p.stage,
+        feet: { x: feet.x, z: feet.z },
+        yaw: g.player.yaw,
+        offerings: p.offerings,
+        inKuti: inKuti(feet),
+        nearestPret,
+      },
+      haunting,
+    );
     this.watchers.update(dt, scareContext, haunting);
     if (!active) return;
     if (p.stage === "garden") {

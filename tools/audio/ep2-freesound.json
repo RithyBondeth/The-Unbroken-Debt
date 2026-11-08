@@ -219,6 +219,48 @@
       "uid": 9395330,
       "file": "583310_fission9_tile_breaking.ogg",
       "title": "Tile Breaking"
+    },
+    {
+      "id": 811809,
+      "user": "JW_Audio",
+      "uid": 13183432,
+      "file": "811809_jw_audio_fingers_scratching_tree_bark.ogg",
+      "title": "VEGETree_ Fingers Scratching, Tree bark, Various"
+    },
+    {
+      "id": 491179,
+      "user": "sidequesting",
+      "uid": 10247258,
+      "file": "491179_sidequesting_climbing_down_from_tree.ogg",
+      "title": "ClimbingDownFromTree.wav"
+    },
+    {
+      "id": 830466,
+      "user": "Wigglesworth",
+      "uid": 6775466,
+      "file": "830466_wigglesworth_clawing_scratching_wood.ogg",
+      "title": "Clawing or Scratching at wood"
+    },
+    {
+      "id": 853591,
+      "user": "Wigglesworth",
+      "uid": 6775466,
+      "file": "853591_wigglesworth_body_fall_leaf_crush.ogg",
+      "title": "A body falling to the ground, with leaf crush"
+    },
+    {
+      "id": 504626,
+      "user": "leonelmail",
+      "uid": 4437257,
+      "file": "504626_leonelmail_body_fall_heavy_dirt.ogg",
+      "title": "BODY FALL - V HVY - DIRT"
+    },
+    {
+      "id": 669085,
+      "user": "vestibule-door",
+      "uid": 14100561,
+      "file": "669085_vestibule-door_hurried_crawling.ogg",
+      "title": "hurried crawling on stone concrete.wav"
     }
   ]
 }

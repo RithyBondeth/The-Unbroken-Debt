@@ -42,6 +42,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 | JN_3DPRINTINGNERD | CC0 1.0 | [Wooden Ladder 02](https://polyhaven.com/a/wooden_ladder_02) (V1-097) |
 | John Malcolm | CC0 1.0 | [Book Encyclopedia Set 01](https://polyhaven.com/a/book_encyclopedia_set_01) (V1-069) |
 | Josh Dean | CC0 1.0 | [Wooden Candlestick](https://polyhaven.com/a/wooden_candlestick) (V1-080) |
+| JW_Audio | CC0 1.0 | [Kmaoch coming down a tree: fingers raking bark (takes 2-3)](https://freesound.org/people/JW_Audio/sounds/811809/) (S2-034) |
 | Kenney | CC0 | [Footsteps: teak, dirt, mud (walk, crouch, hurry)](https://kenney.nl/assets/impact-sounds) (S1-011) |
 | kerozenne | CC0 1.0 | [Temple gong struck by monks, Thailand (2 takes, far off)](https://freesound.org/people/kerozenne/sounds/803159/) (S2-017) |
 | Kinoton | CC0 1.0 | [Empty clay bowl shattering (3 takes)](https://freesound.org/people/Kinoton/sounds/399080/) (S2-030) |
@@ -49,6 +50,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Kless Gyzen | CC0 1.0 | [Rock Moss Set 01](https://polyhaven.com/a/rock_moss_set_01) (V1-132) |
 | Kuutti Siitonen | CC0 1.0 | [Jug 01](https://polyhaven.com/a/jug_01) (V1-073), [Pot Enamel 01](https://polyhaven.com/a/pot_enamel_01) (V1-074), [Wicker Basket 01](https://polyhaven.com/a/wicker_basket_01) (V1-078), [Wicker Basket 02](https://polyhaven.com/a/wicker_basket_02) (V1-096) |
 | kyles | CC0 1.0 | [Night insects, take A (Thailand jungle)](https://freesound.org/people/kyles/sounds/177687/) (S2-001) |
+| leonelmail | CC0 1.0 | [Kmaoch hitting the ground, heavy (1 take)](https://freesound.org/people/leonelmail/sounds/504626/) (S2-037) |
 | Luca B | CC0 1.0 | [Old Bed Frame](https://polyhaven.com/a/old_bed_frame) (V1-065) |
 | ManDaKi | CC0 1.0 | [Temple drum (Myanmar royal drum; 3 takes, far off)](https://freesound.org/people/ManDaKi/sounds/858466/) (S2-018) |
 | manusainz | CC BY 4.0 | [Thai Monk (adapted: decimated)](https://sketchfab.com/3d-models/thai-monk-59840b1ce83e40c291ffb6d5d730be74) (V2-004) |
@@ -75,6 +77,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Sacha.Julien | CC0 1.0 | [Tree creaks in the wind (3 takes)](https://freesound.org/people/Sacha.Julien/sounds/726217/) (S2-009) |
 | SamuelGremaud | CC0 1.0 | [Scops owl calls](https://freesound.org/people/SamuelGremaud/sounds/429185/) (S2-027) |
 | Selector | CC0 1.0 | [Frogs by the lotus pond (Koh Samui)](https://freesound.org/people/Selector/sounds/109439/) (S2-004), [Frogs and insects in the wet ground west (Thailand)](https://freesound.org/people/Selector/sounds/109441/) (S2-005) |
+| sidequesting | CC0 1.0 | [Kmaoch coming down a tree: scrambling down bark (take 1)](https://freesound.org/people/sidequesting/sounds/491179/) (S2-033) |
 | Skjor1 | CC0 1.0 | [Night insects, take B (Ko Jum, southern Thailand)](https://freesound.org/people/Skjor1/sounds/386474/) (S2-002) |
 | sofiarudi | CC BY 4.0 | [Burmese Buddha in National Museum Ireland (adapted: decimated)](https://sketchfab.com/3d-models/burmese-buddha-in-national-museum-ireland-658fab5464e94f118947c2384121104a) (V2-003) |
 | tec_studio | CC0 1.0 | [Middle bronze bell (1532 temple bell, raised a fifth)](https://freesound.org/people/tec_studio/sounds/668647/) (S2-013) |
@@ -82,6 +85,8 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Tina | CC0 1.0 | [Brass Candleholders](https://polyhaven.com/a/brass_candleholders) (V1-070) |
 | Ulan Cabanilla | CC0 1.0 | [Machete](https://polyhaven.com/a/machete) (V1-122) |
 | Unknown | Unknown: placeholder until cleared | Funeral chanting for the ritual (S1-038) |
+| vestibule-door | CC0 1.0 | [Kmaoch scuttling on hands and knees](https://freesound.org/people/vestibule-door/sounds/669085/) (S2-038) |
+| Wigglesworth | CC0 1.0 | [Kmaoch on a trunk: nails dug into the wood (3 takes)](https://freesound.org/people/Wigglesworth/sounds/830466/) (S2-035), [Kmaoch hitting the leaf litter (3 takes)](https://freesound.org/people/Wigglesworth/sounds/853591/) (S2-036) |
 | windyeq | CC0 1.0 | [Knocks in the walls (1 take)](https://freesound.org/people/windyeq/sounds/728716/) (S2-020) |
 | Yann Kervran & Rico Cilliers | CC0 1.0 | [Mantel Clock 01](https://polyhaven.com/a/mantel_clock_01) (V1-064) |
 | Yoyodaman234 | CC0 1.0 | [Bamboo creaking in the wind (4 takes)](https://freesound.org/people/Yoyodaman234/sounds/335891/) (S2-012) |

@@ -242,7 +242,7 @@ async function review(): Promise<void> {
     await ensureAudio();
     const audio = game.audio!;
     // Reuse the production source and buffers, with a short opt-in preview.
-    const { krasueLament, krasueShriek } = await import("@/episodes/ep1/audio/krasueSounds");
+    const { krasueLament, krasueShriek } = await import("@/audio/sounds/krasueSounds");
     const { seededRandom } = await import("@/audio/synth");
     const at = KRASUE_WINDOWS[selected].center.add(KRASUE_WINDOWS[selected].normal.scale(2.45));
     const sound = await audio.spatialSound(

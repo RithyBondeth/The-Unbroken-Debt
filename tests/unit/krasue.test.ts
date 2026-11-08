@@ -7,7 +7,7 @@ import {
   KrasueBrain,
 } from "@/episodes/ep1/entities/KrasueBrain";
 import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "@/episodes/ep1/data/krasue";
-import { krasueLament, krasueShriek, krasueSting } from "@/episodes/ep1/audio/krasueSounds";
+import { krasueLament, krasueShriek, krasueSting } from "@/audio/sounds/krasueSounds";
 import { rms, seededRandom } from "@/audio/synth";
 
 const eye = new Vector3(4.8, 4.08, -13);

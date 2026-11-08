@@ -113,7 +113,7 @@ export class PretBrain {
     readonly route: readonly Point[],
     start = 0,
     /** Comes on hands and knees: slower about, a scuttle when it hears something. */
-    readonly crawls = false,
+    public crawls = false,
   ) {
     this.routeIndex = start % route.length;
     this.position = { ...route[this.routeIndex] };
@@ -146,6 +146,20 @@ export class PretBrain {
   /** Follows towards `to` (Sora's back), on the map's paths, until told otherwise. */
   stalk(to: Point): void {
     this.mode = "stalk";
+    this.path = this.pathfinder(this.position, to);
+  }
+  /**
+   * Straight at `to`, as fast as it goes (one that came down a tree at her). `fresh` starts
+   * the rush's clock again; otherwise only the way is found again.
+   */
+  charge(to: Point, fresh = true): void {
+    this.mode = "rush";
+    this.frozen = false;
+    this.listenFor = 0;
+    if (fresh) {
+      this.rushFor = B.rushSeconds + 1;
+      this.interest = B.searchSeconds;
+    }
     this.path = this.pathfinder(this.position, to);
   }
   /** Back to its rounds from wherever it is. */

@@ -6,7 +6,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { isLfsPointer } from "./lfsAsset";
 
 const PATH = fileURLToPath(
-  new URL("../../public/assets/ep1/krasue/krasue-creature.glb", import.meta.url),
+  new URL("../../public/assets/shared/krasue/krasue-creature.glb", import.meta.url),
 );
 
 describe.skipIf(isLfsPointer(PATH))("krasueAsset (needs the real Git LFS asset)", () => {

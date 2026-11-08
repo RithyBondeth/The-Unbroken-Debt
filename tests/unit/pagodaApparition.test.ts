@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  AMBIENT,
+  AMBIENT_GAP,
   BEATS,
   SCARES,
   facing,
@@ -103,5 +105,34 @@ describe("Episode 2 apparition scares", () => {
     for (const [kind, beats] of Object.entries(BEATS))
       if (kind !== "rush") expect(beats.some((b) => b.sound === "crack")).toBe(true);
     expect(BEATS.stare.some((b) => b.sound === "laugh")).toBe(true);
+  });
+});
+
+describe("the woman in red, more often and in more places", () => {
+  it("waits behind Sora once the rice is taken, and in the verse lane once it is read", () => {
+    const rice = { ...base, feet: { x: -14, z: -65 }, pickedRice: true };
+    expect(scare("rice_shrine").ready(rice)).toBe(true);
+    expect(scare("rice_shrine").ready({ ...rice, pickedRice: false })).toBe(false);
+    const verse = { ...base, feet: { x: -76, z: 6 }, verseRead: true };
+    expect(scare("verse_lane").ready(verse)).toBe(true);
+    expect(scare("verse_lane").place(verse)!.z).toBeLessThan(verse.feet.z);
+  });
+  it("stands on the pond's far side, across the water from Sora", () => {
+    const c = { ...base, feet: { x: 0, z: -16 }, yaw: Math.PI };
+    expect(scare("pond_far").ready(c)).toBe(true);
+    const p = scare("pond_far").place(c)!;
+    expect(p.z).toBeLessThan(-28.2);
+  });
+  it("turns up now and then anywhere in the garden, never in the kuti or with a corpse close", () => {
+    expect(AMBIENT.length).toBeGreaterThanOrEqual(4);
+    expect(AMBIENT.every((s) => s.id.startsWith("ambient_"))).toBe(true);
+    for (const s of AMBIENT) {
+      expect(s.ready(base)).toBe(true);
+      expect(s.ready({ ...base, inKuti: true })).toBe(false);
+      expect(s.ready({ ...base, nearestPret: 3 })).toBe(false);
+      expect(s.ready({ ...base, stage: "escape" })).toBe(false);
+    }
+    expect(AMBIENT_GAP[0]).toBeGreaterThanOrEqual(90);
+    expect(AMBIENT_GAP[1]).toBeLessThanOrEqual(180);
   });
 });

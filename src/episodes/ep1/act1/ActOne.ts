@@ -59,7 +59,7 @@ import { SavePoint } from "@/systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
 import { ShrineEffigy } from "./ShrineEffigy";
 import { KrasueEncounter } from "../entities/KrasueEncounter";
-import { KrasueModel } from "../entities/KrasueModel";
+import { KrasueModel } from "@/shared/entities/KrasueModel";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_LOCATION,

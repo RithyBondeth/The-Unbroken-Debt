@@ -22,6 +22,11 @@ export interface ScareContext {
   zone: string | null;
   /** The tank's lotus has just been taken. */
   pickedLotus: boolean;
+  /** The rice at the spirit house, and the water in the gallery, have been taken. */
+  pickedRice?: boolean;
+  pickedWater?: boolean;
+  /** The bell verse has been read in the Court's walled lane. */
+  verseRead?: boolean;
 }
 
 export type ScareKind = "glimpse" | "lunge" | "behind" | "stare" | "rise" | "rush";
@@ -48,6 +53,13 @@ const KUTI_DOOR = { x: -18, z: 15.5 };
 const SALA_FAR = { x: 40.2, z: 12.9 };
 /** The Sunken Tank's landing, where the lotus is taken (tools/areas/pagoda_lost_garden.py). */
 const TANK_LANDING = { x: -53, z: -39.2 };
+/** Where the rice and the water are taken, and the verse board (pagoda_lost_garden.py). */
+const RICE_TABLE = { x: -14, z: -66.6 };
+const WATER_TABLE = { x: 39, z: -66.2 };
+const VERSE_BOARD = { x: -76.5, z: 4.3 };
+/** The pond's middle, and the bell rack in its pavilion. */
+const POND_MIDDLE = { x: 0, z: -28.2 };
+const BELL_RACK = { x: 19.4, z: 9 };
 const dist = (a: { x: number; z: number }, b: { x: number; z: number }) =>
   Math.hypot(a.x - b.x, a.z - b.z);
 const ahead = (c: ScareContext, d: number, side = 0) => ({
@@ -197,6 +209,70 @@ export const SCARES: Scare[] = [
     place: (c) => rushAcross(c, 8, 6, false),
   },
   {
+    // The rice taken from the spirit house: she is right behind Sora when she turns to go.
+    id: "rice_shrine",
+    kind: "behind",
+    ready: (c) => !!c.pickedRice && dist(c.feet, RICE_TABLE) < 5 && c.nearestPret > 5,
+    place: (c) => ahead(c, -1.7),
+  },
+  {
+    // The water taken: she is carried across the gallery's walk between Sora and the way out.
+    id: "gallery_water",
+    kind: "rush",
+    ready: (c) =>
+      !!c.pickedWater && dist(c.feet, WATER_TABLE) > 4 && dist(c.feet, WATER_TABLE) < 12,
+    place: (c) => rushAcross(c, 7, 5, true),
+  },
+  {
+    // The verse read at the end of the walled lane: she waits at Sora's back, in the lane.
+    id: "verse_lane",
+    kind: "behind",
+    ready: (c) => !!c.verseRead && dist(c.feet, VERSE_BOARD) < 4.5,
+    place: (c) => ahead(c, -1.8),
+  },
+  {
+    // Across the pond: she stands on the black water on the far side, looking back.
+    id: "pond_far",
+    kind: "stare",
+    ready: (c) =>
+      (c.stage === "garden" || c.stage === "library") &&
+      dist(c.feet, POND_MIDDLE) > 7 &&
+      dist(c.feet, POND_MIDDLE) < 15 &&
+      facing(c, POND_MIDDLE) > 0.8 &&
+      c.nearestPret > 6,
+    place: (c) => {
+      const d = dist(c.feet, POND_MIDDLE) || 1;
+      return {
+        x: POND_MIDDLE.x + ((POND_MIDDLE.x - c.feet.x) / d) * 5.5,
+        z: POND_MIDDLE.z + ((POND_MIDDLE.z - c.feet.z) / d) * 5.5,
+      };
+    },
+  },
+  {
+    // At the bells: she is standing behind the rack, between the hanging bells.
+    id: "bells",
+    kind: "stare",
+    ready: (c) =>
+      c.stage === "garden" &&
+      dist(c.feet, BELL_RACK) < 5 &&
+      dist(c.feet, BELL_RACK) > 2 &&
+      facing(c, BELL_RACK) > 0.7,
+    place: (c) => {
+      const d = dist(c.feet, BELL_RACK) || 1;
+      return {
+        x: BELL_RACK.x + ((BELL_RACK.x - c.feet.x) / d) * 2.2,
+        z: BELL_RACK.z + ((BELL_RACK.z - c.feet.z) / d) * 2.2,
+      };
+    },
+  },
+  {
+    // Through the east wall's breaches: across the jungle path outside, low and fast.
+    id: "east_breach",
+    kind: "rush",
+    ready: (c) => c.stage === "garden" && c.feet.x > 31 && c.feet.x < 40 && c.nearestPret > 6,
+    place: (c) => rushAcross(c, 8, 6, false),
+  },
+  {
     // After the first mirror turns: she is behind Sora in the archive.
     id: "mirror",
     kind: "behind",
@@ -204,6 +280,42 @@ export const SCARES: Scare[] = [
     place: (c) => ahead(c, -1.5),
   },
 ];
+
+/** Where she can be found at any time in the garden: not saved, chosen at random. */
+const anywhere = (c: ScareContext) =>
+  (c.stage === "garden" || c.stage === "library") && !c.inKuti && c.nearestPret > 6;
+export const AMBIENT: Scare[] = [
+  {
+    // Carried across the way ahead, near or far.
+    id: "ambient_rush",
+    kind: "rush",
+    ready: anywhere,
+    place: (c) => rushAcross(c, 8 + Math.random() * 5, 6, Math.random() < 0.5),
+  },
+  {
+    // Standing far off in the dark ahead, a little to one side.
+    id: "ambient_stare",
+    kind: "stare",
+    ready: anywhere,
+    place: (c) => ahead(c, 11 + Math.random() * 4, (Math.random() - 0.5) * 5),
+  },
+  {
+    // Stumbling across a gap between the stupas.
+    id: "ambient_glimpse",
+    kind: "glimpse",
+    ready: anywhere,
+    place: (c) => ahead(c, 9 + Math.random() * 3, (Math.random() < 0.5 ? -1 : 1) * 2.5),
+  },
+  {
+    // Behind her: steps and a breath, and there when she turns.
+    id: "ambient_behind",
+    kind: "behind",
+    ready: anywhere,
+    place: (c) => ahead(c, -1.8),
+  },
+];
+/** Seconds between her unplanned appearances: often enough to dread, never routine. */
+export const AMBIENT_GAP = [90, 180] as const;
 
 /** Her head's roll at full lean, in radians: past comfortable, not past human. */
 const NECK_ROLL = 0.72;
@@ -329,6 +441,9 @@ export class PagodaApparition {
     armed: boolean;
   } | null = null;
   private waiting = 0;
+  /** Seconds to her next unplanned appearance, and the last kind she made. */
+  private nextAmbient = 120 + Math.random() * 60;
+  private lastAmbient = "";
   /** The lamps' flicker after she vanishes, in seconds remaining. */
   private afterglow = 0;
   private readonly hit = new PhysicsRaycastResult();
@@ -432,6 +547,7 @@ export class PagodaApparition {
         this.begin(scare, c, p);
         break;
       }
+      if (!this.showing) this.ambient(dt, c);
       return;
     }
     const s = this.showing;
@@ -529,9 +645,27 @@ export class PagodaApparition {
     });
   }
 
+  /** Between the planned moments, she turns up somewhere now and then. */
+  private ambient(dt: number, c: ScareContext): void {
+    if (!anywhere(c)) return;
+    this.nextAmbient -= dt;
+    if (this.nextAmbient > 0) return;
+    // Never the same kind twice running; tried again shortly if nowhere fits.
+    const kinds = AMBIENT.filter((s) => s.id !== this.lastAmbient).sort(() => Math.random() - 0.5);
+    for (const scare of kinds) {
+      const p = alternatives(c, scare.place(c)).find((q) => this.fits(q, scare.kind, c));
+      if (!p) continue;
+      this.lastAmbient = scare.id;
+      this.nextAmbient = AMBIENT_GAP[0] + Math.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0]);
+      this.begin(scare, c, p);
+      return;
+    }
+    this.nextAmbient = 3;
+  }
+
   private begin(scare: Scare, c: ScareContext, p: Placement): void {
     const g = this.game;
-    g.flags.set(`ep2.scare.${scare.id}`, true);
+    if (!scare.id.startsWith("ambient_")) g.flags.set(`ep2.scare.${scare.id}`, true);
     const at = new Vector3(p.x, 0, p.z);
     const to = p.to ? new Vector3(p.to.x, 0, p.to.z) : null;
     // A glimpse crosses the line of sight: along the camera's right, whichever side she is on.

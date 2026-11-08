@@ -1,6 +1,7 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Observer } from "@babylonjs/core/Misc/observable";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import type { Point } from "./data/pagoda";
 import type { GhostRig } from "./GhostRig";
 import { speedFor, type PretMode } from "./PretBrain";
 import type { PagodaSoundscape } from "./PagodaSoundscape";
@@ -60,6 +61,8 @@ interface Body {
   twitch: number;
   side: number;
   nextTwitch: number;
+  /** On a tree trunk, if it is (see cling). */
+  cling: { x: number; y: number; z: number; out: Point; flip: number; rate: number } | null;
   /** How long the player has looked straight at it. */
   gaze: number;
   /** Seconds left out of sight after vanishing. */
@@ -67,6 +70,10 @@ interface Body {
 }
 
 const HEAD_TILT = 0.75;
+/** How far round its neck is wrung on a trunk, radians: past anything living. */
+const WRUNG_NECK = Math.PI * 0.85;
+/** The crawl played faster than this is a blur of limbs, not a body. */
+const MAX_CRAWL_RATE = 6.5;
 
 /**
  * The garden's hungry dead: starved corpses in rotting white, one per PretBrain, walking on
@@ -92,6 +99,7 @@ export class ShroudedDead {
     this.bodies = rigs.map((rig, i) => ({
       rig,
       crawls: crawls[i] ?? false,
+      cling: null,
       yaw: 0,
       gait: "listen",
       phase: 0,
@@ -104,7 +112,15 @@ export class ShroudedDead {
     // The neck goes over on top of whatever the clip is doing.
     this.lateness = scene.onAfterAnimationsObservable.add(() => {
       for (const b of this.bodies) {
-        if (!b.rig.root.isEnabled() || b.twitch >= 2) continue;
+        if (!b.rig.root.isEnabled()) continue;
+        // Head down on a trunk, the head is wrung round on its neck to look out at her,
+        // upside down, until it lets go and turns over.
+        if (b.cling) {
+          const wrung = WRUNG_NECK * (1 - b.cling.flip);
+          b.rig.turn("neck02", "up", wrung * 0.35);
+          b.rig.turn("head", "up", wrung * 0.65);
+        }
+        if (b.twitch >= 2) continue;
         b.rig.turn("head", "forward", b.side * HEAD_TILT * headJerk(b.twitch));
       }
     })!;
@@ -126,9 +142,16 @@ export class ShroudedDead {
     moved: boolean,
     mode: PretMode,
     feet: Vector3,
+    crawls?: boolean,
   ): void {
     const b = this.bodies[i];
     const root = b.rig.root;
+    if (crawls !== undefined) b.crawls = crawls;
+    if (b.cling) {
+      this.holdOnTree(dt, b);
+      return;
+    }
+    root.rotationQuaternion = null;
     const here = new Vector3(at.x, 0.2, at.z);
     const d = Math.hypot(at.x - feet.x, at.z - feet.z) || 1;
     b.rig.pause(dt === 0);
@@ -137,7 +160,14 @@ export class ShroudedDead {
     // Down on the ground and still: the crawl held, barely breathing.
     else if (gait === "low") b.rig.play("crawl", 0.04);
     // The lunge of the one behind her is a throw of the whole body, faster than any walk.
-    else b.rig.play(gait, playbackRate(gait, mode === "loom" ? 3 : speedFor(mode, b.crawls)));
+    else
+      b.rig.play(
+        gait,
+        Math.min(
+          gait === "crawl" ? MAX_CRAWL_RATE : Infinity,
+          playbackRate(gait, mode === "loom" ? 3 : speedFor(mode, b.crawls)),
+        ),
+      );
     if (gait !== b.gait) {
       b.gait = gait;
       if (gait !== "listen" && gait !== "low") b.phase = b.rig.phase(gait);
@@ -170,6 +200,43 @@ export class ShroudedDead {
       root.setEnabled(false);
       if (b.hidden <= 0) this.sounds.thud(i, here, 0.75);
     } else root.setEnabled(true);
+  }
+
+  /**
+   * Corpse `i` on a tree trunk (KmaochDescent): head down against the bark with its back to
+   * Sora (`flip` 0), turning over onto the ground facing her (`flip` 1). Null lets it go.
+   */
+  cling(
+    i: number,
+    pose: { x: number; y: number; z: number; out: Point; flip: number; rate: number } | null,
+  ): void {
+    this.bodies[i].cling = pose;
+  }
+
+  private holdOnTree(dt: number, b: Body): void {
+    const pose = b.cling!;
+    const root = b.rig.root;
+    b.rig.pause(dt === 0);
+    b.rig.play("crawl", pose.rate);
+    b.rig.update(dt, 0.08);
+    const out = new Vector3(pose.out.x, 0, pose.out.z).normalize();
+    // On the bark: forward is down the trunk, the back faces out towards her.
+    const onBark = Quaternion.RotationQuaternionFromAxis(
+      Vector3.Cross(out, Vector3.Down()),
+      out,
+      Vector3.Down(),
+    );
+    // On the ground: forward faces her, the back is up.
+    const onGround = Quaternion.RotationQuaternionFromAxis(
+      Vector3.Cross(Vector3.Up(), out),
+      Vector3.Up(),
+      out,
+    );
+    root.rotationQuaternion = Quaternion.Slerp(onBark, onGround, pose.flip);
+    root.position.set(pose.x, pose.y, pose.z);
+    b.yaw = Math.atan2(out.x, out.z);
+    b.twitch += dt;
+    root.setEnabled(b.hidden <= 0);
   }
 
   /** Corpse `i`'s head snaps over now; `crack` with the neck's crack. */
