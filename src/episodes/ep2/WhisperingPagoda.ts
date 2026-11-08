@@ -689,6 +689,8 @@ export class WhisperingPagoda {
   /** Whether corpse `i` is walking now: the garden's by the night's count, a zone's when Sora is near it. */
   private awake(i: number): boolean {
     const stage = this.progress.stage;
+    // One that came down a tree walks (and hunts) until it rests again.
+    if (stage === "garden" && this.descent.holds(i)) return true;
     if (i < PATROLS.length)
       return (
         (stage === "garden" && i < this.progress.pretCount) || (stage === "arrival" && i === 0)
@@ -1172,6 +1174,7 @@ export class WhisperingPagoda {
         this.ghosts,
         (i) => this.awake(i) && i !== this.haunts.following && i !== this.haunts.looming,
         (i) => this.viewOf(i),
+        (i) => !this.awake(i) && this.grab?.i !== i,
       ))
         this.descentEvent(event);
     else if (p.stage !== "garden") this.descent.reset(this.ghosts);

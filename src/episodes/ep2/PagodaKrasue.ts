@@ -30,9 +30,9 @@ export interface KrasueFlight {
 /** The pond's middle: the one pass comes over its banks. */
 const POND = { x: 0, z: -28.2 };
 /** How many times she is seen far off, the first a while into the garden, then apart. */
-const SIGHTINGS = 3;
-const FIRST = [55, 90] as const;
-const GAP = [110, 220] as const;
+const SIGHTINGS = 5;
+const FIRST = [30, 50] as const;
+const GAP = [75, 140] as const;
 
 /** A point on the quadratic curve from `a` through control `b` to `c`. */
 export function along(f: KrasueFlight, u: number): Vector3 {
@@ -48,8 +48,8 @@ export function along(f: KrasueFlight, u: number): Vector3 {
  * the head and what hangs from it lit by its own faint glow, and is gone into the canopy.
  */
 export function sighting(s: KrasueScene, rand: () => number): KrasueFlight {
-  const yaw = s.yaw + (rand() - 0.5) * 0.7;
-  const d = 18 + rand() * 8;
+  const yaw = s.yaw + (rand() - 0.5) * 0.5;
+  const d = 14 + rand() * 6;
   const centre = { x: s.feet.x + Math.sin(yaw) * d, z: s.feet.z + Math.cos(yaw) * d };
   const side = { x: Math.cos(yaw), z: -Math.sin(yaw) };
   const way = rand() < 0.5 ? 1 : -1;
@@ -183,7 +183,7 @@ export class PagodaKrasue {
     if (this.lament) {
       this.lament.spatial.position = at;
       // Far off it is barely there; it swells as the pass comes on, then the shriek takes over.
-      const target = f.close ? (this.shrieked ? 0 : 0.5) : 0.18 * Math.sin(Math.PI * u);
+      const target = f.close ? (this.shrieked ? 0 : 0.5) : 0.3 * Math.sin(Math.PI * u);
       this.lament.volume += (target - this.lament.volume) * Math.min(1, dt * 3);
     }
     if (f.close && !this.shrieked && d < 7) {

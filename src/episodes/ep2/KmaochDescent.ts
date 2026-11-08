@@ -88,6 +88,11 @@ export class KmaochDescent {
     this.nextDescent = FIRST[0] + rand() * (FIRST[1] - FIRST[0]);
   }
 
+  /** Whether corpse `i` is the descent's: on a tree, or come down and hunting. */
+  holds(i: number): boolean {
+    return this.state?.i === i || this.crawling.has(i);
+  }
+
   /** Which corpse is on (or coming off) a tree, or -1. */
   get active(): number {
     return this.state?.i ?? -1;
@@ -118,15 +123,17 @@ export class KmaochDescent {
     brains: readonly PretBrain[],
     free: (i: number) => boolean,
     view: (i: number) => HauntView,
+    /** Corpses at rest out of the story for now (not shown): the first choice to use. */
+    resting: (i: number) => boolean = () => false,
   ): DescentEvent[] {
     const events: DescentEvent[] = [];
-    this.settle(dt, scene, brains);
+    this.settle(dt, scene, brains, view);
     if (!this.state) {
       if (scene.safe) return events;
       this.nextDescent -= dt;
       if (this.nextDescent > 0) return events;
       this.nextDescent = 4;
-      this.arm(scene, trees, brains, free, view);
+      this.arm(scene, trees, brains, free, view, resting);
       return events;
     }
     const s = this.state,
@@ -201,11 +208,13 @@ export class KmaochDescent {
     brains: readonly PretBrain[],
     free: (i: number) => boolean,
     view: (i: number) => HauntView,
+    resting: (i: number) => boolean,
   ): void {
-    // The nearest free corpse she cannot see, a good way off, is the one moved.
-    let pick = -1,
-      far = 0;
+    // One at rest, unseen by anyone; else the nearest free corpse she cannot see, well off.
+    let pick = brains.findIndex((b, i) => resting(i) && b.mode === "patrol");
+    let far = 0;
     brains.forEach((b, i) => {
+      if (pick >= 0 && resting(pick)) return;
       if (!free(i) || b.mode !== "patrol") return;
       const v = view(i);
       // Never moved where she could see it go: behind her, hidden, or lost in the dark.
@@ -291,7 +300,12 @@ export class KmaochDescent {
   }
 
   /** The ones that came down keep finding her a while, then rise again when they rest. */
-  private settle(dt: number, scene: DescentScene, brains: readonly PretBrain[]): void {
+  private settle(
+    dt: number,
+    scene: DescentScene,
+    brains: readonly PretBrain[],
+    view: (i: number) => HauntView,
+  ): void {
     for (const [i, c] of this.crawling) {
       const b = brains[i];
       if (b.mode === "rush" && c.homing > 0) {
@@ -300,7 +314,9 @@ export class KmaochDescent {
         // Every half second it finds her again.
         if (Math.floor(before * 2) !== Math.floor(c.homing * 2)) b.charge(scene.feet, false);
       }
-      if (b.mode === "patrol") {
+      // Back on its rounds, it lets go (and may go back to rest) only where she cannot see it.
+      const v = view(i);
+      if (b.mode === "patrol" && (v.facing < 0.3 || v.distance > 20)) {
         b.crawls = c.was;
         this.crawling.delete(i);
       }
