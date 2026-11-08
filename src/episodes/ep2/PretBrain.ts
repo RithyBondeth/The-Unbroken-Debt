@@ -6,7 +6,7 @@ import {
   hearingRadius,
   crossesStupa,
 } from "./data/balance";
-export type PretMode = "patrol" | "listen" | "investigate";
+export type PretMode = "patrol" | "listen" | "investigate" | "rush";
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.z - b.z);
 /** Obstacles inflated by the ghost's shoulder radius. */
 export function gardenClear(p: Point): boolean {
@@ -71,15 +71,21 @@ export function gardenPath(from: Point, to: Point): Point[] {
   return [];
 }
 
+/** A way from one point to another for a corpse; the garden grid unless the map's is set. */
+export type Pathfinder = (from: Point, to: Point) => Point[];
+
 /** Blind hungry ghosts react to hearing only; a lamp never gives Sora away. */
 export class PretBrain {
   readonly position: Point;
   mode: PretMode = "patrol";
   yaw = 0;
+  /** How it finds its way: the whole map's navigation once the area has loaded. */
+  pathfinder: Pathfinder = gardenPath;
   private routeIndex = 0;
   private path: Point[] = [];
   private listenFor = 0;
   private interest = 0;
+  private rushFor = 0;
   constructor(
     readonly route: readonly Point[],
     start = 0,
@@ -91,10 +97,21 @@ export class PretBrain {
     if (loudness <= 0 || inKuti(at)) return false;
     const barriers = GARDEN_OBSTACLES.filter((s) => crossesStupa(this.position, at, s)).length;
     const transmission = Math.max(B.minimumTransmission, B.stupaTransmission ** barriers);
-    if (distance(at, this.position) > hearingRadius(loudness) * transmission) return false;
-    this.path = gardenPath(this.position, at);
-    // Repeated footsteps renew the target without freezing an investigating ghost.
-    if (this.mode === "patrol") {
+    const d = distance(at, this.position);
+    if (d > hearingRadius(loudness) * transmission) return false;
+    this.path = this.pathfinder(this.position, at);
+    // A loud sound close by (a run, a gasp, a thrown bowl): a jerk round, then it comes fast.
+    if (
+      loudness >= B.rushLoudness &&
+      d < B.rushRange &&
+      this.mode !== "rush" &&
+      this.rushFor <= 0
+    ) {
+      this.mode = "listen";
+      this.listenFor = B.rushFreeze;
+      this.rushFor = B.rushSeconds;
+    } else if (this.mode === "patrol") {
+      // Repeated footsteps renew the target without freezing an investigating ghost.
       this.mode = "listen";
       this.listenFor = B.listeningSeconds;
     }
@@ -104,8 +121,15 @@ export class PretBrain {
   update(dt: number): void {
     if (this.listenFor > 0) {
       this.listenFor -= dt;
-      if (this.listenFor <= 0) this.mode = "investigate";
+      if (this.listenFor <= 0) this.mode = this.rushFor > 0 ? "rush" : "investigate";
       return;
+    }
+    if (this.mode === "rush") {
+      this.rushFor -= dt;
+      if (this.rushFor <= 0) {
+        this.rushFor = 0;
+        this.mode = "investigate";
+      }
     }
     if (this.mode === "investigate") {
       this.interest -= dt;
@@ -116,12 +140,18 @@ export class PretBrain {
     }
     if (!this.path.length && this.mode === "patrol") {
       this.routeIndex = (this.routeIndex + 1) % this.route.length;
-      this.path = gardenPath(this.position, this.route[this.routeIndex]);
+      this.path = this.pathfinder(this.position, this.route[this.routeIndex]);
     }
     const goal = this.path[0];
     if (!goal) return;
     const d = distance(this.position, goal),
-      step = dt * (this.mode === "patrol" ? B.patrolSpeed : B.investigateSpeed);
+      step =
+        dt *
+        (this.mode === "patrol"
+          ? B.patrolSpeed
+          : this.mode === "rush"
+            ? B.rushSpeed
+            : B.investigateSpeed);
     this.yaw = Math.atan2(goal.x - this.position.x, goal.z - this.position.z);
     if (d <= step) {
       this.position.x = goal.x;

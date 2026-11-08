@@ -57,7 +57,7 @@ describe("the lost garden", () => {
 
   it("keeps the far forest's cards out of the zones", () => {
     const trees = layoutFarForest();
-    expect(trees.length).toBe(760);
+    expect(trees.length).toBe(1600 + 150);
     for (const t of trees) expect(inside(t.x, t.z), `${t.x},${t.z}`).toBe(false);
   });
 

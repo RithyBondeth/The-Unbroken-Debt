@@ -16,7 +16,7 @@ export const GAITS = {
 /** Which clip suits what the corpse is doing. */
 export function gaitFor(moved: boolean, mode: PretMode): "walk" | "lurch" | "listen" {
   if (!moved) return "listen";
-  return mode === "investigate" ? "lurch" : "walk";
+  return mode === "investigate" || mode === "rush" ? "lurch" : "walk";
 }
 
 /** Playback rate so the feet keep pace with the ground: `moving` metres a second. */
@@ -124,7 +124,8 @@ export class ShroudedDead {
     const gait = gaitFor(moved, mode);
     if (gait === "listen") b.rig.play("listen");
     else {
-      const speed = mode === "investigate" ? B.investigateSpeed : B.patrolSpeed;
+      const speed =
+        mode === "rush" ? B.rushSpeed : mode === "investigate" ? B.investigateSpeed : B.patrolSpeed;
       b.rig.play(gait, playbackRate(gait, speed));
     }
     if (gait !== b.gait) {

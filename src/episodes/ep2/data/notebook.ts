@@ -2,7 +2,7 @@ import type { NotebookSnapshot } from "@/ui/notebook/notebookContent";
 import type { NotebookMap, MapShape } from "@/ui/notebook/NotebookMap";
 import type { SketchbookData, SketchEntry, NightMark } from "@/ui/diegetic/sketchbookContent";
 import type { PagodaProgress } from "../PagodaProgress";
-import { ANCESTORS, NOTES, MIRROR_CLUES, STUPAS, GARDEN_TREES } from "./pagoda";
+import { ANCESTORS, NOTES, MIRROR_CLUES, STUPAS, GARDEN_TREES, LOST_GARDEN } from "./pagoda";
 
 export const EP2_SKETCHBOOK: SketchbookData = { entries: [], mapLabels: [], loreCount: 5 };
 export function pagodaNotebook(
@@ -24,7 +24,7 @@ export function pagodaNotebook(
     arrival:
       "Find Venerable Sophal in the warm wooden kuti, west of the processional path. Sok’s map led me here.",
     garden:
-      "Four family stupas bear a silver five-petalled flower. Read their inscriptions, gather the offerings, then open the bronze lock at the pond.",
+      "Four family stupas bear a silver five-petalled flower. Read their inscriptions, then fetch the offerings from the lost garden: rice at the old spirit house in the grove (north), a lotus from the sunken tank (west), sanctified water at the end of the ruined gallery (east). Then open the bronze lock at the pond. A verse for the hall's bells is said to stand somewhere in the Court's lanes.",
     library:
       "Guide the roof’s moonbeam across three bronze mirrors into the family cabinet. E turns a mirror one quarter turn. The silver line on its rim marks its direction.",
     memory:
@@ -75,9 +75,34 @@ export function pagodaNotebook(
     { kind: "label", x: -23, y: 19, text: "Kuti · Sophal" },
     { kind: "label", x: 16, y: 10, text: "Prayer hall" },
     { kind: "label", x: -6, y: -39, text: "Scripture library" },
-    { kind: "label", x: -22, y: 30, text: "Naga gate" },
+    { kind: "label", x: -22, y: 30, text: "Temple gate" },
     { kind: "label", x: 6, y: -23, text: "Lotus pond" },
   ];
+  // The lost garden, drawn in as Sora finds each part of it.
+  const ZONE_NAMES: Record<string, string> = {
+    court: "Court of the Forgotten",
+    tank: "Sunken Tank",
+    grove: "Spirit Grove",
+    gallery: "Root Gallery",
+    terrace: "Bone Terrace",
+  };
+  for (const zone of LOST_GARDEN) {
+    if (!p.flags.get("ep2.visited." + zone.id, false)) continue;
+    shapes.push({
+      kind: "rect",
+      x: zone.minX,
+      y: zone.minZ,
+      w: zone.maxX - zone.minX,
+      h: zone.maxZ - zone.minZ,
+      walls: true,
+    });
+    shapes.push({
+      kind: "label",
+      x: (zone.minX + zone.maxX) / 2 - 8,
+      y: (zone.minZ + zone.maxZ) / 2,
+      text: ZONE_NAMES[zone.id] ?? zone.id,
+    });
+  }
   for (const stupa of STUPAS)
     shapes.push({
       kind: "rect",
@@ -96,10 +121,16 @@ export function pagodaNotebook(
       text: `${p.offered(a.id) ? "✓ " : ""}${a.name}`,
     });
   }
-  if (at.x < 40) shapes.push({ kind: "you", x: at.x, y: at.z, r: 1.2 });
+  if (at.x < 70) shapes.push({ kind: "you", x: at.x, y: at.z, r: 1.2 });
+  // The map opens out to take in whatever of the lost garden has been found.
+  const seen = LOST_GARDEN.filter((z) => p.flags.get("ep2.visited." + z.id, false));
+  const minX = Math.min(-30, ...seen.map((z) => z.minX)),
+    minZ = Math.min(-42, ...seen.map((z) => z.minZ)),
+    maxX = Math.max(30, ...seen.map((z) => z.maxX)),
+    maxZ = Math.max(35, ...seen.map((z) => z.maxZ));
   const map: NotebookMap = {
     title: "The Whispering Pagoda",
-    bounds: [-30, -42, 30, 35],
+    bounds: [minX, minZ, maxX, maxZ],
     labelSize: 1.1,
     bindingOffset: 0,
     shapes,
@@ -128,13 +159,14 @@ export function pagodaNotebook(
       heading: "The family flower",
       text: ANCESTORS.map((a) => `${a.name}: ${a.offering}. ${a.inscription}`).join("\n\n"),
     });
-    entries.push({
-      id: "ep2:bells",
-      beat: "live",
-      section: "notes",
-      heading: "Verse at the prayer hall",
-      text: "First the deepest voice calls the earth. Then the smallest voice calls the sky. Last the middle voice carries us home. Large → small → middle. The bells carry far.",
-    });
+    if (p.flags.get("ep2.verse.read", false))
+      entries.push({
+        id: "ep2:bells",
+        beat: "live",
+        section: "notes",
+        heading: "The bell verse, in the Court",
+        text: "First the deepest voice calls the earth. Then the smallest voice calls the sky. Last the middle voice carries us home. Large → small → middle. The bells carry far.",
+      });
     entries.push({
       id: "ep2:mirrors",
       beat: "live",

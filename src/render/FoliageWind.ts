@@ -42,7 +42,7 @@ const PLANTS: [RegExp, FoliageKind][] = [
     "leaf",
   ],
   [
-    /^(M_wet_bark(_dead)?|M_forest_moss|M_palm_trunk|M_bamboo(_dead)?|M_coconut|M_banana_stem|pachira_aquatica_\d+_bark|island_tree_\d+(_branches)?)$/,
+    /^(M_wet_bark(_dead)?|M_ep2_bark(_dead)?|M_forest_moss|M_palm_trunk|M_bamboo(_dead)?|M_coconut|M_banana_stem|pachira_aquatica_\d+_bark|island_tree_\d+(_branches)?)$/,
     "bark",
   ],
 ];

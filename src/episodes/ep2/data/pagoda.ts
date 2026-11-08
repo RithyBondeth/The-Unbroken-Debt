@@ -162,3 +162,47 @@ export const PATROLS: Point[][] = [
     { x: -14, z: 9 },
   ],
 ];
+
+/**
+ * The dead out in the lost garden, one walking each zone where an offering or a clue waits
+ * (runtime X east, Z south). They wake only while Sora is near their zone.
+ */
+export const ZONE_PATROLS: { zone: string; route: Point[] }[] = [
+  {
+    zone: "court",
+    route: [
+      { x: -37, z: 21.7 },
+      { x: -76, z: 21.7 },
+      { x: -53.9, z: 21.7 },
+      { x: -53.9, z: -17 },
+    ],
+  },
+  {
+    zone: "tank",
+    route: [
+      { x: -72.5, z: -29 },
+      { x: -37.5, z: -29.5 },
+      { x: -37, z: -63.5 },
+      { x: -73, z: -63 },
+    ],
+  },
+  {
+    zone: "grove",
+    route: [
+      { x: 23.3, z: -44 },
+      { x: 20, z: -52 },
+      { x: 6, z: -58 },
+      { x: -10, z: -56 },
+      { x: -26, z: -54.3 },
+    ],
+  },
+  {
+    zone: "gallery",
+    route: [
+      { x: 39, z: -12 },
+      { x: 39, z: -62 },
+      { x: 54, z: -53 },
+      { x: 54, z: -30 },
+    ],
+  },
+];

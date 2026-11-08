@@ -111,17 +111,67 @@ function plantRoot(mesh: Node): Node {
 }
 
 /**
+ * How a scene says which meshes are plants. By default every mesh under the file's root
+ * belongs to the plant node just below it (Episode 1's village files are laid out that
+ * way). A file whose plants share one parent with everything else names its plants
+ * instead (`rootOf`), and its other wind-material meshes are "loose".
+ */
+export interface PlantRules {
+  /** The plant node a mesh belongs to, or null for a loose mesh. */
+  rootOf?: (mesh: Node) => Node | null;
+  /**
+   * A loose mesh's motion: "rigid" never moves (a root gripping a stupa must not slide off
+   * it), "flutter" only shivers its leaves, "ground" bends from its own lowest point
+   * (undergrowth patches).
+   */
+  loose?: (mesh: Mesh) => "rigid" | "flutter" | "ground";
+}
+
+/** The nearest ancestor (or the mesh itself) whose name matches `pattern`. */
+export function namedRoot(pattern: RegExp): (mesh: Node) => Node | null {
+  return (mesh) => {
+    for (let node: Node | null = mesh; node; node = node.parent)
+      if (pattern.test(node.name)) return node;
+    return null;
+  };
+}
+
+/** Height and phase for a loose mesh, written straight into its uv6. */
+function bakeLoose(mesh: Mesh, motion: "rigid" | "flutter" | "ground"): void {
+  if (mesh.geometry && mesh.geometry.meshes.length > 1) mesh.makeGeometryUnique();
+  const positions = mesh.getVerticesData(VertexBuffer.PositionKind);
+  if (!positions) return;
+  mesh.computeWorldMatrix(true);
+  const m = mesh.getWorldMatrix().m;
+  const foot = mesh.getBoundingInfo().boundingBox.minimumWorld.y;
+  const centre = mesh.getBoundingInfo().boundingBox.centerWorld;
+  const phase = plantPhase(centre.x, centre.z);
+  const uv6 = new Float32Array((positions.length / 3) * 2);
+  for (let i = 0, j = 0; i < positions.length; i += 3, j += 2) {
+    const y = positions[i] * m[1] + positions[i + 1] * m[5] + positions[i + 2] * m[9] + m[13];
+    // A height of 0 stops every motion; 0.6 is enough for leaves to shiver without leaning.
+    uv6[j] = motion === "rigid" ? 0 : motion === "flutter" ? 0.6 : Math.max(0, y - foot) * 1.4;
+    uv6[j + 1] = phase;
+  }
+  mesh.setVerticesData(VertexBuffer.UV6Kind, uv6, false, 2);
+}
+
+/**
  * Writes every plant's height above its foot (scaled by how readily it
  * bends) and its phase into uv6, before batching merges the plants into large
  * meshes: FoliageWind then bends a trunk and its crown as one, from the
  * ground up, wherever the batch has put them. Returns the trees, for their sound.
  */
-export function bakePlantHeights(container: AssetContainer): PlantSite[] {
+export function bakePlantHeights(container: AssetContainer, rules: PlantRules = {}): PlantSite[] {
   const plants = new Map<Node, Mesh[]>();
   for (const mesh of container.meshes) {
     if (!(mesh instanceof Mesh) || !mesh.material || mesh.getTotalVertices() === 0) continue;
     if (!foliageKind(mesh.material.name)) continue;
-    const root = plantRoot(mesh);
+    const root = rules.rootOf ? rules.rootOf(mesh) : plantRoot(mesh);
+    if (!root) {
+      bakeLoose(mesh, rules.loose?.(mesh) ?? "rigid");
+      continue;
+    }
     let list = plants.get(root);
     if (!list) plants.set(root, (list = []));
     list.push(mesh);

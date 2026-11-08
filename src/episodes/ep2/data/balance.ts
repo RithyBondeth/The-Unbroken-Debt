@@ -4,6 +4,12 @@ export const PAGODA_BALANCE = {
   simulationStep: 1 / 30,
   patrolSpeed: 0.62,
   investigateSpeed: 1.22,
+  /** A loud sound close by: the corpse snaps round and comes at a stumbling run. */
+  rushSpeed: 2.5,
+  rushRange: 10,
+  rushLoudness: 1,
+  rushSeconds: 3.5,
+  rushFreeze: 0.3,
   listeningSeconds: 0.75,
   searchSeconds: 9,
   catchRadius: 0.72,
