@@ -1,12 +1,18 @@
 import { biquad, noise } from "./synth";
 
 /**
- * The spaces of Episode 1 and how they sound (Audio Design Document, section
- * 3, "Reverb"). Every sound on the effects, threat and voice buses is sent
- * into the current space's reverb, so a step upstairs rings off teak walls and
- * the same step under the house dies in the mud and the low boards.
+ * The spaces of Episodes 1 and 2 and how they sound (Audio Design Document,
+ * section 3, "Reverb"). Every sound on the effects, threat and voice buses is
+ * sent into the current space's reverb, so a step upstairs rings off teak walls
+ * and the same step under the house dies in the mud and the low boards.
  */
 export type SpaceName = "studio" | "house" | "wardrobe" | "underHouse" | "tent" | "outdoors";
+
+/** Episode 2's spaces: the pagoda garden, the monk's kuti, the prayer hall and the library. */
+export type PagodaSpace = "jungle" | "kuti" | "hall" | "library";
+
+/** Any space the listener can be moved into. */
+export type AcousticSpace = SpaceName | PagodaSpace;
 
 export interface Space {
   /** Seconds the late tail takes to fall 60 dB, in the lows, mids and highs. */
@@ -24,7 +30,7 @@ export interface Space {
   occlusion: [cutoff: number, gain: number];
 }
 
-export const SPACES: Record<SpaceName, Space> = {
+export const SPACES: Record<AcousticSpace, Space> = {
   // A small plastered room with shutters: bright, short.
   studio: {
     rt60: [0.55, 0.5, 0.32],
@@ -106,6 +112,63 @@ export const SPACES: Record<SpaceName, Space> = {
     ],
     wet: 0.2,
     occlusion: [20000, 1],
+  },
+  // Episode 2's pagoda garden: no rain, old trees close round a walled yard. Soft
+  // slapback from the hall and the wall, a short tail swallowed by the leaves.
+  jungle: {
+    rt60: [1.2, 0.8, 0.3],
+    preDelay: 0.025,
+    early: [
+      [0.05, 0.22],
+      [0.085, 0.18],
+      [0.13, 0.12],
+      [0.2, 0.08],
+    ],
+    wet: 0.16,
+    occlusion: [20000, 1],
+  },
+  // The monk's kuti: a small wooden room with mats and a shuttered window.
+  kuti: {
+    rt60: [0.55, 0.4, 0.18],
+    preDelay: 0.003,
+    early: [
+      [0.005, 0.5],
+      [0.008, 0.42],
+      [0.012, 0.3],
+      [0.017, 0.22],
+    ],
+    wet: 0.26,
+    occlusion: [1900, 0.65],
+  },
+  // The prayer hall: plaster and tile, a high roof, a long warm ring that bells and
+  // whispers hang in. Open doors let more of the night in than the kuti does.
+  hall: {
+    rt60: [2.2, 1.7, 0.8],
+    preDelay: 0.018,
+    early: [
+      [0.022, 0.4],
+      [0.031, 0.34],
+      [0.047, 0.28],
+      [0.066, 0.2],
+      [0.09, 0.14],
+    ],
+    wet: 0.3,
+    occlusion: [2600, 0.7],
+  },
+  // The scripture library over the pond: teak boards, shelves of palm-leaf books.
+  // Mid-sized and dry, the shelves break the reflections up.
+  library: {
+    rt60: [0.9, 0.65, 0.3],
+    preDelay: 0.008,
+    early: [
+      [0.01, 0.4],
+      [0.016, 0.3],
+      [0.023, 0.24],
+      [0.032, 0.16],
+      [0.044, 0.1],
+    ],
+    wet: 0.24,
+    occlusion: [2000, 0.7],
   },
 };
 
