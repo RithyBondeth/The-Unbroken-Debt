@@ -219,7 +219,7 @@ describe("Episode 2's soundscape without audio", () => {
       sounds.crack(Vector3.Zero());
       sounds.laugh(Vector3.Zero());
       sounds.thud(3, Vector3.Zero());
-      sounds.groan(1, Vector3.Zero());
+      sounds.thud(2, Vector3.Zero(), 0.3, "crawl");
       sounds.grind(Vector3.Zero());
       sounds.scare();
       sounds.unease();

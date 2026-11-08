@@ -37,6 +37,7 @@ import { bakePlantHeights } from "@/render/plantHeights";
 import { PagodaProgress } from "./PagodaProgress";
 import { PretBrain, Breath } from "./PretBrain";
 import { PagodaNav } from "./PagodaNav";
+import { KmaochHaunts, type HauntEvent, type HauntView } from "./KmaochHaunts";
 import { zoneDistance } from "./PagodaZones";
 import {
   LOST_GARDEN,
@@ -71,7 +72,7 @@ export class WhisperingPagoda {
   /** The garden's dead (PATROLS), then one in each zone of the lost garden (ZONE_PATROLS). */
   readonly ghosts = [
     ...PATROLS.map((p, i) => new PretBrain(p, i)),
-    ...ZONE_PATROLS.map((z, i) => new PretBrain(z.route, i)),
+    ...ZONE_PATROLS.map((z, i) => new PretBrain(z.route, i, z.crawl)),
   ];
   /** A corpse has hold of Sora: which, and for how long. */
   private grab: { i: number; t: number; from: number; yaw: number } | null = null;
@@ -84,6 +85,11 @@ export class WhisperingPagoda {
   private readonly rigs: GhostRig[] = [];
   /** How the shrouded dead move, twitch and vanish. */
   private dead!: ShroudedDead;
+  /** The dead that follow her, and the one put behind her when she stands still. */
+  private readonly haunts = new KmaochHaunts();
+  private nav!: PagodaNav;
+  /** Seconds Sora has stood without moving. */
+  private stillFor = 0;
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -165,9 +171,15 @@ export class WhisperingPagoda {
     for (let i = 0; i < this.ghosts.length; i++)
       this.rigs.push(new GhostRig(kmaoch, "kmaoch_" + i));
     // The dead find their way over the whole map: round walls, stupas and trees, through gaps.
-    const nav = PagodaNav.fromScene(g.scene);
+    const nav = (this.nav = PagodaNav.fromScene(g.scene));
     for (const ghost of this.ghosts) ghost.pathfinder = (a, b) => nav.path(a, b);
-    this.dead = new ShroudedDead(g.scene, this.rigs, this.sounds, this.lights);
+    this.dead = new ShroudedDead(
+      g.scene,
+      this.rigs,
+      this.sounds,
+      this.lights,
+      this.ghosts.map((b) => b.crawls),
+    );
     await ShadowFigure.prepare(g.scene);
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
@@ -667,6 +679,41 @@ export class WhisperingPagoda {
     const feet = this.game.player.feet;
     return stage === "garden" && !!zone && zoneDistance(zone, feet.x, feet.z) < 22;
   }
+  /** How Sora sees corpse `i`: 1 when it is dead ahead, and how far off it is. */
+  private viewOf(i: number): HauntView {
+    const at = this.ghosts[i].position,
+      feet = this.game.player.feet,
+      yaw = this.game.player.yaw;
+    const dx = at.x - feet.x,
+      dz = at.z - feet.z,
+      distance = Math.hypot(dx, dz) || 1;
+    return { facing: (Math.sin(yaw) * dx + Math.cos(yaw) * dz) / distance, distance };
+  }
+  /** What the dead's haunting shows and sounds. */
+  private hauntEvent(e: HauntEvent): void {
+    const g = this.game;
+    switch (e.kind) {
+      case "loom": {
+        // Put down behind her: one foot set down, soft, as if it had just arrived.
+        const at = new Vector3(e.at.x, 0, e.at.z);
+        this.sounds.thud(e.i, at, 0.16, this.ghosts[e.i].crawls ? "crawl" : "walk");
+        this.dead.jerk(e.i);
+        break;
+      }
+      case "turn":
+        // She has turned and it is there: the neck goes over with a crack, the lamp gutters.
+        this.dead.jerk(e.i, true);
+        this.dead.gutter(0.8);
+        this.sounds.scare(0.55);
+        g.atmosphere.scare();
+        break;
+      case "gone":
+        if (e.seen) this.dead.vanishNow(e.i, new Vector3(e.at.x, 0, e.at.z));
+        break;
+      case "stalk":
+        break;
+    }
+  }
   private awakeGhosts(): PretBrain[] {
     return this.ghosts.filter((_, i) => this.awake(i) && this.progress.stage === "garden");
   }
@@ -1044,6 +1091,24 @@ export class WhisperingPagoda {
     this.cinematics.collapse.update(dt, active && p.stage === "escape");
     const shown = (i: number) => this.awake(i);
     if (this.grab) this.holdGrab(dt);
+    this.stillFor = g.player.speed > 0.2 ? 0 : this.stillFor + simDt;
+    if (active && !g.cutscene && !this.grab && p.stage === "garden")
+      for (const event of this.haunts.update(
+        simDt,
+        {
+          feet: { x: g.player.feet.x, z: g.player.feet.z },
+          yaw: g.player.yaw,
+          still: this.stillFor,
+          safe: inKuti(g.player.feet),
+          walkable: (q) => this.nav.walkable(q),
+          clear: (a, b) => this.nav.straight(a, b),
+        },
+        this.ghosts,
+        (i) => this.awake(i),
+        (i) => this.viewOf(i),
+      ))
+        this.hauntEvent(event);
+    else if (p.stage !== "garden") this.haunts.reset(this.ghosts);
     this.rigs.forEach((_, i) => {
       if (!shown(i)) {
         this.dead.hide(i);
@@ -1051,7 +1116,9 @@ export class WhisperingPagoda {
       }
       const brain = this.ghosts[i];
       const was = { x: brain.position.x, z: brain.position.z };
-      if (active && p.stage === "garden" && this.grab?.i !== i) brain.update(simDt);
+      // Before the monk, the first of them already walks its rounds (it hears nothing yet).
+      const walking = p.stage === "garden" || p.stage === "arrival";
+      if (active && walking && this.grab?.i !== i) brain.update(simDt);
       const moved = Math.hypot(brain.position.x - was.x, brain.position.z - was.z) > 1e-4;
       this.dead.update(
         active ? simDt : 0,
@@ -1064,19 +1131,12 @@ export class WhisperingPagoda {
       );
     });
     if (active && !g.cutscene)
-      this.dead.watch(simDt, (i) => {
+      for (const gone of this.dead.watch(simDt, (i) => {
         if (!shown(i)) return null;
-        const at = this.ghosts[i].position,
-          feet = g.player.feet;
-        const dx = at.x - feet.x,
-          dz = at.z - feet.z,
-          distance = Math.hypot(dx, dz) || 1;
-        return {
-          facing: (Math.sin(g.player.yaw) * dx + Math.cos(g.player.yaw) * dz) / distance,
-          distance,
-          at: new Vector3(at.x, 0, at.z),
-        };
-      });
+        const at = this.ghosts[i].position;
+        return { ...this.viewOf(i), at: new Vector3(at.x, 0, at.z) };
+      }))
+        this.haunts.vanished(gone, this.ghosts);
     this.sounds.update(
       dt,
       this.ghosts.slice(0, p.pretCount).map((b) => b.position),

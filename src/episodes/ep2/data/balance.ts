@@ -10,6 +10,14 @@ export const PAGODA_BALANCE = {
   rushLoudness: 1,
   rushSeconds: 3.5,
   rushFreeze: 0.3,
+  /** Following Sora unseen: quick while her back is turned, never nearer than `stalkGap`. */
+  stalkSpeed: 1.05,
+  stalkGap: 5,
+  stalkSeconds: 28,
+  /** The dead that crawl go slower on patrol and scuttle when they hear something. */
+  crawlSpeed: 0.42,
+  crawlInvestigateSpeed: 0.95,
+  crawlRushSpeed: 1.7,
   listeningSeconds: 0.75,
   searchSeconds: 9,
   catchRadius: 0.72,

@@ -1,9 +1,8 @@
 import type { AbstractSound } from "@babylonjs/core/AudioV2/abstractAudio/abstractSound";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { SoundState } from "@babylonjs/core/AudioV2/soundState";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "@/core/Game";
-import { modal, normalise, noise, seededRandom, rattlingBreath } from "@/audio/synth";
+import { modal, normalise, noise, seededRandom } from "@/audio/synth";
 import { dawnBirds, breathOut } from "@/audio/sounds/nightSounds";
 import { foliageMovement } from "@/audio/sounds/atmosphereSounds";
 import { DreadScore } from "@/audio/DreadScore";
@@ -19,11 +18,11 @@ import {
   boneCrack,
   vanishBreath,
   pocongThud,
-  pocongGroan,
   stepsBehind,
   woodKnocks,
 } from "./audio/pagodaHorror";
 import { ShotBank } from "./audio/ShotBank";
+import { CorpseSteps, type CorpseGait } from "./audio/corpseSteps";
 import { PagodaNight } from "./audio/PagodaNight";
 import { SMOT, hasRecording, soundUrls } from "./audio/recordings";
 import {
@@ -33,7 +32,6 @@ import {
   around,
   behind as behindPoint,
   between,
-  breathVoices,
   heartbeat,
   pitchJitter,
 } from "./audio/pagodaMix";
@@ -57,10 +55,6 @@ const ALTAR = new Vector3(22, 1.6, -5.5);
 const BELL_AT = (i: number) => new Vector3(18.4 + i, 2, 9);
 /** The recitation's level at the hall door: heard across the yard, under the night. */
 const CHANT_LEVEL = 0.35;
-/** The Pret's breathing, each from its own body. */
-const BREATH_LEVEL = 0.16;
-/** Seconds for a Pret's breath to fade in or out (a pause, a reader, a save). */
-const BREATH_FADE = 0.6;
 
 /**
  * Episode 2's sound. The night itself is recorded (audio/PagodaNight: insects,
@@ -68,8 +62,8 @@ const BREATH_FADE = 0.6;
  * timber and the bowl from audio/ShotBank); the monks' recitation is the real
  * smot heard in Episode 1. The horror layer stays original synthesis: whispers
  * well away behind the player, bare steps that follow, a heartbeat only with a
- * Pret close, a sob far off in the trees, the apparition's voice and body, the
- * corpses' feet and groans. Every repeat is another take a little off pitch,
+ * Pret close, a sob far off in the trees, the apparition's voice and body. The
+ * corpses make no sound of their own but their recorded feet. Every repeat is another take a little off pitch,
  * at an uneven gap; everything fades in and out rather than snapping.
  */
 export class PagodaSoundscape {
@@ -85,9 +79,10 @@ export class PagodaSoundscape {
   private laughSound: StaticSound | null = null;
   private crackSound: StaticSound | null = null;
   private vanishSound: StaticSound | null = null;
-  /** One thud and one groan per corpse, so their footfalls overlap naturally. */
+  /** The stand-in thud per corpse, if the recorded steps are missing. */
   private readonly thuds: StaticSound[] = [];
-  private readonly groans: StaticSound[] = [];
+  /** The corpses' feet: recorded steps, slowed and dragged. */
+  private readonly corpseSteps: CorpseSteps;
   private chantLevel = 0;
   private chantMax = CHANT_LEVEL;
   private hushed = 0;
@@ -99,8 +94,6 @@ export class PagodaSoundscape {
   private nextSnap = 6;
   private lastCrack = -10;
   private readonly rand = seededRandom(Math.floor(Math.random() * 1e9));
-  private readonly breaths: StaticSound[] = [];
-  private readonly breathLevels: number[] = [];
   private readonly fallbackBells: StaticSound[] = [];
   private bowl: StaticSound | null = null;
   private birds: StaticSound | null = null;
@@ -122,12 +115,12 @@ export class PagodaSoundscape {
   private dawned = false;
 
   constructor(private readonly game: Game) {
+    this.corpseSteps = new CorpseSteps(this.rand);
     this.night = new PagodaNight(game, this.shots, this.rand);
     game.scene.onDisposeObservable.addOnce(() => {
       this.night.stop();
       this.shots.stop();
       for (const sound of [
-        ...this.breaths,
         ...this.fallbackBells,
         this.harvest,
         this.birds,
@@ -146,10 +139,10 @@ export class PagodaSoundscape {
         this.crackSound,
         this.vanishSound,
         ...this.thuds,
-        ...this.groans,
       ])
         sound?.stop();
       this.score.stop();
+      this.corpseSteps.stop();
     });
   }
 
@@ -186,17 +179,6 @@ export class PagodaSoundscape {
         0.65,
         "sfx",
       );
-    // Each Pret breathes at its own pace from its own point in the loop.
-    const breaths = [0, 1, 2, 3, 4].map((i) => rattlingBreath(rate, seededRandom(210 + i)));
-    const voices = breathVoices(breaths.length, breaths[0].length / rate, this.rand);
-    for (const [i, samples] of breaths.entries()) {
-      const sound = await spatial("pret_" + i, samples, Vector3.Zero(), 0, "threat", 2.5, 30);
-      sound.loop = true;
-      sound.playbackRate = voices[i].rate;
-      sound.play({ startOffset: voices[i].offset });
-      this.breaths.push(sound);
-      this.breathLevels.push(0);
-    }
     this.birds = await spatial(
       "birds",
       dawnBirds(rate, seededRandom(230)),
@@ -327,31 +309,22 @@ export class PagodaSoundscape {
       3,
       30,
     );
-    for (let i = 0; i < 5; i++) {
-      this.thuds.push(
-        await spatial(
-          "pocong_thud_" + i,
-          pocongThud(rate, seededRandom(270 + i)),
-          Vector3.Zero(),
-          0.5,
-          "sfx",
-          3,
-          32,
-        ),
-      );
-      if (i < 2)
-        this.groans.push(
+    // The dead's feet: Sora's own dirt and leaf takes, slowed into something heavier.
+    const takes = this.game.footsteps?.buffers;
+    await this.corpseSteps.load(audio, takes?.get("dirt") ?? [], takes?.get("leaves") ?? []);
+    if (!this.corpseSteps.loaded)
+      for (let i = 0; i < 5; i++)
+        this.thuds.push(
           await spatial(
-            "pocong_groan_" + i,
-            pocongGroan(rate, seededRandom(280 + i)),
+            "pocong_thud_" + i,
+            pocongThud(rate, seededRandom(270 + i)),
             Vector3.Zero(),
             0.5,
-            "threat",
-            3.5,
-            30,
+            "sfx",
+            3,
+            32,
           ),
         );
-    }
     this.grindSound = await spatial(
       "stone_grind",
       stoneGrind(rate, seededRandom(266)),
@@ -529,15 +502,10 @@ export class PagodaSoundscape {
     this.at(this.vanishSound, at, undefined, 0.04);
   }
 
-  /** Corpse `i`'s foot coming down. */
-  thud(i: number, at: Vector3, volume = 0.5): void {
-    this.at(this.thuds[i % Math.max(1, this.thuds.length)], at, volume, 0.06);
-  }
-
-  /** Corpse `i` moaning under its cloth. */
-  groan(i: number, at: Vector3): void {
-    const g = this.groans[i % Math.max(1, this.groans.length)];
-    if (g && g.state !== SoundState.Started) this.at(g, at, undefined, 0.04);
+  /** Corpse `i`'s foot (or hand) coming down, walking, lurching or crawling. */
+  thud(i: number, at: Vector3, volume = 0.5, gait: CorpseGait = "walk"): void {
+    if (this.corpseSteps.loaded) this.corpseSteps.step(at, volume, gait);
+    else this.at(this.thuds[i % Math.max(1, this.thuds.length)], at, volume, 0.06);
   }
 
   private at(sound: StaticSound | null | undefined, at: Vector3, volume?: number, pitch = 0): void {
@@ -582,14 +550,6 @@ export class PagodaSoundscape {
     this.score.update(dt);
     this.pret = positions;
     this.pretActive = active && hidden && !this.dawned;
-    // Each Pret's breath fades in and out over a moment, never snaps.
-    this.breaths.forEach((sound, i) => {
-      const p = positions[i];
-      const target = this.pretActive && p?.x !== undefined ? BREATH_LEVEL : 0;
-      this.breathLevels[i] = approach(this.breathLevels[i], target, dt, BREATH_FADE / 3);
-      sound.volume = this.breathLevels[i];
-      if (p) sound.spatial.position = new Vector3(p.x, 1.8, p.z);
-    });
     // The library coming apart behind Sora: old timber splitting at uneven gaps.
     if (escape && hidden && !this.dawned) {
       this.nextSnap -= dt;
@@ -651,7 +611,7 @@ export class PagodaSoundscape {
     this.night.dawn();
     this.birds?.play();
     setTimeout(() => {
-      for (const s of [...this.breaths, this.chant, this.heart]) s?.stop();
+      for (const s of [this.chant, this.heart]) s?.stop();
     }, 6000);
   }
 }

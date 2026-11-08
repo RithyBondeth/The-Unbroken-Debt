@@ -167,7 +167,8 @@ export const PATROLS: Point[][] = [
  * The dead out in the lost garden, one walking each zone where an offering or a clue waits
  * (runtime X east, Z south). They wake only while Sora is near their zone.
  */
-export const ZONE_PATROLS: { zone: string; route: Point[] }[] = [
+/** One of the dead in each zone; `crawl`: it comes on hands and knees. */
+export const ZONE_PATROLS: { zone: string; route: Point[]; crawl?: boolean }[] = [
   {
     zone: "court",
     route: [
@@ -179,6 +180,7 @@ export const ZONE_PATROLS: { zone: string; route: Point[] }[] = [
   },
   {
     zone: "tank",
+    crawl: true,
     route: [
       { x: -72.5, z: -29 },
       { x: -37.5, z: -29.5 },
@@ -198,6 +200,7 @@ export const ZONE_PATROLS: { zone: string; route: Point[] }[] = [
   },
   {
     zone: "gallery",
+    crawl: true,
     route: [
       { x: 39, z: -12 },
       { x: 39, z: -62 },

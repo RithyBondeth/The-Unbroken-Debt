@@ -6,7 +6,28 @@ import {
   hearingRadius,
   crossesStupa,
 } from "./data/balance";
-export type PretMode = "patrol" | "listen" | "investigate" | "rush";
+/**
+ * What a corpse is about. `stalk`: following Sora unseen (see KmaochHaunts); `loom`: put
+ * just behind her while she stood still, waiting for her to turn.
+ */
+export type PretMode = "patrol" | "listen" | "investigate" | "rush" | "stalk" | "loom";
+/** How fast a corpse in `mode` goes, as its brain moves it. */
+export function speedFor(mode: PretMode, crawls: boolean): number {
+  if (crawls)
+    return mode === "rush"
+      ? B.crawlRushSpeed
+      : mode === "investigate" || mode === "stalk"
+        ? B.crawlInvestigateSpeed
+        : B.crawlSpeed;
+  return mode === "rush"
+    ? B.rushSpeed
+    : mode === "investigate"
+      ? B.investigateSpeed
+      : mode === "stalk"
+        ? B.stalkSpeed
+        : B.patrolSpeed;
+}
+
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.z - b.z);
 /** Obstacles inflated by the ghost's shoulder radius. */
 export function gardenClear(p: Point): boolean {
@@ -86,15 +107,19 @@ export class PretBrain {
   private listenFor = 0;
   private interest = 0;
   private rushFor = 0;
+  /** Held where it is this frame: looked at while stalking, or looming. */
+  frozen = false;
   constructor(
     readonly route: readonly Point[],
     start = 0,
+    /** Comes on hands and knees: slower about, a scuttle when it hears something. */
+    readonly crawls = false,
   ) {
     this.routeIndex = start % route.length;
     this.position = { ...route[this.routeIndex] };
   }
   hear(at: Point, loudness: number): boolean {
-    if (loudness <= 0 || inKuti(at)) return false;
+    if (loudness <= 0 || inKuti(at) || this.mode === "loom") return false;
     const barriers = GARDEN_OBSTACLES.filter((s) => crossesStupa(this.position, at, s)).length;
     const transmission = Math.max(B.minimumTransmission, B.stupaTransmission ** barriers);
     const d = distance(at, this.position);
@@ -110,7 +135,7 @@ export class PretBrain {
       this.mode = "listen";
       this.listenFor = B.rushFreeze;
       this.rushFor = B.rushSeconds;
-    } else if (this.mode === "patrol") {
+    } else if (this.mode === "patrol" || this.mode === "stalk") {
       // Repeated footsteps renew the target without freezing an investigating ghost.
       this.mode = "listen";
       this.listenFor = B.listeningSeconds;
@@ -118,7 +143,32 @@ export class PretBrain {
     this.interest = B.searchSeconds;
     return true;
   }
+  /** Follows towards `to` (Sora's back), on the map's paths, until told otherwise. */
+  stalk(to: Point): void {
+    this.mode = "stalk";
+    this.path = this.pathfinder(this.position, to);
+  }
+  /** Back to its rounds from wherever it is. */
+  resume(): void {
+    this.mode = "patrol";
+    this.path = [];
+    this.frozen = false;
+    this.listenFor = 0;
+    this.rushFor = 0;
+  }
+  /** Put somewhere at once, out of sight, facing `yaw`. */
+  place(at: Point, yaw = this.yaw): void {
+    this.position.x = at.x;
+    this.position.z = at.z;
+    this.yaw = yaw;
+    this.path = [];
+  }
+  /** How fast it goes now, metres a second. */
+  speed(): number {
+    return speedFor(this.mode, this.crawls);
+  }
   update(dt: number): void {
+    if (this.frozen || this.mode === "loom") return;
     if (this.listenFor > 0) {
       this.listenFor -= dt;
       if (this.listenFor <= 0) this.mode = this.rushFor > 0 ? "rush" : "investigate";
@@ -145,13 +195,7 @@ export class PretBrain {
     const goal = this.path[0];
     if (!goal) return;
     const d = distance(this.position, goal),
-      step =
-        dt *
-        (this.mode === "patrol"
-          ? B.patrolSpeed
-          : this.mode === "rush"
-            ? B.rushSpeed
-            : B.investigateSpeed);
+      step = dt * this.speed();
     this.yaw = Math.atan2(goal.x - this.position.x, goal.z - this.position.z);
     if (d <= step) {
       this.position.x = goal.x;
@@ -163,6 +207,8 @@ export class PretBrain {
     }
   }
   catches(player: Point): boolean {
+    // One put behind her is a scare, not a death: it is gone before it could reach.
+    if (this.mode === "loom") return false;
     return !inKuti(player) && distance(player, this.position) < B.catchRadius;
   }
 }
