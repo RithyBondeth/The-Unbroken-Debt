@@ -25,6 +25,14 @@ export const GAPS = {
   creak: [12, 30],
   /** How long one insect take plays before the night drifts to another. */
   bedSwap: [70, 150],
+  /** The chant stopping dead, every voice at once (and the insects with it). */
+  chantSilence: [120, 260],
+  /** How long that silence holds before the chant creeps back. */
+  silenceLength: [6, 12],
+  /** The chant answered from the trees where no monks are. */
+  chantAnswer: [70, 160],
+  /** How long the answer is heard each time. */
+  answerLength: [18, 40],
   /** Bare steps behind a player who stands still too long. */
   steps: [45, 120],
 } as const satisfies Record<string, Range>;

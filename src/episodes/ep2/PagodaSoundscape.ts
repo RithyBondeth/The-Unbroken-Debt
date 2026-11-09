@@ -55,6 +55,10 @@ const ALTAR = new Vector3(22, 1.6, -5.5);
 const BELL_AT = (i: number) => new Vector3(18.4 + i, 2, 9);
 /** The recitation's level at the hall door: heard across the yard, under the night. */
 const CHANT_LEVEL = 0.35;
+/** Where the chant answers from: deep in the trees on the far side of the garden. */
+const ANSWER_AT = new Vector3(-38, 2.5, -12);
+/** The answer is never louder than this: half heard, doubted. */
+const ANSWER_LEVEL = 0.16;
 
 /**
  * Episode 2's sound. The night itself is recorded (audio/PagodaNight: insects,
@@ -86,6 +90,15 @@ export class PagodaSoundscape {
   private chantLevel = 0;
   private chantMax = CHANT_LEVEL;
   private hushed = 0;
+  /** The same recitation answering from the dark trees, a few seconds out of step. */
+  private answer: AbstractSound | null = null;
+  private answerLevel = 0;
+  private answerFor = 0;
+  private nextAnswer = between(GAPS.chantAnswer, Math.random);
+  /** Seconds left of a sudden silence in the chant, and when the next one falls. */
+  private silence = 0;
+  private nextSilence = between(GAPS.chantSilence, Math.random);
+  private silenceWhisper = -1;
   private stillFor = 0;
   private nextWhisper = 45;
   private nextFar = 50;
@@ -127,6 +140,7 @@ export class PagodaSoundscape {
         this.bowl,
         this.gaspSound,
         this.chant,
+        this.answer,
         this.heart,
         ...this.whispers,
         this.sob,
@@ -209,6 +223,13 @@ export class PagodaSoundscape {
     const options = { loop: true, minDistance: 10, maxDistance: 120, volume: 0 };
     if (await hasRecording(smot)) {
       this.chant = await audio.spatialStream("ep2_smot", smot, "ambience", ALTAR, options);
+      // The answer is the same voices from where no monks are: the trees west of the
+      // kuti, across the garden from the hall, and never quite in time with it.
+      this.answer = await audio.spatialStream("ep2_smot_answer", smot, "ambience", ANSWER_AT, {
+        ...options,
+        minDistance: 6,
+      });
+      this.answer.play({ startOffset: 4 + this.rand() * 5 });
     } else {
       this.chant = await spatial(
         "chant",
@@ -361,14 +382,52 @@ export class PagodaSoundscape {
     // steps into the hall (and returns a while after she leaves), and in memories.
     const chantStage = ["arrival", "garden", "library"].includes(l.stage);
     this.hushed = l.inHall ? 6 : Math.max(0, this.hushed - dt);
-    const chantTarget = shown && chantStage && !ended && this.hushed === 0 ? this.chantMax : 0;
+    const chanting = shown && chantStage && !ended && this.hushed === 0;
+    // Now and then every voice stops mid-phrase, and the insects with them. Sometimes,
+    // in that silence, something whispers close behind. Then the chant creeps back.
+    if (chanting && live && !l.inHall) this.nextSilence -= dt;
+    if (this.nextSilence <= 0) {
+      this.nextSilence = between(GAPS.chantSilence, this.rand);
+      this.silence = between(GAPS.silenceLength, this.rand);
+      this.silenceWhisper =
+        !l.safe && this.rand() < 0.5 ? this.silence * (0.3 + this.rand() * 0.4) : -1;
+      this.night.hush(this.silence + 2);
+    }
+    if (this.silence > 0) {
+      this.silence -= dt;
+      if (this.silenceWhisper > 0 && this.silence <= this.silenceWhisper) {
+        this.silenceWhisper = -1;
+        const w = this.whispers[Math.floor(this.rand() * this.whispers.length)];
+        if (w) {
+          w.spatial.position = this.around(l, 2.5 + this.rand() * 1.5, (this.rand() - 0.5) * 0.9);
+          w.playbackRate = pitchJitter(this.rand, 0.06);
+          w.play();
+        }
+      }
+    }
+    const silent = this.silence > 0;
+    const chantTarget = chanting && !silent ? this.chantMax : 0;
     this.chantLevel = approach(
       this.chantLevel,
       chantTarget,
       dt,
-      chantTarget < this.chantLevel ? 0.9 : 3,
+      // A silence falls at once; the hall's own hush is slower; the return is slowest.
+      chantTarget < this.chantLevel ? (silent ? 0.08 : 0.9) : silent ? 0.08 : 4,
     );
     if (this.chant) this.chant.volume = this.chantLevel * (enabled ? 1 : 0.8);
+    // The answer from the trees comes and goes, a minute or two apart.
+    if (chanting && !l.safe && !l.inHall) {
+      this.nextAnswer -= dt;
+      if (this.nextAnswer <= 0) {
+        this.nextAnswer = between(GAPS.chantAnswer, this.rand);
+        this.answerFor = between(GAPS.answerLength, this.rand);
+      }
+    }
+    this.answerFor = Math.max(0, this.answerFor - dt);
+    const answerTarget =
+      chanting && this.answerFor > 0 && !silent && !l.safe && !l.inHall ? ANSWER_LEVEL : 0;
+    this.answerLevel = approach(this.answerLevel, answerTarget, dt, silent ? 0.08 : 3);
+    if (this.answer) this.answer.volume = this.answerLevel;
 
     // The heart only beats in the ears with a Pret within about eight metres.
     const beat = heartbeat(live && this.pretActive && !ended ? nearest : 99);
@@ -611,7 +670,7 @@ export class PagodaSoundscape {
     this.night.dawn();
     this.birds?.play();
     setTimeout(() => {
-      for (const s of [this.chant, this.heart]) s?.stop();
+      for (const s of [this.chant, this.answer, this.heart]) s?.stop();
     }, 6000);
   }
 }

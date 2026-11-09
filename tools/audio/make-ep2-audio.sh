@@ -38,7 +38,8 @@ calc() { # arithmetic with a leading zero (bc prints .5)
   printf '%.4f' "$(echo "$1" | bc -l)"
 }
 
-src() { # the source file whose name starts with this Freesound id
+src() { # a path as given, or the source file whose name starts with this Freesound id
+  if [[ "$1" == */* ]]; then echo "$1"; return; fi
   local f
   f=$(ls "$SRC/$1"_*.ogg 2>/dev/null | head -1)
   [[ -n "$f" ]] || { echo "missing source $1 (run with --fetch)" >&2; exit 1; }
@@ -113,6 +114,10 @@ loop amb_ep2_insects_c 806575 8 90 stereo "highpass=f=180,lowpass=f=12000"
 # their levels from the shared wind.
 loop amb_ep2_wind_canopy 523389 2 120 stereo "highpass=f=50,lowpass=f=12000"
 loop amb_ep2_wind_leaves 575645 1 54 stereo "highpass=f=120"
+# The monks' recitation of the Dharma in Pali, from the hall (recorded for the project
+# at a pagoda). The master is limited to -3 LUFS and clips: mono,
+# the harsh top softened, levelled to -20 LUFS like Episode 1's smot.
+loop amb_ep2_chant art-source/audio/ep2/khmer_monks_dharma_pali_source.mp3 1 230 mono "volume=-10dB,highpass=f=90,lowpass=f=7000"
 # Placed in the world: frogs by the lotus pond and in the wet ground west, the pond's edge.
 loop amb_ep2_frogs_a 109439 0 29 mono "highpass=f=250"
 loop amb_ep2_frogs_b 109441 0 41 mono "highpass=f=200"

@@ -77,6 +77,8 @@ export class PagodaNight {
   private master = 0;
   private masterTarget = 1;
   private duck = 0;
+  /** Seconds the night holds its breath (the chant's silences). */
+  private held = 0;
   private nextCreak = 6;
   private nextCall = 8;
   private lastCall = "";
@@ -150,7 +152,11 @@ export class PagodaNight {
       dt,
       (this.masterTarget ? FADE_IN : FADE_OUT) / 3,
     );
-    const duckTarget = nightDuck(nearestPret, this.game.threatActive);
+    this.held = Math.max(0, this.held - dt);
+    const duckTarget = Math.max(
+      nightDuck(nearestPret, this.game.threatActive),
+      this.held > 0 ? 0.85 : 0,
+    );
     // The night stops at once when something comes close, and comes back slowly.
     this.duck = approach(this.duck, duckTarget, dt, duckTarget > this.duck ? 0.6 : 4);
     const life = this.master * (1 - this.duck);
@@ -283,6 +289,11 @@ export class PagodaNight {
     }
     for (const gust of [...this.gusts.keys()])
       if (!wind.gusts.includes(gust)) this.gusts.delete(gust);
+  }
+
+  /** The insects and frogs fall silent for `seconds`, then come back slowly. */
+  hush(seconds: number): void {
+    this.held = Math.max(this.held, seconds);
   }
 
   /** Dawn: the night drains away (the birds are the soundscape's). */

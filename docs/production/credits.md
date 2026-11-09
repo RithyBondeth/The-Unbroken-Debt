@@ -65,6 +65,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 | Oliver Harries | CC0 1.0 | [Wooden Bowl 01](https://polyhaven.com/a/wooden_bowl_01) (V1-093) |
 | Organuz | CC0 1.0 | [Tokay gecko calling on the eaves](https://freesound.org/people/Organuz/sounds/686626/) (S2-024) |
 | Patrick Wagesreiter | SIL OFL 1.1 | [Sora's English handwriting (sketchbook, hints)](https://fonts.google.com/specimen/Patrick+Hand) (V1-052) |
+| Project (family recording) | Project (own recording) | Khmer monks chanting the Dharma in Pali (the prayer hall's recitation) (S2-032) |
 | Project (from Léon Busy, 1921, A36130 and A35898) | CC0 1.0 (source photograph) | Photographs on the hall wall (family group, mother, eldest daughter; a young monk at Angkor Wat) (V1-140) |
 | Project (imagegen original) | Original AI-generated artwork | Uncle Sok funeral photograph matching notebook identity (V1-113) |
 | Project / MakeHuman Community | Project / CC0 1.0 (base mesh) | First-person hands (Sora) (V1-041), Uncle Sok's corpse (5 poses) (V1-048) |
@@ -103,6 +104,6 @@ Only assets in use (status other than Not started) by someone other than the pro
 
 ## Release blockers
 
-- **S1-038 Funeral chanting for the ritual**: Unknown: placeholder until cleared. RELEASE BLOCKER: source, performers and permission unknown; replace or document before release. Master at art-source/audio/ep1/smot_source.mp3 (28 min 24 s, no artist tags, FFmpeg-encoded). Game version: mono, high-passed at 110 Hz, 3 s loop fades, -20 LUFS; Opus 64 kbps with AAC fallback, streamed from the pavilion (NightLife) and, since Nov 8, from Episode 2's prayer hall (PagodaSoundscape, about 0.35). Before release: find the original recording and its performers, get the licence and the monks' or temple's permission (Cultural Guide), or replace it with a recording made with permission. The master is clipped (true peak +1 dBTP)
+- **S1-038 Funeral chanting for the ritual**: Unknown: placeholder until cleared. RELEASE BLOCKER: source, performers and permission unknown; replace or document before release. Master at art-source/audio/ep1/smot_source.mp3 (28 min 24 s, no artist tags, FFmpeg-encoded). Game version: mono, high-passed at 110 Hz, 3 s loop fades, -20 LUFS; Opus 64 kbps with AAC fallback, streamed from the pavilion (NightLife). Before release: find the original recording and its performers, get the licence and the monks' or temple's permission (Cultural Guide), or replace it with a recording made with permission. The master is clipped (true peak +1 dBTP)
 - **S1-040 Sok's Khmer gramophone recording (A2-05), four paragraphs**: Unclear for commercial release. RELEASE BLOCKER: the free Edge read-aloud service is not licensed for shipping in a game; replace with a recorded actor or a licensed TTS service. Khmer text AI-drafted, native review pending. Provenance in art-source/audio/ep1/sok-piseth/
 - **S1-041 Sok's English scratch recording (fallback)**: Scratch only. RELEASE BLOCKER: scratch voice; remove or replace before release

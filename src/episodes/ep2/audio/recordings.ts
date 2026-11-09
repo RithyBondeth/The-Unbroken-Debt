@@ -69,10 +69,10 @@ export const TAKE_TRIM: Partial<Record<string, number>> = {
 };
 
 /**
- * The monks' recitation: Episode 1's recorded smot (art-source/audio/ep1;
- * clearance pending, see S1-038 in credits.md), streamed from the hall.
+ * The monks' recitation of the Dharma in Pali, streamed from the hall
+ * (recorded for the project at a pagoda; art-source/audio/ep2, S2-032).
  */
-export const SMOT = "assets/ep1/audio/amb_ep1_smot";
+export const SMOT = "amb_ep2_chant";
 
 /** Sora's footsteps on leaves (Kenney, CC0), borrowed for steps that follow her. */
 export const LEAF_STEPS = [0, 1, 2, 3, 4].map((k) => `assets/shared/audio/sfx_step_leaves_00${k}`);
