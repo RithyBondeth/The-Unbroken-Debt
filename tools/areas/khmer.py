@@ -589,49 +589,9 @@ def sandals(coll, m, pairs):
 
 
 def ox_cart(coll, m, name, x, y, rot, hood=False):
-    """A Khmer ox cart (រទេះគោ): two big spoked wheels, a slatted bed, a long pole,
-    and on a passenger cart a curved hood of woven bamboo."""
-    parent = empty(name, coll, (x, y, 0), (0, 0, rot))
-    parts = []
-    r = 0.68
-    for side in (-0.78, 0.78):
-        rim = [(side, r * math.cos(a), r + r * math.sin(a)) for a in (2 * math.pi * k / 24 for k in range(25))]
-        parts.append(tube(f"{name}_rim_{side:+.1f}", coll, rim, 0.04, m["worn"], sides=6, metres_per_v=1.0))
-        hub = lathe(f"{name}_hub_{side:+.1f}", coll, [(0.0, -0.12), (0.09, -0.12), (0.11, 0.0), (0.09, 0.12), (0.0, 0.12)],
-                    0, 0, 0, m["worn"], segments=10)
-        hub.location = (side, 0, r)
-        hub.rotation_euler = (0, math.radians(90), 0)
-        parts.append(hub)
-        for k in range(12):
-            a = 2 * math.pi * k / 12
-            parts.append(tube(f"{name}_spoke_{side:+.1f}_{k}", coll, [(side, 0, r), (side, r * math.cos(a) * 0.95, r + r * math.sin(a) * 0.95)],
-                              0.018, m["worn"], sides=5))
-    parts.append(tube(f"{name}_axle", coll, [(-0.9, 0, r), (0.9, 0, r)], 0.045, m["worn"], sides=6))
-    parts.append(box(f"{name}_bed", coll, -0.6, 0.6, -1.2, 1.4, r + 0.06, r + 0.12, m["old_planks"]))
-    for sx in (-0.6, 0.6):
-        for k in range(6):
-            sy = -1.1 + k * 0.48
-            parts.append(tube(f"{name}_stake_{sx:+.1f}_{k}", coll, [(sx, sy, r + 0.1), (sx * 1.05, sy, r + 0.55)], 0.02, m["bamboo"], sides=5))
-        parts.append(tube(f"{name}_side_rail_{sx:+.1f}", coll, [(sx * 1.05, -1.15, r + 0.52), (sx * 1.05, 1.35, r + 0.52)], 0.025, m["bamboo"], sides=5))
-    parts.append(tube(f"{name}_pole", coll, [(0, 1.3, r + 0.08), (0, 3.6, 0.55), (0, 4.2, 0.45)], 0.05, m["worn"], sides=6))
-    parts.append(tube(f"{name}_yoke_rest", coll, [(0.0, 4.0, 0.0), (0.0, 4.0, 0.5)], 0.04, m["worn"], sides=5))
-    if hood:
-        verts, faces, uvs = [], [], []
-        n = 10
-        for i in range(n + 1):
-            a = math.pi * i / n
-            for yy in (-1.0, 1.1):
-                verts.append((-0.68 * math.cos(a), yy, r + 0.5 + 0.65 * math.sin(a)))
-        for i in range(n):
-            faces.append((2 * i, 2 * i + 1, 2 * i + 3, 2 * i + 2))
-            uvs += [(i / n * 1.1, 0), (i / n * 1.1, 1.05), ((i + 1) / n * 1.1, 1.05), ((i + 1) / n * 1.1, 0)]
-        parts.append(mesh_object(f"{name}_hood", coll, verts, faces, m["bamboo_wall_2s"], uvs=uvs))
-    for p in parts:
-        p.parent = parent
-    bpy.context.view_layer.update()
-    pts = [o.matrix_world @ v.co for o in parts for v in o.data.vertices]
-    xs, ys = [p.x for p in pts], [p.y for p in pts]
-    collider(name, coll, min(xs), max(xs), min(ys), max(ys), 0, 1.6)
+    """A Khmer ox cart (រទេះគោ), weathered and partly broken: see ox_cart.py."""
+    from ox_cart import ox_cart_detailed
+    return ox_cart_detailed(coll, m, name, x, y, rot, hood=hood)
 
 
 def bamboo_fence(coll, m, name, a, b, gap=None):

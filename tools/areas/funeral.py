@@ -1,13 +1,8 @@
-"""Detailed Khmer funeral ensemble, as a village in the 1930s would raise it.
+"""Detailed Khmer funeral ensemble, guided by documented Cambodian arrangements.
 
-On 2026-11-07 the user found the earlier modern styling (florist's wreath stands
-with printed condolence banners, frosted globe lamps on brass stands, satin bows,
-black-and-gold swags and chrysanthemum garlands) wrong for the period. The
-pavilion is now what a village made by hand: undyed white cotton, palm thatch
-laid in courses, rattan ties, beeswax candles and clay oil lamps on bamboo, carved
-banana-trunk stands for candles and incense, lotus and jasmine. The authored
-portrait and every gameplay node name stay intact; cultural evidence is in
-docs/production/funeral-reference-study.md (advisor review). Exports to glTF.
+Modern floral/drapery styling was selected by the user. The authored portrait and
+all gameplay node names stay intact; cultural evidence is recorded separately in
+ docs/production/funeral-reference-study.md. Geometry and PBR maps export to glTF.
 """
 import math
 import os
@@ -19,7 +14,7 @@ from mathutils import Matrix, Vector
 from kit import (ROOT, collider, empty, image, image_material, lathe,
                  library_material, mesh_object, plain, texture, tube)
 from shrine import box
-from khmer import beads, join, lotus_buds, pole, place, picture_uvs, flame
+from khmer import join, pole, place, picture_uvs, flame
 from floristry import Flowers
 
 
@@ -136,15 +131,21 @@ def fabric(name,coll,m,point,nu=64,nv=26,folds=11,depth=.025):
 
 
 def bow(name,coll,m,centre,size=.16):
-    """A strip of the same undyed cotton knotted round, its two ends hanging:
-    how a curtain is tied back in a village, not a florist's satin bow."""
     f=funeral_materials(m)['_funeral'];parts=[];x,y,z=centre
-    parts.append(lathe(name+'_knot',coll,[(0,-size*.16),(size*.1,-size*.12),(size*.13,0),(size*.1,size*.12),(0,size*.16)],
-                       x,y-.02,z,f['linen'],segments=10))
     for sign in (-1,1):
-        parts.append(fabric(f'{name}_tail_{sign}',coll,f['linen'],
-                           lambda u,v,fold,s=sign:(x+s*(.01+v*.03)+(u-.5)*size*.22,y-.03+fold*.2,z-v*size*(1.6 if s<0 else 1.2)),
-                           nu=6,nv=12,folds=2,depth=.006))
+        verts=[];faces=[];uv=[]
+        for j in range(17):
+            t=j/16;angle=t*math.pi*2
+            for edge in (-1,1):
+                verts.append((x+sign*(.03+size*.55*(1-math.cos(angle))),
+                              y-.025-size*.16*math.sin(angle),z+size*.26*math.sin(angle)+edge*size*.13))
+            if j:faces.append((2*j-2,2*j,2*j+1,2*j-1));uv.extend(((0,0),(1,0),(1,1),(0,1)))
+        parts.append(mesh_object(f'{name}_loop_{sign}',coll,verts,faces,f['ribbon'],uvs=uv,smooth=True))
+        parts.append(fabric(f'{name}_tail_{sign}',coll,f['ribbon'],
+                           lambda u,v,fold,s=sign:(x+s*(.025+v*.075)+(u-.5)*.06,y-.04+fold*.2,z-v*size*1.6),
+                           nu=8,nv=18,folds=2,depth=.008))
+    parts.append(box(name+'_knot',coll,x-size*.13,x+size*.13,y-.04,y-.006,
+                     z-size*.13,z+size*.13,f['ribbon'],edge=size*.045))
     return join(parts,name)
 
 
@@ -175,111 +176,73 @@ def portrait(coll,m,x,y,z,width=.42):
     parts.append(box('portrait_back',coll,-width/2,width/2,.004,.018,.02,height+.05,f['lining']))
     photo=box('interact_portrait',coll,-width/2+.008,width/2-.008,-.026,-.022,.035,height+.035,m['photo'])
     picture_uvs(photo,(1,0,0),(0,0,1));photo['action']='examine'
-    # A string of jasmine over the frame's top corners, sagging across the glass.
-    pts=[]
-    for i in range(80):
-        t=i/79
-        if t<.25:p=(-width/2-.02,-.035,height*(.55+1.8*t))
-        elif t<.75:u=(t-.25)/.5;p=(-width/2-.02+u*(width+.04),-.04,height+.06-.11*math.sin(u*math.pi))
-        else:p=(width/2+.02,-.035,height*(.55+1.8*(1-t)))
-        pts.append(p)
-    garland=beads('portrait_jasmine_garland',coll,pts,.013,m['jasmine']);garland.parent=parent
+    # A generous floral surround, leaving the original character's face unobscured.
+    flowers=Flowers('portrait_floral_surround',coll,m,1948)
+    flowers.border(width,height)
+    floral=flowers.finish();floral.parent=parent
     for obj in parts+[photo]:obj.parent=parent
     stand=pole('portrait_stand',coll,(0,.025,height*.60),(0,.19,.005),.009,f['wood'],sides=8);stand.parent=parent
     return parent
 
 
-def banana_trunk_stand(coll,m,x,y,z,k,rng):
-    """A length of banana trunk stood on end, its outer sheath cut in a band of
-    kbach points (as funeral and cremation stands are carved), candles and
-    incense pushed into the soft top, jasmine hung round it."""
-    f=funeral_materials(m)['_funeral'];parts=[];h=1.05;r=.13
-    parts.append(lathe(f'funeral_banana_trunk_{k}',coll,[(0,0),(r,0),(r*1.03,.05),(r,h*.5),(r*.96,h),(0,h)],x,y,z,m['banana_stem'],segments=24))
-    # The carved band: two rows of points peeled outward from the sheath.
-    for row,zz in enumerate((h*.62,h*.78)):
-        for j in range(16):
-            a=j/16*math.tau+row*.2
-            c,s_=math.cos(a),math.sin(a)
-            base=((x+c*r*.99,y+s_*r*.99,z+zz-.06),(x+c*r*.99,y+s_*r*.99,z+zz+.06))
-            tip=(x+c*r*1.22,y+s_*r*1.22,z+zz+.11)
-            parts.append(mesh_object(f'funeral_banana_kbach_{k}_{row}_{j}',coll,[base[0],tip,base[1]],[(0,1,2)],m['banana_stem'],
-                                     uvs=[(0,0),(1,.5),(0,1)]))
-    join(parts,f'funeral_banana_trunk_{k}')
-    for j in range(5):
-        a=j/5*math.tau+.3
-        candle(f'funeral_trunk_candle_{k}_{j}',coll,m,x+math.cos(a)*.07,y+math.sin(a)*.07,z+h-.01,height=.12+.02*(j%2),radius=.011)
-    for j in range(11):
-        a=rng.uniform(0,math.tau);rr=rng.uniform(0,.04)
-        bx,by=x+math.cos(a)*rr,y+math.sin(a)*rr
-        tube(f'funeral_trunk_incense_{k}_{j}',coll,[(bx,by,z+h-.02),(bx+rng.normal(0,.01),by+rng.normal(0,.01),z+h+rng.uniform(.18,.26))],.0017,m['incense'],sides=4)
-    pts=[(x+math.cos(a)*(r+.012),y+math.sin(a)*(r+.012),z+h*.45-.05*math.sin(a*3)) for a in (i*math.tau/60 for i in range(61))]
-    beads(f'funeral_trunk_jasmine_{k}',coll,pts,.01,m['jasmine'])
-    collider(f'funeral_banana_trunk_{k}',coll,x-r,x+r,y-r,y+r,z,z+h)
+def floral_stand(coll,m,x,y,z,k):
+    m=funeral_materials(m);f=m['_funeral'];r=np.random.default_rng(830+k)
+    parts=[]
+    for dx,dy in ((-.19,-.06),(.19,-.06),(0,.22)):
+        parts.append(pole(f'funeral_wreath_{k}_leg',coll,(x+dx,y+dy,z),(x,y+.04,z+1.15),.014,f['gilt'],sides=8))
+    flowers=Flowers(f'funeral_wreath_{k}_flowers',coll,m,421+k)
+    centre=Vector((x,y,z+1.28))
+    parts.append(tube(f'funeral_wreath_{k}_backing',coll,
+        [(x+.323*math.cos(a),y+.018,z+1.28+.365*math.sin(a)) for a in (i*math.tau/80 for i in range(81))],
+        .014,f['stem'],sides=8))
+    flowers.wreath(centre,k)
+    parts.append(flowers.finish());parts.append(bow(f'funeral_wreath_{k}_bow',coll,m,(x,y-.07,z+.91),.16))
+    parts.append(tribute_banner(coll,m,centre,k))
+    result=join(parts,f'funeral_wreath_{k}')
+    result['filled_center']=True
+    result['center_blooms']=110
+    result['condolence_text']='សូមចូលរួមរំលែកទុក្ខ'
+    return result
 
 
-def lotus_tray(coll,m,x,y,z,k,rng):
-    """A plaited rattan tray holding a clay pot of lotus buds, betel and a candle."""
-    lathe(f'funeral_lotus_tray_{k}',coll,[(0,0),(.2,0),(.23,.03),(.235,.04),(.22,.035),(0,.012)],x,y,z,m['rattan'],segments=24)
-    lathe(f'funeral_lotus_pot_{k}',coll,[(0,0),(.05,0),(.085,.05),(.09,.1),(.06,.15),(.065,.17),(.05,.17),(0,.16)],x,y,z+.012,m['clay'],segments=18)
-    lotus_buds(f'funeral_lotus_{k}',coll,x,y,z+.15,m,n=5)
-    from shrine import leaf_packet
-    for j in range(3):
-        a=j*2.1+.5
-        leaf_packet(f'funeral_lotus_betel_{k}_{j}',coll,m,(x+math.cos(a)*.15,y+math.sin(a)*.15,z+.03),rng,size=.8,yaw=a)
+def tribute_banner(coll,m,centre,k):
+    """A horizontal, softly sagging printed cloth in front of the full flower head."""
+    f=funeral_materials(m)['_funeral']
+    if 'condolence_banner' not in f:
+        mat=bpy.data.materials.get('M_funeral_condolence_banner')
+        if mat is None:
+            mat=image_material('M_funeral_condolence_banner',
+                texture('T_ep1_funeral_tribute_banner_BC'),rough=.98,tile=0)
+            mat.use_backface_culling=False
+            mat.node_tree.nodes['Principled BSDF'].inputs['Specular IOR Level'].default_value=.18
+        f['condolence_banner']=mat
+    x,y,z=centre;nu,nv=48,8;verts=[];faces=[];uvs=[]
+    for j in range(nv+1):
+        v=j/nv
+        for i in range(nu+1):
+            u=i/nu
+            # The ends fold back toward the flowers; lettering reads left to right.
+            fold=max(0,abs(u-.5)-.43)*.9
+            verts.append((x+(u-.5)*.98,y-.235+fold+.002*math.sin(u*math.tau*5+v),
+                z+.025+(.5-v)*.17-.024*math.sin(u*math.pi)))
+    for j in range(nv):
+        for i in range(nu):
+            a=j*(nu+1)+i;faces.append((a,a+nu+1,a+nu+2,a+1))
+            uvs.extend(((i/nu,1-j/nv),(i/nu,1-(j+1)/nv),
+                         ((i+1)/nu,1-(j+1)/nv),((i+1)/nu,1-j/nv)))
+    return mesh_object(f'funeral_wreath_{k}_khmer_banner',coll,verts,faces,
+        f['condolence_banner'],uvs=uvs,smooth=True)
 
 
-def thatch_roof(coll,m,t,rng):
-    """Palm thatch laid in overlapping courses up each slope, each course's lower
-    edge ragged where the fronds end, frayed strips hanging at the eaves and a
-    capping of bent fronds over the ridge: in place of the flat roof slabs."""
-    for name in ('tent_roof_s','tent_roof_n','tent_roof_cap'):
-        obj=bpy.data.objects.get(name)
-        if obj:bpy.data.objects.remove(obj,do_unlink=True)
-    x0,x1,y0,y1,eave,ridge=t['x0'],t['x1'],t['y0'],t['y1'],t['eave'],t['ridge']
-    ym=(y0+y1)/2;half=ym-y0;over=.55
-    pitch=math.atan2(ridge-eave,half)
-    run=(half+over)/math.cos(pitch)
-    xa,xb=x0-.72,x1+.72;cols=int((xb-xa)/.06)
-    for side in (-1,1):
-        normal=Vector((0,side*math.sin(pitch),math.cos(pitch)))
-        def at(x,d,lift):
-            return Vector((x,ym+side*math.cos(pitch)*d,ridge+.02-math.sin(pitch)*d))+normal*lift
-        verts,faces=[],[]
-        course,d=0,run
-        while d>.12:
-            jag=[rng.uniform(0,.07)+.03*math.sin(i*.7+course) for i in range(cols+1)]
-            base=len(verts)
-            for i in range(cols+1):
-                x=xa+(xb-xa)*i/cols+rng.normal(0,.008)
-                low=d+jag[i]
-                for j,(dd,lift) in enumerate(((low,.13+.01*(i%3)),(low-.25,.1),(low-.55,.075))):
-                    verts.append(tuple(at(x,dd,lift)))
-            for i in range(cols):
-                q=base+i*3
-                faces+=[(q,q+3,q+4,q+1),(q+1,q+4,q+5,q+2)] if side>0 else [(q,q+1,q+4,q+3),(q+1,q+2,q+5,q+4)]
-            course+=1;d-=.21
-        roof=mesh_object(f'tent_thatch_courses_{"n" if side>0 else "s"}',coll,verts,faces,m['thatch'])
-        # Fronds frayed from the eave course, hanging and dripping.
-        strips=[]
-        for k in range(150):
-            x=rng.uniform(xa,xb);top=at(x,run+.02,.12)
-            length=rng.uniform(.05,.22)
-            strips.append(tube(f'tent_thatch_fray_{side}_{k}',coll,[tuple(top),tuple(top+Vector((rng.normal(0,.02),side*.03,-length)))],
-                               .006,m['thatch'],sides=3,radius_end=.002))
-        join(strips,f'tent_thatch_fray_{"n" if side>0 else "s"}')
-    # The ridge capping: fronds bent over the ridge pole, both edges ragged.
-    verts,faces=[],[]
-    for i in range(cols+1):
-        x=xa+(xb-xa)*i/cols
-        for j in range(7):
-            a=(j/6-.5)*2.4
-            rr=.26+rng.uniform(0,.04)*(j in (0,6))
-            verts.append((x,ym+math.sin(a)*rr,ridge+.06+math.cos(a)*rr*.6))
-    for i in range(cols):
-        for j in range(6):
-            q=i*7+j
-            faces.append((q,q+7,q+8,q+1))
-    mesh_object('tent_thatch_ridge',coll,verts,faces,m['thatch'],smooth=True)
+def flower_basket(coll,m,x,y,z,k):
+    m=funeral_materials(m);f=m['_funeral'];r=np.random.default_rng(923+k)
+    parts=[lathe(f'funeral_basket_{k}_urn',coll,[(0,0),(.16,0),(.17,.025),(.085,.09),(.075,.16),(.18,.20),(.20,.27),(.17,.29),(.15,.26)],x,y,z,f['gilt'],segments=48)]
+    for h,rad in ((.025,.165),(.18,.12),(.26,.19)):
+        parts.append(tube(f'funeral_basket_{k}_bead',coll,[(x+rad*math.cos(a),y+rad*math.sin(a),z+h) for a in (j*math.tau/48 for j in range(49))],.004,f['brass'],sides=6))
+    flowers=Flowers(f'funeral_basket_{k}_flowers',coll,m,641+k)
+    flowers.bouquet((x,y,z+.28),width=.255,height=.29,count=92)
+    parts.append(flowers.finish());parts.append(bow(f'funeral_basket_{k}_bow',coll,m,(x,y-.21,z+.30),.13))
+    return join(parts,f'funeral_basket_{k}')
 
 
 def candle(name,coll,m,x,y,z,height=.22,radius=.016):
@@ -336,7 +299,9 @@ def altar(coll,m,x,y,z,rng):
         lathe(f'altar_water_cup_{side}',coll,[(0,0),(.028,0),(.042,.063),(.044,.069),(.037,.070),(.031,.012),(0,.012)],px,py,top,f['porcelain'],segments=32)
         lathe(f'altar_water_{side}',coll,[(0,.044),(.038,.044)],px,py,top,f['water'],segments=32)
         place(coll,'brass_vase_03',(x+side*.69,y+.12,top),scale=1.05)
-        lotus_buds(f'altar_lotus_{"w" if side<0 else "e"}',coll,x+side*.69,y+.12,top+.2,m,n=5)
+        flowers=Flowers(f'altar_bouquet_{side}',coll,m,420+side)
+        flowers.bouquet((x+side*.69,y+.12,top+.22),width=.145,height=.28+(side*.016),count=41)
+        flowers.finish()
     # A hollow incense vessel, ringed foot and ash surface.
     ix,iy=x,y-.20
     lathe('altar_incense_pot',coll,[(0,0),(.072,0),(.08,.018),(.065,.04),(.08,.10),(.088,.13),(.078,.138),(.068,.05),(0,.04)],ix,iy,top,f['brass'],segments=40)
@@ -353,20 +318,7 @@ def altar(coll,m,x,y,z,rng):
     place(coll,'bananas',(x-.48,y+.05,top+.025),rot_deg=20,scale=.45)
     from shrine import grains
     grains('altar_rice',coll,[(x+.48+rng.normal(0,.022),y+.05+rng.normal(0,.022),top+.030+rng.uniform(0,.018)) for _ in range(230)],m['rice'],rng)
-    # Clay oil lamps on lashed bamboo stands either side, burning coconut oil.
-    # The flame keeps the old lamp's name: the vigil snuffs it (data/arrival.ts).
-    for i,side in enumerate((-1,1)):
-        px=x+side*.96;py=y-.02;h=1.02
-        for k in range(3):
-            a=k*math.tau/3+.4
-            pole(f'altar_lamp_leg_{i}_{k}',coll,(px+.16*math.cos(a),py+.16*math.sin(a),z),(px+.02*math.cos(a),py+.02*math.sin(a),z+h*.62),.012,m['bamboo'],sides=6)
-        pole(f'altar_lamp_stand_{i}',coll,(px,py,z+h*.55),(px,py,z+h),.016,m['bamboo'],sides=7)
-        lathe(f'altar_lamp_lashing_{i}',coll,[(.022,h*.57),(.026,h*.6),(.026,h*.65),(.022,h*.68)],px,py,z,m['rattan'],segments=10)
-        lathe(f'altar_lamp_dish_{i}',coll,[(0,0),(.035,0),(.075,.025),(.082,.04),(.076,.042),(.06,.03),(0,.026)],px,py,z+h,m['clay'],segments=20)
-        lathe(f'altar_lamp_oil_{i}',coll,[(0,.032),(.064,.032)],px,py,z+h,f['water'],segments=16)
-        tube(f'altar_lamp_wick_{i}',coll,[(px+.04,py,z+h+.035),(px+.06,py,z+h+.05)],.004,f['char'],sides=4)
-        flame(f'altar_globe_{i}',coll,px+.06,py,z+h+.05,.05,m['flame'])
-        empty(f'light_flame_altar_globe_{i}',coll,(px+.06,py,z+h+.1),radius=3.2,intensity=.6)
+    # (The frosted globe lamps on brass stands were removed on 2026-11-07.)
     return flames
 
 
@@ -439,28 +391,35 @@ def pavilion(coll,m,t,rng):
     for side,name in ((-1,'w'),(1,'e')):
         px=x0 if side<0 else x1
         fabric(f'tent_drape_{name}',coll,f['linen'],lambda u,v,w,xx=px:(xx+w,y0+1.6+(y1-y0-1.6)*u,.07+v*(eave-.12)),folds=17,depth=.05,nu=96,nv=30)
-        # Gathered front curtains of the same white cotton, tied back to the posts.
-        fabric(f'tent_drape_{name}_tied',coll,f['linen'],
+        # Gathered front curtains open in a curved, load-bearing silhouette.
+        fabric(f'tent_drape_{name}_tied',coll,f['black'],
                lambda u,v,w,xx=px,sgn=side:(xx+sgn*(.08+.22*math.sin(v*math.pi))+(u-.5)*(.14+.30*abs(v-.48)),
                     y0+.19+w,eave-.06-v*(eave-.30)),nu=26,nv=50,folds=8,depth=.022)
         bow(f'tent_curtain_tie_{name}',coll,m,(px+side*.28,y0+.13,1.28),.19)
-    # Plain white cotton swags across the entrance, two deep, hemmed by hand.
+    # Layered white swags with narrow gold hems span the pavilion entrance.
+    # Black swags over deeper white ones, as at Cambodian funerals, with a
+    # garland of white and yellow flowers along their hem.
+    garland=Flowers('tent_front_garland',coll,m,7101)
     for k in range(4):
         a=x0+(x1-x0)*k/4;b=x0+(x1-x0)*(k+1)/4
         fabric(f'tent_entrance_underswag_{k}',coll,f['linen'],
                lambda u,v,w,aa=a,bb=b:(aa+(bb-aa)*u,y0-.07+w,eave+.035-.52*math.sin(math.pi*u)-v*.16),nu=34,nv=14,folds=11,depth=.022)
-        fabric(f'tent_entrance_swag_{k}',coll,m['cotton_dirty'],
-               lambda u,v,w,aa=a,bb=b:(aa+(bb-aa)*u,y0-.10+w,eave+.035-.33*math.sin(math.pi*u)-v*.12),nu=34,nv=14,folds=9,depth=.025)
-    # The canopy over the portrait: bamboo posts lashed to the dais, white cloth.
+        fabric(f'tent_entrance_swag_{k}',coll,f['black'],
+               lambda u,v,w,aa=a,bb=b:(aa+(bb-aa)*u,y0-.10+w,eave+.035-.39*math.sin(math.pi*u)-v*.15),nu=34,nv=14,folds=9,depth=.025)
+        for j in range(1,18):
+            u=j/18
+            garland.bloom((a+(b-a)*u,y0-.16,eave-.115-.39*math.sin(math.pi*u)),radius=.036,
+                          normal=(0,-1,.15),yellow=(j//3)%2==1,kind=None if (j//3)%2 else 'chrysanthemum')
+        tube(f'tent_entrance_gold_hem_{k}',coll,[(a+(b-a)*u,y0-.135,eave-.11-.39*math.sin(math.pi*u)) for u in (j/44 for j in range(45))],.009,f['gold_cloth'],sides=7)
+    garland.finish()
+    # A portrait canopy, distinct from the larger weather shelter.
     for side in (-1,1):
-        pole(f'funeral_canopy_post_{side}',coll,(side*1.24,4.65,.32),(side*1.24,4.65,2.42),.028,m['bamboo'],sides=8)
-        for h in (.8,1.6,2.35):
-            lathe(f'funeral_canopy_lashing_{side}_{h:.1f}',coll,[(.031,h-.03),(.036,h-.015),(.036,h+.015),(.031,h+.03)],side*1.24,4.65,0,m['rattan'],segments=8)
+        pole(f'funeral_canopy_post_{side}',coll,(side*1.24,4.65,.32),(side*1.24,4.65,2.42),.025,f['gilt'],sides=10)
         fabric(f'funeral_canopy_curtain_{side}',coll,f['linen'],
                lambda u,v,w,sg=side:(sg*(.40+v*.72)+(u-.5)*(.54-.24*math.sin(v*math.pi)),4.65+w,2.37-v*1.78),nu=32,nv=54,folds=9,depth=.028)
         bow(f'funeral_canopy_tie_{side}',coll,m,(side*.88,4.60,1.27),.14)
-    pole('funeral_canopy_bar',coll,(-1.3,4.65,2.4),(1.3,4.65,2.4),.02,m['bamboo'],sides=7)
-    fabric('funeral_canopy_top_swag',coll,f['linen'],lambda u,v,w:(-1.30+2.6*u,4.62+w,2.42-.25*math.sin(u*math.pi)-v*.17),nu=66,nv=20,folds=16,depth=.022)
+    fabric('funeral_canopy_top_swag',coll,f['black'],lambda u,v,w:(-1.30+2.6*u,4.62+w,2.42-.25*math.sin(u*math.pi)-v*.17),nu=66,nv=20,folds=16,depth=.022)
+    tube('funeral_canopy_gold_edge',coll,[(-1.30+2.6*u,4.59,2.25-.25*math.sin(u*math.pi)) for u in (j/64 for j in range(65))],.007,f['gold_cloth'],sides=7)
     # Actual cross-laid floor boards and bamboo joints remain visible at the mat edges.
     boards=[]
     for j in range(38):
@@ -472,18 +431,16 @@ def pavilion(coll,m,t,rng):
             for j in range(7):
                 h=eave-.035+j*.009
                 tube('tent_lashing_fibre',coll,[(px+.074*math.cos(a),py+.074*math.sin(a),h) for a in (i*math.tau/22 for i in range(23))],.0025,m['rattan'],sides=5)
-    # Carved banana-trunk stands beside the coffin, candles and incense set in
-    # them, and lotus buds in clay pots on plaited trays before the altar.
+    # Paired stands and low flower baskets follow the selected Cambodian references.
     for k,side in enumerate((-1,1)):
-        banana_trunk_stand(coll,m,side*2.20,5.68,.31,k,rng)
-        lotus_tray(coll,m,side*1.10,3.78,.065,k,rng)
-    thatch_roof(coll,m,t,rng)
+        floral_stand(coll,m,side*2.20,5.68,.31,k)
+        flower_basket(coll,m,side*1.10,3.78,.065,k)
 
 
 def mourning_cloth(coll,m,t):
-    """The white of a village funeral pavilion: the ceiling lined in bays of new
-    and older cotton, sagging between the rafters, a scalloped valance round the
-    eaves, and curtains gathered at every post of the white walls."""
+    """The black and white of a Khmer funeral pavilion: the ceiling lined in
+    alternate black and white bays, a scalloped black valance on a white band
+    round the eaves, and black curtains gathered at every post of the white walls."""
     f=funeral_materials(m)['_funeral']
     x0,x1,y0,y1,eave,ridge=t['x0'],t['x1'],t['y0'],t['y1'],t['eave'],t['ridge']
     ym=(y0+y1)/2;half=ym-y0
@@ -513,14 +470,14 @@ def mourning_cloth(coll,m,t):
                 for index in face:
                     px,py,_=verts[index];uvs.append(((px-x0)*.9,(py-ym)*.9))
             panels[i%2].append(mesh_object(f'tent_lining_bay_{side}_{i}',coll,verts,faces,
-                                           f['linen'],uvs=uvs,smooth=True))
-        join(panels[0]+panels[1],f'tent_lining_white_{side}')
+                                           f['linen'] if i%2==0 else f['black'],uvs=uvs,smooth=True))
+        join(panels[0],f'tent_lining_white_{side}');join(panels[1],f'tent_lining_black_{side}')
     # Valance: a white band with black scallops hanging below it.
     def valance(name,a,b,z):
         length=math.dist(a,b);n=max(8,int(length/.05))
         dx,dy=(b[0]-a[0])/length,(b[1]-a[1])/length
         for label,mat,top,drop in (('band',f['linen'],0,lambda s:.13),
-                                   ('scallop',m['cotton_dirty'],.11,lambda s:.13+.27*math.sin(math.pi*(s%.5)/.5))):
+                                   ('scallop',f['black'],.11,lambda s:.13+.27*math.sin(math.pi*(s%.5)/.5))):
             verts,faces,uvs=[],[],[]
             for i in range(n+1):
                 s=length*i/n;wave=.012*math.sin(s*14)
@@ -535,16 +492,16 @@ def mourning_cloth(coll,m,t):
     for px in (x0,x1):
         off=.06 if px>0 else -.06
         valance(f'tent_valance_{px:.0f}',(px+off,y0),(px+off,y1),eave)
-    # Gathered white curtains at the posts, tied at shoulder height with cotton strips.
+    # Gathered black curtains at the posts, tied at shoulder height with white bows.
     def gathered(v):
         return .52-.40*math.sin(math.pi*min(1,v/.62))**1.5 if v<.62 else .12+.30*((v-.62)/.38)**1.2
     for k,cx in enumerate((x0+.32,-2.0,0.0,2.0,x1-.32)):
-        fabric(f'tent_post_curtain_back_{k}',coll,f['linen'],
+        fabric(f'tent_post_curtain_back_{k}',coll,f['black'],
                lambda u,v,w,c=cx:(c+(u-.5)*gathered(v),y1-.12+w,eave-.07-v*(eave-.12)),nu=16,nv=40,folds=5,depth=.02)
         if 0<k<4:bow(f'tent_post_curtain_back_{k}_tie',coll,m,(cx,y1-.15,eave-.07-.62*(eave-.12)),.12)
     for side,px in ((-1,x0),(1,x1)):
         for k,cy in enumerate((y0+1.75,(y0+y1)/2+.4,y1-.32)):
-            fabric(f'tent_post_curtain_{"w" if side<0 else "e"}_{k}',coll,f['linen'],
+            fabric(f'tent_post_curtain_{"w" if side<0 else "e"}_{k}',coll,f['black'],
                    lambda u,v,w,c=cy,xx=px-side*.12:(xx+w,c+(u-.5)*gathered(v),eave-.07-v*(eave-.12)),
                    nu=16,nv=40,folds=5,depth=.02)
             z=eave-.07-.62*(eave-.12)
@@ -560,7 +517,7 @@ def monks_seat(coll,m,x0,x1,y0,y1,h):
         cy=y0+.5+k*(y1-y0-1)/3
         # Seams and soft piping make the triangular cushions read as sewn textiles.
         for yy in (cy-.22,cy+.22):
-            tube(f'monk_cushion_piping_{k}',coll,[(x0+.05,yy,h+.015),(x0+.05,yy,h+.37),(x0+.30,yy,h+.015),(x0+.05,yy,h+.015)],.003,f['linen'],sides=6)
+            tube(f'monk_cushion_piping_{k}',coll,[(x0+.05,yy,h+.015),(x0+.05,yy,h+.37),(x0+.30,yy,h+.015),(x0+.05,yy,h+.015)],.003,f['gold_cloth'],sides=6)
     fabric('monk_seat_soft_runner',coll,f['linen'],lambda u,v,w:(x0+.25+(x1-x0-.30)*u,y0+.1+(y1-y0-.2)*v,h+.023+w*.05),nu=22,nv=48,folds=6,depth=.008)
 
 
