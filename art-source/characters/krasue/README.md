@@ -1,7 +1,7 @@
 # Krasue: full 3D character
 
 `krasue.blend` is the editable source. Rebuild it and the self-contained runtime
-`public/assets/ep1/krasue/krasue-creature.glb` with:
+`public/assets/shared/krasue/krasue-creature.glb` with:
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background \

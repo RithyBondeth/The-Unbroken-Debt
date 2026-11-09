@@ -42,6 +42,20 @@ SALA_SOUTH_X = (37.0, 41.0)  # sala clearing's south side: into the Bone Terrace
 COURT_TANK_BAY = 8  # of the wall along Y 21, from X -81
 TANK_GROVE_BAY = 3  # of the wall along X -30, from Y 43
 GROVE_GALLERY_Y = (58.0, 62.0)
+# The story's way through the garden (Blender X east, Y north): where each offering and clue
+# waits, so the zones keep these spots clear and the area script puts them there.
+TANK_STEPS_X = -53.9
+PICKUPS = {
+    'rice': (-14.0, 66.6),  # still left at the village's old spirit house, deep in the grove
+    'water': (39.0, 66.2),  # lustral water before the images at the head of the west walk
+    'lotus': (TANK_STEPS_X + .9, 39.75),  # a living lotus off the tank's landing
+}
+RICE_SHRINE = (-14.0, 68.0)
+# A dead-end lane in the Court, the bell verse at its end: x0, x1, y0, y1.
+VERSE_LANE = (-79.6, -73.4, -13.0, -3.2)
+VERSE_BOARD = (-76.5, -4.3)
+# Ways back into the compound that open only from the garden's side (centres, X/Y).
+SHORTCUTS = {'terrace': (29.25, -24.9), 'grove': (-23.35, 41.75)}
 
 
 def _rect(zones, name):
@@ -142,16 +156,24 @@ def court(coll, m, rect, lamp):
             if abs(row_y - avenue_y) < 3.2 or rng.random() > .56:
                 continue
             px, py = lane_x + rng.normal(0, .35), row_y + rng.normal(0, .35)
+            vx0, vx1, vy0, vy1 = VERSE_LANE
+            if vx0 - 1 < px < vx1 + 1 and vy0 - 1 < py < vy1 + 1:
+                continue  # the lane to the bell verse stays open
             k += 1
             objs = memorial(coll, m, px, py, 400 + k, rng.uniform(2.3, 3.4), 'court_' + str(k), rng)
             lean(objs, px, py, rng.normal(0, .05), rng.normal(0, .05))
             collider('court_stupa_' + str(k), coll, px - .7, px + .7, py - .7, py + .7, 0, 3.2, 'stone')
             placed.append((px, py))
-            if k % 4 == 0:
+            if k % 4 == 0 and not any('_fig_' in o.name for o in objs):
                 # A fig tree stands only on a snapped stupa; a whole one keeps just the roots.
                 crown = rng.uniform(1.4, 2.2)
                 fig_roots(coll, m, 'court_fig_' + str(k), px, py, 2.4, lambda z: .6 if z < 1.9 else .45, rng, n=7, spread=.9,
-                          crown=crown if 'broken' in objs[0].data.name else 0)
+                          crown=crown if 'broken' in objs[0].data.name else 0, support=[objs[0]])
+    # The lane to the bell verse: walled both sides and at its end, open to the south.
+    vx0, vx1, vy0, vy1 = VERSE_LANE
+    temple_wall(coll, m, 'court_verse_lane_w', (vx0, vy0), (vx0, vy1), rng, 'mould_grey', height=2.3)
+    temple_wall(coll, m, 'court_verse_lane_e', (vx1, vy0), (vx1, vy1), rng, 'mould_grey', height=2.3)
+    temple_wall(coll, m, 'court_verse_lane_n', (vx0, vy1), (vx1, vy1), rng, 'mould_grey', height=2.3)
     # Standing walls that end lanes: walk one, and you have to come back.
     for j, (a, b) in enumerate([((-41, -10), (-41, 2)), ((-46.5, 6), (-46.5, 17)), ((-60, -12), (-60, 1)),
                                 ((-65.5, 5), (-65.5, 16)), ((-71, -14), (-71, -2))]):
@@ -167,7 +189,8 @@ def court(coll, m, rect, lamp):
 
     def clear(x, y):
         return (abs(y - avenue_y) < 1.6 or abs(x - avenue_x) < 1.6
-                or any((x - a) ** 2 + (y - b) ** 2 < 1.2 for a, b in placed))
+                or any((x - a) ** 2 + (y - b) ** 2 < 1.2 for a, b in placed)
+                or vx0 < x < vx1 and vy0 - .5 < y < vy1)
     _growth(coll, m, 'court', rect, rng, 500, clear)
     return zone.close()
 
@@ -198,7 +221,7 @@ def tank(coll, m, rect, lamp):
             _slab(coll, m, f'tank_course_{i}_{name}', *r, top - .4, top, mat)
     box('tank_water', coll, bx0 + 4, bx1 - 4, by0 + 4, by1 - 4, -2.0, water, m['water'])
     # The steps down: a real ramp in the collision, under the visible courses.
-    sx = -53.9
+    sx = TANK_STEPS_X
     half = 1.2
     landing_y = by0 + 5.6
     z_low = water + .12
@@ -259,9 +282,13 @@ def grove(coll, m, rect, lamp):
     # A crooked path joins the three ways in: from the compound, the tank and the gallery.
     path = [(sum(NORTH_BREACH_X) / 2, y0), (20, 52), (6, 58), (-10, 56), (x0, 54.3)]
     branch = [(6, 58), (18, 62), (x1, sum(GROVE_GALLERY_Y) / 2)]
+    # Side ways: up to the old spirit house where the rice is, and down to the barred breach
+    # in the compound wall (a way back that opens only from this side).
+    shrine_way = [(-10, 56), (-12.5, 61), (RICE_SHRINE[0], RICE_SHRINE[1] - 2.2)]
+    breach_way = [(-10, 56), (-18, 48), (SHORTCUTS['grove'][0], y0)]
 
     def on_path(x, y, width=2.4):
-        for route in (path, branch):
+        for route in (path, branch, shrine_way, breach_way):
             for (ax, ay), (bx, by) in zip(route, route[1:]):
                 dx, dy = bx - ax, by - ay
                 t = max(0, min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)))
@@ -273,6 +300,8 @@ def grove(coll, m, rect, lamp):
     for j in range(46):
         px, py = rng.uniform(x0 + 3, x1 - 3), rng.uniform(y0 + 3, y1 - 3)
         if on_path(px, py, 4.2) or any((px - a) ** 2 + (py - b) ** 2 < 49 for a, b in trees):
+            continue
+        if math.dist((px, py), RICE_SHRINE) < 6:
             continue
         trees.append((px, py))
         giant(coll, m, px, py, rng.uniform(14, 20), 700 + j, rng, reach=2.1, collision=True, crown=1.1)
@@ -290,9 +319,14 @@ def grove(coll, m, rect, lamp):
             sx, sy = px + math.cos(a) * rng.uniform(2, 3.4), py + math.sin(a) * rng.uniform(2, 3.4)
             if on_path(sx, sy, 2.8) or not (x0 + 1 < sx < x1 - 1 and y0 + 1 < sy < y1 - 1):
                 continue
+            if math.dist((sx, sy), RICE_SHRINE) < 4:
+                continue
             k += 1
             spirit_house(coll, m, 'grove_shrine_' + str(k), sx, sy, rng.uniform(0, math.tau), rng, fallen=rng.random() < .28)
             collider('grove_shrine_' + str(k), coll, sx - .4, sx + .4, sy - .4, sy + .4, 0, 1.6, 'wood')
+    # The village's old spirit house, bigger than the rest, where someone still leaves rice.
+    spirit_house(coll, m, 'grove_rice_shrine', RICE_SHRINE[0], RICE_SHRINE[1] + .3, 0, rng)
+    collider('grove_rice_shrine', coll, RICE_SHRINE[0] - .45, RICE_SHRINE[0] + .45, RICE_SHRINE[1] - .15, RICE_SHRINE[1] + .75, 0, 1.6, 'wood')
     for j in range(5):
         px, py = trees[j]
         pts = [(px + math.cos(t) * .9, py + math.sin(t) * .9, 2.3 + .1 * math.sin(t * 3)) for t in np.linspace(0, math.tau, 14)]
@@ -302,7 +336,8 @@ def grove(coll, m, rect, lamp):
     _edge_forest(coll, m, rect, rng, 760, gaps=[(sum(NORTH_BREACH_X) / 2, y0, 6), (x0, 54.3, 6), (x1, sum(GROVE_GALLERY_Y) / 2, 6)])
 
     def clear(x, y):
-        return on_path(x, y, 1.5) or any((x - a) ** 2 + (y - b) ** 2 < 1.5 for a, b in trees)
+        return (on_path(x, y, 1.5) or any((x - a) ** 2 + (y - b) ** 2 < 1.5 for a, b in trees)
+                or math.dist((x, y), RICE_SHRINE) < 2.6)
     _growth(coll, m, 'grove', rect, rng, 900, clear)
     return zone.close()
 
@@ -321,10 +356,11 @@ def _walk(coll, m, name, x, y0, y1, rng, images=False):
             px = x + side * width / 2
             broken = rng.random() < .24
             height = 1.45 if broken else 3.1
-            piece(coll, 'gallery_pier_broken' if broken else 'gallery_pier', f'{name}_pier_{j}_{side}', px, py, 0, rng.integers(0, 4) * math.pi / 2)
+            pier = piece(coll, 'gallery_pier_broken' if broken else 'gallery_pier', f'{name}_pier_{j}_{side}', px, py, 0, rng.integers(0, 4) * math.pi / 2)
             collider(f'{name}_pier', coll, px - .24, px + .24, py - .24, py + .24, 0, height, 'stone')
             if rng.random() < .22:
-                fig_roots(coll, m, f'{name}_fig_{j}', px, py, height, lambda z: .34, rng, n=5, spread=.7, crown=rng.uniform(1.2, 2))
+                fig_roots(coll, m, f'{name}_fig_{j}', px, py, height, lambda z: .34, rng, n=5, spread=.7, crown=rng.uniform(1.2, 2),
+                          support=[pier])
         if images and j % 2 == 0:
             side = -1 if j % 4 == 0 else 1
             px = x + side * (width / 2 - .5)
@@ -523,12 +559,13 @@ def terrace(coll, m, rect, lamp):
     for j, (px, py, top) in enumerate(anchors + [(cx - 12.6, cy + 2, 4.4), (cx + 12.2, cy + 1, 4.1), (cx + 1.5, cy + 6.4, 3.8), (gate_x - 1.2, y1 - 3.4, 3.6)]):
         funeral_tatter(coll, m, f'terrace_tatter_{j}', px + rng.normal(0, .3), py + rng.normal(0, .3), top - .05, rng)
     lamp('terrace_altar', cx + 1.5, cy - .6, t1, 2.0)
-    _edge_forest(coll, m, rect, rng, 920, gaps=[(gate_x, y1, 6)])
+    _edge_forest(coll, m, rect, rng, 920, gaps=[(gate_x, y1, 6), (x0, SHORTCUTS['terrace'][1], 4)])
     drop_protos(coll, skulls + bones)
 
     def clear(x, y):
         return (abs(x - cx) < 11.6 and abs(y - cy) < 6.8 or abs(x - gate_x) < 1.8
-                or abs(x - gx - .8) < 2 and abs(y - gy) < 2)
+                or abs(x - gx - .8) < 2 and abs(y - gy) < 2
+                or x < x0 + 4 and abs(y - SHORTCUTS['terrace'][1]) < 2.2)
     _growth(coll, m, 'terrace', rect, rng, 260, clear)
     return zone.close()
 

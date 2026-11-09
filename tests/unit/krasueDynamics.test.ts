@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KrasueDynamics, type KrasueJoint } from "@/episodes/ep1/entities/KrasueDynamics";
+import { KrasueDynamics, type KrasueJoint } from "@/shared/entities/KrasueDynamics";
 
 const joints: KrasueJoint[] = [
   { kind: "hair", index: 0, joint: 0 },

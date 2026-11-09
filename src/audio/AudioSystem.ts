@@ -5,7 +5,7 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import type { StreamingSound } from "@babylonjs/core/AudioV2/abstractAudio/streamingSound";
 import type { Node } from "@babylonjs/core/node";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SPACES, impulseResponse, type SpaceName } from "./acoustics";
+import { SPACES, impulseResponse, type AcousticSpace } from "./acoustics";
 import { seededRandom } from "./synth";
 
 /**
@@ -49,6 +49,31 @@ const REVERB_SENDS: Partial<Record<BusName, number>> = {
   ambience: 0.35,
 };
 
+/**
+ * The master limiter: a fast compressor just under full scale with its automatic
+ * make-up gain taken back off, so everything below the threshold passes at
+ * exactly the level it had before (Episodes 1 and 3 sound as they did) and only
+ * the stacked peaks of a scare are held down, to about -3 dBFS.
+ */
+export const LIMITER = { threshold: -4, knee: 0, ratio: 20, attack: 0.002, release: 0.12 };
+
+/**
+ * The gain, in dB, a DynamicsCompressorNode adds after compressing (Web Audio
+ * API 1.1, "Computing the makeup gain"): the curve's output for a full-scale
+ * input, inverted and raised to 0.6. Exact for a hard knee.
+ */
+export function compressorMakeupDb(threshold: number, ratio: number): number {
+  const fullRange = threshold + (0 - threshold) / ratio;
+  return -0.6 * fullRange;
+}
+
+/** The level, dBFS, the limiter lets out for an input `db` dBFS (make-up gain removed). */
+export function limiterOutputDb(db: number, limiter = LIMITER): number {
+  return db <= limiter.threshold
+    ? db
+    : limiter.threshold + (db - limiter.threshold) / limiter.ratio;
+}
+
 /** The Web Audio nodes behind `setSpace`: reverb sends and the walls' muffling of the outdoors. */
 interface Acoustics {
   send: GainNode;
@@ -63,15 +88,17 @@ interface Acoustics {
  * after a click or key press, so call `unlock` from one.
  */
 export class AudioSystem {
-  private space: SpaceName | null = null;
+  private space: AcousticSpace | null = null;
   private reverb: { convolver: ConvolverNode; gain: GainNode } | null = null;
-  private readonly impulses = new Map<SpaceName, AudioBuffer>();
+  private readonly impulses = new Map<AcousticSpace, AudioBuffer>();
 
   private constructor(
     readonly engine: AudioEngineV2,
     readonly buses: Record<BusName, AudioBus>,
     readonly context: BaseAudioContext,
     private readonly acoustics: Acoustics | null,
+    /** The last node before the speakers, after the master limiter (for meters). */
+    readonly master: AudioNode | null = null,
   ) {}
 
   /**
@@ -93,7 +120,38 @@ export class AudioSystem {
       await Promise.all(names.map(async (n) => [n, await engine.createBusAsync(n)] as const)),
     ) as Record<BusName, AudioBus>;
     const context = (engine as unknown as { _audioContext: BaseAudioContext })._audioContext;
-    return new AudioSystem(engine, buses, context, AudioSystem.wire(engine, buses, context));
+    const master = AudioSystem.limit(engine, context);
+    const acoustics = AudioSystem.wire(engine, buses, context);
+    return new AudioSystem(engine, buses, context, acoustics, master);
+  }
+
+  /**
+   * Puts the master limiter between Babylon's main output and the speakers. Left
+   * out, and the mix runs as before, if the graph is not the plain Web Audio one.
+   */
+  private static limit(engine: AudioEngineV2, context: BaseAudioContext): AudioNode | null {
+    const mainOut = (engine as unknown as { mainOut?: { _inNode?: AudioNode | null } }).mainOut;
+    const out = mainOut?._inNode;
+    if (!out || typeof context.createDynamicsCompressor !== "function") return null;
+    try {
+      const limiter = context.createDynamicsCompressor();
+      limiter.threshold.value = LIMITER.threshold;
+      limiter.knee.value = LIMITER.knee;
+      limiter.ratio.value = LIMITER.ratio;
+      limiter.attack.value = LIMITER.attack;
+      limiter.release.value = LIMITER.release;
+      const trim = context.createGain();
+      trim.gain.value = 10 ** (-compressorMakeupDb(LIMITER.threshold, LIMITER.ratio) / 20);
+      const destination =
+        (engine as unknown as { _audioDestination?: AudioNode })._audioDestination ??
+        context.destination;
+      out.disconnect();
+      out.connect(limiter).connect(trim).connect(destination);
+      return trim;
+    } catch (error) {
+      console.warn("[AudioSystem] no master limiter", error);
+      return null;
+    }
   }
 
   /**
@@ -139,7 +197,7 @@ export class AudioSystem {
    * out, and the walls close round (or open from) the outdoor ambience, over
    * `fade` seconds (the Audio Design Document crossfades zones over 2–3 s).
    */
-  setSpace(name: SpaceName, fade = 2.5): void {
+  setSpace(name: AcousticSpace, fade = 2.5): void {
     const acoustics = this.acoustics;
     if (!acoustics || name === this.space) return;
     this.space = name;
@@ -176,7 +234,7 @@ export class AudioSystem {
   }
 
   /** The space the listener is in, once `setSpace` has been called. */
-  get currentSpace(): SpaceName | null {
+  get currentSpace(): AcousticSpace | null {
     return this.space;
   }
 
@@ -247,6 +305,20 @@ export class AudioSystem {
       urls,
       this.spatialOptions(bus, position, options),
     );
+  }
+
+  /** A long bed streamed from a file and heard everywhere, not placed (Opus first, AAC after). */
+  async stream(
+    name: string,
+    urls: string[],
+    bus: BusName,
+    { loop = true, volume = 1 }: { loop?: boolean; volume?: number } = {},
+  ): Promise<StreamingSound> {
+    return this.engine.createStreamingSoundAsync(name, urls, {
+      outBus: this.buses[bus],
+      loop,
+      volume,
+    });
   }
 
   private spatialOptions(bus: BusName, position: Vector3, options: SpatialOptions) {

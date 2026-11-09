@@ -44,16 +44,36 @@ describe("Pret hearing and navigation", () => {
     expect(gardenClear(p.position)).toBe(true);
   });
   it("keeps approaching through repeated footsteps instead of restarting its listening pause", () => {
+    // Steps on leaves, short of the loud sounds that set it running (see below).
     const p = new PretBrain(PATROLS[0]);
-    p.hear({ x: -14, z: 1 }, 1);
+    p.hear({ x: -14, z: 1 }, 0.9);
     p.update(0.8);
     const before = p.position.z;
     for (let i = 0; i < 10; i++) {
-      p.hear({ x: -14, z: 1 }, 1);
+      p.hear({ x: -14, z: 1 }, 0.9);
       p.update(0.1);
     }
     expect(p.mode).toBe("investigate");
     expect(before - p.position.z).toBeGreaterThan(1);
+  });
+  it("snaps round at a loud sound close by and comes at a run, then slows to a search", () => {
+    const p = new PretBrain(PATROLS[0]);
+    const near = { x: p.position.x + 6, z: p.position.z };
+    p.hear(near, 1.3);
+    expect(p.mode).toBe("listen");
+    p.update(0.35);
+    expect(p.mode).toBe("rush");
+    const start = { ...p.position };
+    for (let i = 0; i < 30; i++) p.update(1 / 30);
+    expect(Math.hypot(p.position.x - start.x, p.position.z - start.z)).toBeGreaterThan(2);
+    for (let i = 0; i < 40; i++) p.update(0.1);
+    expect(p.mode).toBe("investigate");
+  });
+  it("only walks to a quiet sound, even close by", () => {
+    const p = new PretBrain(PATROLS[0]);
+    p.hear({ x: p.position.x + 5, z: p.position.z }, 0.35);
+    p.update(1);
+    expect(p.mode).toBe("investigate");
   });
   it("does not use visibility or the lantern to detect a quiet player", () => {
     const p = new PretBrain(PATROLS[0]);

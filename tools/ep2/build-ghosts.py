@@ -4,7 +4,8 @@ blender -b --factory-startup -P tools/ep2/build-ghosts.py [-- kmaoch|red]
 Then: npm run assets -- ep2/ep2_kmaoch && npm run assets -- ep2/ep2_red
 
 The garden's dead (91_25 "DragBadLegWalk", 104_13 "StumbleWalk", 79_73 "scared") drag a bad
-leg on patrol, lurch when they hear something, and stand and listen with arms hanging.
+leg on patrol, lurch when they hear something, and stand and listen with arms hanging;
+some crawl on hands and knees instead (111_03 "Crawling", played forwards).
 The woman in red has one clip per kind of scare: 104_13 bent over and stumbling for the
 glimpse, 104_41 "ZombieWalk" arms rising for the lunge and the one behind you, 79_73 with
 dead arms for the stare, 111_03 "Crawling" run backwards for rising out of the water.
@@ -88,6 +89,8 @@ def build_kmaoch():
 
     walk('walk', '91_25', 16.6, 24.4, 2.6)
     walk('lurch', '104_13', 0.2, 4.6, 1.8)
+    # Some of the dead come on hands and knees: 111_03 "Crawling", the stretch going forwards.
+    walk('crawl', '111_03', 3.0, 9.5, 2.4)
     # Standing, head turning, listening; the arms hang dead whatever the performer's did.
     stand = M.Clip('79_73', 1.0, 7.3)
     M.make_loop(M.clean_stand(stand), 4.2)

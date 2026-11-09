@@ -13,18 +13,16 @@ import type { Area } from "@/core/areaLoader";
 import { FLAME_COLOR, limitLightToRange } from "@/render/renderSetup";
 import { softFalloff, useSoftFalloff } from "@/render/softLampFalloff";
 import { applyFoliageWind, type FoliageWind } from "@/render/FoliageWind";
-import { NIGHT_LOOK, DAWN_LOOK } from "@/render/nightLook";
+import { DAWN_LOOK } from "@/render/nightLook";
+import { NIGHT_GRADE } from "@/render/nightGrade";
 import { LowGroundMist } from "@/render/LowGroundMist";
-import type { MistPocket } from "@/render/mist";
+import { PAGODA_FOG, PAGODA_GRADE, PAGODA_LOOK, PAGODA_MIST } from "./pagodaLook";
+import { PagodaSky } from "./PagodaSky";
 
-const GROUND_MIST: MistPocket[] = [
-  { x: -8, z: -25, radiusX: 9, radiusZ: 12, baseY: 0.04, height: 1, density: 0.5 },
-  { x: 8, z: -25, radiusX: 9, radiusZ: 12, baseY: 0.04, height: 1, density: 0.5 },
-  { x: -8, z: 0, radiusX: 6, radiusZ: 10, baseY: 0.02, height: 0.55, density: 0.2 },
-  // The Bone Terrace: mist lying shin-deep over the bricks and round the skulls.
-  { x: 47, z: 33, radiusX: 12, radiusZ: 7.5, baseY: 0.08, height: 0.75, density: 0.42 },
-];
-/** Episode 1's calibrated lamp, surfaces, grade and fog, under a clearer moon. */
+/**
+ * Episode 1's calibrated lamp and surfaces, in the pagoda's darker, misty night
+ * (pagodaLook.ts) under a faint sky.
+ */
 export class PagodaLights {
   readonly lamp: PointLight;
   readonly flames: PointLight[] = [];
@@ -34,6 +32,7 @@ export class PagodaLights {
   /** 0–1 while an apparition is close: the lamp gutters. */
   scare = 0;
   private mist: LowGroundMist | null = null;
+  private readonly heavens: PagodaSky;
   private time = 0;
   private shade = 1;
   private daytime = false;
@@ -42,15 +41,15 @@ export class PagodaLights {
     area: Area,
   ) {
     const scene = game.scene;
-    scene.clearColor = new Color4(...NIGHT_LOOK.clearColor, 1);
+    scene.clearColor = new Color4(...PAGODA_LOOK.clearColor, 1);
     this.sky = new HemisphericLight("pagoda_sky", new Vector3(0.2, 1, -0.3), scene);
     this.sky.diffuse = new Color3(0.48, 0.56, 0.72);
     this.sky.groundColor = new Color3(0.13, 0.16, 0.2);
     this.sky.specular = new Color3(0.03, 0.04, 0.06);
-    this.sky.intensity = NIGHT_LOOK.skyIntensity;
+    this.sky.intensity = PAGODA_LOOK.skyIntensity;
     this.moon = new DirectionalLight("pagoda_moon", new Vector3(-0.3, -0.7, 0.5), scene);
     this.moon.diffuse = Color3.FromHexString("#7F9FD6");
-    this.moon.intensity = 0.28;
+    this.moon.intensity = PAGODA_LOOK.moonIntensity;
     this.lamp = new PointLight("player_lamp", new Vector3(-0.06, -0.14, 0.1), scene);
     this.lamp.parent = game.camera;
     this.lamp.diffuse = Color3.FromHexString("#FFD4A0");
@@ -81,6 +80,7 @@ export class PagodaLights {
     moonSurface.disableLighting = true;
     moonSurface.emissiveColor.set(0.5, 0.56, 0.64);
     moonDisc.material = moonSurface;
+    this.heavens = new PagodaSky(scene, moonDisc.position);
     if (game.preset.name !== "low") {
       this.moon.position.set(15, 32, -20);
       this.moon.orthoLeft = -42;
@@ -94,6 +94,7 @@ export class PagodaLights {
       shadows.usePercentageCloserFiltering = true;
       shadows.bias = 0.0005;
       shadows.normalBias = 0.025;
+      const casters: Mesh[] = [];
       for (const mesh of area.container.meshes) {
         mesh.receiveShadows = true;
         if (
@@ -101,13 +102,18 @@ export class PagodaLights {
           /M_ep2_(stone|moss|teak|boards|plaster|chalk|soot|ochre|red|carved|column|tiles|bark|gate_)|M_forest_leaf/.test(
             mesh.material?.name ?? "",
           )
-        )
+        ) {
           shadows.addShadowCaster(mesh);
+          casters.push(mesh);
+        }
       }
-      // The moon and architecture are static; render their shadows once after textures compile.
+      // The moon and architecture are static; render their shadows once after the casters
+      // compile. Not `scene.isReady()`: a hidden prop whose texture is drawn on demand (the
+      // sketchbook's pages) can keep the scene "not ready" for good, and an unfrozen map
+      // redraws some 600 casters every frame.
       let readyFrames = 0;
       const freeze = scene.onAfterRenderObservable.add(() => {
-        if (!scene.isReady()) return;
+        if (!casters.every((mesh) => mesh.isDisposed() || mesh.isReady(true))) return;
         if (++readyFrames < 3) return;
         const map = shadows.getShadowMap();
         if (map) {
@@ -126,22 +132,26 @@ export class PagodaLights {
   begin(): void {
     const g = this.game;
     g.addFlameLights(this.lamp, ...this.flames.slice(0, 4));
-    // A still, close night under the canopy: a light breeze in the crowns.
-    g.wind.base = 0.3;
+    // A close night under the canopy: the crowns move all the time, and gusts roll through.
+    g.wind.base = 0.45;
     g.wind.calm = 0;
-    g.atmosphere.baseExposure = NIGHT_LOOK.baseExposure;
-    g.atmosphere.maxExposure = NIGHT_LOOK.maxExposure;
-    g.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
-    g.atmosphere.nightSight.range = NIGHT_LOOK.nightSightRange;
+    g.atmosphere.baseExposure = PAGODA_LOOK.baseExposure;
+    g.atmosphere.maxExposure = PAGODA_LOOK.maxExposure;
+    g.atmosphere.nightSightIntensity = PAGODA_LOOK.nightSightIntensity;
+    g.atmosphere.nightSight.range = PAGODA_LOOK.nightSightRange;
+    g.atmosphere.setGrade(PAGODA_GRADE);
     if (g.pipeline.fog) {
-      g.pipeline.fog.density = 0.015;
-      g.pipeline.fog.ambient.set(...NIGHT_LOOK.fogAmbient);
-      g.pipeline.fog.setMistPockets(GROUND_MIST);
+      g.pipeline.fog.density = PAGODA_LOOK.fogDensity;
+      g.pipeline.fog.heightFalloff = PAGODA_FOG.heightFalloff;
+      g.pipeline.fog.maxDistance = PAGODA_FOG.maxDistance;
+      g.pipeline.fog.ambient.set(...PAGODA_LOOK.fogAmbient);
+      g.pipeline.fog.setMistPockets(PAGODA_MIST);
     } else {
-      g.scene.fogDensity = 0.015;
-      g.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
-      this.mist = new LowGroundMist(g.scene, GROUND_MIST);
+      g.scene.fogDensity = PAGODA_LOOK.fogDensity;
+      g.scene.fogColor.set(...PAGODA_LOOK.fogAmbient);
     }
+    // Wisps drifting low over the mist, on every preset: one draw.
+    this.mist = new LowGroundMist(g.scene, PAGODA_MIST);
   }
   update(dt: number, flame: number): void {
     this.time += dt;
@@ -160,6 +170,7 @@ export class PagodaLights {
         (l.metadata as { base: number }).base *
         (0.9 + 0.07 * Math.sin(this.time * 8.3 + i) + 0.03 * Math.sin(this.time * 15.1 + i * 2));
     this.game.atmosphere.update(dt, this.daytime ? 1 : flame * (6 / 14) + 0.05);
+    this.heavens.update(this.game.pipeline.main.imageProcessing.exposure);
   }
   dawn(): void {
     this.daytime = true;
@@ -172,8 +183,12 @@ export class PagodaLights {
     g.atmosphere.baseExposure = DAWN_LOOK.baseExposure;
     g.atmosphere.maxExposure = DAWN_LOOK.maxExposure;
     g.atmosphere.nightSightIntensity = 0;
+    g.atmosphere.setGrade(NIGHT_GRADE);
+    this.heavens.hide();
     if (g.pipeline.fog) {
       g.pipeline.fog.density = 0.01;
+      g.pipeline.fog.heightFalloff = 0.35;
+      g.pipeline.fog.maxDistance = 40;
       g.pipeline.fog.ambient.set(...DAWN_LOOK.fogAmbient);
       g.pipeline.fog.mistStrength = 0.3;
     } else {

@@ -8,7 +8,7 @@ from mathutils import Vector
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-OUT = ROOT / 'public/assets/ep1/krasue'
+OUT = ROOT / 'public/assets/shared/krasue'
 OUT.mkdir(parents=True, exist_ok=True)
 # Maps are embedded in the GLB; their working copies stay out of public/.
 WORK = ROOT / 'art-export/krasue'

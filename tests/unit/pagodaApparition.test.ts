@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  AMBIENT,
+  AMBIENT_GAP,
   BEATS,
   SCARES,
   facing,
   ghostPose,
+  rushAcross,
   type ScareContext,
 } from "@/episodes/ep2/PagodaApparition";
 
@@ -15,12 +18,37 @@ const base: ScareContext = {
   inKuti: false,
   mirrorsTurned: false,
   nearestPret: 20,
+  zone: null,
+  pickedLotus: false,
 };
 const scare = (id: string) => SCARES.find((s) => s.id === id)!;
 
 describe("Episode 2 apparition scares", () => {
-  it("has seven distinct one-time scares", () => {
-    expect(new Set(SCARES.map((s) => s.id)).size).toBe(7);
+  it("has distinct one-time scares", () => {
+    expect(new Set(SCARES.map((s) => s.id)).size).toBe(SCARES.length);
+    expect(SCARES.length).toBeGreaterThanOrEqual(11);
+  });
+  it("carries her across the line of sight, ahead of Sora, from one side to the other", () => {
+    for (const yaw of [0, 0.7, Math.PI, -2.2])
+      for (const rightward of [true, false]) {
+        const c = { ...base, yaw };
+        const p = rushAcross(c, 9, 6.5, rightward);
+        const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+        const side = (q: { x: number; z: number }) => q.x * right.x + q.z * right.z;
+        expect(Math.sign(side(p))).toBe(rightward ? -1 : 1);
+        expect(Math.sign(side(p.to!))).toBe(rightward ? 1 : -1);
+        // Both ends in front of her, so she crosses the view and never walks at the camera.
+        expect(facing(c, p)).toBeGreaterThan(0.5);
+        expect(facing(c, p.to!)).toBeGreaterThan(0.5);
+      }
+  });
+  it("waits for the lost garden's own places", () => {
+    expect(scare("court_lanes").ready(base)).toBe(false);
+    expect(scare("court_lanes").ready({ ...base, zone: "court" })).toBe(true);
+    expect(scare("court_lanes").ready({ ...base, zone: "court", nearestPret: 3 })).toBe(false);
+    const landing = { ...base, feet: { x: -53, z: -39 } };
+    expect(scare("tank_rise").ready(landing)).toBe(false);
+    expect(scare("tank_rise").ready({ ...landing, pickedLotus: true })).toBe(true);
   });
   it("shows her at the far end of the reclining Buddha only from inside the sala's mouth", () => {
     const sala = { ...base, feet: { x: 35, z: 8.7 }, yaw: Math.atan2(40.2 - 35, 12.9 - 8.7) };
@@ -43,7 +71,7 @@ describe("Episode 2 apparition scares", () => {
   it("places a behind scare behind the player, so it shows only when they turn", () => {
     const c = { ...base, feet: { x: -18, z: 19.6 }, yaw: 0 };
     expect(scare("kuti_leave").ready(c)).toBe(true);
-    const at = scare("kuti_leave").place(c);
+    const at = scare("kuti_leave").place(c)!;
     expect(facing(c, at)).toBeLessThan(-0.9);
     expect(facing({ ...c, yaw: Math.PI }, at)).toBeGreaterThan(0.9);
   });
@@ -72,9 +100,39 @@ describe("Episode 2 apparition scares", () => {
     expect(ghostPose("stare", 0.5).travel).toBe(0);
     expect(ghostPose("stare", 1.1).travel).toBe(1);
   });
-  it("cracks her neck in every appearance, and laughs when she stares", () => {
-    for (const beats of Object.values(BEATS))
-      expect(beats.some((b) => b.sound === "crack")).toBe(true);
+  it("cracks her neck in every appearance she stops for, and laughs when she stares", () => {
+    // A pass is too quick to stop for: it has its own whoosh (audio/ghostSounds.ts).
+    for (const [kind, beats] of Object.entries(BEATS))
+      if (kind !== "rush") expect(beats.some((b) => b.sound === "crack")).toBe(true);
     expect(BEATS.stare.some((b) => b.sound === "laugh")).toBe(true);
+  });
+});
+
+describe("the woman in red, more often and in more places", () => {
+  it("waits behind Sora once the rice is taken, and in the verse lane once it is read", () => {
+    const rice = { ...base, feet: { x: -14, z: -65 }, pickedRice: true };
+    expect(scare("rice_shrine").ready(rice)).toBe(true);
+    expect(scare("rice_shrine").ready({ ...rice, pickedRice: false })).toBe(false);
+    const verse = { ...base, feet: { x: -76, z: 6 }, verseRead: true };
+    expect(scare("verse_lane").ready(verse)).toBe(true);
+    expect(scare("verse_lane").place(verse)!.z).toBeLessThan(verse.feet.z);
+  });
+  it("stands on the pond's far side, across the water from Sora", () => {
+    const c = { ...base, feet: { x: 0, z: -16 }, yaw: Math.PI };
+    expect(scare("pond_far").ready(c)).toBe(true);
+    const p = scare("pond_far").place(c)!;
+    expect(p.z).toBeLessThan(-28.2);
+  });
+  it("turns up now and then anywhere in the garden, never in the kuti or with a corpse close", () => {
+    expect(AMBIENT.length).toBeGreaterThanOrEqual(4);
+    expect(AMBIENT.every((s) => s.id.startsWith("ambient_"))).toBe(true);
+    for (const s of AMBIENT) {
+      expect(s.ready(base)).toBe(true);
+      expect(s.ready({ ...base, inKuti: true })).toBe(false);
+      expect(s.ready({ ...base, nearestPret: 3 })).toBe(false);
+      expect(s.ready({ ...base, stage: "escape" })).toBe(false);
+    }
+    expect(AMBIENT_GAP[0]).toBeGreaterThanOrEqual(90);
+    expect(AMBIENT_GAP[1]).toBeLessThanOrEqual(180);
   });
 });

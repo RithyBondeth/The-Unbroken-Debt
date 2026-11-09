@@ -15,20 +15,21 @@ from khmer import place, join, pole, flame, incense_sticks, lotus_buds
 from forest import tropical_tree, banyan, bamboo_clump, grass_patch
 from forest_detail import understory, grass_geometry
 from pagoda_architecture import painted_materials, stupa, temple_roof, temple_interior, Craft
-from pagoda_gateway import build_gateway, overgrow_gateway
+from pagoda_gateway import build_gateway, haunt_gateway, overgrow_gateway
 from pagoda_ruin import (ruin_materials, temple_wall, great_chedi, seated_image, spirit_house, sema_stone,
-                         sash, incense_pot, candles, fig_roots, lean, rubble)
+                         incense_pot, candles, fig_roots, lean, rubble)
 from pagoda_stupa import memorial
-from pagoda_lost_garden import build_lost_garden, WEST_BREACH_Y, NORTH_BREACH_X, SALA_NORTH_X, SALA_SOUTH_X
+from pagoda_lost_garden import (build_lost_garden, WEST_BREACH_Y, NORTH_BREACH_X, SALA_NORTH_X, SALA_SOUTH_X,
+                                 PICKUPS, SHORTCUTS, TANK_STEPS_X, VERSE_BOARD)
 from pagoda_kit import piece
 from pagoda_forest import giant, outer_forest
-from pagoda_pond import build_pond, pond_materials
+from pagoda_pond import WATER as POND_WATER, build_pond, pond_materials
 from pagoda_offerings import (offering_materials, sticky_rice_ball, banana_leaf_piece, lotus_bud, lotus_bunch,
                               terracotta_bowl, tray_places)
 from pagoda_rituals import (ritual_materials, red_string_web, bound_trunk, boundary_stakes, sorcery_altar,
                             hanging_doll)
 from pagoda_props import (prop_materials, hall_buddha, money_tree, curtain_swag, stepped_altar, offering_table,
-                          footed_tray, naga_rail, family_emblem, inscribed_tablet,
+                          footed_tray, family_emblem, inscribed_tablet,
                           leaf_litter, sutra_table, hall_doors, sealed_doorway, verse_board,
                           bell_pavilion, kuti_furnishings, supplies_contents, lore_contents)
 from khmer import rotate_uvs
@@ -131,7 +132,8 @@ def building(name,x,z,w,d,floor):
         for l in board.data.uv_layers.active.data:l.uv=(l.uv[0]+du,l.uv[1]+dv)
     for px in [x-w/2+.15,x+w/2-.15]:
         for pz in np.linspace(z-d/2+.15,z+d/2-.15,4):
-            cube(name+'_post',px,pz,-.3,.18,.18,floor+3.3,m['post'],True,surface='teak')
+            # Footed below the pond's surface where a building stands in the water.
+            cube(name+'_post',px,pz,-.75,.18,.18,floor+3.75,m['post'],True,surface='teak')
     # Window openings have deep plaster reveals, worn red dado and timber shutters.
     wallmat=m['plaster'] if name=='vihear' else m['boards']
     for px in [x-w/2,x+w/2]:
@@ -175,7 +177,10 @@ cube('col_boundary',-30,(WEST_BREACH_Y[1]+43)/2,-.2,1,43-WEST_BREACH_Y[1],5,None
 # East of the fallen bay the forest opens into the clearing of the reclining Buddha
 # (the sala, its images and its watchers are authored in tools/ep2/build-cinematics.py).
 ANNEX=(28.4,44.6,-21,1.2)
-cube('col_boundary',30,-30.6,-.2,1,22.8,5,None,True)
+# Open where the Bone Terrace's barred breach comes through the east wall (SHORTCUTS).
+tx_y=SHORTCUTS['terrace'][1]
+cube('col_boundary',30,(-42+tx_y-1.65)/2,-.2,1,tx_y-1.65+42,5,None,True)
+cube('col_boundary',30,(tx_y+1.65-19.2)/2,-.2,1,-19.2-(tx_y+1.65),5,None,True)
 cube('col_boundary',30,21.6,-.2,1,40.8,5,None,True)
 cube('col_boundary',45,-9.9,-.2,1,23.2,5,None,True)
 # The clearing's north and south sides, open into the Root Gallery and the Bone Terrace.
@@ -186,26 +191,24 @@ collider('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,'dirt')
 box('earth_annex',AREA,28,45,-21,1.2,-.18,-.01,m['earth'])
 cube('col_boundary',0,-40,-.2,60,1,5,None,True)
 # The north limit, open at the breach into the Spirit Grove.
-cube('col_boundary',(-30+NORTH_BREACH_X[0])/2,42,-.2,NORTH_BREACH_X[0]+30,1,5,None,True)
+# Open too where the grove's barred breach comes through the north wall (SHORTCUTS).
+gx_x=SHORTCUTS['grove'][0]
+cube('col_boundary',(-30+gx_x-1.55)/2,42,-.2,gx_x-1.55+30,1,5,None,True)
+cube('col_boundary',(gx_x+1.55+NORTH_BREACH_X[0])/2,42,-.2,NORTH_BREACH_X[0]-(gx_x+1.55),1,5,None,True)
 cube('col_boundary',(NORTH_BREACH_X[1]+30)/2,42,-.2,30-NORTH_BREACH_X[1],1,5,None,True)
 # Low masonry compound walls and breathing foliage beyond them.
 # Old lotus-crested temple walls: leaning bays, scabbed plaster, fallen sections, creepers.
 wall_rng=np.random.default_rng(1767)
 temple_wall(AREA,m,'compound_wall_west',(-28,-39.5),(-28,41.5),wall_rng,'mould_white',breaches=(4,5,13,21),open_bays=(5,))
-temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_grey',breaches=(9,17),open_bays=(9,))
-temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(5,16),open_bays=(16,))
+# Bay 4 of the east wall and bay 1 of the north wall are the shortcuts' breaches.
+temple_wall(AREA,m,'compound_wall_east',(28,-39.5),(28,41.5),wall_rng,'mould_grey',breaches=(4,9,17),open_bays=(4,9))
+temple_wall(AREA,m,'compound_wall_north',(-28,41.5),(28,41.5),wall_rng,'mould_grey',breaches=(1,5,16),open_bays=(1,16))
 temple_wall(AREA,m,'gateway_boundary_west',(-28,-27),(-7.6,-27),wall_rng,'mould_red',breaches=(2,))
 temple_wall(AREA,m,'gateway_boundary_east',(7.6,-27),(28,-27),wall_rng,'mould_red')
-# Reference-led red-and-gold ceremonial arch and pedestrian portals, now overgrown.
+# Reference-led red-and-gold ceremonial arch and pedestrian portals, now overgrown and bound.
 build_gateway(AREA,m,walls=False)
 overgrow_gateway(AREA,m)
-for x in [-2.3,2.3]:
-    # Naga balustrades: one fused stone carving, scaled body rising to a fan of five hoods.
-    naga_rail(AREA,m,'naga_'+('west' if x<0 else 'east'),x,rng)
-    # On its own post outside the rail: the serpent's neck is no lamp stand.
-    lamp_x=x+(.82 if x>0 else -.82)
-    cube('gate_lamp_post_'+str(x),lamp_x,-26,0,.2,.2,.95,m['stone'],True)
-    lamp('gate_'+str(x),lamp_x,-26,.95)
+haunt_gateway(AREA,m,lamp)
 anchor('spawn_player',0,-33)
 anchor('marker_kuti_spawn',-17,-17)
 # Stone path from threshold, branching to the kuti and prayer hall.
@@ -309,7 +312,9 @@ for k,(x,z) in enumerate([(-8,-4),(8,3),(-4,10),(4,-9)]):
     collider('leaf_bed',AREA,x-1.3,x+1.3,z-1,z+1,.012,.03,'leaves')
     leaf_litter(AREA,m,'leaf_bed_'+str(k),x,z,1.3,1.0,np.random.default_rng(70+k))
 # Small offering tables: finite puzzle supply and empty bowls for distractions.
-for id,x,z in [('rice',-17,-7),('lotus',-17,7),('water',17,9),('bowls',16,-8)]:
+# The bowls stay in the garden; the offerings wait out in the lost garden (PICKUPS): rice at
+# the grove's old spirit house, water before the gallery's images. The lotus grows in the tank.
+for id,x,z in [('rice',*PICKUPS['rice']),('water',*PICKUPS['water']),('bowls',16,-8)]:
     offering_table(AREA,m,id+'_stand',x,z)
     collider(id+'_stand',AREA,x-.5,x+.5,z-.375,z+.375,0,.45,'teak')
     def contents(id=id,x=x,z=z):
@@ -325,6 +330,16 @@ for id,x,z in [('rice',-17,-7),('lotus',-17,7),('water',17,9),('bowls',16,-8)]:
             elif id=='rice':sticky_rice_ball(AREA,m,'rice_ball',px,pz,.566,rng)
             else:terracotta_bowl(AREA,m,'empty_clay_bowl',px,pz,.561,rng)
     usable('pickup_'+id,x,z,.5,contents)
+# A living lotus in the tank, just off its landing: pads on the black water, the one bud up.
+TANK_WATER=-1.05
+def tank_lotus():
+    lx,lz=PICKUPS['lotus']
+    for k in range(9):
+        a=k*2.4;rr=.25+.14*k**.5
+        lathe('tank_lotus_pad',AREA,[(0,0),(.12,.003),(.19,.012),(.185,.016),(0,.008)],lx+math.cos(a)*rr,lz+math.sin(a)*rr*.8,TANK_WATER+.004,m['lotus_leaf'],segments=14)
+    tube('tank_lotus_stem',AREA,[(lx,lz,TANK_WATER),(lx+.03,lz-.02,TANK_WATER+.25),(lx+.02,lz-.05,TANK_WATER+.48)],.008,m['lotus_leaf'],sides=5)
+    lotus_bud(AREA,m,'tank_lotus_bud',lx+.02,lz-.05,TANK_WATER+.46,rng,height=.13,lying=False)
+usable('pickup_lotus',*PICKUPS['lotus'],TANK_WATER+.45,tank_lotus)
 # Prayer hall; bell puzzle and lore remain an optional detour.
 building('vihear',22,1,9,15,.15)
 # Rust-red handprints on the hall's front wall and door jambs, and dolls under its eaves.
@@ -348,7 +363,8 @@ for k,x in enumerate([18.4,19.4,20.4]):
 # A small tiled bell pavilion on stone footings replaces the bare rack.
 bell_pavilion(AREA,m,'bell_frame',17.7,21.1,-9,[18.4,19.4,20.4],rng)
 # The verse stands beside the hall steps, out of the walk to the door.
-usable('bell_verse',24,-8.6,1.2,lambda:verse_board(AREA,m,'bell_verse',24,-8.6,.8,rng))
+# The bell verse is far from the bells: at the dead end of a walled lane in the Court.
+usable('bell_verse',*VERSE_BOARD,1.2,lambda:verse_board(AREA,m,'bell_verse',*VERSE_BOARD,.8,rng))
 # Carved doors stand ajar inside; what seals the hall is chain, cord and cloth.
 hall_doors(AREA,m,22,-6.35,.195,rng)
 adopt(anchor('hall_chain',22,-6.6,.15),sealed_doorway(AREA,m,'hall_chain',22,-6.6,.15,2.6,2.6,rng))
@@ -392,7 +408,7 @@ for k in range(35):
     y=18+k*.29;top=(y-18)*.12
     cube('bridge_plank',0,y,top,2,.27,.12,m['post'])
     if k%5==0:
-        for x in [-1.05,1.05]:cube('bridge_post',x,y,-.3,.11,.11,top+1.5,m['post'])
+        for x in [-1.05,1.05]:cube('bridge_post',x,y,-.75,.11,.11,top+1.95,m['post'])
 # Walkable ramp collider matches sloping boards, with no teleport needed.
 verts=[(-1,18,-.1),(1,18,-.1),(-1,28,-.1),(1,28,-.1),(-1,18,.12),(1,18,.12),(-1,28,1.32),(1,28,1.32)]
 mesh_object('col_bridge_ramp',AREA,verts,[(0,2,3,1),(4,5,7,6),(0,1,5,4),(2,6,7,3),(0,4,6,2),(1,3,7,5)],surface='teak')
@@ -403,7 +419,7 @@ collider('bridge_lock',AREA,-1,1,17.9,18.1,0,1.6)
 for i in range(4):
     cylinder('bridge_symbol_'+str(i),AREA,-.6+i*.4,17.9,.9,1,.09,m['silver'])
 # Oil lamps left floating on the black water; reeds along the shore.
-for x in [-5,5]:lamp('pond_'+str(x),x,23,-.2)
+for x in [-5,5]:lamp('pond_'+str(x),x,23,POND_WATER)
 grass_geometry('pond_reeds',AREA,pond_reeds,rng,size=(.7,1.4))
 # Archive shelves, tied palm-leaf bundles and swivel mirrors.
 for x in [-3.6,3.6]:
@@ -449,9 +465,10 @@ forgotten=[(-26,16),(-21.5,16.5),(-19,19),(-26.5,19.5),(-21,27),(-26.5,25.5),(-1
 for j,(px,py) in enumerate(forgotten):
     objs=memorial(AREA,m,px,py,200+j,ruin_rng.uniform(2.3,3.5),'forgotten_'+str(j),ruin_rng)
     lean(objs,px,py,ruin_rng.normal(0,.05),ruin_rng.normal(0,.05))
-    if j%3==0:
+    if j%3==0 and not any('_fig_' in o.name for o in objs):
         crown=ruin_rng.uniform(1.8,3.2)  # a fig tree stands only on a snapped stupa
-        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,crown=crown if 'broken' in objs[0].data.name else 0,hang=3)
+        fig_roots(AREA,m,'forgotten_fig_'+str(j),px,py,2.4,lambda z:.6 if z<1.9 else .45,ruin_rng,n=7,spread=.9,
+                  crown=crown if 'broken' in objs[0].data.name else 0,hang=3,support=[objs[0]])
     collider('forgotten_stupa_'+str(j),AREA,px-.7,px+.7,py-.7,py+.7,0,3.2,'stone')
 spirit_house(AREA,m,'roadside_spirit_house',4.8,-37.6,math.pi,ruin_rng)
 # Rituals on the approach: a boundary of stakes and red cord both sides of the track,
@@ -519,6 +536,32 @@ for k,(x,z) in enumerate(inner):
         tube('fallen_bough',AREA,[(x-.8,z+.4,.1),(x+.2,z+.7,.16),(x+1.8,z+1.2,.08)],.13,m['bark'],sides=9,radius_end=.045)
 # The lost garden: five zones round the compound, joined in a loop through its walls.
 build_lost_garden(AREA,m,layout['zones'],lamp)
+# The two ways back into the compound, barred from the garden's side: a breach in the east
+# wall stacked with fallen teak from the Bone Terrace, and one in the north wall planked over
+# from the grove. Sora can pull them down only from the garden's side (the game checks).
+def barricade(name,x,y,along_x):
+    def build():
+        r=np.random.default_rng(len(name))
+        for k in range(5):
+            h=.25+k*.42+r.normal(0,.04)
+            tilt=r.normal(0,.08)
+            if along_x:
+                box(name+'_plank',AREA,x-1.55,x+1.55,y-.05+tilt*.2,y+.05+tilt*.2,h,h+.24,m['teak'],edge=.01,tilt=(0,tilt,0))
+            else:
+                box(name+'_plank',AREA,x-.05+tilt*.2,x+.05+tilt*.2,y-1.55,y+1.55,h,h+.24,m['teak'],edge=.01,tilt=(tilt,0,0))
+        for s_ in (-1.3,0,1.3):
+            if along_x:box(name+'_upright',AREA,x+s_-.07,x+s_+.07,y-.12,y+.12,0,2.3,m['post'],edge=.01)
+            else:box(name+'_upright',AREA,x-.12,x+.12,y+s_-.07,y+s_+.07,0,2.3,m['post'],edge=.01)
+        # The bar across, on the garden side, wound with red cord and a tag: someone shut this.
+        off=.2 if along_x else -.2
+        if along_x:box(name+'_bar',AREA,x-1.6,x+1.6,y+off-.06,y+off+.06,1.15,1.3,m['bark'],edge=.01)
+        else:box(name+'_bar',AREA,x-off-.06,x-off+.06,y-1.6,y+1.6,1.15,1.3,m['bark'],edge=.01)
+    root=usable('shortcut_'+name,x,y,1.2,build)
+    if along_x:collider('shortcut_'+name,AREA,x-1.6,x+1.6,y-.25,y+.25,0,2.4,'wood')
+    else:collider('shortcut_'+name,AREA,x-.25,x+.25,y-1.6,y+1.6,0,2.4,'wood')
+    return root
+barricade('terrace',*SHORTCUTS['terrace'],False)
+barricade('grove',*SHORTCUTS['grove'],True)
 # Memory space: forest-shrine walk kept outside the present's view and collision bounds.
 cube('memory_ground',80,0,-.2,22,34,.2,m['earth'],True,surface='dirt')
 for k in range(15):

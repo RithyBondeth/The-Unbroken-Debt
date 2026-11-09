@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { SPACES, impulseResponse, type SpaceName } from "@/audio/acoustics";
+import {
+  SPACES,
+  impulseResponse,
+  type AcousticSpace,
+  type Space,
+  type SpaceName,
+} from "@/audio/acoustics";
 import { rms, seededRandom } from "@/audio/synth";
 import { spaceAt } from "@/episodes/ep1/act1/Soundscape";
 
 const RATE = 22050;
 
 describe("room acoustics", () => {
-  for (const [name, space] of Object.entries(SPACES) as [SpaceName, (typeof SPACES)[SpaceName]][]) {
+  for (const [name, space] of Object.entries(SPACES) as [AcousticSpace, Space][]) {
     it(`${name}'s reverb is finite, decays and surrounds the listener`, () => {
       const [left, right] = impulseResponse(RATE, seededRandom(3), space);
       expect(left.length).toBe(right.length);
