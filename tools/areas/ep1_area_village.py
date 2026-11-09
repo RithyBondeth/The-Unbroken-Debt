@@ -982,7 +982,6 @@ def interiors(m):
     usable("interact_loose_planks", (4.5, 12.5, F + 0.02), lambda: [
         box(f"loose_plank_{k}", AREA, 4.1, 4.95, 12.2 + k * 0.21, 12.4 + k * 0.21, F, F + 0.012, m["floor"], tilt=(0, 0.01 * k, 0)) for k in range(3)],
         action="open", requires="brass_key")
-    usable("interact_oil_sok", (5.6, 12.0, F + 0.1), lambda: oil_bottle("oil_sok", 5.6, 12.0, F, m), action="pickup", item="oil")
     vuthy_room(m)
 
 
