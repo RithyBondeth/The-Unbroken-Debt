@@ -39,6 +39,15 @@ describe("Episode 2's mix rules", () => {
     expect(GAPS.knock[0]).toBeGreaterThanOrEqual(120);
   });
 
+  it("lets the chant fall silent, or be answered from the trees, only now and then", () => {
+    expect(GAPS.chantSilence[0]).toBeGreaterThanOrEqual(120);
+    expect(GAPS.silenceLength[0]).toBeGreaterThanOrEqual(5);
+    expect(GAPS.silenceLength[1]).toBeLessThanOrEqual(15);
+    expect(GAPS.chantAnswer[0]).toBeGreaterThanOrEqual(60);
+    // The answer is heard for less time than it is gone.
+    expect(GAPS.answerLength[1]).toBeLessThan(GAPS.chantAnswer[0]);
+  });
+
   it("pitches every repeat a few percent off, both ways", () => {
     const rand = seededRandom(4);
     const rates = Array.from({ length: 400 }, () => pitchJitter(rand));
@@ -156,7 +165,8 @@ describe("Episode 2's recordings", () => {
     for (const name of names)
       for (const ext of ["ogg", "m4a"])
         expect(existsSync(`public/assets/ep2/audio/${name}.${ext}`), `${name}.${ext}`).toBe(true);
-    for (const ext of ["ogg", "m4a"]) expect(existsSync(`public/${SMOT}.${ext}`)).toBe(true);
+    for (const ext of ["ogg", "m4a"])
+      expect(existsSync(`public/assets/ep2/audio/${SMOT}.${ext}`)).toBe(true);
   });
 
   it("makes every file the game asks for from a listed CC0 source", () => {
@@ -174,7 +184,7 @@ describe("Episode 2's recordings", () => {
       "/assets/ep2/audio/amb_ep2_pond.ogg",
       "/assets/ep2/audio/amb_ep2_pond.m4a",
     ]);
-    expect(soundUrls(SMOT, "/")[0]).toBe("/assets/ep1/audio/amb_ep1_smot.ogg");
+    expect(soundUrls(SMOT, "/")[0]).toBe("/assets/ep2/audio/amb_ep2_chant.ogg");
   });
 
   it("has three insect takes to drift between and one take per bell", () => {
