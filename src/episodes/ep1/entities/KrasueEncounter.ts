@@ -9,9 +9,9 @@ import type { SaveData } from "@/systems/saves/SaveData";
 import { seededRandom } from "@/audio/synth";
 import { setControlText } from "@/ui/html/controlText";
 import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "../data/krasue";
-import { krasueLament, krasueShriek, krasueSting } from "../audio/krasueSounds";
+import { krasueLament, krasueShriek, krasueSting } from "@/audio/sounds/krasueSounds";
 import { KrasueBrain } from "./KrasueBrain";
-import { KrasueModel } from "./KrasueModel";
+import { KrasueModel } from "@/shared/entities/KrasueModel";
 import "@/ui/html/krasue.css";
 
 /**

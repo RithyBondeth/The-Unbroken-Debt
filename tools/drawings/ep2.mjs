@@ -1,13 +1,15 @@
 // Episode 2 drawings: hand-inked yantra (យ័ន្ត) cloths for the sealed hall door and
 // Sophal's kuti, after the user's reference yantra (2 November 2026): a circular yantra
 // with rings of script, eight cartouches and radiating unalom strokes, and a square
-// yantra with diagonals, looped corners and a numeral square. Original layouts.
+// yantra with diagonals, looped corners and a numeral square. Original layouts. Also the
+// wat's gilded name board over the gate, and old handprints.
 //
 // Khmer text: every string is listed in KHMER below for the native-speaker and
-// cultural-advisor review (Cultural Guide, section 4). They are standard Pali
-// formulas written in Khmer script, as on real yantra. Keep it to that list.
+// cultural-advisor review (Cultural Guide, section 4). The yantra carry standard Pali
+// formulas written in Khmer script, as on real yantra; the gate board carries the wat's
+// (fictional) name and year. Keep it to that list.
 
-/** Every Khmer string on the yantra, with its meaning. Review: pending. */
+/** Every Khmer string in these drawings, with its meaning. Review: pending. */
 export const KHMER = {
   namoBuddhaya: [
     "នមោពុទ្ធាយ",
@@ -30,6 +32,12 @@ export const KHMER = {
   triple: ["ពុទ្ធំ ធម្មំ សង្ឃំ", "buddhaṃ dhammaṃ saṅghaṃ: the Triple Gem"],
   arahang: ["អរហំ", "arahaṃ: worthy one"],
   numerals: ["១ ២ ៣ ៤ ៥ ៦ ៧ ៨ ៩", "Khmer numerals one to nine (the numeral square)"],
+  // The gate's name board. The wat is fictional; the name and year are for review.
+  watName: [
+    "វត្តព្រៃស្ងាត់",
+    "Wat Prey Sngat: 'pagoda of the silent forest' (the wat's name, on the gate)",
+  ],
+  watFounded: ["ព.ស. ២៤៥៥", "B.E. 2455 (1912 CE): the year the gate was raised, under the name"],
 };
 
 const syll = KHMER.namoSyllables[0].split(" ");
@@ -215,6 +223,56 @@ export const drawings = [
         for(const [fx] of [[-33],[-11],[12],[33]])for(let k=0;k<300*drag;k++){const t=r();ctx.fillStyle='rgba(78,14,6,'+(.4*(1-t)*r()*alpha)+')';ctx.fillRect(fx+(r()-.5)*18+t*6,54+t*260*drag,1+r()*2,2+r()*5)}
         ctx.restore()};
       print(150,230,1.1,-.15,1,1);print(420,200,1.0,.25,.4,.8);print(640,260,1.15,-.05,1.2,.9);print(880,210,.9,.4,.2,.6);
+    </script>`,
+  },
+  {
+    // The wat's name board over the gate: gilded letters raised on red lacquer, as Khmer gate
+    // boards are, now flaking to the plaster, streaked with damp, cracked through, and dragged
+    // across by a rust-red hand.
+    name: "gate_name",
+    file: "T_ep2_gate_name_BC",
+    size: [2048, 352],
+    draw: () => `<canvas id="c" width="2048" height="352"></canvas><script>
+    document.fonts.load('150px Preahvihear').then(()=>{
+      const ctx=document.getElementById('c').getContext('2d'),w=2048,h=352;let s=27455;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+      // Old red lacquer over lime plaster: brushed grain, darker where the damp sits.
+      ctx.fillStyle='#3a0c08';ctx.fillRect(0,0,w,h);
+      for(let i=0;i<26000;i++){const g=r();ctx.fillStyle='rgba('+(60+g*40|0)+','+(12+g*10|0)+','+(8+g*6|0)+','+(.08+r()*.12)+')';ctx.fillRect(r()*w,r()*h,4+r()*40,1+r()*2)}
+      // Gilded frame: a raised double border with lotus buds at the corners.
+      const gold=(y0,y1)=>{const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,'#b8954a');g.addColorStop(.45,'#7d5c22');g.addColorStop(1,'#43300f');return g};
+      ctx.lineJoin='round';
+      for(const [m,wd] of [[14,10],[34,4]]){ctx.strokeStyle=gold(m,h-m);ctx.lineWidth=wd;ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=6;ctx.shadowOffsetY=3;
+        ctx.beginPath();ctx.roundRect(m,m,w-2*m,h-2*m,26);ctx.stroke()}
+      for(const [x,y] of [[60,60],[w-60,60],[60,h-60],[w-60,h-60]]){ctx.fillStyle=gold(y-22,y+22);ctx.beginPath();ctx.ellipse(x,y,14,22,0,0,7);ctx.fill()}
+      // The name, then the year, in raised gold: a dark undercut below, light catching the top.
+      const raised=(t,y,size)=>{ctx.font=size+'px Preahvihear';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.shadowColor='rgba(10,2,0,.85)';ctx.shadowBlur=8;ctx.shadowOffsetX=0;ctx.shadowOffsetY=6;ctx.fillStyle=gold(y-size*.6,y+size*.6);ctx.fillText(t,w/2,y);
+        ctx.shadowColor='transparent';ctx.fillStyle='rgba(255,236,170,.18)';ctx.fillText(t,w/2,y-2)};
+      raised(${JSON.stringify(KHMER.watName[0])},150,150);
+      raised(${JSON.stringify(KHMER.watFounded[0])},272,54);
+      ctx.shadowColor='transparent';
+      // Gold and lacquer both flake back to grey plaster: small scabs in clusters, worst along
+      // the bottom edge and round the crack, their edges dark with dirt.
+      const scab=(x,y,rad)=>{ctx.beginPath();for(let k=0;k<9;k++){const a=k/9*Math.PI*2,q=rad*(.45+r()*.8);k?ctx.lineTo(x+Math.cos(a)*q,y+Math.sin(a)*q*.7):ctx.moveTo(x+Math.cos(a)*q,y+Math.sin(a)*q*.7)}ctx.closePath();
+        ctx.fillStyle='rgba('+(78+r()*20|0)+','+(74+r()*16|0)+','+(64+r()*12|0)+',.85)';ctx.fill();ctx.strokeStyle='rgba(20,10,6,.6)';ctx.lineWidth=1.5;ctx.stroke()};
+      for(let c=0;c<34;c++){const cx=c<8?1100+r()*260:r()*w,cy=c<8?r()*h:h*(.55+r()*.45);for(let k=0;k<4+r()*10;k++)scab(cx+(r()-.5)*90,cy+(r()-.5)*40,2+r()*9)}
+      // Grime over everything: damp running down from the cornice, mould blooming in it,
+      // soot along the top, and the board dulled toward its ends.
+      for(let i=0;i<90;i++){const x=r()*w,len=60+r()*300;const g=ctx.createLinearGradient(0,0,0,len);g.addColorStop(0,'rgba(10,8,4,.6)');g.addColorStop(1,'rgba(10,8,4,0)');ctx.fillStyle=g;ctx.fillRect(x,0,2+r()*8,len)}
+      for(let i=0;i<50;i++){const x=r()*w,y=r()*h*.6;for(let k=0;k<30;k++){ctx.fillStyle='rgba(14,18,8,'+(r()*.28)+')';ctx.beginPath();ctx.arc(x+(r()-.5)*100,y+(r()-.5)*44,2+r()*10,0,7);ctx.fill()}}
+      const soot=ctx.createLinearGradient(0,0,0,h*.4);soot.addColorStop(0,'rgba(6,4,2,.6)');soot.addColorStop(1,'rgba(6,4,2,0)');ctx.fillStyle=soot;ctx.fillRect(0,0,w,h*.4);
+      const dull=ctx.createLinearGradient(0,0,w,0);dull.addColorStop(0,'rgba(8,4,2,.55)');dull.addColorStop(.3,'rgba(8,4,2,.15)');dull.addColorStop(.7,'rgba(8,4,2,.15)');dull.addColorStop(1,'rgba(8,4,2,.55)');ctx.fillStyle=dull;ctx.fillRect(0,0,w,h);
+      // A crack right through the board, the plaster dark in it.
+      ctx.strokeStyle='rgba(6,3,1,.95)';ctx.lineWidth=5;ctx.beginPath();let x=1180,y=0;ctx.moveTo(x,y);
+      while(y<h){x+=(r()-.45)*60;y+=14+r()*26;ctx.lineTo(x,y)}ctx.stroke();
+      ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(1205,120);ctx.lineTo(1290,150);ctx.lineTo(1330,138);ctx.lineTo(1420,190);ctx.stroke();
+      // A hand pressed at the left end and dragged along under the name: rust-brown, the
+      // palm heavy, four fingers trailing off thinner as the smear runs out.
+      ctx.save();ctx.translate(250,250);ctx.rotate(-.08);
+      for(let k=0;k<5000;k++){const a=r()*Math.PI*2,q=Math.sqrt(r());ctx.fillStyle='rgba(70,12,6,'+(.15+r()*.45)+')';ctx.fillRect(Math.cos(a)*q*44,Math.sin(a)*q*52,1+r()*3,1+r()*3)}
+      for(let f=0;f<4;f++){const fy=-36+f*24;for(let k=0;k<2400;k++){const t=Math.pow(r(),.7);ctx.fillStyle='rgba(70,12,6,'+((1-t)*(.2+r()*.5))+')';ctx.fillRect(30+t*620,fy+(r()-.5)*(12-8*t)+t*24,1+r()*3,1+r()*2)}}
+      ctx.restore();
+    });
     </script>`,
   },
 ];

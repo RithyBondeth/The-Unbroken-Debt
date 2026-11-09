@@ -52,7 +52,7 @@ export class KrasueModel {
   static async prepare(scene: Scene): Promise<void> {
     if (assets.has(scene)) return;
     const container = await LoadAssetContainerAsync(
-      `${import.meta.env.BASE_URL}assets/ep1/krasue/krasue-creature.glb`,
+      `${import.meta.env.BASE_URL}assets/shared/krasue/krasue-creature.glb`,
       scene,
     );
     realiseInstances(container);

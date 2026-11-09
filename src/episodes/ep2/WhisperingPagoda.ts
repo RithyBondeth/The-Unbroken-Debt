@@ -13,7 +13,7 @@ import type { SaveData } from "@/systems/saves/SaveData";
 import { encodeSaveCode } from "@/systems/saves/saveCode";
 import { ResolutionView } from "@/ui/html/ResolutionView";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
-import { NIGHT_GRADE } from "@/render/nightGrade";
+import { PAGODA_GRADE } from "./pagodaLook";
 import { PagodaLights } from "./PagodaLights";
 import { PagodaZones, zoneOf } from "./PagodaZones";
 import { LanternEquipment } from "@/systems/lamp/LanternEquipment";
@@ -28,9 +28,23 @@ import { CheaHands } from "@/player/CheaHands";
 import { COLLAPSE_KEEP } from "./cinematics/LibraryCollapse";
 import { PAGODA_BALANCE as B, EscapeClock, inKuti, simulationStep } from "./data/balance";
 import { PagodaGate } from "./PagodaGate";
+import { PAGODA_PLANTS } from "./pagodaWind";
+import { PagodaWater, waterUvs } from "./PagodaWater";
+import { SHORTCUTS, onGardenSide, visitedZone } from "./data/shortcuts";
+import { buildBelt, captureBeltTemplates } from "./pagodaForestBelt";
+import type { PlantTemplate } from "@/render/plantCopies";
+import { bakePlantHeights } from "@/render/plantHeights";
 import { PagodaProgress } from "./PagodaProgress";
 import { PretBrain, Breath } from "./PretBrain";
+import { PagodaNav } from "./PagodaNav";
+import { KmaochHaunts, type HauntEvent, type HauntView } from "./KmaochHaunts";
+import { KmaochDescent, type DescentEvent } from "./KmaochDescent";
+import { captureClimbTrees, type ClimbTree } from "./pagodaTrees";
+import { ClimbSounds } from "./audio/climbSounds";
+import { PagodaKrasue } from "./PagodaKrasue";
+import { zoneDistance } from "./PagodaZones";
 import {
+  LOST_GARDEN,
   ANCESTORS,
   ENTRY,
   KUTI,
@@ -39,6 +53,7 @@ import {
   MEMORY,
   BOUNDS,
   PATROLS,
+  ZONE_PATROLS,
   MIRROR_TARGETS,
   NOTES,
   type NoteId,
@@ -51,13 +66,20 @@ export class WhisperingPagoda {
   area!: Area;
   lights!: PagodaLights;
   private zones!: PagodaZones;
+  private water!: PagodaWater;
   private apparition!: PagodaApparition;
   private watchers!: PagodaWatchers;
   equipment!: LanternEquipment;
   private gate!: PagodaGate;
   readonly progress: PagodaProgress;
   readonly view = new ResolutionView("Episode 2 · The Whispering Pagoda");
-  readonly ghosts = PATROLS.map((p, i) => new PretBrain(p, i));
+  /** The garden's dead (PATROLS), then one in each zone of the lost garden (ZONE_PATROLS). */
+  readonly ghosts = [
+    ...PATROLS.map((p, i) => new PretBrain(p, i)),
+    ...ZONE_PATROLS.map((z, i) => new PretBrain(z.route, i, z.crawl)),
+  ];
+  /** A corpse has hold of Sora: which, and for how long. */
+  private grab: { i: number; t: number; from: number; yaw: number } | null = null;
   readonly breath = new Breath();
   readonly sounds: PagodaSoundscape;
   readonly cinematics: PagodaCinematics;
@@ -67,6 +89,20 @@ export class WhisperingPagoda {
   private readonly rigs: GhostRig[] = [];
   /** How the shrouded dead move, twitch and vanish. */
   private dead!: ShroudedDead;
+  /** The dead that follow her, and the one put behind her when she stands still. */
+  private readonly haunts = new KmaochHaunts();
+  private nav!: PagodaNav;
+  /** Seconds Sora has stood without moving. */
+  private stillFor = 0;
+  /** The one that comes down a tree at her, the trees it may use, and how it sounds. */
+  private readonly descent = new KmaochDescent();
+  private climbTrees: ClimbTree[] = [];
+  private readonly climbSounds = new ClimbSounds(Math.random);
+  /** A climbing or scuttling sound that moves with corpse `i`. */
+  private carried: { i: number; sound: { spatial: { position: Vector3 } } } | null = null;
+  private clinging = -1;
+  /** Episode 1's Krasue, seen far off over the trees, and once low overhead. */
+  private readonly krasue: PagodaKrasue;
   private readonly beams: Mesh[] = [];
   private readonly tendrils: Mesh[] = [];
   private guardian!: ShadowFigure;
@@ -82,6 +118,7 @@ export class WhisperingPagoda {
   constructor(private readonly game: Game) {
     this.progress = new PagodaProgress(game.flags, game.inventory);
     this.sounds = new PagodaSoundscape(game);
+    this.krasue = new PagodaKrasue(game);
     this.cinematics = new PagodaCinematics(game, this.sounds);
     this.cheaHands = new CheaHands(game);
   }
@@ -102,6 +139,10 @@ export class WhisperingPagoda {
   }
   async load(): Promise<void> {
     const g = this.game;
+    let beltTemplates: { trees: PlantTemplate[]; undergrowth: PlantTemplate[] } = {
+      trees: [],
+      undergrowth: [],
+    };
     this.area = await loadArea(g.scene, "ep2", "ep2_area_pagoda", {
       // The pagoda is draw-call bound, not fill or vertex bound: 16 m cells (24 m in the
       // garden zones) cut its frame from about 39 ms to 28 ms on an M1 Pro without
@@ -116,6 +157,12 @@ export class WhisperingPagoda {
             mesh.isVisible = false;
             mesh.setEnabled(false);
           }
+        // Each tree sways on its own, trunk and crown together; roots gripping stupas,
+        // creepers on walls and cord stay where they are (pagodaWind.ts).
+        bakePlantHeights(container, PAGODA_PLANTS);
+        beltTemplates = captureBeltTemplates(container);
+        this.climbTrees = captureClimbTrees(container);
+        waterUvs(container);
       },
       coarse: { pattern: /leaf|leaves|fern|bark|bamboo/, cellSize: 24 },
       group: zoneOf,
@@ -126,14 +173,28 @@ export class WhisperingPagoda {
     g.camera.maxZ = 130;
     this.lights = new PagodaLights(g, this.area);
     buildFarForest(g.scene, g.wind, g.scene.getMaterialByName("M_ep2_earth"));
+    // Trunks behind trunks all round the map, between the authored edge and the far cards.
+    buildBelt(g.scene, beltTemplates);
+    // After the sky, the belt and the far forest exist: the pond mirrors them.
+    this.water = new PagodaWater(g);
     this.zones = new PagodaZones(this.area.container.meshes);
     const kmaoch = await GhostRig.load(g.scene, "ep2_kmaoch", {
       M_ep2_kmaoch_skin: new Color3(0.46, 0.46, 0.44),
       M_ep2_kmaoch_head: new Color3(0.5, 0.5, 0.47),
       M_ep2_kmaoch_cloth: new Color3(0.42, 0.4, 0.35),
     });
-    for (let i = 0; i < PATROLS.length; i++) this.rigs.push(new GhostRig(kmaoch, "kmaoch_" + i));
-    this.dead = new ShroudedDead(g.scene, this.rigs, this.sounds, this.lights);
+    for (let i = 0; i < this.ghosts.length; i++)
+      this.rigs.push(new GhostRig(kmaoch, "kmaoch_" + i));
+    // The dead find their way over the whole map: round walls, stupas and trees, through gaps.
+    const nav = (this.nav = PagodaNav.fromScene(g.scene));
+    for (const ghost of this.ghosts) ghost.pathfinder = (a, b) => nav.path(a, b);
+    this.dead = new ShroudedDead(
+      g.scene,
+      this.rigs,
+      this.sounds,
+      this.lights,
+      this.ghosts.map((b) => b.crawls),
+    );
     await ShadowFigure.prepare(g.scene);
     this.guardian = new ShadowFigure(g.scene, "pagoda_guardian", 4);
     this.guardian.root.setEnabled(false);
@@ -143,6 +204,7 @@ export class WhisperingPagoda {
     await Promise.all([this.cinematics.load(), this.cheaHands.load()]);
     this.apparition = new PagodaApparition(g, this.sounds, this.lights);
     await this.apparition.load();
+    await this.krasue.load();
     this.watchers = new PagodaWatchers(g, this.sounds);
     this.watchers.attach();
     for (const light of [this.lights.sky, this.lights.moon, ...this.lights.flames])
@@ -245,6 +307,8 @@ export class WhisperingPagoda {
       void g.audio?.unlock();
     });
     await this.sounds.load();
+    if (g.audio) await this.climbSounds.load(g.audio);
+    g.scene.onDisposeObservable.addOnce(() => this.climbSounds.stop());
     if (!g.flags.get("ep2.started", false)) {
       g.flags.set("ep2.started", true);
       document.exitPointerLock();
@@ -301,6 +365,13 @@ export class WhisperingPagoda {
       return s === "garden" && this.game.flags.get("ep2.hall.open", false);
     if (id.startsWith("interact_lore_library")) return s === "library";
     if (id === "interact_bridge_lock") return s === "garden";
+    for (const way of SHORTCUTS)
+      if (id === "interact_shortcut_" + way.id)
+        return (
+          s !== "memory" &&
+          !this.game.flags.get("ep2.shortcut." + way.id, false) &&
+          onGardenSide(way, this.game.player.feet)
+        );
     if (id.startsWith("interact_mirror_") || id === "interact_archive") return s === "library";
     return false;
   }
@@ -328,6 +399,7 @@ export class WhisperingPagoda {
           "Venerable Sophal",
           [
             "The white thread lies across his open palm. Four silver flowers mark the family stupas. Oil and matches wait on the table.",
+            "Nothing for the dead is kept here any more, he says. Rice is still left at the village's old spirit house in the grove, beyond the north wall. A lotus grows only in the sunken tank, past the western lanes. Sanctified water stands before the images at the end of the ruined gallery, east beyond the clearing.",
             "His notebook guidance is now copied into mine: C to crouch, Space to hold breath briefly, G to throw an empty bowl. The kuti is safe.",
           ],
           ["Receive the white thread"],
@@ -353,6 +425,16 @@ export class WhisperingPagoda {
         );
         await this.persist();
       });
+      return;
+    }
+    if (id.startsWith("interact_shortcut_")) {
+      const way = SHORTCUTS.find((w) => id === "interact_shortcut_" + w.id);
+      if (!way) return;
+      g.flags.set("ep2.shortcut." + way.id, true);
+      this.message("Sora", way.opened);
+      this.sounds.throw(this.game.player.feet);
+      await this.saveProgress();
+      this.sync();
       return;
     }
     if (id.startsWith("interact_pickup_")) {
@@ -420,6 +502,7 @@ export class WhisperingPagoda {
       return;
     }
     if (id === "interact_bell_verse") {
+      g.flags.set("ep2.verse.read", true);
       await this.dialog(() =>
         this.view.show(
           "The bell verse",
@@ -546,7 +629,7 @@ export class WhisperingPagoda {
           ["Return to the library"],
         );
         await g.fade.to(1, 1);
-        g.atmosphere.setGrade(NIGHT_GRADE);
+        g.atmosphere.setGrade(PAGODA_GRADE);
         g.atmosphere.mood.memory = false;
         g.player.config.walkSpeed = 1.6;
         g.player.config.hurrySpeed = 3.4;
@@ -603,8 +686,90 @@ export class WhisperingPagoda {
   private message(speaker: string, text: string): void {
     void this.game.subtitles.say(speaker, text, Math.max(4, text.length / 17));
   }
+  /** Whether corpse `i` is walking now: the garden's by the night's count, a zone's when Sora is near it. */
+  private awake(i: number): boolean {
+    const stage = this.progress.stage;
+    // One that came down a tree walks (and hunts) until it rests again.
+    if (stage === "garden" && this.descent.holds(i)) return true;
+    if (i < PATROLS.length)
+      return (
+        (stage === "garden" && i < this.progress.pretCount) || (stage === "arrival" && i === 0)
+      );
+    const zone = LOST_GARDEN.find((z) => z.id === ZONE_PATROLS[i - PATROLS.length].zone);
+    const feet = this.game.player.feet;
+    return stage === "garden" && !!zone && zoneDistance(zone, feet.x, feet.z) < 22;
+  }
+  /** How Sora sees corpse `i`: 1 when it is dead ahead, and how far off it is. */
+  private viewOf(i: number): HauntView {
+    const at = this.ghosts[i].position,
+      feet = this.game.player.feet,
+      yaw = this.game.player.yaw;
+    const dx = at.x - feet.x,
+      dz = at.z - feet.z,
+      distance = Math.hypot(dx, dz) || 1;
+    return { facing: (Math.sin(yaw) * dx + Math.cos(yaw) * dz) / distance, distance };
+  }
+  /** What the one coming down a tree shows and sounds. */
+  private descentEvent(e: DescentEvent): void {
+    const g = this.game;
+    switch (e.kind) {
+      case "scratch":
+        this.climbSounds.play("scratch", new Vector3(e.at.x, e.at.y, e.at.z), 0.55);
+        break;
+      case "down": {
+        // She has looked: it comes down the trunk, the bark raked all the way.
+        const sound = this.climbSounds.play("climb", new Vector3(e.at.x, e.at.y, e.at.z), 0.8);
+        this.carried = sound ? { i: e.i, sound } : null;
+        this.dead.jerk(e.i);
+        break;
+      }
+      case "land": {
+        const at = new Vector3(e.at.x, 0.1, e.at.z);
+        this.climbSounds.play("drop", at, 0.9);
+        this.dead.jerk(e.i, true);
+        this.dead.gutter(0.6);
+        this.sounds.scare(0.5);
+        g.atmosphere.scare();
+        this.carried = null;
+        break;
+      }
+      case "charge": {
+        const sound = this.climbSounds.play("scuttle", new Vector3(e.at.x, 0.2, e.at.z), 0.7);
+        this.carried = sound ? { i: e.i, sound } : null;
+        break;
+      }
+    }
+  }
+  /** What the dead's haunting shows and sounds. */
+  private hauntEvent(e: HauntEvent): void {
+    const g = this.game;
+    switch (e.kind) {
+      case "loom": {
+        // Put down behind her: one foot set down, soft, as if it had just arrived.
+        const at = new Vector3(e.at.x, 0, e.at.z);
+        this.sounds.thud(e.i, at, 0.16, this.ghosts[e.i].crawls ? "crawl" : "walk");
+        this.dead.jerk(e.i);
+        break;
+      }
+      case "turn":
+        // She has turned and it is there: the neck goes over with a crack, the lamp gutters.
+        this.dead.jerk(e.i, true);
+        this.dead.gutter(0.8);
+        this.sounds.scare(0.55);
+        g.atmosphere.scare();
+        break;
+      case "gone":
+        if (e.seen) this.dead.vanishNow(e.i, new Vector3(e.at.x, 0, e.at.z));
+        break;
+      case "stalk":
+        break;
+    }
+  }
+  private awakeGhosts(): PretBrain[] {
+    return this.ghosts.filter((_, i) => this.awake(i) && this.progress.stage === "garden");
+  }
   private hear(at: Point, loudness: number): void {
-    this.ghosts.slice(0, this.progress.pretCount).forEach((ghost) => ghost.hear(at, loudness));
+    this.awakeGhosts().forEach((ghost) => ghost.hear(at, loudness));
   }
   private throwBowl(): void {
     const g = this.game;
@@ -628,7 +793,7 @@ export class WhisperingPagoda {
     g.player.config.hurrySpeed = 0.85;
     g.player.config.crouchSpeed = 0.65;
     g.atmosphere.setGrade({
-      ...NIGHT_GRADE,
+      ...PAGODA_GRADE,
       saturation: -0.45,
       midtones: { tint: [1, 0.72, 0.43], strength: 0.4 },
     });
@@ -824,6 +989,11 @@ export class WhisperingPagoda {
         const body = g.scene.getTransformNodeByName("col_" + name + "_body");
         body?.dispose();
       }
+    for (const way of SHORTCUTS) {
+      const open = g.flags.get("ep2.shortcut." + way.id, false);
+      this.node("interact_shortcut_" + way.id)?.setEnabled(!open);
+      if (open) g.scene.getTransformNodeByName("col_shortcut_" + way.id + "_body")?.dispose();
+    }
     for (const item of ["rice", "lotus", "water", "bowls"]) {
       this.node("interact_pickup_" + item)?.setEnabled(!p.flags.get("ep2.pickup." + item, false));
     }
@@ -903,6 +1073,54 @@ export class WhisperingPagoda {
       this.tendrils.push(mesh);
     }
   }
+  /**
+   * Caught: the corpse has her. The view is wrenched round to it, its face comes right
+   * up to hers with the neck cracking over, the lamp all but dies, a sting; then the night
+   * goes back to the last checkpoint.
+   */
+  private seize(i: number): void {
+    const g = this.game;
+    this.catching = true;
+    g.player.inputEnabled = false;
+    const b = this.ghosts[i],
+      feet = g.player.feet;
+    this.grab = {
+      i,
+      t: 0,
+      from: Math.hypot(b.position.x - feet.x, b.position.z - feet.z),
+      yaw: g.player.yaw,
+    };
+    b.mode = "rush";
+    this.apparition.grabSting();
+    this.sounds.crack(new Vector3(b.position.x, 1.5, b.position.z));
+    this.sounds.scare(0.8);
+    g.atmosphere.scare();
+  }
+  private holdGrab(dt: number): void {
+    const g = this.game,
+      grab = this.grab!;
+    grab.t += dt;
+    const b = this.ghosts[grab.i],
+      feet = g.player.feet;
+    const u = Math.min(1, grab.t / 0.28),
+      ease = u * u * (3 - 2 * u);
+    // The view turns to it, fast, the way a head is turned by a hand.
+    const to = Math.atan2(b.position.x - feet.x, b.position.z - feet.z);
+    const turn = Math.atan2(Math.sin(to - grab.yaw), Math.cos(to - grab.yaw));
+    g.player.yaw = grab.yaw + turn * ease;
+    g.player.pitch = 0.06 * ease;
+    // It comes in to arm's length of her face and stops there, swaying.
+    const reach = grab.from + (0.5 - grab.from) * ease;
+    const away = to + Math.PI;
+    b.position.x = feet.x - Math.sin(away) * reach;
+    b.position.z = feet.z - Math.cos(away) * reach;
+    b.yaw = Math.atan2(feet.x - b.position.x, feet.z - b.position.z);
+    this.lights.scare = grab.t < 0.3 ? 1 : 0.85 + 0.15 * Math.random();
+    if (grab.t > 1.05 && grab.t - dt <= 1.05) {
+      g.bus.emit("player:caught", { by: "pret" });
+      void g.retryFromCheckpoint();
+    }
+  }
   private update(dt: number): void {
     if (!this.running) return;
     const g = this.game,
@@ -911,14 +1129,65 @@ export class WhisperingPagoda {
     const simDt = simulationStep(dt);
     // The memory space lies beyond the Root Gallery, and must not see it.
     this.zones.update(p.stage === "memory" ? null : g.player.feet);
+    this.water.update(dt);
+    // The notebook's map draws each part of the lost garden once Sora has been there.
+    const visited = p.stage === "memory" ? null : visitedZone(g.player.feet);
+    if (visited && !g.flags.get("ep2.visited." + visited, false))
+      g.flags.set("ep2.visited." + visited, true);
     this.equipment.update(simDt);
     this.cheaHands.update(dt, this.equipment);
     this.cinematics.update(document.hidden || this.cinematics.director.isPaused ? 0 : dt);
     const active = !this.paused;
     if (active) this.contactGrace = Math.max(0, this.contactGrace - simDt);
     this.cinematics.collapse.update(dt, active && p.stage === "escape");
-    const shown = (i: number) =>
-      (p.stage === "garden" && i < p.pretCount) || (p.stage === "arrival" && i === 0);
+    const shown = (i: number) => this.awake(i);
+    if (this.grab) this.holdGrab(dt);
+    this.stillFor = g.player.speed > 0.2 ? 0 : this.stillFor + simDt;
+    if (active && !g.cutscene && !this.grab && p.stage === "garden")
+      for (const event of this.haunts.update(
+        simDt,
+        {
+          feet: { x: g.player.feet.x, z: g.player.feet.z },
+          yaw: g.player.yaw,
+          still: this.stillFor,
+          safe: inKuti(g.player.feet),
+          walkable: (q) => this.nav.walkable(q),
+          clear: (a, b) => this.nav.straight(a, b),
+        },
+        this.ghosts,
+        (i) => this.awake(i),
+        (i) => this.viewOf(i),
+      ))
+        this.hauntEvent(event);
+    else if (p.stage !== "garden") this.haunts.reset(this.ghosts);
+    if (active && !g.cutscene && !this.grab && p.stage === "garden")
+      for (const event of this.descent.update(
+        simDt,
+        {
+          feet: { x: g.player.feet.x, z: g.player.feet.z },
+          yaw: g.player.yaw,
+          safe: inKuti(g.player.feet),
+          walkable: (q) => this.nav.walkable(q),
+          clear: (a, b) => this.nav.straight(a, b),
+        },
+        this.climbTrees,
+        this.ghosts,
+        (i) => this.awake(i) && i !== this.haunts.following && i !== this.haunts.looming,
+        (i) => this.viewOf(i),
+        (i) => !this.awake(i) && this.grab?.i !== i,
+      ))
+        this.descentEvent(event);
+    else if (p.stage !== "garden") this.descent.reset(this.ghosts);
+    // The body on the tree, if there is one, is posed against the bark.
+    const pose = this.descent.pose();
+    if (this.clinging >= 0 && this.clinging !== pose?.i) this.dead.cling(this.clinging, null);
+    if (pose) this.dead.cling(pose.i, pose);
+    this.clinging = pose?.i ?? -1;
+    if (this.carried) {
+      const c = this.carried;
+      const at = pose && pose.i === c.i ? pose : { ...this.ghosts[c.i].position, y: 0.4 };
+      c.sound.spatial.position = new Vector3(at.x, at.y + 0.4, at.z);
+    }
     this.rigs.forEach((_, i) => {
       if (!shown(i)) {
         this.dead.hide(i);
@@ -926,7 +1195,9 @@ export class WhisperingPagoda {
       }
       const brain = this.ghosts[i];
       const was = { x: brain.position.x, z: brain.position.z };
-      if (active && p.stage === "garden") brain.update(simDt);
+      // Before the monk, the first of them already walks its rounds (it hears nothing yet).
+      const walking = p.stage === "garden" || p.stage === "arrival";
+      if (active && walking && this.grab?.i !== i) brain.update(simDt);
       const moved = Math.hypot(brain.position.x - was.x, brain.position.z - was.z) > 1e-4;
       this.dead.update(
         active ? simDt : 0,
@@ -936,22 +1207,17 @@ export class WhisperingPagoda {
         moved,
         brain.mode,
         g.player.feet,
+        brain.crawls,
       );
     });
     if (active && !g.cutscene)
-      this.dead.watch(simDt, (i) => {
-        if (!shown(i)) return null;
-        const at = this.ghosts[i].position,
-          feet = g.player.feet;
-        const dx = at.x - feet.x,
-          dz = at.z - feet.z,
-          distance = Math.hypot(dx, dz) || 1;
-        return {
-          facing: (Math.sin(g.player.yaw) * dx + Math.cos(g.player.yaw) * dz) / distance,
-          distance,
-          at: new Vector3(at.x, 0, at.z),
-        };
-      });
+      for (const gone of this.dead.watch(simDt, (i) => {
+        // The one coming down a tree is not seen off by a stare.
+        if (!shown(i) || i === this.descent.active) return null;
+        const at = this.ghosts[i].position;
+        return { ...this.viewOf(i), at: new Vector3(at.x, 0, at.z) };
+      }))
+        this.haunts.vanished(gone, this.ghosts);
     this.sounds.update(
       dt,
       this.ghosts.slice(0, p.pretCount).map((b) => b.position),
@@ -964,9 +1230,10 @@ export class WhisperingPagoda {
     const nearestPret =
       p.stage === "garden"
         ? Math.min(
-            ...this.ghosts
-              .slice(0, p.pretCount)
-              .map((b) => Math.hypot(b.position.x - feet.x, b.position.z - feet.z)),
+            99,
+            ...this.awakeGhosts().map((b) =>
+              Math.hypot(b.position.x - feet.x, b.position.z - feet.z),
+            ),
           )
         : 99;
     this.sounds.haunt(
@@ -991,8 +1258,25 @@ export class WhisperingPagoda {
       inKuti: inKuti(feet),
       mirrorsTurned: p.mirrors.some((turn) => turn !== 0),
       nearestPret,
+      zone: visitedZone(feet),
+      pickedLotus: g.flags.get("ep2.pickup.lotus", false),
+      pickedRice: g.flags.get("ep2.pickup.rice", false),
+      pickedWater: g.flags.get("ep2.pickup.water", false),
+      verseRead: g.flags.get("ep2.verse.read", false),
     };
     this.apparition.update(dt, scareContext, haunting);
+    this.krasue.update(
+      dt,
+      {
+        stage: p.stage,
+        feet: { x: feet.x, z: feet.z },
+        yaw: g.player.yaw,
+        offerings: p.offerings,
+        inKuti: inKuti(feet),
+        nearestPret,
+      },
+      haunting,
+    );
     this.watchers.update(dt, scareContext, haunting);
     if (!active) return;
     if (p.stage === "garden") {
@@ -1006,22 +1290,18 @@ export class WhisperingPagoda {
         this.breathClock = 0;
         if (!this.breath.holding) this.hear(g.player.feet, B.breathingLoudness);
       }
+      const awake = this.awakeGhosts();
       const nearest = Math.min(
-        ...this.ghosts
-          .slice(0, p.pretCount)
-          .map((b) => Math.hypot(b.position.x - g.player.feet.x, b.position.z - g.player.feet.z)),
+        99,
+        ...awake.map((b) =>
+          Math.hypot(b.position.x - g.player.feet.x, b.position.z - g.player.feet.z),
+        ),
       );
       g.threatActive = !inKuti(g.player.feet) && nearest < 5;
       g.atmosphere.mood.fear = inKuti(g.player.feet) ? 0 : Math.max(0, 1 - nearest / 12);
-      if (
-        !this.catching &&
-        this.contactGrace <= 0 &&
-        this.ghosts.slice(0, p.pretCount).some((b) => b.catches(g.player.feet))
-      ) {
-        this.catching = true;
-        g.bus.emit("player:caught", { by: "pret" });
-        void g.retryFromCheckpoint();
-      }
+      const catcher = awake.find((b) => b.catches(g.player.feet));
+      if (!this.catching && this.contactGrace <= 0 && catcher)
+        this.seize(this.ghosts.indexOf(catcher));
     } else {
       g.threatActive = p.stage === "escape";
       g.atmosphere.mood.fear = p.stage === "escape" ? 0.7 : 0;

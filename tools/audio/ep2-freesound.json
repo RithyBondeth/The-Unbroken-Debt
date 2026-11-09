@@ -1,0 +1,266 @@
+{
+  "about": "Episode 2's recorded sound sources: Freesound HQ Ogg previews of CC0 1.0 recordings (licence checked on each page, 2026-11-07). The originals need a Freesound login; the previews are what tools/audio/make-ep2-audio.sh cuts from. `npm`-free re-download: tools/audio/make-ep2-audio.sh --fetch.",
+  "folder": "art-source/audio/library/freesound",
+  "licence": "CC0 1.0",
+  "sources": [
+    {
+      "id": 177687,
+      "user": "kyles",
+      "uid": 612689,
+      "file": "177687_kyles_thailand_jungle_night_heavy_crickets.ogg",
+      "title": "Thailand jungle night heavy crickets1.flac"
+    },
+    {
+      "id": 386474,
+      "user": "Skjor1",
+      "uid": 1998557,
+      "file": "386474_skjor1_jungle_night_southern_thailand.ogg",
+      "title": "Jungle Night Ambience Southern Thailand"
+    },
+    {
+      "id": 806575,
+      "user": "marc.om",
+      "uid": 5417386,
+      "file": "806575_marc.om_night_cat_tien_vietnam.ogg",
+      "title": "Night Ambience, Cát Tiên, Vietnam (April 19, 2019)"
+    },
+    {
+      "id": 109439,
+      "user": "Selector",
+      "uid": 270868,
+      "file": "109439_selector_asian_frog_koh_samui.ogg",
+      "title": "asian frog"
+    },
+    {
+      "id": 109441,
+      "user": "Selector",
+      "uid": 270868,
+      "file": "109441_selector_asian_night_sounds_2.ogg",
+      "title": "asian night sounds 2"
+    },
+    {
+      "id": 523389,
+      "user": "Anya_Media",
+      "uid": 2010973,
+      "file": "523389_anya_media_forest_trees_rustling_wind.ogg",
+      "title": "Forest, close up of trees rustling in the wind.wav"
+    },
+    {
+      "id": 575645,
+      "user": "Garuda1982",
+      "uid": 2061858,
+      "file": "575645_garuda1982_large_leaves_rustle_wind.ogg",
+      "title": "large leaves rustle in the wind sound effect"
+    },
+    {
+      "id": 714265,
+      "user": "bruno.auzet",
+      "uid": 11519060,
+      "file": "714265_bruno.auzet_gusts_in_a_tree.ogg",
+      "title": "gusts in a tree"
+    },
+    {
+      "id": 726217,
+      "user": "Sacha.Julien",
+      "uid": 14889307,
+      "file": "726217_sacha.julien_tree_creaks.ogg",
+      "title": "Tree creaks"
+    },
+    {
+      "id": 95263,
+      "user": "Department64",
+      "uid": 861714,
+      "file": "95263_department64_tree_creak_05.ogg",
+      "title": "tree_creak_05.wav"
+    },
+    {
+      "id": 95264,
+      "user": "Department64",
+      "uid": 861714,
+      "file": "95264_department64_tree_creak_06.ogg",
+      "title": "tree_creak_06.wav"
+    },
+    {
+      "id": 335891,
+      "user": "Yoyodaman234",
+      "uid": 2792951,
+      "file": "335891_yoyodaman234_bamboo_creaking_wind.ogg",
+      "title": "Bamboo Creaking in Wind"
+    },
+    {
+      "id": 668647,
+      "user": "tec_studio",
+      "uid": 1431924,
+      "file": "668647_tec_studio_temple_bell_002.ogg",
+      "title": "temple_bell_002.wav"
+    },
+    {
+      "id": 131348,
+      "user": "nahmandub",
+      "uid": 1513948,
+      "file": "131348_nahmandub_bell_daitokuji.ogg",
+      "title": "Bell at Daitokuji temple,kyoto.wav"
+    },
+    {
+      "id": 232333,
+      "user": "Mista Bumpy",
+      "uid": 2313287,
+      "file": "232333_mista_bumpy_temple_bell_byodo_in.ogg",
+      "title": "Temple Bell, Valley of the Temples"
+    },
+    {
+      "id": 91196,
+      "user": "surly",
+      "uid": 1488875,
+      "file": "91196_surly_buddhist_prayer_bell.ogg",
+      "title": "Buddhist Prayer Bell.wav"
+    },
+    {
+      "id": 803159,
+      "user": "kerozenne",
+      "uid": 16350347,
+      "file": "803159_kerozenne_temple_gong_2.ogg",
+      "title": "Temple Gong 2"
+    },
+    {
+      "id": 858466,
+      "user": "ManDaKi",
+      "uid": 15096086,
+      "file": "858466_mandaki_myanmar_royal_drum.ogg",
+      "title": "Grand Myanmar Royal Drum"
+    },
+    {
+      "id": 448359,
+      "user": "ExplosiveTamale",
+      "uid": 4844765,
+      "file": "448359_explosivetamale_knocking_wood_door.ogg",
+      "title": "Knocking On a Wooden Door"
+    },
+    {
+      "id": 728716,
+      "user": "windyeq",
+      "uid": 15671594,
+      "file": "728716_windyeq_knocking_wall.ogg",
+      "title": "knocking on table or wall or door even"
+    },
+    {
+      "id": 483354,
+      "user": "craigsmith",
+      "uid": 2524442,
+      "file": "483354_craigsmith_wood_splinters_creaks.ogg",
+      "title": "R27-16-Wood Splinters and Creaks.wav"
+    },
+    {
+      "id": 873248,
+      "user": "harrisonlace",
+      "uid": 9839964,
+      "file": "873248_harrisonlace_plywood_splinters.ogg",
+      "title": "WOODBrk_Layered Cracking Thin Plywood Board Splinters x 7"
+    },
+    {
+      "id": 393829,
+      "user": "FreeToUseSounds",
+      "uid": 7266967,
+      "file": "393829_freetousesounds_cambodian_dogs_night.ogg",
+      "title": "Cambodian Street Dogs Barking at Night.wav"
+    },
+    {
+      "id": 686626,
+      "user": "Organuz",
+      "uid": 8281041,
+      "file": "686626_organuz_tookgeh_gecko.ogg",
+      "title": "Tookgeh Gecko"
+    },
+    {
+      "id": 232287,
+      "user": "zachrau",
+      "uid": 676927,
+      "file": "232287_zachrau_tokeh_quiet_beach.ogg",
+      "title": "Tokeh on a quiet beach"
+    },
+    {
+      "id": 266898,
+      "user": "darthbaul",
+      "uid": 4539217,
+      "file": "266898_darthbaul_scops_owl.ogg",
+      "title": "Scops owl's call in night silence"
+    },
+    {
+      "id": 429185,
+      "user": "SamuelGremaud",
+      "uid": 8031303,
+      "file": "429185_samuelgremaud_scops_owl_1.ogg",
+      "title": "SCOPS OWL - 1"
+    },
+    {
+      "id": 318064,
+      "user": "ceich93",
+      "uid": 4457609,
+      "file": "318064_ceich93_water_lapping_river.ogg",
+      "title": "Water_Lapping_River.wav"
+    },
+    {
+      "id": 501323,
+      "user": "JappeHallunken",
+      "uid": 10865671,
+      "file": "501323_jappehallunken_lapping_water.ogg",
+      "title": "Lapping water sound"
+    },
+    {
+      "id": 399080,
+      "user": "Kinoton",
+      "uid": 2247456,
+      "file": "399080_kinoton_clay_pottery_drop_break.ogg",
+      "title": "Clay Pottery Drop ’n’ Break"
+    },
+    {
+      "id": 583310,
+      "user": "Fission9",
+      "uid": 9395330,
+      "file": "583310_fission9_tile_breaking.ogg",
+      "title": "Tile Breaking"
+    },
+    {
+      "id": 811809,
+      "user": "JW_Audio",
+      "uid": 13183432,
+      "file": "811809_jw_audio_fingers_scratching_tree_bark.ogg",
+      "title": "VEGETree_ Fingers Scratching, Tree bark, Various"
+    },
+    {
+      "id": 491179,
+      "user": "sidequesting",
+      "uid": 10247258,
+      "file": "491179_sidequesting_climbing_down_from_tree.ogg",
+      "title": "ClimbingDownFromTree.wav"
+    },
+    {
+      "id": 830466,
+      "user": "Wigglesworth",
+      "uid": 6775466,
+      "file": "830466_wigglesworth_clawing_scratching_wood.ogg",
+      "title": "Clawing or Scratching at wood"
+    },
+    {
+      "id": 853591,
+      "user": "Wigglesworth",
+      "uid": 6775466,
+      "file": "853591_wigglesworth_body_fall_leaf_crush.ogg",
+      "title": "A body falling to the ground, with leaf crush"
+    },
+    {
+      "id": 504626,
+      "user": "leonelmail",
+      "uid": 4437257,
+      "file": "504626_leonelmail_body_fall_heavy_dirt.ogg",
+      "title": "BODY FALL - V HVY - DIRT"
+    },
+    {
+      "id": 669085,
+      "user": "vestibule-door",
+      "uid": 14100561,
+      "file": "669085_vestibule-door_hurried_crawling.ogg",
+      "title": "hurried crawling on stone concrete.wav"
+    }
+  ]
+}

@@ -158,7 +158,7 @@ export function enterPagoda(previous: SaveData): SaveData {
     if (key.startsWith("checkpoint.")) delete save.flags[key];
   save.flags["ep2.checkpoint"] = "CP0";
   save.flags["ep2.clock"] = "23:45";
-  save.flags["checkpoint.location"] = "Pagoda · Naga gate";
+  save.flags["checkpoint.location"] = "Pagoda · Temple gate";
   save.flags["series.nextEpisode"] = 2;
   // New night: Sophal supplies kerosene and matches; retained quest items stay in the satchel.
   save.inventory.matches = Math.max(10, save.inventory.matches ?? 0);

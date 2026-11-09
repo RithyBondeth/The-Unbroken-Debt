@@ -1,5 +1,9 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
+import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import type { Game } from "@/core/Game";
+import { GhostAudio, PASS_NEAREST } from "./audio/ghostSounds";
 import { GhostRig } from "./GhostRig";
 import type { PagodaLights } from "./PagodaLights";
 import type { PagodaSoundscape } from "./PagodaSoundscape";
@@ -14,23 +18,48 @@ export interface ScareContext {
   inKuti: boolean;
   mirrorsTurned: boolean;
   nearestPret: number;
+  /** The lost-garden zone Sora stands in, or null in the compound. */
+  zone: string | null;
+  /** The tank's lotus has just been taken. */
+  pickedLotus: boolean;
+  /** The rice at the spirit house, and the water in the gallery, have been taken. */
+  pickedRice?: boolean;
+  pickedWater?: boolean;
+  /** The bell verse has been read in the Court's walled lane. */
+  verseRead?: boolean;
 }
 
-export type ScareKind = "glimpse" | "lunge" | "behind" | "stare" | "rise";
+export type ScareKind = "glimpse" | "lunge" | "behind" | "stare" | "rise" | "rush";
+
+/** Where a scare puts her, and for a rush, where she is carried to. */
+export interface Placement {
+  x: number;
+  z: number;
+  to?: { x: number; z: number };
+}
 
 export interface Scare {
   id: string;
   kind: ScareKind;
   /** True when the moment has come; may arm a "behind" scare that waits for a turn. */
   ready(c: ScareContext): boolean;
-  /** Where she appears, given the player. */
-  place(c: ScareContext): { x: number; z: number };
+  /** Where she appears, given the player; null if there is nowhere fit this moment. */
+  place(c: ScareContext): Placement | null;
 }
 
 const HALL_DOOR = { x: 22, z: 6.6 };
 const KUTI_DOOR = { x: -18, z: 15.5 };
 /** The far end of the reclining Buddha's bed, in the clearing east of the compound. */
 const SALA_FAR = { x: 40.2, z: 12.9 };
+/** The Sunken Tank's landing, where the lotus is taken (tools/areas/pagoda_lost_garden.py). */
+const TANK_LANDING = { x: -53, z: -39.2 };
+/** Where the rice and the water are taken, and the verse board (pagoda_lost_garden.py). */
+const RICE_TABLE = { x: -14, z: -66.6 };
+const WATER_TABLE = { x: 39, z: -66.2 };
+const VERSE_BOARD = { x: -76.5, z: 4.3 };
+/** The pond's middle, and the bell rack in its pavilion. */
+const POND_MIDDLE = { x: 0, z: -28.2 };
+const BELL_RACK = { x: 19.4, z: 9 };
 const dist = (a: { x: number; z: number }, b: { x: number; z: number }) =>
   Math.hypot(a.x - b.x, a.z - b.z);
 const ahead = (c: ScareContext, d: number, side = 0) => ({
@@ -45,18 +74,53 @@ export function facing(c: ScareContext, p: { x: number; z: number }): number {
   return (Math.sin(c.yaw) * dx + Math.cos(c.yaw) * dz) / d;
 }
 
+/**
+ * A pass across the view `d` metres ahead, `half` metres either side of the line of sight:
+ * she comes out of the dark on one side and is carried across to the other.
+ */
+export function rushAcross(
+  c: ScareContext,
+  d: number,
+  half: number,
+  rightward: boolean,
+): Placement {
+  const from = ahead(c, d, rightward ? -half : half),
+    to = ahead(c, d + 0.6, rightward ? half : -half);
+  return { x: from.x, z: from.z, to };
+}
+
+/**
+ * Where else she could be if the first place is blocked: a pass is tried nearer to Sora
+ * (stupas and trunks crowd the far lanes) and the other way across.
+ */
+export function alternatives(c: ScareContext, p: Placement | null): Placement[] {
+  if (!p) return [];
+  if (!p.to) return [p];
+  const out: Placement[] = [];
+  for (const k of [1, 0.8, 0.65, 0.5]) {
+    const near = (q: { x: number; z: number }) => ({
+      x: c.feet.x + (q.x - c.feet.x) * k,
+      z: c.feet.z + (q.z - c.feet.z) * k,
+    });
+    const from = near(p),
+      to = near(p.to);
+    out.push({ ...from, to }, { ...to, to: from });
+  }
+  return out;
+}
+
 /** The one-time scares of the episode, in story order. */
 export const SCARES: Scare[] = [
   {
-    // Crossing the threshold: something red crosses the processional path far ahead.
+    // Crossing the threshold: something red is carried across the processional path ahead.
     id: "gate",
-    kind: "glimpse",
+    kind: "rush",
     ready: (c) =>
       ["arrival", "garden"].includes(c.stage) &&
       c.feet.z < 22 &&
       c.feet.z > 15 &&
       Math.abs(c.feet.x) < 3,
-    place: (c) => ahead(c, 9, -2.5),
+    place: (c) => rushAcross(c, 9, 6.5, true),
   },
   {
     // Facing the sealed hall: she throws herself at the chains from inside.
@@ -109,6 +173,106 @@ export const SCARES: Scare[] = [
     place: () => SALA_FAR,
   },
   {
+    // In the Court's lanes: she crosses the lane ahead between the stupas, low and fast.
+    id: "court_lanes",
+    kind: "rush",
+    ready: (c) => c.stage === "garden" && c.zone === "court" && c.nearestPret > 6,
+    place: (c) => rushAcross(c, 7.5, 5.5, false),
+  },
+  {
+    // The lotus taken: she rises out of the tank's black water, facing the landing.
+    id: "tank_rise",
+    kind: "rise",
+    ready: (c) => c.pickedLotus && dist(c.feet, TANK_LANDING) < 4,
+    place: () => ({ x: TANK_LANDING.x + 1.4, z: TANK_LANDING.z - 3.4 }),
+  },
+  {
+    // Deep in the grove: far off between the trunks, something red is carried past.
+    id: "grove_far",
+    kind: "rush",
+    ready: (c) => c.stage === "garden" && c.zone === "grove" && c.feet.z < -55 && c.nearestPret > 6,
+    place: (c) => rushAcross(c, 13, 8, true),
+  },
+  {
+    // At the head of the ruined gallery: she stands at the end of the walk, then is gone.
+    id: "gallery_end",
+    kind: "stare",
+    ready: (c) =>
+      c.stage === "garden" && c.zone === "gallery" && c.feet.z < -50 && c.nearestPret > 6,
+    place: (c) => ahead(c, 8),
+  },
+  {
+    // On the Bone Terrace: she goes across the tiers in front of the altar.
+    id: "terrace",
+    kind: "rush",
+    ready: (c) => c.zone === "terrace" && c.stage !== "memory" && c.stage !== "escape",
+    place: (c) => rushAcross(c, 8, 6, false),
+  },
+  {
+    // The rice taken from the spirit house: she is right behind Sora when she turns to go.
+    id: "rice_shrine",
+    kind: "behind",
+    ready: (c) => !!c.pickedRice && dist(c.feet, RICE_TABLE) < 5 && c.nearestPret > 5,
+    place: (c) => ahead(c, -1.7),
+  },
+  {
+    // The water taken: she is carried across the gallery's walk between Sora and the way out.
+    id: "gallery_water",
+    kind: "rush",
+    ready: (c) =>
+      !!c.pickedWater && dist(c.feet, WATER_TABLE) > 4 && dist(c.feet, WATER_TABLE) < 12,
+    place: (c) => rushAcross(c, 7, 5, true),
+  },
+  {
+    // The verse read at the end of the walled lane: she waits at Sora's back, in the lane.
+    id: "verse_lane",
+    kind: "behind",
+    ready: (c) => !!c.verseRead && dist(c.feet, VERSE_BOARD) < 4.5,
+    place: (c) => ahead(c, -1.8),
+  },
+  {
+    // Across the pond: she stands on the black water on the far side, looking back.
+    id: "pond_far",
+    kind: "stare",
+    ready: (c) =>
+      (c.stage === "garden" || c.stage === "library") &&
+      dist(c.feet, POND_MIDDLE) > 7 &&
+      dist(c.feet, POND_MIDDLE) < 15 &&
+      facing(c, POND_MIDDLE) > 0.8 &&
+      c.nearestPret > 6,
+    place: (c) => {
+      const d = dist(c.feet, POND_MIDDLE) || 1;
+      return {
+        x: POND_MIDDLE.x + ((POND_MIDDLE.x - c.feet.x) / d) * 5.5,
+        z: POND_MIDDLE.z + ((POND_MIDDLE.z - c.feet.z) / d) * 5.5,
+      };
+    },
+  },
+  {
+    // At the bells: she is standing behind the rack, between the hanging bells.
+    id: "bells",
+    kind: "stare",
+    ready: (c) =>
+      c.stage === "garden" &&
+      dist(c.feet, BELL_RACK) < 5 &&
+      dist(c.feet, BELL_RACK) > 2 &&
+      facing(c, BELL_RACK) > 0.7,
+    place: (c) => {
+      const d = dist(c.feet, BELL_RACK) || 1;
+      return {
+        x: BELL_RACK.x + ((BELL_RACK.x - c.feet.x) / d) * 2.2,
+        z: BELL_RACK.z + ((BELL_RACK.z - c.feet.z) / d) * 2.2,
+      };
+    },
+  },
+  {
+    // Through the east wall's breaches: across the jungle path outside, low and fast.
+    id: "east_breach",
+    kind: "rush",
+    ready: (c) => c.stage === "garden" && c.feet.x > 31 && c.feet.x < 40 && c.nearestPret > 6,
+    place: (c) => rushAcross(c, 8, 6, false),
+  },
+  {
     // After the first mirror turns: she is behind Sora in the archive.
     id: "mirror",
     kind: "behind",
@@ -116,6 +280,42 @@ export const SCARES: Scare[] = [
     place: (c) => ahead(c, -1.5),
   },
 ];
+
+/** Where she can be found at any time in the garden: not saved, chosen at random. */
+const anywhere = (c: ScareContext) =>
+  (c.stage === "garden" || c.stage === "library") && !c.inKuti && c.nearestPret > 6;
+export const AMBIENT: Scare[] = [
+  {
+    // Carried across the way ahead, near or far.
+    id: "ambient_rush",
+    kind: "rush",
+    ready: anywhere,
+    place: (c) => rushAcross(c, 8 + Math.random() * 5, 6, Math.random() < 0.5),
+  },
+  {
+    // Standing far off in the dark ahead, a little to one side.
+    id: "ambient_stare",
+    kind: "stare",
+    ready: anywhere,
+    place: (c) => ahead(c, 11 + Math.random() * 4, (Math.random() - 0.5) * 5),
+  },
+  {
+    // Stumbling across a gap between the stupas.
+    id: "ambient_glimpse",
+    kind: "glimpse",
+    ready: anywhere,
+    place: (c) => ahead(c, 9 + Math.random() * 3, (Math.random() < 0.5 ? -1 : 1) * 2.5),
+  },
+  {
+    // Behind her: steps and a breath, and there when she turns.
+    id: "ambient_behind",
+    kind: "behind",
+    ready: anywhere,
+    place: (c) => ahead(c, -1.8),
+  },
+];
+/** Seconds between her unplanned appearances: often enough to dread, never routine. */
+export const AMBIENT_GAP = [90, 180] as const;
 
 /** Her head's roll at full lean, in radians: past comfortable, not past human. */
 const NECK_ROLL = 0.72;
@@ -127,6 +327,7 @@ const DURATION: Record<ScareKind, number> = {
   behind: 0.8,
   stare: 2.6,
   rise: 1.3,
+  rush: 1.2,
 };
 
 /** Which performance she gives in each appearance, and how fast. */
@@ -136,6 +337,8 @@ export const CLIPS: Record<ScareKind, { clip: string; rate: number }> = {
   behind: { clip: "behind", rate: 2.1 },
   stare: { clip: "stare", rate: 0.9 },
   rise: { clip: "rise", rate: 1.3 },
+  // Carried, not running: the slack standing performance, barely moving, arms hanging.
+  rush: { clip: "stare", rate: 0.35 },
 };
 
 /** What the timing asks of her at one moment of an appearance. */
@@ -187,6 +390,14 @@ export function ghostPose(kind: ScareKind, t: number): GhostPose {
         neck: ramp(t, 0.9, 1.08),
         travel: Math.min(1, t * 1.6),
       };
+    case "rush":
+      // Out of the dark on one side, across in about a second, gone into the dark beyond;
+      // her head turns towards Sora as she passes nearest.
+      return {
+        visible: t < 1.08,
+        neck: ramp(t, PASS_NEAREST - 0.15, PASS_NEAREST + 0.05) * 0.6,
+        travel: ramp(t, 0, 1.08) * 0.85 + Math.min(1, t / 1.08) * 0.15,
+      };
   }
 }
 
@@ -203,6 +414,7 @@ export const BEATS: Record<ScareKind, { at: number; sound: "crack" | "laugh" }[]
     { at: 1.9, sound: "laugh" },
   ],
   rise: [{ at: 0.9, sound: "crack" }],
+  rush: [],
 };
 
 /**
@@ -215,24 +427,35 @@ export const BEATS: Record<ScareKind, { at: number; sound: "crack" | "laugh" }[]
  */
 export class PagodaApparition {
   private rig: GhostRig | null = null;
+  /** Fainter copies of her, a few frames behind, while she is carried past. */
+  private trail: GhostRig[] = [];
   /** Her head's roll this frame, applied on top of the clip. */
   private neck = 0;
   private showing: {
     scare: Scare;
     t: number;
     at: Vector3;
-    heading: number;
+    to: Vector3 | null;
+    /** Unit direction she crosses in, for a glimpse. */
+    across: { x: number; z: number };
     armed: boolean;
   } | null = null;
   private waiting = 0;
+  /** Seconds to her next unplanned appearance, and the last kind she made. */
+  private nextAmbient = 120 + Math.random() * 60;
+  private lastAmbient = "";
   /** The lamps' flicker after she vanishes, in seconds remaining. */
   private afterglow = 0;
+  private readonly hit = new PhysicsRaycastResult();
+  private readonly audio: GhostAudio;
 
   constructor(
     private readonly game: Game,
     private readonly sounds: PagodaSoundscape,
     private readonly lights: PagodaLights,
-  ) {}
+  ) {
+    this.audio = new GhostAudio(game);
+  }
 
   /** Loads her own asset, parked out of sight until the first scare. */
   async load(): Promise<void> {
@@ -240,13 +463,63 @@ export class PagodaApparition {
     const asset = await GhostRig.load(scene, "ep2_red");
     this.rig = new GhostRig(asset, "pagoda_ghost");
     this.rig.root.setEnabled(false);
-    scene.onAfterAnimationsObservable.add(() => {
-      if (this.rig?.root.isEnabled()) this.rig.turn("Head_021", "forward", this.neck * NECK_ROLL);
+    // Faint smears of her a few hundredths of a second behind: their own see-through copies
+    // of her material (hers is authored opaque, which ignores a mesh's visibility).
+    this.trail = [0.3, 0.12].map((alpha, i) => {
+      const rig = new GhostRig(asset, "pagoda_ghost_trail_" + i);
+      rig.root.setEnabled(false);
+      for (const mesh of rig.root.getChildMeshes()) {
+        if (!(mesh.material instanceof PBRMaterial)) continue;
+        const smear = mesh.material.clone(mesh.material.name + "_trail_" + i);
+        smear.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+        smear.alpha = alpha;
+        smear.disableDepthWrite = true;
+        mesh.material = smear;
+      }
+      return rig;
     });
+    scene.onAfterAnimationsObservable.add(() => {
+      for (const rig of [this.rig, ...this.trail])
+        if (rig?.root.isEnabled()) rig.turn("Head_021", "forward", this.neck * NECK_ROLL);
+    });
+    await this.audio.load();
   }
 
   get visible(): boolean {
     return !!this.showing && !this.showing.armed;
+  }
+
+  /** True when nothing solid lies between `a` and `b` (the player's own capsule aside). */
+  private clear(a: Vector3, b: Vector3): boolean {
+    const physics = this.game.scene.getPhysicsEngine() as PhysicsEngine | null;
+    if (!physics) return true;
+    physics.raycastToRef(a, b, this.hit);
+    const player = this.game.player.collisionShape;
+    return (
+      !this.hit.hasHit ||
+      this.hit.shape === player ||
+      this.hit.body?.shape === player ||
+      this.hit.hitDistance >= Vector3.Distance(a, b) - 0.15
+    );
+  }
+
+  /**
+   * Whether she can be put at `p` (and carried to `to`): not inside a wall, a stupa or a tree,
+   * seen from Sora's eyes, and for a pass, the whole way across open.
+   */
+  fits(p: Placement, kind: ScareKind, c: ScareContext): boolean {
+    // Her eyes, from where her feet are now (the camera's own matrix can lag a teleport).
+    const feetY = (c.feet as { y?: number }).y ?? 0;
+    const eye = new Vector3(c.feet.x, feetY + 1.55, c.feet.z);
+    const chest = new Vector3(p.x, 1.25, p.z);
+    // Inside something solid: a ray down from just above her shoulders hits it at once.
+    if (!this.clear(new Vector3(p.x, 2.2, p.z), new Vector3(p.x, 0.3, p.z))) return false;
+    if (kind === "behind" || kind === "rise") return true;
+    if (!this.clear(eye, chest)) return false;
+    if (!p.to) return true;
+    const end = new Vector3(p.to.x, 1.0, p.to.z);
+    const mid = new Vector3((p.x + p.to.x) / 2, 1.25, (p.z + p.to.z) / 2);
+    return this.clear(new Vector3(p.x, 1.0, p.z), end) && this.clear(eye, mid);
   }
 
   update(dt: number, c: ScareContext, active: boolean): void {
@@ -267,10 +540,14 @@ export class PagodaApparition {
         if (g.flags.get(`ep2.scare.${scare.id}`, false) || !scare.ready(c)) continue;
         // A staring ghost waits a moment so it never lands on top of another scare.
         if (scare.kind === "stare" && (this.waiting += dt) < 3) break;
+        // Somewhere fit, or not this frame: she is tried again as Sora moves.
+        const p = alternatives(c, scare.place(c)).find((q) => this.fits(q, scare.kind, c));
+        if (!p) continue;
         this.waiting = 0;
-        this.begin(scare, c);
+        this.begin(scare, c, p);
         break;
       }
+      if (!this.showing) this.ambient(dt, c);
       return;
     }
     const s = this.showing;
@@ -300,8 +577,13 @@ export class PagodaApparition {
       dz = c.feet.z - s.at.z,
       d = Math.hypot(dx, dz) || 1;
     if (kind === "glimpse") {
-      x += Math.cos(s.heading) * 3.2 * pose.travel;
-      z -= Math.sin(s.heading) * 3.2 * pose.travel;
+      x += s.across.x * 3.2 * pose.travel;
+      z += s.across.z * 3.2 * pose.travel;
+    } else if (kind === "rush" && s.to) {
+      x += (s.to.x - s.at.x) * pose.travel;
+      z += (s.to.z - s.at.z) * pose.travel;
+      // Carried a hand's breadth off the ground, bobbing as if on a current.
+      y = 0.12 + 0.05 * Math.sin(s.t * 9);
     } else if (kind === "lunge") {
       x += (dx / d) * 1.05 * pose.travel;
       z += (dz / d) * 1.05 * pose.travel;
@@ -310,39 +592,90 @@ export class PagodaApparition {
       x += (dx / d) * 1.4 * pose.travel;
       z += (dz / d) * 1.4 * pose.travel;
     } else if (kind === "rise")
-      y = -0.8 + pose.travel * 0.7; // getting up out of the black water beside the planks
+      y = -0.8 + pose.travel * 0.7; // getting up out of the black water
     else if (kind === "behind") {
       x += (dx / d) * 0.4 * pose.travel;
       z += (dz / d) * 0.4 * pose.travel;
     }
     root.position.set(x, y, z);
-    // She faces Sora, except while she crosses, when she faces where she is going.
+    // She faces Sora, except while she crosses or is carried past, when she faces where she
+    // is going and leans into it.
     const toward = Math.atan2(c.feet.x - x, c.feet.z - z);
-    root.rotation.y =
-      kind === "glimpse" && s.t < 0.82
-        ? Math.atan2(Math.cos(s.heading), -Math.sin(s.heading))
-        : toward;
+    if (kind === "rush" && s.to) {
+      root.rotation.set(0.32, Math.atan2(s.to.x - s.at.x, s.to.z - s.at.z), 0);
+      this.trailAfter(s.t, s.at, s.to, root.rotation.y, pose.visible);
+    } else
+      root.rotation.set(
+        0,
+        kind === "glimpse" && s.t < 0.82 ? Math.atan2(s.across.x, s.across.z) : toward,
+        0,
+      );
     const here = new Vector3(x, 1.5, z);
     for (const beat of BEATS[kind])
       if (before < beat.at && s.t >= beat.at) {
         if (beat.sound === "crack") this.sounds.crack(here);
         else this.sounds.laugh(here);
       }
-    // The lamps stutter as she arrives and burn low while she is there.
-    this.lights.scare = s.t < 0.2 ? (pose.visible ? 1 : 0.1) : 0.55 + 0.1 * Math.sin(s.t * 31);
-    if (s.t >= DURATION[kind]) this.hide(true);
+    if (kind === "rush" && before < PASS_NEAREST && s.t >= PASS_NEAREST) g.atmosphere.scare();
+    // The lamps stutter as she arrives and burn low while she is there; a pass makes the
+    // flame bow and nearly die as she goes by.
+    this.lights.scare =
+      kind === "rush"
+        ? Math.max(0, 1 - Math.abs(s.t - PASS_NEAREST) * 2.4) * 0.9
+        : s.t < 0.2
+          ? pose.visible
+            ? 1
+            : 0.1
+          : 0.55 + 0.1 * Math.sin(s.t * 31);
+    if (s.t >= DURATION[kind]) this.hide(kind !== "rush");
   }
 
-  private begin(scare: Scare, c: ScareContext): void {
+  /** The after-image: copies a few hundredths of a second behind her along the pass. */
+  private trailAfter(t: number, from: Vector3, to: Vector3, yaw: number, visible: boolean): void {
+    this.trail.forEach((rig, i) => {
+      const lag = 0.03 + i * 0.035;
+      const travel = ghostPose("rush", Math.max(0, t - lag)).travel;
+      rig.root.setEnabled(visible && t > lag);
+      rig.root.position.set(
+        from.x + (to.x - from.x) * travel,
+        0.12 + 0.05 * Math.sin((t - lag) * 9),
+        from.z + (to.z - from.z) * travel,
+      );
+      rig.root.rotation.set(0.32, yaw, 0);
+    });
+  }
+
+  /** Between the planned moments, she turns up somewhere now and then. */
+  private ambient(dt: number, c: ScareContext): void {
+    if (!anywhere(c)) return;
+    this.nextAmbient -= dt;
+    if (this.nextAmbient > 0) return;
+    // Never the same kind twice running; tried again shortly if nowhere fits.
+    const kinds = AMBIENT.filter((s) => s.id !== this.lastAmbient).sort(() => Math.random() - 0.5);
+    for (const scare of kinds) {
+      const p = alternatives(c, scare.place(c)).find((q) => this.fits(q, scare.kind, c));
+      if (!p) continue;
+      this.lastAmbient = scare.id;
+      this.nextAmbient = AMBIENT_GAP[0] + Math.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0]);
+      this.begin(scare, c, p);
+      return;
+    }
+    this.nextAmbient = 3;
+  }
+
+  private begin(scare: Scare, c: ScareContext, p: Placement): void {
     const g = this.game;
-    g.flags.set(`ep2.scare.${scare.id}`, true);
-    const p = scare.place(c);
+    if (!scare.id.startsWith("ambient_")) g.flags.set(`ep2.scare.${scare.id}`, true);
     const at = new Vector3(p.x, 0, p.z);
-    const heading = -Math.atan2(c.feet.x - p.x, c.feet.z - p.z);
-    this.showing = { scare, t: 0, at, heading, armed: scare.kind === "behind" };
+    const to = p.to ? new Vector3(p.to.x, 0, p.to.z) : null;
+    // A glimpse crosses the line of sight: along the camera's right, whichever side she is on.
+    const right = { x: Math.cos(c.yaw), z: -Math.sin(c.yaw) };
+    const side = (p.x - c.feet.x) * right.x + (p.z - c.feet.z) * right.z;
+    const across = side > 0 ? { x: -right.x, z: -right.z } : right;
+    this.showing = { scare, t: 0, at, to, across, armed: scare.kind === "behind" };
     const root = this.rig!.root;
     root.position.set(p.x, -50, p.z);
-    root.rotation.y = Math.atan2(c.feet.x - p.x, c.feet.z - p.z);
+    root.rotation.set(0, Math.atan2(c.feet.x - p.x, c.feet.z - p.z), 0);
     this.neck = 0;
     if (scare.kind === "behind") {
       root.setEnabled(false);
@@ -352,7 +685,13 @@ export class PagodaApparition {
     }
     root.setEnabled(true);
     this.rig!.start(CLIPS[scare.kind].clip, CLIPS[scare.kind].rate);
-    if (scare.kind === "glimpse" || scare.kind === "stare") this.sounds.unease();
+    if (scare.kind === "rush" && to) {
+      for (const rig of this.trail) rig.start(CLIPS.rush.clip, CLIPS.rush.rate);
+      // The whoosh moves the way she does, across the listener; the sting lands as she passes.
+      const rightward = (to.x - at.x) * right.x + (to.z - at.z) * right.z > 0;
+      this.audio.pass(rightward);
+      this.audio.hit(PASS_NEAREST - 0.06, 0.8);
+    } else if (scare.kind === "glimpse" || scare.kind === "stare") this.sounds.unease();
     else {
       this.sounds.scare(1);
       this.jolt();
@@ -376,5 +715,11 @@ export class PagodaApparition {
     } else this.lights.scare = 0;
     this.showing = null;
     root?.setEnabled(false);
+    for (const rig of this.trail) rig.root.setEnabled(false);
+  }
+
+  /** The grab's own sting, for the corpses (they share her sounds). */
+  grabSting(): void {
+    this.audio.hit(0, 1);
   }
 }

@@ -3,7 +3,7 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "@/core/Game";
 import type { Vigil } from "@/episodes/ep1/act1/Vigil";
 
-vi.mock("@/episodes/ep1/entities/KrasueModel", () => ({
+vi.mock("@/shared/entities/KrasueModel", () => ({
   KrasueModel: class {
     ready = true;
     root = { setEnabled: vi.fn() };

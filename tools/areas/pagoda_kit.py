@@ -38,10 +38,3 @@ def piece(coll, mesh, name, x=0.0, y=0.0, z=0.0, yaw=0.0, scale=1.0, tilt=(0.0, 
     o.scale = (scale, scale, scale) if isinstance(scale, (int, float)) else scale
     o['kit_piece'] = True
     return o
-
-
-def coloured(obj, mat):
-    """Gives one placed piece its own colour, for the cloths; its mesh becomes its own."""
-    obj.data = obj.data.copy()
-    obj.data.materials[0] = mat
-    return obj

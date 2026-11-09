@@ -54,31 +54,45 @@ export function floorPieces(r: number, basins: readonly Basin[]): number[][] {
 }
 
 /**
- * Lays far trees in an elliptical belt from the authored forest out to the fog,
- * densest near, thinning far away, so the jungle seems to go on without end.
+ * Lays far trees in an elliptical belt from the authored forest out to the fog, densest
+ * near and thinning far away, so the jungle seems to go on without end. About one tree
+ * per 17 m² of belt, as Episode 1's border: full, overlapping crowns, with tall emergents
+ * standing above the canopy line here and there.
  */
-export function layoutFarForest(seed = 6242202, count = 760, outer = 118): FarTree[] {
+export function layoutFarForest(
+  seed = 6242202,
+  count = 1600,
+  outer = 118,
+  emergents = 150,
+): FarTree[] {
   const random = seededRandom(seed);
   const trees: FarTree[] = [];
-  for (let tries = 0; trees.length < count && tries < count * 20; tries++) {
-    const a = random() * Math.PI * 2;
-    // Square-root-free bias towards the near edge of the belt.
-    const t = random() ** 1.6;
-    const ex = INNER.x + (outer - INNER.x) * t,
-      ez = INNER.z + (outer - INNER.z) * t;
-    const x = Math.cos(a) * ex,
-      z = Math.sin(a) * ez + 1;
-    // The lost garden has its own trees; a card standing in a lane would look flat.
-    if (LOST_GARDEN.some((g) => x > g.minX && x < g.maxX && z > g.minZ && z < g.maxZ)) continue;
-    trees.push({
-      x,
-      z,
-      yaw: random() * Math.PI,
-      width: 9 + random() * 7,
-      height: 15 + random() * 13 + t * 6,
-      variant: Math.floor(random() * CARD_COLUMNS * CARD_ROWS),
-    });
-  }
+  const place = (total: number, tall: boolean) => {
+    const start = trees.length;
+    for (let tries = 0; trees.length - start < total && tries < total * 20; tries++) {
+      const a = random() * Math.PI * 2;
+      // Square-root-free bias towards the near edge of the belt; emergents spread evenly.
+      const t = tall ? 0.1 + random() * 0.9 : random() ** 1.45;
+      const ex = INNER.x + (outer - INNER.x) * t,
+        ez = INNER.z + (outer - INNER.z) * t;
+      const x = Math.cos(a) * ex,
+        z = Math.sin(a) * ez + 1;
+      // The lost garden has its own trees; a card standing in a lane would look flat.
+      if (LOST_GARDEN.some((g) => x > g.minX && x < g.maxX && z > g.minZ && z < g.maxZ)) continue;
+      const height = tall ? 27 + random() * 9 : 15 + random() * 13 + t * 6;
+      trees.push({
+        x,
+        z,
+        yaw: random() * Math.PI,
+        // Crowns as wide as they are tall, as a broadleaf's is: they overlap into one canopy.
+        width: height * (tall ? 0.6 + random() * 0.25 : 0.75 + random() * 0.3),
+        height,
+        variant: Math.floor(random() * CARD_COLUMNS * CARD_ROWS),
+      });
+    }
+  };
+  place(count, false);
+  place(emergents, true);
   return trees;
 }
 

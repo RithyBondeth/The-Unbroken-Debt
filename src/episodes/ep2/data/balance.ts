@@ -4,6 +4,20 @@ export const PAGODA_BALANCE = {
   simulationStep: 1 / 30,
   patrolSpeed: 0.62,
   investigateSpeed: 1.22,
+  /** A loud sound close by: the corpse snaps round and comes at a stumbling run. */
+  rushSpeed: 2.5,
+  rushRange: 10,
+  rushLoudness: 1,
+  rushSeconds: 3.5,
+  rushFreeze: 0.3,
+  /** Following Sora unseen: quick while her back is turned, never nearer than `stalkGap`. */
+  stalkSpeed: 1.05,
+  stalkGap: 5,
+  stalkSeconds: 28,
+  /** The dead that crawl go slower on patrol and scuttle when they hear something. */
+  crawlSpeed: 0.42,
+  crawlInvestigateSpeed: 0.95,
+  crawlRushSpeed: 2.1,
   listeningSeconds: 0.75,
   searchSeconds: 9,
   catchRadius: 0.72,
