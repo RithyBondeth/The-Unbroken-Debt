@@ -9,7 +9,7 @@ import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
 import { DreadScore } from "@/audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
-import { taxiConversationAt } from "./taxiConversation";
+import { TAXI_CONVERSATION, taxiConversationAt, taxiDriverVoiceUrls } from "./taxiConversation";
 import { TaxiSoundscape, taxiThrottle } from "./TaxiSoundscape";
 import { taxiPass, taxiPassBeat } from "./taxiApparitions";
 
@@ -30,6 +30,9 @@ export class TaxiRide {
   private windAudio!: WindAudio;
   private dread: TaxiSoundscape | null = null;
   private thunder: StaticSound | null = null;
+  /** The driver's Khmer lines, by their `voice` number. */
+  private readonly driverVoice = new Map<number, StaticSound>();
+  private speaking: StaticSound | null = null;
   private score = new DreadScore(null);
   private thunderPlayed = false;
   private skip: HTMLButtonElement | null = null;
@@ -114,6 +117,13 @@ export class TaxiRide {
       this.dialogueIndex = line?.index ?? -1;
       if (line) this.game.subtitles.show(line.speaker, line.text);
       else this.game.subtitles.hide();
+      // Spoken from its first word; a ride resumed mid-line shows only the subtitle.
+      const voice = line?.voice ? this.driverVoice.get(line.voice) : undefined;
+      if (line && voice && t - line.at < 0.5) {
+        this.speaking?.stop();
+        this.speaking = voice;
+        voice.play();
+      }
     }
     const bucket = Math.floor(t / 8);
     if (bucket !== this.savedBucket) {
@@ -151,6 +161,7 @@ export class TaxiRide {
     this.game.subtitles.hide();
     const g = this.game;
     await g.fade.to(1, 2);
+    this.speaking?.stop();
     for (const sound of this.loops) sound.stop();
     this.score.stop();
     this.windAudio.stop();
@@ -205,6 +216,20 @@ export class TaxiRide {
       audio.buffer(thunder(rate, seededRandom(213)), rate),
       "threat",
       0.65,
+    );
+    // The driver's voice, recorded in Khmer (S1-042), heard from the front seat.
+    await Promise.all(
+      TAXI_CONVERSATION.filter((line) => line.voice).map(async (line) => {
+        const urls = taxiDriverVoiceUrls(line.voice!).map(
+          (url) => `${import.meta.env.BASE_URL}${url}`,
+        );
+        const buffer = await audio.load(urls);
+        if (buffer)
+          this.driverVoice.set(
+            line.voice!,
+            await audio.sound(`taxi_driver_${line.voice}`, buffer, "voice", 0.95),
+          );
+      }),
     );
     this.score = new DreadScore(audio);
     this.score.onSting = (kind, volume) =>
