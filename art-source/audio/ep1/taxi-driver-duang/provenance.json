@@ -1,0 +1,208 @@
+{
+  "service": "ElevenLabs text-to-speech",
+  "model": "eleven_v4",
+  "voice": "Duang - Deep, Engaging Storyteller",
+  "voiceId": "jucSqawHKM1rUNf78oZQ",
+  "voiceLanguage": "th (Thai library voice reading Khmer)",
+  "language": "km-KH",
+  "generatedAt": "2026-11-07",
+  "flow": "https://elevenlabs.io/app/flows/mHFBDtcMYCrTIdjxzMTk",
+  "license": "Chosen takes were made on the Free plan (no commercial use). Release blocker: ElevenLabs grants commercial rights for audio made on a paid plan.",
+  "khmerSource": {
+    "service": "Microsoft Edge online text-to-speech via edge-tts 7.3.1",
+    "voice": "km-KH-PisethNeural",
+    "rate": "-12% (line 1), -15% (line 5)",
+    "pitch": "-10Hz",
+    "license": "Not licensed for shipping; test input for Voice Changer only",
+    "files": [
+      {
+        "file": "khmer-source/piseth_driver_1.mp3",
+        "seconds": 4.128,
+        "sha256": "76aadea82dde96038cbe7562dd3803cce4d564db48ba2ade744386de11b83922"
+      },
+      {
+        "file": "khmer-source/piseth_driver_5.mp3",
+        "seconds": 4.512,
+        "sha256": "8c3112b22af008fcb6c447939d3a18be5b93a7876d74b37065964b4b9693376e"
+      }
+    ]
+  },
+  "chosenTakes": {
+    "plan": "Free",
+    "note": "User's chosen takes (2026-11-07). Line 5 is cut from taxi_driver_km_refined_full.mp3 at 4.45-8.0 s.",
+    "files": [
+      {
+        "file": "taxi_driver_km_1.mp3",
+        "seconds": 4.48,
+        "sha256": "d9871a2734f80ff2ae5012fc3007f6d307f33b30427686733709f3f529534224"
+      },
+      {
+        "file": "taxi_driver_km_2.mp3",
+        "seconds": 3.68,
+        "sha256": "d636738a2cad617570d4562b61999d6e167b5c0e41fd9ba9ea0fea2d6718333e"
+      },
+      {
+        "file": "taxi_driver_km_3.mp3",
+        "seconds": 3.84,
+        "sha256": "23b211604606c2b4bdd19303ad9b296f52f76fa4cb1a9d8e01ac698e0ef703b0"
+      },
+      {
+        "file": "taxi_driver_km_4.mp3",
+        "seconds": 5.28,
+        "sha256": "16ef52b75544eba742bb2e19a2d5650dd41a8bac3c8c720185b79698f1d2bb4f"
+      },
+      {
+        "file": "taxi_driver_km_5.mp3",
+        "seconds": 3.55,
+        "sha256": "e65f87fc2bc096cd93d4646b9ebd848f557ebb939d410a4300373020f0bef46a"
+      },
+      {
+        "file": "taxi_driver_km_6.mp3",
+        "seconds": 4.24,
+        "sha256": "878ceffc42c8512e73849c96d0178095b053f1025b31bfab7a14c65dc9ade2a1"
+      },
+      {
+        "file": "taxi_driver_km_7.mp3",
+        "seconds": 5.84,
+        "sha256": "e9cc7997bdbf4e96706d9f086502b5c13ddc9498c82b6c53f3abd54983bc0cec"
+      },
+      {
+        "file": "taxi_driver_km_refined_full.mp3",
+        "seconds": 14.32,
+        "sha256": "0a0d5f8e1cb5eac148429ba3a33bda5c4ac35e7c17864526134a3c397003b434"
+      }
+    ]
+  },
+  "creatorPlanAlternates": {
+    "plan": "Creator (commercial use)",
+    "note": "Same voice, model, text and tags; licensed fallback if the chosen takes cannot ship.",
+    "files": [
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_1_a.mp3",
+        "line": 1,
+        "take": "a",
+        "textKm": "[tired] ផ្លូវលិចទឹកអស់ហើយ។ [pause] មានគេចាំក្មួយនៅផ្ទះទេ?",
+        "subtitleEn": "The road is flooded. Is someone expecting you?",
+        "seconds": 4.56,
+        "sha256": "85460def66da12cf373b9050c2a357a4d1e65b45317356ad02d14fa224d0e3e1"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_1_b.mp3",
+        "line": 1,
+        "take": "b",
+        "textKm": "[tired] ផ្លូវលិចទឹកអស់ហើយ។ [pause] មានគេចាំក្មួយនៅផ្ទះទេ?",
+        "subtitleEn": "The road is flooded. Is someone expecting you?",
+        "seconds": 4.24,
+        "sha256": "e0ed34c154e7ff99514f2557b4a4c20785d35c83db15952f75788d72bc14b273"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_2_a.mp3",
+        "line": 2,
+        "take": "a",
+        "textKm": "[tired] [softly] ព្រឹកមិញ ពូទើបតែដឹកអ្នកមកបុណ្យខ្មោចទៅទីនោះ។",
+        "subtitleEn": "I took mourners there this morning.",
+        "seconds": 3.76,
+        "sha256": "169b03eda39c48a0ed2a46d43dde961ee75ad0a7ee21d44cb6f8fc22c00d3f8d"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_2_b.mp3",
+        "line": 2,
+        "take": "b",
+        "textKm": "[tired] [softly] ព្រឹកមិញ ពូទើបតែដឹកអ្នកមកបុណ្យខ្មោចទៅទីនោះ។",
+        "subtitleEn": "I took mourners there this morning.",
+        "seconds": 3.84,
+        "sha256": "68dfc4db7ab391da26d1c2af5a01300aa0d5a0969b35e2670f770b4b2206edd1"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_3_a.mp3",
+        "line": 3,
+        "take": "a",
+        "textKm": "[softly] ដើមឈើធំអស់ហើយ… [pause] តែផ្លូវនៅដដែល។",
+        "subtitleEn": "The trees have grown. The road hasn't changed.",
+        "seconds": 3.84,
+        "sha256": "0715d4eb4e50548206d265e760fe8162be227e51a6add62d0d1952e2c0bd9785"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_3_b.mp3",
+        "line": 3,
+        "take": "b",
+        "textKm": "[softly] ដើមឈើធំអស់ហើយ… [pause] តែផ្លូវនៅដដែល។",
+        "subtitleEn": "The trees have grown. The road hasn't changed.",
+        "seconds": 3.68,
+        "sha256": "a1d4dbaaed42fe676866c9f98a2b386bdb0b6e996ea1e0cd07d57487d14975b6"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_4_a.mp3",
+        "line": 4,
+        "take": "a",
+        "textKm": "[nervous] [softly] គ្មានអ្នកណាមកឈរចាំក្បែរផ្លូវនេះទេ… [pause] ពិសេសពេលភ្លៀងបែបនេះ។",
+        "subtitleEn": "People don't wait beside this road. Not in this weather.",
+        "seconds": 5.04,
+        "sha256": "b84dbb49485942dc114ea16342c8300d50cf2b2d4ea7367ee2cab1ddfb5f6c29"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_4_b.mp3",
+        "line": 4,
+        "take": "b",
+        "textKm": "[nervous] [softly] គ្មានអ្នកណាមកឈរចាំក្បែរផ្លូវនេះទេ… [pause] ពិសេសពេលភ្លៀងបែបនេះ។",
+        "subtitleEn": "People don't wait beside this road. Not in this weather.",
+        "seconds": 4.96,
+        "sha256": "9e58c1ced63520895add415e40f60daf91121fa0e71ff4aa9f5e9c190404e401"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_5_a.mp3",
+        "line": 5,
+        "take": "a",
+        "textKm": "[nervous] [softly] មើលតែទៅមុខទៅ… [whispers] កុំហៅវាអី។",
+        "subtitleEn": "Keep your eyes forward. Don't call to it.",
+        "seconds": 3.12,
+        "sha256": "acfe0337a7bc35e3c0fe664f661777bdcafb8c521fdcce81cf66758d3e2dad70"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_5_b.mp3",
+        "line": 5,
+        "take": "b",
+        "textKm": "[nervous] [softly] មើលតែទៅមុខទៅ… [whispers] កុំហៅវាអី។",
+        "subtitleEn": "Keep your eyes forward. Don't call to it.",
+        "seconds": 3.28,
+        "sha256": "ff04ab6057e516244536c373b218b4a1409b6a062c9913ae48e8d407af37a60f"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_6_a.mp3",
+        "line": 6,
+        "take": "a",
+        "textKm": "[whispers] ល្អហើយ។ [pause] គ្របចង្កៀងទុកសិន ទាល់តែចេញផុត។",
+        "subtitleEn": "Good. Keep your lamp covered until you're out.",
+        "seconds": 4.32,
+        "sha256": "35b8a2abea06e2277c684e806ef0b2d35ecbe823733218be4988aca666999dc1"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_6_b.mp3",
+        "line": 6,
+        "take": "b",
+        "textKm": "[whispers] ល្អហើយ។ [pause] គ្របចង្កៀងទុកសិន ទាល់តែចេញផុត។",
+        "subtitleEn": "Good. Keep your lamp covered until you're out.",
+        "seconds": 4.08,
+        "sha256": "10cf58897f54965c82f05eec0f4ea708199dcb5769f2db4b20c37f7bf0d84819"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_7_a.mp3",
+        "line": 7,
+        "take": "a",
+        "textKm": "[tired] [softly] ពូជូនបានត្រឹមនេះហើយ។ ដើរតាមផ្លូវនេះទៅរោងបុណ្យទៅ… [whispers] ហើយកុំនិយាយខ្លាំងៗ។",
+        "subtitleEn": "This is as far as I go. Follow the path to the funeral tent. Stay quiet.",
+        "seconds": 6.16,
+        "sha256": "802065dbbba75bf11e6070fbc4195b9552bc040d6b560d2a1f9da6a49b86bf1f"
+      },
+      {
+        "file": "creator-plan-alternates/taxi_driver_km_7_b.mp3",
+        "line": 7,
+        "take": "b",
+        "textKm": "[tired] [softly] ពូជូនបានត្រឹមនេះហើយ។ ដើរតាមផ្លូវនេះទៅរោងបុណ្យទៅ… [whispers] ហើយកុំនិយាយខ្លាំងៗ។",
+        "subtitleEn": "This is as far as I go. Follow the path to the funeral tent. Stay quiet.",
+        "seconds": 6.32,
+        "sha256": "66a312fe84e14470a32e9bd80e9185028b8d2d67f1c0f7d2b610c95f3287951b"
+      }
+    ]
+  }
+}
