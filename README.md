@@ -12,6 +12,24 @@
 
 ---
 
+<!-- product-images:start -->
+
+## Product preview
+
+<p align="center">
+  <img src="docs/product-images/hero.png" alt="Boon Sop: The Unbroken Debt — A first-person survival horror game set in rural Cambodia, 1932." width="100%">
+</p>
+
+<table>
+<tr>
+  <td width="33%"><img src="docs/product-images/feature-01.png" alt="Step into the unknown. — Boon Sop brings an atmospheric 3D world to a WebGPU browser." width="100%"></td>
+  <td width="33%"><img src="docs/product-images/feature-02.png" alt="Your inventory lives in the world. — Maps, notes, and supplies belong in Sora’s satchel and sketchbook." width="100%"></td>
+  <td width="33%"><img src="docs/product-images/feature-03.png" alt="Make every resource count. — Stealth and limited supplies shape how you move through the dark." width="100%"></td>
+</tr>
+</table>
+
+<!-- product-images:end -->
+
 ## 📌 About The Project
 
 **Boon Sop: The Unbroken Debt** is an episodic 3D first-person survival horror game running directly in modern web browsers without installation. Step into the shoes of **Sora**, a 24-year-old illustrator from Phnom Penh, as she returns to rural Cambodia to break an ancient ancestral debt tied to a land guardian spirit (_Neak Ta_).
