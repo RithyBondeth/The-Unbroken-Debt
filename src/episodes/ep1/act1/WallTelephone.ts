@@ -9,13 +9,30 @@ import { seededRandom } from "@/audio/synth";
 import { TelephoneCord } from "@/player/TelephoneCord";
 import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
-/** Wall-mounted rotary phone. The front faces into the hall along negative X. */
+/** Where a {@link WallTelephone} hangs, and what its parts are called. */
+export interface WallTelephoneMount {
+  /** Root name; also the prefix of the cord's nodes. */
+  name: string;
+  position: [number, number, number];
+  /** Turn about Y; at 0 the front faces negative X. */
+  turn?: number;
+  /** Name of the receiver's node, which the story hides while it is in Sora's hand. */
+  receiverName?: string;
+}
+
+const HALL_MOUNT: WallTelephoneMount = { name: "arrival_phone", position: [2.75, 3.7, -17.2] };
+
+/**
+ * Wall-mounted rotary phone: the village house's hall telephone, and the same
+ * instrument on the studio wall in Phnom Penh. The front faces along negative X
+ * before `turn`.
+ */
 export class WallTelephone {
   readonly root: TransformNode;
   readonly receiver: TransformNode;
   private readonly receiverCord: TelephoneCord;
 
-  constructor(scene: Scene) {
+  constructor(scene: Scene, mount: WallTelephoneMount = HALL_MOUNT) {
     const c = new RelicCraft(scene);
     const black = c.mat("telephone_bakelite", "#24201b", 0.29);
     black.albedoTexture = c.painted("telephone_bakelite", (ctx) => {
@@ -38,7 +55,8 @@ export class WallTelephone {
     const dark = c.mat("telephone_recesses", "#070806", 0.9);
     const cord = c.surface("telephone_braided_cord", "#302b22", "cloth");
     const wood = c.surface("telephone_mounting_board", "#38271d", "wood");
-    this.root = c.root("arrival_phone", [2.75, 3.7, -17.2]);
+    this.root = c.root(mount.name, mount.position);
+    this.root.rotation.y = mount.turn ?? 0;
     this.housing(c, this.root, "telephone_mounting_board", 0.166, 0.048, 0.46, 0.31, 0.018, wood);
     this.housing(c, this.root, "telephone_case_seam", 0.091, 0.11, 0.39, 0.275, 0.025, dark);
     this.housing(c, this.root, "telephone_bakelite_case", 0.025, 0.105, 0.375, 0.264, 0.03, black);
@@ -160,7 +178,7 @@ export class WallTelephone {
       );
       c.cylinder(this.root, "telephone_switch_plunger", 0.009, 0.025, [-0.055, 0.137, z], edge);
     }
-    this.receiver = c.root("arrival_receiver", [-0.103, 0.16, 0], this.root);
+    this.receiver = c.root(mount.receiverName ?? "arrival_receiver", [-0.103, 0.16, 0], this.root);
     c.tube(
       this.receiver,
       "telephone_receiver_handle",
@@ -194,9 +212,9 @@ export class WallTelephone {
       }
     }
     faceCylinder("telephone_cord_grommet", 0.023, 0.016, -0.005, -0.149, 0.092, black);
-    const terminal = c.root("arrival_phone_cord_terminal", [-0.005, -0.149, 0.092], this.root);
-    const rest = c.root("arrival_phone_cord_rest", [0, 0, 0.17], this.receiver);
-    this.receiverCord = new TelephoneCord(scene, "arrival_phone_cord", terminal, rest, cord, 0.004);
+    const terminal = c.root(`${mount.name}_cord_terminal`, [-0.005, -0.149, 0.092], this.root);
+    const rest = c.root(`${mount.name}_cord_rest`, [0, 0, 0.17], this.receiver);
+    this.receiverCord = new TelephoneCord(scene, `${mount.name}_cord`, terminal, rest, cord, 0.004);
     c.tube(
       this.root,
       "telephone_line_wire",

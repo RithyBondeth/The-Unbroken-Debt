@@ -7,6 +7,10 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import type { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator";
+import { RenderTargetTexture } from "@babylonjs/core/Materials/Textures/renderTargetTexture";
+import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import type { QualityPreset } from "@/render/qualityPresets";
 import { createShadowedPointLight, FLAME_COLOR } from "@/render/renderSetup";
 import type { Area } from "@/core/areaLoader";
@@ -16,7 +20,10 @@ import { useSoftFalloff } from "@/render/softLampFalloff";
 /**
  * The studio's lights (Beat Sheet 4.1): the green glass desk lamp as the key
  * light, the shelf candle as fill, and lightning through the south window.
- * The candle can be put out (P05).
+ * The candle can be put out (P05). All three throw real shadows: the lamp
+ * always, the lightning (the window's bars and everything in the room thrown
+ * across the floor and walls in each flash) on every preset, and the candle
+ * where the preset allows shadowed flames.
  */
 export class StudioLights {
   /** Soft falloff caps the close wall; this level keeps cloth and paper readable. */
@@ -31,6 +38,8 @@ export class StudioLights {
   private candleLit = true;
   private readonly storm = new Lightning();
   private time = 0;
+  /** Drawn once, then again only while the sky is lit: the room barely moves. */
+  private readonly flashShadows: ShadowGenerator;
 
   constructor(scene: Scene, area: Area, preset: QualityPreset) {
     // Imported materials must include the shelf candle as well as the other room lights.
@@ -91,9 +100,28 @@ export class StudioLights {
     windowBounce.shadowEnabled = false;
 
     const candleAt = flames.get("candle");
-    this.candle = new PointLight("candle", at(candleAt, new Vector3(-2.33, 1.53, -4.83)), scene);
+    const candlePosition = at(candleAt, new Vector3(-2.33, 1.53, -4.83));
+    const candleRange = Number(candleAt?.extras.radius) || 3;
+    if (preset.shadowedFlames > 0) {
+      // The books, jar and shelf edge throw long, shivering shadows up the wall.
+      const shadowed = createShadowedPointLight(
+        scene,
+        "candle",
+        candlePosition,
+        candleRange,
+        Math.min(1024, preset.lampShadowMapSize),
+        (m) => castsShadow(m) && !m.getBoundingInfo().intersectsPoint(candlePosition),
+      );
+      this.candle = shadowed.light;
+      // The shelf only changes when something is taken from it: redraw sparingly.
+      const map = shadowed.shadows.getShadowMap();
+      if (map) map.refreshRate = 6;
+    } else {
+      this.candle = new PointLight("candle", candlePosition, scene);
+      this.candle.shadowEnabled = false;
+    }
     this.candle.diffuse = FLAME_COLOR.clone();
-    this.candle.range = Number(candleAt?.extras.radius) || 3;
+    this.candle.range = candleRange;
     this.candle.intensity = this.candlePower;
     useSoftFalloff(this.candle);
     this.candleFlame = CreateSphere(
@@ -126,6 +154,30 @@ export class StudioLights {
     this.lightning.diffuse = new Color3(0.75, 0.82, 1);
     this.lightning.intensity = 0;
     this.lightning.range = 12;
+    this.lightning.shadowMinZ = 0.3;
+    this.lightning.shadowMaxZ = 12;
+    this.flashShadows = new ShadowGenerator(
+      Math.min(2048, preset.lampShadowMapSize),
+      this.lightning,
+    );
+    this.flashShadows.usePercentageCloserFiltering = true;
+    this.flashShadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM;
+    this.flashShadows.bias = 0.0015;
+    this.flashShadows.normalBias = 0.012;
+    // A whole sky, not a point: the flash's shadows are deep but not black.
+    this.flashShadows.darkness = 0.12;
+    const flashMap = this.flashShadows.getShadowMap();
+    if (flashMap) {
+      const origin = this.lightning.position;
+      flashMap.renderList = scene.meshes.filter(
+        (m) =>
+          castsShadow(m) &&
+          Vector3.Distance(m.getBoundingInfo().boundingSphere.centerWorld, origin) < 12,
+      );
+      flashMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+    }
+    // Every surface in the room takes the lamp's, the candle's and the flash's shadows.
+    for (const mesh of scene.meshes) if (receivesShadow(mesh)) mesh.receiveShadows = true;
     const glass = scene.getMeshByName("window_glass");
     this.windowGlass = glass?.material instanceof PBRMaterial ? glass.material : null;
   }
@@ -169,6 +221,8 @@ export class StudioLights {
     }
     const level = this.storm.update(dt);
     this.lightning.intensity = level * 60;
+    // Things are picked up and drawers opened between flashes: redraw while lit.
+    if (level > 0) this.flashShadows.getShadowMap()?.resetRefreshCounter();
     if (this.windowGlass)
       this.windowGlass.emissiveColor = new Color3(0.6, 0.68, 0.85).scale(level * 1.5 + 0.03);
   }
@@ -177,4 +231,31 @@ export class StudioLights {
   get flashing(): boolean {
     return this.storm.flashing;
   }
+}
+
+/** Solid, lit, world-space geometry: what can stand between a light and a wall. */
+function castsShadow(m: AbstractMesh): boolean {
+  const material = m.material;
+  return (
+    m.isEnabled() &&
+    m.isVisible &&
+    m.visibility > 0 &&
+    m.renderingGroupId === 0 &&
+    m.getTotalVertices() > 0 &&
+    !!material &&
+    material.alpha >= 1 &&
+    !m.name.startsWith("desk_lamp") &&
+    !/glass|flame|rain|ink_line|ink_blot|pickup_volume/.test(m.name)
+  );
+}
+
+function receivesShadow(m: AbstractMesh): boolean {
+  const material = m.material;
+  return (
+    m.renderingGroupId === 0 &&
+    m.getTotalVertices() > 0 &&
+    !!material &&
+    !/flame|rain/.test(m.name) &&
+    !("disableLighting" in material && material.disableLighting === true)
+  );
 }

@@ -3,37 +3,36 @@ import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AudioSystem } from "@/audio/AudioSystem";
 import { biquad, seededRandom } from "@/audio/synth";
-import { cricketsLoop, frogsLoop } from "@/audio/sounds/nightSounds";
+import { breathOut, cricketsLoop, frogsLoop } from "@/audio/sounds/nightSounds";
 import { whispers } from "../audio/vigilSounds";
-import { pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 import { thunder } from "../audio/prologueSounds";
 import { taxiMeter } from "../audio/taxiSounds";
 import type { DreadScore } from "@/audio/DreadScore";
 import {
   brakeSlither,
   driverGasp,
-  ghostRush,
   mudSprint,
   radioStatic,
   windowSlap,
 } from "../audio/taxiDreadSounds";
 import {
   TAXI_PASSES,
+  TAXI_MIRROR,
+  TAXI_STANDER,
+  TAXI_WINDOW,
   taxiPass,
-  TAXI_RITUAL_ALONG,
-  TAXI_RITUAL_LATERAL,
   taxiPassBeat,
-  taxiRunnerAt,
+  taxiSpiritAt,
 } from "./taxiApparitions";
-import { taxiRoadPoint } from "./taxiMotion";
 
 const ramp = (t: number, from: number, to: number) =>
   Math.max(0, Math.min(1, (t - from) / (to - from)));
 
 /**
  * The night outside and the radio inside, 0–1, from the ride clock. The forest's
- * frogs and insects fall silent as the car nears the rite and stay silent while
- * something is near, come back, then stop again just before the last pass; the
+ * frogs and insects fall silent as the car comes up on the still form at the
+ * verge and stay silent while something is near, come back, then stop again just
+ * before the last pass; the
  * radio drifts into static and surges whenever something runs close.
  */
 export function taxiNightLevels(t: number): { forest: number; radio: number } {
@@ -43,8 +42,8 @@ export function taxiNightLevels(t: number): { forest: number; radio: number } {
   );
   let radio =
     0.08 + 0.3 * Math.exp(-(((t - 30) / 3.5) ** 2)) + 0.5 * Math.exp(-(((t - 37.8) / 1.6) ** 2));
-  for (const pass of TAXI_PASSES)
-    radio += 0.75 * Math.exp(-(((t - taxiPassBeat(pass)) / 0.7) ** 2));
+  for (const beat of [...TAXI_PASSES.map(taxiPassBeat), TAXI_WINDOW.beat, TAXI_MIRROR.lean.beat])
+    radio += 0.75 * Math.exp(-(((t - beat) / 0.7) ** 2));
   return { forest: 1 - hush, radio: Math.min(1, radio) };
 }
 
@@ -62,16 +61,15 @@ interface Cue {
 
 /**
  * The ride's dread layer over the engine, wipers and rain TaxiRide already plays:
- * the forest at night through the body, the dash radio between stations, the rite
- * whispering and its flags snapping as the car passes, and each running form
- * heard truthfully: rushing across the beams, sprinting up Sora's side, slapping
- * her window. The score's stings land on those beats. Positions follow the route.
+ * the forest at night through the body, the dash radio between stations, and the
+ * Neak Ta heard truthfully: feet in the mud coming up Sora's side between the
+ * flickers, its hands on her window. The score's stings land on those beats.
+ * Positions follow the route.
  */
 export class TaxiSoundscape {
   private forest: StaticSound[] = [];
   private radio: StaticSound | null = null;
   private meter: StaticSound | null = null;
-  private readonly rite: StaticSound[] = [];
   private sprint: StaticSound | null = null;
   private readonly cues: Cue[] = [];
   private last = -1;
@@ -119,30 +117,11 @@ export class TaxiSoundscape {
       { minDistance: 0.35, maxDistance: 5, loop: true },
     );
     this.meter.volume = 0.5;
-    const at = this.ritePosition();
-    for (const [name, samples, seed, volume] of [
-      ["taxi_rite_whispers", whispers, 223, 0.9],
-      ["taxi_rite_flags", pavilionCloth, 224, 0.7],
-    ] as const) {
-      const sound = await audio.spatialSound(
-        name,
-        buffer(samples(rate, seededRandom(seed))),
-        "threat",
-        at,
-        {
-          minDistance: 3,
-          maxDistance: 45,
-          loop: true,
-        },
-      );
-      sound.volume = volume;
-      this.rite.push(sound);
-    }
     this.sprint = await audio.spatialSound(
       "taxi_sprint",
       buffer(mudSprint(rate, seededRandom(225))),
       "threat",
-      at,
+      Vector3.Zero(),
       { minDistance: 1.5, maxDistance: 30 },
     );
     const oneShot = async (
@@ -151,12 +130,6 @@ export class TaxiSoundscape {
       bus: "sfx" | "threat" | "voice",
       volume: number,
     ) => audio.sound(name, buffer(samples), bus, volume);
-    const crossing = await oneShot(
-      "taxi_crossing_rush",
-      ghostRush(rate, seededRandom(227), -1, 1),
-      "threat",
-      1,
-    );
     const brake = await oneShot(
       "taxi_brake_slither",
       brakeSlither(rate, seededRandom(228)),
@@ -188,7 +161,7 @@ export class TaxiSoundscape {
       at: crossBeat - this.score.lead("shock"),
       play: () => this.score.sting("shock", 0.95),
     });
-    this.cues.push({ at: crossBeat - 0.6, play: () => crossing.play() });
+    // No rush of air across the beams: it only staggers. The brakes and his breath are the sound.
     this.cues.push({ at: crossBeat + 0.1, play: () => brake.play() });
     this.cues.push({ at: crossBeat + 0.16, play: () => gasp.play() });
     this.cues.push({ at: crossBeat + 0.45, play: () => this.score.ring() });
@@ -199,12 +172,50 @@ export class TaxiSoundscape {
       play: () => this.score.sting("shock", 0.8),
     });
     this.cues.push({ at: slapBeat, play: () => slap.play() });
+    // The still form at the verge is only a swell under the engine: was that a person?
+    this.cues.push({ at: TAXI_STANDER.level - 1.1, play: () => this.score.sting("swell", 0.55) });
+    // The face at the window: the hardest hit of the ride, then her ears ringing.
+    this.cues.push({
+      at: TAXI_WINDOW.beat - this.score.lead("shock"),
+      play: () => this.score.sting("shock", 1),
+    });
+    this.cues.push({ at: TAXI_WINDOW.beat + 0.05, play: () => ((slap.volume = 0.6), slap.play()) });
+    this.cues.push({ at: TAXI_WINDOW.beat + 0.12, play: () => gasp.play() });
+    this.cues.push({ at: TAXI_WINDOW.beat + 0.4, play: () => this.score.ring() });
+    this.cues.push({ at: TAXI_WINDOW.beat + 1.5, play: () => ((roll.volume = 0.6), roll.play()) });
+    // The back seat. A slow breath out behind her shoulder while it sits there,
+    // then whispering right at her ear as the lightning shows it leaning in.
+    const behind = new Vector3(0.3, 1.25, -0.72);
+    const breath = await audio.spatialSound(
+      "taxi_back_seat_breath",
+      buffer(breathOut(rate, seededRandom(232))),
+      "threat",
+      behind,
+      { minDistance: 0.3, maxDistance: 4 },
+    );
+    const whisper = await audio.spatialSound(
+      "taxi_back_seat_whisper",
+      buffer(whispers(rate, seededRandom(233))),
+      "threat",
+      new Vector3(0.24, 1.3, -0.45),
+      { minDistance: 0.25, maxDistance: 3 },
+    );
+    const { seated, lean } = TAXI_MIRROR;
+    this.cues.push({ at: seated.from + 0.2, play: () => this.score.sting("swell", 0.5) });
+    this.cues.push({ at: seated.from + 0.9, play: () => ((breath.volume = 0.55), breath.play()) });
+    this.cues.push({
+      at: lean.beat - this.score.lead("shock"),
+      play: () => this.score.sting("shock", 0.9),
+    });
+    this.cues.push({ at: lean.from, play: () => ((whisper.volume = 0.8), whisper.play()) });
+    this.cues.push({ at: lean.beat + 0.5, play: () => whisper.stop() });
+    this.cues.push({ at: lean.beat + 0.35, play: () => this.score.ring() });
   }
 
   /** Starts the beds. Cues before `t` (a resumed ride) are not replayed. */
   begin(t: number): void {
     this.last = t;
-    for (const sound of [...this.forest, ...this.rite]) sound.play();
+    for (const sound of this.forest) sound.play();
     this.radio?.play();
     this.meter?.play();
     this.apply(t);
@@ -221,16 +232,10 @@ export class TaxiSoundscape {
     const levels = taxiNightLevels(t);
     this.forest.forEach((sound, i) => (sound.volume = levels.forest * [0.42, 0.3][i]));
     if (this.radio) this.radio.volume = levels.radio * 0.55;
-    const rite = this.ritePosition();
-    for (const sound of this.rite) sound.spatial.position = rite;
-    const runner = taxiRunnerAt(t);
-    if (this.sprint && runner?.kind === "overtake")
-      this.sprint.spatial.position = this.toWorld(runner.x, 0.9, runner.z);
-  }
-
-  private ritePosition(): Vector3 {
-    const at = taxiRoadPoint(TAXI_RITUAL_LATERAL, TAXI_RITUAL_ALONG);
-    return this.toWorld(at.x, 0.4, at.z);
+    // Feet in the mud between the flickers: it is heard coming up Sora's side, never seen moving.
+    const spirit = taxiSpiritAt(t);
+    if (this.sprint && spirit?.kind === "overtake")
+      this.sprint.spatial.position = this.toWorld(spirit.x, 0.9, spirit.z);
   }
 
   private toWorld(x: number, y: number, z: number): Vector3 {
@@ -239,7 +244,7 @@ export class TaxiSoundscape {
 
   stop(): void {
     this.stopped = true;
-    for (const sound of [...this.forest, ...this.rite]) sound.stop();
+    for (const sound of this.forest) sound.stop();
     this.radio?.stop();
     this.meter?.stop();
     this.sprint?.stop();

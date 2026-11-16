@@ -1,5 +1,6 @@
 import type { Game } from "@/core/Game";
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import { registerBuiltInLoaders } from "@babylonjs/loaders/dynamic";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -9,13 +10,16 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { MirrorTexture } from "@babylonjs/core/Materials/Textures/mirrorTexture";
-import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import { RenderTargetTexture } from "@babylonjs/core/Materials/Textures/renderTargetTexture";
+import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
+import type { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Plane } from "@babylonjs/core/Maths/math.plane";
 import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
 import { taxiDriverFace, type DriverFace } from "./taxiDriver";
@@ -29,6 +33,7 @@ import { addStaticBox } from "@/core/physics";
 import { buildTaxiRoadside } from "./taxiRoadside";
 import { StormSky } from "@/render/weather/StormSky";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import { MocapFigure } from "@/shared/entities/MocapFigure";
 import { NIGHT_LOOK } from "@/render/nightLook";
 import { applyRainWetness } from "@/render/surfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
@@ -40,30 +45,71 @@ import {
   taxiRoadPose,
   taxiRouteChunkVisible,
   taxiSpeed,
-  taxiRoadPoint,
   taxiWiperAngle,
 } from "./taxiMotion";
 import {
-  TAXI_RITUAL_ALONG,
-  TAXI_RITUAL_LATERAL,
+  taxiElectrics,
   taxiFlinch,
-  taxiRunnerAt,
+  taxiMirrorRiderAt,
+  taxiSpiritAt,
   taxiSwerve,
 } from "./taxiApparitions";
+import { TaxiMist } from "./TaxiMist";
+import { buildTaxiFarForest, thickenTaxiUnderstorey } from "./taxiForestDepth";
+import { ageTaxiCabin } from "./taxiCabinWear";
+import { TaxiGlassMarks } from "./TaxiGlassMarks";
 
-/** The running form and its smear: lag behind the lead (s) and how solid each is. */
-const RUNNER_TRAIL = [
-  [0, 1],
-  [0.022, 0.42],
-  [0.045, 0.18],
-] as const;
-/** Not the shrine's lacquer: something closer to a hole in the headlights. */
-const RUNNER_BLACK = new Color3(0.004, 0.004, 0.005);
+/**
+ * The roadside Neak Ta's paint, as the shrine effigy's (ShadowFigure): its mineral skin
+ * darkened to soot-black with a dull sheen the lamps can find, dark faded cotton, and
+ * chalk eyes dimmed so they catch light without glowing.
+ */
+const SPIRIT_TINTS: Record<string, [albedo: Color3, roughness: number, specular: number]> = {
+  // Darker and drier than the shrine's paint: the headlamps, right beside Sora's eyes,
+  // would show that, and any sheen, straight back as a pale bronze man.
+  M_neakta_worn_skin: [new Color3(0.011, 0.01, 0.009), 0.9, 0.18],
+  M_ancestor_earth_cotton: [new Color3(0.12, 0.11, 0.09), 0.92, 0.2],
+  M_ancestor_saffron_cotton: [new Color3(0.05, 0.04, 0.032), 0.92, 0.2],
+  M_ancestor_chalk_eye: [new Color3(0.16, 0.15, 0.11), 0.32, 1],
+};
+/** A layer the player's camera never draws (its mask is the default 0x0FFFFFFF). */
+const MIRROR_ONLY = 0x10000000;
+/** Leaf materials the headlamps reach, and how much deeper and greener they are graded here. */
+const FOLIAGE_IN_THE_LAMPS =
+  /^(M_forest_leaf|fern_02|shrub_02|M_bamboo_leaves|M_palm_fan|M_forest_grass)$/;
+const HEADLAMP_LEAF_TINT = new Color3(0.5, 0.56, 0.36);
+
+/** The fog behind the car as the rear-view mirror shows it (linear). */
+const MIRROR_FOG = [0.035, 0.04, 0.05] as const;
 
 /** Authored cabin, Act I foliage/materials, physical headlights and the same storm grade. */
 export class TaxiVisuals {
   readonly route: TransformNode;
-  private readonly routeChunks: { mesh: Mesh; minZ: number; maxZ: number; active: boolean }[] = [];
+  private readonly routeChunks: {
+    mesh: AbstractMesh;
+    minZ: number;
+    maxZ: number;
+    active: boolean;
+  }[] = [];
+  private readonly mist: TaxiMist;
+  private readonly headlamps: { light: SpotLight; power: number }[] = [];
+  private readonly dash: PointLight;
+  private readonly dials: StandardMaterial;
+  /** The form that stands by the road, and later runs at Sora's window. */
+  /** The black Neak Ta on the road, moving on motion capture. */
+  private readonly spirit: MocapFigure;
+  /** Frames left to draw it out of sight below the road, so it compiles before it is needed. */
+  private spiritWarm = 4;
+  /**
+   * Lightning through the windscreen and Sora's glass, falling on its face when it is at
+   * the car: the storm's own light comes from above and behind it and leaves only a hole.
+   */
+  private readonly spiritFill: PointLight;
+  /** What sits behind Sora: drawn into the rear-view mirror only, never into the cabin. */
+  private readonly rider: ShadowFigure;
+  private readonly riderLights: PointLight[] = [];
+  private readonly riderEyes: StandardMaterial;
+  private readonly glassMarks: TaxiGlassMarks | null = null;
   private readonly wipers: TransformNode[] = [];
   private readonly sky: StormSky;
   private readonly flash: DirectionalLight;
@@ -71,11 +117,9 @@ export class TaxiVisuals {
   private readonly glass: TaxiRain;
   private readonly dialTexture: DynamicTexture;
   private dialIn = 0;
-  private readonly mirror: MirrorTexture;
+  private readonly mirror: RenderTargetTexture;
   private readonly waterRipples: Texture;
-  private readonly runners: ShadowFigure[] = [];
-  private readonly candlelight: PointLight;
-  private readonly flames: PBRMaterial[] = [];
+  private bonnetBeads: Texture | null = null;
   private readonly charm: TransformNode | null;
   private readonly charmSwing = { side: 0, sideRate: 0, pitch: 0, pitchRate: 0 };
   private readonly driver: TransformNode | null = null;
@@ -93,10 +137,19 @@ export class TaxiVisuals {
     cabinMeshes: AbstractMesh[],
     route: TransformNode,
     landscape: Mesh[],
+    spiritAsset: AssetContainer,
   ) {
     const scene = game.scene;
     this.route = route;
-    for (const mesh of landscape) {
+    // Old growth is not a row of trees: plant the understorey twice, and carry the
+    // forest on past the authored ranks with Episode 2's far tree cards.
+    const ground = scene.getMaterialByName("M_wet_forest_floor");
+    const forest: AbstractMesh[] = [
+      ...landscape,
+      ...thickenTaxiUnderstorey(landscape),
+      ...buildTaxiFarForest(scene, route, game.wind, ground),
+    ];
+    for (const mesh of forest) {
       mesh.computeWorldMatrix(true);
       const box = mesh.getBoundingInfo().boundingBox;
       this.routeChunks.push({
@@ -116,6 +169,11 @@ export class TaxiVisuals {
       [...materials].filter((m) => m !== null),
       game.wind,
     );
+    // Under headlamps a few metres off, the village's pale leaf tint burns to white
+    // paper once the haze is thin. Wet old-growth leaves stay a deep, cold green.
+    for (const material of materials)
+      if (material instanceof PBRMaterial && FOLIAGE_IN_THE_LAMPS.test(material.name))
+        material.albedoColor.multiplyInPlace(HEADLAMP_LEAF_TINT);
     const hemi = new HemisphericLight("taxi_storm_bounce", new Vector3(0.2, 1, -0.3), scene);
     hemi.diffuse.set(0.48, 0.56, 0.72);
     hemi.groundColor.set(0.13, 0.16, 0.2);
@@ -169,6 +227,18 @@ export class TaxiVisuals {
         mesh.material.albedoColor.set(0.055, 0.075, 0.085);
         mesh.material.roughness = 0.16;
       }
+    // The bonnet's old lacquer under running rain: a hard wet clear coat, beaded and moving.
+    const lacquer = scene.getMaterialByName("M_taxi_body_lacquer");
+    if (lacquer instanceof PBRMaterial) {
+      lacquer.clearCoat.isEnabled = true;
+      lacquer.clearCoat.intensity = 1;
+      lacquer.clearCoat.roughness = 0.06;
+      const beads = this.waterRipples.clone();
+      beads.uScale = beads.vScale = 7;
+      beads.level = 0.5;
+      lacquer.clearCoat.bumpTexture = beads;
+      this.bonnetBeads = beads;
+    }
     this.glass = new TaxiRain(scene);
     const sideGlass = scene.materials.find((m) => m.name === "M_taxi_window_glass");
     if (sideGlass instanceof PBRMaterial) {
@@ -185,10 +255,12 @@ export class TaxiVisuals {
     dash.intensity = 0.6;
     dash.range = 1.6;
     dash.includedOnlyMeshes = cabinMeshes;
+    this.dash = dash;
     for (const x of [-0.6, 0.6]) {
       const headlamp = new SpotLight(
         `taxi_headlight_${x}`,
-        new Vector3(x, 0.76, 2.52),
+        // Inside the nickel bowls on the lamp bar, ahead of the radiator.
+        new Vector3(x * 1.07, 0.96, 2.74),
         new Vector3(x < 0 ? -0.09 : 0.09, -0.08, 1).normalize(),
         1.25,
         1.5,
@@ -199,6 +271,7 @@ export class TaxiVisuals {
       headlamp.range = 42;
       headlamp.renderPriority = 8;
       headlamp.excludedMeshes = [...cabinMeshes, this.glass.glass];
+      this.headlamps.push({ light: headlamp, power: headlamp.intensity });
       if (x < 0) {
         const shadow = new ShadowGenerator(game.preset.name === "low" ? 512 : 1024, headlamp);
         shadow.usePercentageCloserFiltering = true;
@@ -263,6 +336,7 @@ export class TaxiVisuals {
     dials.emissiveColor.set(0.45, 0.38, 0.22);
     dials.disableLighting = true;
     dials.specularColor = Color3.Black();
+    this.dials = dials;
     for (const [x, r, u0, u1] of [
       [-0.49, 0.071, 0, 0.66],
       [-0.29, 0.043, 0.66, 1],
@@ -290,42 +364,124 @@ export class TaxiVisuals {
       disc.isPickable = false;
     }
     this.paintDials(6.8);
-    this.mirror = new MirrorTexture("taxi_rear_view", { width: 256, height: 96 }, scene, false);
-    this.mirror.mirrorPlane = new Plane(0, 0, -1, 0.731);
-    this.mirror.level = 0.6;
+    // The rear-view mirror, as the driver set it: angled down and across so that
+    // from Sora's seat it frames the back seat behind her. A fixed camera at the
+    // glass, drawn flipped, keeps that view steady however she turns her head.
+    const mirrorEye = new FreeCamera("taxi_rear_view_eye", new Vector3(0.02, 1.62, 0.7), scene);
+    mirrorEye.setTarget(new Vector3(0.2, 1.26, -1.6));
+    // Vertical field: a band from the seat cushion to the rear window's top.
+    mirrorEye.fov = 0.34;
+    mirrorEye.minZ = 0.05;
+    mirrorEye.maxZ = 8;
+    // Only the RTT renders through it; it must not take part in input or the main view.
+    mirrorEye.inputs.clear();
+    mirrorEye.layerMask = 0x0fffffff | MIRROR_ONLY;
+    this.mirror = new RenderTargetTexture("taxi_rear_view", { width: 544, height: 160 }, scene);
+    this.mirror.activeCamera = mirrorEye;
+    // Through the rear and side glass: the night fog behind the car.
+    this.mirror.clearColor = new Color4(...MIRROR_FOG, 1);
+    // A plain colour pass: the SSAO pre-pass belongs to the player's camera only.
+    this.mirror.noPrePassRenderer = true;
+    scene.customRenderTargets.push(this.mirror);
+    // A touch brighter than the cabin seen directly: eyes adjust to the small bright glass.
+    this.mirror.level = 2.4;
     this.mirror.refreshRate = 3;
     this.mirror.renderParticles = false;
-    this.mirror.renderList = cabinMeshes.filter((m) => !/mirror|sunvisor|bonnet/.test(m.name));
+    this.mirror.renderList = cabinMeshes.filter(
+      (m) => !/mirror|sunvisor|bonnet|taxi_charm/.test(m.name),
+    );
+    // The same shape as the glass (its projection follows the target's size), mirrored left to right.
+    this.mirror.uScale = -1;
+    this.mirror.uOffset = 1;
+    this.mirror.vScale = -1;
+    this.mirror.vOffset = 1;
+    // Unlit: the glass shows the back seat as the camera there sees it, and the
+    // player's camera grades it with the rest of the night.
     const mirrorMaterial = new StandardMaterial("taxi_mirror_silver", scene);
-    mirrorMaterial.diffuseColor.set(0.035, 0.045, 0.04);
-    mirrorMaterial.specularColor.set(0.3, 0.3, 0.3);
-    mirrorMaterial.reflectionTexture = this.mirror;
-    this.mirror.coordinatesMode = Texture.PLANAR_MODE;
+    // (Unlit, a standard material shows emissive × its diffuse texture.)
+    mirrorMaterial.diffuseTexture = this.mirror;
+    mirrorMaterial.emissiveColor.set(0.92, 0.95, 0.93);
+    mirrorMaterial.specularColor = Color3.Black();
+    mirrorMaterial.disableLighting = true;
+    // The authored glass is wound away from the cabin; show it from Sora's side.
+    mirrorMaterial.backFaceCulling = false;
     const face = cabinMeshes.find((m) => m.name.includes("taxi_mirror_surface"));
     if (face) face.material = mirrorMaterial;
     this.rain = new TaxiWeather(scene, game.preset.name === "low");
-    for (const [index] of RUNNER_TRAIL.entries()) {
-      const form = new ShadowFigure(scene, `taxi_road_runner_${index}`, 2.1);
-      form.root.parent = route;
-      form.root.setEnabled(false);
-      form.darken(RUNNER_BLACK, true);
-      this.runners.push(form);
+    for (const material of spiritAsset.materials) {
+      const tint = SPIRIT_TINTS[material.name];
+      if (!tint || !(material instanceof PBRMaterial)) continue;
+      material.albedoColor = tint[0].clone();
+      material.roughness = tint[1];
+      material.specularIntensity = tint[2];
     }
-    // Candles still burning at the rite: one warm, guttering light for the whole ring.
-    const rite = taxiRoadPoint(TAXI_RITUAL_LATERAL, TAXI_RITUAL_ALONG);
-    this.candlelight = new PointLight(
-      "taxi_rite_candlelight",
-      new Vector3(rite.x, 0.35, rite.z),
-      scene,
+    this.spirit = new MocapFigure(spiritAsset, "taxi_neakta");
+    this.spirit.root.parent = route;
+    this.spiritFill = new PointLight("taxi_spirit_flash_fill", new Vector3(0.45, 1.5, 0.45), scene);
+    this.spiritFill.diffuse.set(0.68, 0.76, 0.95);
+    this.spiritFill.specular.set(0.15, 0.17, 0.22);
+    this.spiritFill.range = 3.2;
+    this.spiritFill.intensity = 0;
+    this.spiritFill.includedOnlyMeshes = this.spirit.meshes.filter((m) => m.getTotalVertices() > 0);
+    // Shown once, behind the black of the opening, so its shaders are compiled before it is needed.
+    this.spirit.pose("stand", 0);
+    this.spirit.root.position.set(0, -50, 0);
+    this.rider = new ShadowFigure(scene, "taxi_mirror_rider", 2.05);
+    // Black lacquer like the others, but with enough sheen for the mirror to find it.
+    this.rider.darken(new Color3(0.06, 0.055, 0.05));
+    this.rider.root.setEnabled(false);
+    this.mirror.renderList.push(...this.rider.meshes);
+    // Two lights that touch only the rider: the cold night through Sora's side
+    // glass across its face, and the dash's warm glow from below.
+    for (const [name, at, colour, range] of [
+      ["taxi_mirror_rider_rim", new Vector3(0.95, 1.45, -0.7), new Color3(0.55, 0.64, 0.85), 2.6],
+      ["taxi_mirror_rider_dash", new Vector3(0.15, 0.95, 0.35), new Color3(0.85, 0.62, 0.36), 2.4],
+    ] as const) {
+      const light = new PointLight(name, at, scene);
+      light.diffuse = colour;
+      light.range = range;
+      light.intensity = 0;
+      light.includedOnlyMeshes = this.rider.meshes;
+      this.riderLights.push(light);
+    }
+    // In the dark of the back seat the mirror shows little but its eyes: the chalk
+    // whites catch what light there is, pale and fixed on the back of Sora's head.
+    this.riderEyes = new StandardMaterial("M_taxi_mirror_rider_eyes", scene);
+    this.riderEyes.disableLighting = true;
+    this.riderEyes.diffuseColor.set(0, 0, 0);
+    for (const mesh of this.rider.meshes) {
+      if (/inset_eye|painted_iris/.test(mesh.name)) mesh.material = this.riderEyes;
+      // Its own two lights come last in the scene: room for them past the storm's.
+      else if (mesh.material instanceof PBRMaterial) mesh.material.maxSimultaneousLights = 16;
+    }
+    // The small glass would lose a pair of chalk eyes: two points of shine over them.
+    for (const [i, at] of [
+      [0, new Vector3(0.079, 2.262, 0.384)],
+      [1, new Vector3(0.152, 2.274, 0.348)],
+    ] as const) {
+      const shine = CreateSphere(
+        `taxi_mirror_rider_shine_${i}`,
+        { diameter: 0.05, segments: 6 },
+        scene,
+      );
+      shine.parent = this.rider.root;
+      shine.position.copyFrom(at);
+      shine.material = this.riderEyes;
+      shine.isPickable = false;
+      this.rider.meshes.push(shine);
+      this.mirror.renderList.push(shine);
+    }
+    // It is on a layer only the mirror's camera draws: turning round finds the seat empty.
+    for (const mesh of this.rider.meshes) mesh.layerMask = MIRROR_ONLY;
+    const soraGlass = cabinMeshes.find(
+      (m): m is Mesh =>
+        m instanceof Mesh &&
+        m.name.startsWith("taxi_side_glass") &&
+        m.getBoundingInfo().boundingBox.centerWorld.x > 0,
     );
-    this.candlelight.parent = route;
-    this.candlelight.diffuse.set(1, 0.58, 0.26);
-    this.candlelight.specular.set(0.4, 0.25, 0.1);
-    this.candlelight.range = 9;
-    this.candlelight.intensity = 0;
-    for (const material of scene.materials)
-      if (material instanceof PBRMaterial && material.name === "M_taxi_ritual_flame")
-        this.flames.push(material);
+    if (soraGlass) this.glassMarks = new TaxiGlassMarks(scene, soraGlass);
+    this.mist = new TaxiMist(game, route);
+    ageTaxiCabin(scene);
     this.charm = scene.getTransformNodeByName("taxi_mirror_charm_pivot");
     if (this.charm) this.charm.rotationQuaternion ??= Quaternion.Identity();
     // The driver's body as one piece, pivoting at his hips on the seat.
@@ -359,10 +515,11 @@ export class TaxiVisuals {
     registerBuiltInLoaders();
     const scene = game.scene,
       base = `${import.meta.env.BASE_URL}assets/ep1/`;
-    const [cabin, roadside] = await Promise.all([
+    const [cabin, roadside, , spiritAsset] = await Promise.all([
       LoadAssetContainerAsync(`${base}ep1_taxi_cabin.glb`, scene),
       LoadAssetContainerAsync(`${base}ep1_taxi_roadside.glb`, scene),
       ShadowFigure.prepare(scene),
+      MocapFigure.load(scene, `${base}neakta_roadside.glb`),
     ]);
     cabin.addAllToScene();
     for (const material of cabin.materials) {
@@ -429,7 +586,7 @@ export class TaxiVisuals {
     game.player.pitch = 0.025;
     game.player.yaw = -0.12;
     scene.clearColor = new Color4(...NIGHT_LOOK.clearColor, 1);
-    return new TaxiVisuals(game, cabinMeshes, route, landscape);
+    return new TaxiVisuals(game, cabinMeshes, route, landscape, spiritAsset);
   }
   configure(): void {
     const g = this.game;
@@ -438,8 +595,8 @@ export class TaxiVisuals {
     g.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
     g.atmosphere.nightSight.range = 2.8;
     g.atmosphere.nightSight.excludedMeshes.push(this.glass.glass);
-    // Far enough for the painted forest walls on both sides; fog closes beyond.
-    g.camera.maxZ = 85;
+    // Far enough for the far tree cards on both sides; the haze closes beyond.
+    g.camera.maxZ = 140;
     if (g.pipeline.fog) {
       g.pipeline.fog.density = NIGHT_LOOK.fogDensity;
       g.pipeline.fog.heightFalloff = 0.25;
@@ -448,6 +605,7 @@ export class TaxiVisuals {
       g.scene.fogDensity = NIGHT_LOOK.fogDensity;
       g.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
     }
+    this.mist.configure();
   }
   update(dt: number, t: number, flash: number): void {
     const g = this.game,
@@ -474,9 +632,18 @@ export class TaxiVisuals {
     this.glass.update(dt, angle, flash);
     this.waterRipples.uOffset = t * 0.009;
     this.waterRipples.vOffset = t * 0.006;
+    // Rain running back along the bonnet in the wind of the car's speed.
+    if (this.bonnetBeads) this.bonnetBeads.vOffset = -t * 0.05 * (speed / 6.8);
     this.rain.update(t, speed, flash);
-    this.updateRunners(t);
-    this.updateRite(t, distance);
+    this.updateSpirit(t, flash);
+    this.updateMirrorRider(t, flash);
+    this.glassMarks?.update(t, flash);
+    // The car's electrics fail when something is close: lamps, dash and dials together.
+    const power = taxiElectrics(t);
+    for (const lamp of this.headlamps) lamp.light.intensity = lamp.power * power;
+    this.dash.intensity = 0.6 * (0.15 + 0.85 * power);
+    this.dials.emissiveColor.set(0.45, 0.38, 0.22).scaleInPlace(0.12 + 0.88 * power);
+    this.mist.update(dt, t, distance, power, flash);
     this.updateCabinLife(dt, t, speed, flash);
     // Small suspension movement, tied to speed, leaves mouse look independent of the car body.
     const bump = (Math.sin(t * 5.6) * 0.0028 + Math.sin(t * 9.9 + 0.7) * 0.0012) * (speed / 6.8);
@@ -500,31 +667,51 @@ export class TaxiVisuals {
       : new Vector3(0.27, 1.17, 1.13);
   }
 
-  /** Each pass: the lead form and two fainter copies a beat behind it, smeared by speed. */
-  private updateRunners(t: number): void {
-    RUNNER_TRAIL.forEach(([lag, solid], i) => {
-      const form = this.runners[i],
-        pose = taxiRunnerAt(t, lag);
-      form.root.setEnabled(pose !== null);
-      if (!pose) return;
-      const edge = Math.min(1, pose.progress / 0.1, (1 - pose.progress) / 0.12);
-      form.setPresence(solid * edge);
-      form.root.position.set(pose.x, -0.12, pose.z);
-      form.root.rotation.set(0.32, pose.heading, 0);
-      form.animate(t * 4.4, 1, 0);
-    });
+  /**
+   * The Neak Ta where the ride clock puts it, on the frame of its motion capture the clock
+   * gives, its head turning to keep Sora in view. Between the flickers that show it, it is
+   * switched off: it is somewhere in the dark, and only the sound says where.
+   */
+  private updateSpirit(t: number, flash: number): void {
+    const pose = taxiSpiritAt(t),
+      form = this.spirit;
+    const atTheGlass =
+      pose?.kind === "window" || (pose?.kind === "overtake" && pose.clip === "reach");
+    this.spiritFill.intensity = atTheGlass ? flash * 9 : 0;
+    if (this.spiritWarm > 0 && !pose) {
+      this.spiritWarm--;
+      form.setEnabled(true);
+      return;
+    }
+    form.setEnabled(pose !== null && pose.visible);
+    if (!pose || !pose.visible) return;
+    form.root.position.set(pose.x, pose.y, pose.z);
+    form.root.rotation.set(0, pose.heading, 0);
+    form.pose(pose.clip, pose.clipTime, pose.clip !== "reach");
+    form.root.computeWorldMatrix(true);
+    form.lookAt(this.game.camera.globalPosition, pose.look);
   }
 
-  /** Candle flames gutter in the rain; their light reaches only while the rite is near. */
-  private updateRite(t: number, distance: number): void {
-    const near = Math.max(0, 1 - Math.abs(distance - TAXI_RITUAL_ALONG) / 70),
-      gutter =
-        0.78 +
-        0.12 * Math.sin(t * 13.1) +
-        0.07 * Math.sin(t * 23.7 + 1.3) +
-        0.05 * Math.sin(t * 41.9);
-    this.candlelight.intensity = near * 3.4 * gutter;
-    for (const flame of this.flames) flame.emissiveIntensity = 0.7 + 0.3 * gutter;
+  /** The back-seat rider, posed for the mirror; the mirror refreshes every frame while it is there. */
+  private updateMirrorRider(t: number, flash: number): void {
+    const pose = taxiMirrorRiderAt(t),
+      form = this.rider;
+    form.root.setEnabled(pose !== null);
+    this.mirror.refreshRate = pose ? 1 : 3;
+    // The fog behind the car; the lightning turns it white.
+    const [fr, fg, fb] = MIRROR_FOG;
+    this.mirror.clearColor.set(fr + flash * 0.5, fg + flash * 0.55, fb + flash * 0.62, 1);
+    const [rim, dash] = this.riderLights;
+    rim.intensity = pose ? 2.2 + flash * 10 : 0;
+    dash.intensity = pose ? 2.6 * taxiElectrics(t) : 0;
+    if (!pose) return;
+    form.setPresence(pose.presence);
+    this.riderEyes.emissiveColor
+      .set(0.62, 0.6, 0.55)
+      .scaleInPlace(pose.presence * (0.75 + 0.25 * Math.sin(t * 2.3)) + flash);
+    form.root.position.set(pose.x, pose.y, pose.z);
+    form.root.rotation.set(pose.lean, pose.kind === "lean" ? 0.35 : 0.08, 0);
+    form.animate(t, 0, pose.attention);
   }
 
   /**

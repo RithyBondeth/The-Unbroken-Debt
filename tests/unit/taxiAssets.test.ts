@@ -6,15 +6,16 @@ import { getBounds } from "@gltf-transform/functions";
 import { MeshoptDecoder } from "meshoptimizer";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-let cabin: Document, road: Document;
+let cabin: Document, road: Document, spirit: Document;
 beforeAll(async () => {
   await MeshoptDecoder.ready;
   const io = new NodeIO()
     .registerExtensions(ALL_EXTENSIONS)
     .registerDependencies({ "meshopt.decoder": MeshoptDecoder });
-  [cabin, road] = await Promise.all([
+  [cabin, road, spirit] = await Promise.all([
     io.read("public/assets/ep1/ep1_taxi_cabin.glb"),
     io.read("public/assets/ep1/ep1_taxi_roadside.glb"),
+    io.read("public/assets/ep1/neakta_roadside.glb"),
   ]);
 });
 describe("authored taxi assets", () => {
@@ -399,7 +400,7 @@ describe("authored taxi assets", () => {
         .filter((n) => n.getName().startsWith("taxi_road_")).length,
     ).toBeGreaterThan(1000);
   });
-  it("dresses the road, the rite and the cabin for the dread pass", () => {
+  it("dresses the road and the cabin for the dread pass, with no rite by the road", () => {
     const roadNames = road
       .getRoot()
       .listNodes()
@@ -411,21 +412,13 @@ describe("authored taxi assets", () => {
     expect(count(/^taxi_road_pebble/, roadNames)).toBeGreaterThan(500);
     expect(count(/^taxi_ditch_water/, roadNames)).toBeGreaterThan(20);
     expect(roadNames).toContain("taxi_median_grass");
-    // The rite: spirit house, guardian, banners, the cord ring, the bound effigy and lit candles.
-    for (const piece of [
-      /^taxi_road_rite_spirit_house/,
-      /^taxi_road_rite_tingmong/,
-      /^taxi_rite_banner/,
-      /^taxi_rite_cord/,
-      /^taxi_rite_effigy_wrap/,
-      /^taxi_rite_candle_flame/,
-    ])
-      expect(count(piece, roadNames)).toBeGreaterThan(0);
-    const flame = road
-      .getRoot()
-      .listMaterials()
-      .find((m) => m.getName() === "M_taxi_ritual_flame")!;
-    expect(Math.max(...flame.getEmissiveFactor())).toBeGreaterThan(0.5);
+    // The roadside rite was taken out: nothing of it is left along the road.
+    expect(count(/rite|ritual/, roadNames)).toBe(0);
+    // Old growth, not bamboo: tall broadleaf giants far outnumber the odd clump.
+    const giants = count(/^taxi_road_(far_)?tree_/, roadNames),
+      bamboo = count(/^taxi_road_bamboo/, roadNames);
+    expect(giants).toBeGreaterThan(1000);
+    expect(bamboo).toBeLessThan(giants / 60);
     const cabinNames = cabin
       .getRoot()
       .listNodes()
@@ -438,6 +431,23 @@ describe("authored taxi assets", () => {
     expect(pivot.listChildren().length).toBeGreaterThan(40);
     for (const name of ["taxi_meter_case", "taxi_rear_lotus_bud"])
       expect(cabinNames).toContain(name);
+  });
+  it("ships the roadside Neak Ta rigged, with its three motion-captured clips", () => {
+    const root = spirit.getRoot();
+    expect(root.listSkins().length).toBeGreaterThan(0);
+    expect(
+      root
+        .listAnimations()
+        .map((a) => a.getName())
+        .sort(),
+    ).toEqual(["reach", "stand", "walk"]);
+    const joints = root
+      .listSkins()[0]
+      .listJoints()
+      .map((j) => j.getName());
+    for (const bone of ["root", "head", "neck03", "upperleg01.L", "foot.R", "upperarm01.L"])
+      expect(joints).toContain(bone);
+    expect(statSync("public/assets/ep1/neakta_roadside.glb").size).toBeLessThan(8 * 1024 * 1024);
   });
   it("keeps download and geometry costs bounded for the transition scene", () => {
     expect(statSync("public/assets/ep1/ep1_taxi_cabin.glb").size).toBeLessThan(6 * 1024 * 1024);

@@ -11,10 +11,7 @@ import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { TAXI_CONVERSATION, taxiConversationAt, taxiDriverVoiceUrls } from "./taxiConversation";
 import { TaxiSoundscape, taxiThrottle } from "./TaxiSoundscape";
-import { taxiPass, taxiPassBeat } from "./taxiApparitions";
-
-/** Lightning silhouettes the form crossing the beams, and catches it again as it overtakes. */
-const OVERTAKE_FLASH = taxiPassBeat(taxiPass("overtake")) + 0.35;
+import { taxiLightning } from "./taxiApparitions";
 
 const TAXI_SECONDS = 72;
 /** The playable journey between CP0 and CP1. Reload resumes the ride, never an empty studio. */
@@ -48,7 +45,7 @@ export class TaxiRide {
     g.interaction.allow = () => false;
     this.visuals = await TaxiVisuals.load(g);
     // The storm the taxi drives into: gusts off the paddies buffet the car.
-    g.wind.base = 0.62;
+    g.wind.base = 0.78;
     this.windAudio = new WindAudio(g, g.wind, { vehicle: true });
     if (import.meta.env.DEV) (window as unknown as { taxi: TaxiRide }).taxi = this;
     g.scene.onBeforeRenderObservable.add(() => this.update(g.deltaSeconds));
@@ -88,13 +85,7 @@ export class TaxiRide {
     if (!this.running || this.ending) return;
     this.elapsed = Math.min(TAXI_SECONDS, this.elapsed + dt);
     const t = this.elapsed,
-      flash = Math.max(
-        0,
-        1 - Math.abs(t - 37.8) * 3,
-        0.7 - Math.abs(t - 13.4) * 4,
-        0.9 - Math.abs(t - 55.7) * 4,
-        0.8 - Math.abs(t - OVERTAKE_FLASH) * 5,
-      );
+      flash = taxiLightning(t);
     this.visuals.update(dt, t, flash);
     this.windAudio.update(dt);
     this.dread?.update(t);

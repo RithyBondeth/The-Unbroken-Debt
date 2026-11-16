@@ -224,10 +224,7 @@ def cabin():
         quad(f'taxi_side_glass_{side}',[(x,.91,-.62),(x,.96,.79),(side*.70,1.74,.82),(side*.78,1.76,-.62)],glass)
         quad(f'taxi_quarter_glass_{side}',[(x,.89,-1.27),(x,.91,-.67),(side*.78,1.76,-.67),(side*.76,1.73,-1.39)],glass)
         rounded('taxi_sunvisor',(side*.42,1.71,.72),(.48,.13,.025),felt,.026)
-    # Thin bonnet: visibility below the windshield, with rounded ridges and panel seams.
-    rounded('taxi_bonnet', (0,.83,1.92),(1.57,.10,1.44),metal,.07)
-    tube('taxi_bonnet_centre_ridge',[(0,.892,1.28),(0,.90,2.05),(0,.867,2.6)],.005,chrome)
-    for x in [-.72,.72]: tube('taxi_bonnet_seam',[(x,.88,1.3),(x,.88,2.53)],.003,rubber)
+    car_nose(chrome,black,rubber)
     rounded('taxi_floor_carpet',(0,.048,-.15),(1.70,.026,3.01),carpet,.02)
     rounded('taxi_transmission_tunnel',(0,.19,.1),(.21,.29,1.42),carpet,.09)
     tube('taxi_gear_lever',[(.02,.3,.36),(.02,.65,.39),(.03,.70,.36)],.012,chrome)
@@ -287,6 +284,59 @@ def upright_upholstery(x,y0,y1,z,width,mat,thread,rolls=6,depth=.05,name='taxi_s
         xx=x-width/2+pitch*(k+.5)
         rounded(name,(xx,(y0+y1)/2,z),(pitch*1.06,abs(y1-y0),depth),mat,min(.028,pitch*.3))
         if k: tube(name+'_seam',[(xx-pitch/2,y0+.02,z+depth*.42),(xx-pitch/2,y1-.02,z+depth*.42)],.0022,thread)
+
+def car_nose(chrome,black,rubber):
+    """What a 1930s saloon shows through its windscreen: a long hinged bonnet in
+    old black-green lacquer, the nickel radiator shell with its filler cap and
+    thermometer, and the two big lamp bowls standing on their bar."""
+    lacquer=plain('M_taxi_body_lacquer',(.016,.024,.02),.24,.0)
+    # The bonnet: two hinged halves lofted over the engine, falling slightly to the radiator.
+    vs=[];fs=[];rows=18;cols=24
+    for i in range(rows+1):
+        t=i/rows; z=1.24+t*1.44; top=1.118-.045*t; half=.47-.035*t
+        for j in range(cols+1):
+            a=-math.pi/2+j/cols*math.pi
+            # A flattened superellipse: a crowned top and near-vertical sides down to the wings.
+            c,sn=math.cos(a),math.sin(a)
+            x=half*math.copysign(abs(sn)**.55,sn); y=top-(.4*(1-abs(c)**.35))-.012*(1-abs(sn))
+            vs.append((x,y,z))
+    for i in range(rows):
+        for j in range(cols):
+            k=i*(cols+1)+j; fs.append((k,k+1,k+cols+2,k+cols+1))
+    hood=mesh('taxi_bonnet_lacquer',vs,fs,lacquer)
+    for f in hood.data.polygons: f.use_smooth=True
+    lacquer.use_backface_culling=False
+    # The centre hinge and the seam either side where each half lifts.
+    tube('taxi_bonnet_centre_hinge',[(0,1.121,1.24),(0,1.098,2.0),(0,1.076,2.68)],.0055,chrome)
+    for x in [-.23,.23]: tube('taxi_bonnet_seam',[(x,1.106,1.26),(x*.97,1.084,2.0),(x*.95,1.06,2.66)],.0018,rubber)
+    # Louvres pressed into each side, catching the lamps' spill.
+    for side in [-1,1]:
+        for k in range(9):
+            z=1.62+k*.075
+            tube('taxi_bonnet_louvre',[(side*.425,.95,z),(side*.452,1.0,z+.012)],.006,lacquer)
+        rounded('taxi_bonnet_catch',(side*.468,.86,2.25),(.012,.05,.06),chrome,.004)
+    # Nickel radiator shell, its vertical slats, and the filler cap with the motor thermometer.
+    rounded('taxi_bonnet_radiator_shell',(0,.93,2.715),(.6,.44,.07),chrome,.03)
+    rounded('taxi_bonnet_radiator_core',(0,.92,2.755),(.5,.36,.02),black,.006)
+    for k in range(13): tube('taxi_bonnet_radiator_slat',[(-.24+k*.04,.75,2.762),(-.24+k*.04,1.1,2.762)],.003,chrome)
+    tube('taxi_bonnet_filler_neck',[(0,1.12,2.71),(0,1.165,2.71)],.022,chrome)
+    ellipsoid('taxi_bonnet_filler_cap',(0,1.172,2.71),(.07,.026,.07),chrome)
+    tube('taxi_bonnet_thermometer_stem',[(0,1.18,2.71),(0,1.215,2.71)],.006,chrome)
+    tube('taxi_bonnet_thermometer_ring',[(math.cos(a)*.034,1.25+math.sin(a)*.034,2.71) for a in [i/24*math.tau for i in range(25)]],.006,chrome)
+    dial=plain('M_taxi_thermometer_dial',(.55,.5,.38),.4)
+    disc=[(0,1.25,2.708)]+[(math.cos(a)*.031,1.25+math.sin(a)*.031,2.708) for a in [i/24*math.tau for i in range(24)]]
+    mesh('taxi_bonnet_thermometer_face',disc,[(0,k+1,(k+1)%24+1) for k in range(24)],dial)
+    tube('taxi_bonnet_thermometer_mercury',[(0,1.226,2.706),(0,1.262,2.706)],.0022,plain('M_taxi_thermometer_red',(.32,.02,.015),.3))
+    # The lamp bar and two deep nickel bowls standing above the wings.
+    tube('taxi_bonnet_lamp_bar',[(-.66,.86,2.66),(-.3,.84,2.72),(.3,.84,2.72),(.66,.86,2.66)],.014,chrome)
+    for side in [-1,1]:
+        x=side*.64
+        ellipsoid('taxi_bonnet_lamp_bowl',(x,.96,2.6),(.22,.22,.2),chrome)
+        tube('taxi_bonnet_lamp_rim',[(x+math.cos(a)*.11,.96+math.sin(a)*.11,2.7) for a in [i/28*math.tau for i in range(29)]],.008,chrome)
+        tube('taxi_bonnet_lamp_stalk',[(x,.86,2.62),(x,.9,2.6)],.016,chrome)
+        # The front wing's crown, just showing beside the bonnet.
+        wing=[(x+side*.06*math.sin(t*math.pi),.62+.3*math.sin(t*math.pi),1.55+t*1.25) for t in [i/16 for i in range(17)]]
+        tube('taxi_bonnet_wing_crown',wing,.11,lacquer)
 
 def cabin_detail(vinyl,felt,carpet,wood,rubber,chrome,black,thread,metal,glass):
     """What makes it a working 1930s taxi rather than a box: tuck-and-roll seats, real
@@ -484,9 +534,9 @@ def mourners_leavings():
         tube('taxi_rear_incense',[(.1+dx,.075+dy,-1.0),(.12+dx,.08+dy,-.72)],.0022,incense)
     tube('taxi_rear_incense_band',[(.096+math.cos(a)*.02,.081+math.sin(a)*.016,-.86) for a in [i/16*math.tau for i in range(17)]],.002,plain('M_taxi_incense_paper',(.45,.05,.04),.7))
 
-def character_skin(name,src,photo,relief=1024):
+def character_skin(name,src,photo,relief=1024,image=None,strength=.3):
     mat=plain(name,(.30,.20,.13),.7)
-    image=bpy.data.images.load(str(src/photo),check_existing=True)
+    image=image or bpy.data.images.load(str(src/photo),check_existing=True)
     tex=mat.node_tree.nodes.new('ShaderNodeTexImage'); tex.image=image
     links=mat.node_tree.links; bs=mat.node_tree.nodes['Principled BSDF']; links.new(tex.outputs['Color'],bs.inputs['Base Color'])
     # Photo-derived fine relief breaks the plastic highlight without inventing scars.
@@ -501,7 +551,7 @@ def character_skin(name,src,photo,relief=1024):
     normal.colorspace_settings.name='Non-Color'; normal.pixels.foreach_set(rgba.ravel())
     normal.filepath_raw=str(TEX/(name+'_N.png')); normal.file_format='PNG'; normal.save()
     t=mat.node_tree.nodes.new('ShaderNodeTexImage'); t.image=normal
-    n=mat.node_tree.nodes.new('ShaderNodeNormalMap'); n.inputs['Strength'].default_value=.3
+    n=mat.node_tree.nodes.new('ShaderNodeNormalMap'); n.inputs['Strength'].default_value=strength
     links.new(t.outputs['Color'],n.inputs['Color']); links.new(n.outputs['Normal'],bs.inputs['Normal'])
     return mat
 
@@ -681,13 +731,28 @@ def proxy_material(name,image_name,rough=.6,clip=False,tint=None,normal=None):
         links.new(n.outputs['Color'],nm.inputs['Color']); links.new(nm.outputs['Normal'],bs.inputs['Normal'])
     return mat
 
-def faded_cotton(name,tint):
-    """The suit's denim map washed to grey so its weave, seams and folds carry a period cotton."""
+def faded_cotton(name,tint,stains=0.):
+    """The suit's denim map washed to grey so its weave, seams and folds carry a period cotton.
+    `stains` (0–1) lays sweat tide-marks and ground-in grime over it."""
     image=bpy.data.images.load(str(DRIVER_SRC/'male_casualsuit01_diffuse.png'),check_existing=True)
     if image.size[0]>1024: image.scale(1024,1024)
     px=np.array(image.pixels[:],dtype=np.float32).reshape(image.size[1],image.size[0],4)
     grey=px[...,:3]@np.array([.2126,.7152,.0722]); grey=grey/max(grey.mean(),1e-4)*.5
     rgb=np.clip(grey[...,None]*np.array(tint)*2,0,1)
+    if stains>0:
+        n=rgb.shape[0]; rng=np.random.default_rng(1936)
+        grime=_blur(rng.normal(size=(n,n)),24); grime=(grime-grime.mean())/(grime.std()+1e-6)
+        sweat=np.zeros((n,n))
+        yy,xx=np.mgrid[:n,:n]
+        for _ in range(26):
+            cx,cy,r=rng.uniform(0,n),rng.uniform(0,n),rng.uniform(.03,.11)*n
+            d=np.hypot(xx-cx,yy-cy)/r
+            # Dried sweat: a pale yellowed patch with a darker rim where the salt stopped.
+            sweat+=np.clip(1-d,0,1)**.6*.5+np.exp(-((d-1)/.08)**2)*.7
+        sweat=np.clip(sweat,0,1.4)
+        rgb=rgb*(1-stains*(.1+.07*grime[...,None]).clip(0,.3))
+        rgb=rgb*(1-stains*sweat[...,None]*np.array([.1,.14,.3]))
+        rgb=np.clip(rgb,0,1)
     out=bpy.data.images.new('T_'+name.removeprefix('M_'),width=image.size[0],height=image.size[1],alpha=True)
     out.pixels.foreach_set(np.concatenate([rgb,np.ones(grey.shape+(1,))],axis=-1).astype(np.float32).ravel())
     out.filepath_raw=str(TEX/('T_'+name.removeprefix('M_')+'_BC.png')); out.file_format='PNG'; out.save()
@@ -698,6 +763,182 @@ def faded_cotton(name,tint):
     nm=nodes.new('ShaderNodeNormalMap'); nm.inputs['Strength'].default_value=1.0
     mat.node_tree.links.new(n.outputs['Color'],nm.inputs['Color']); mat.node_tree.links.new(nm.outputs['Normal'],bs.inputs['Normal'])
     return mat
+
+def _pixels(path,size):
+    image=bpy.data.images.load(str(path),check_existing=True)
+    if image.size[0]!=size: image.scale(size,size)
+    return np.array(image.pixels[:],dtype=np.float32).reshape(size,size,4)[...,:3]
+
+def _blur(a,sigma):
+    """Gaussian blur of a square H×W(×C) array through the FFT (wraps, which the atlas margins hide)."""
+    n=a.shape[0]; fy=np.fft.fftfreq(n)[:,None]; fx=np.fft.rfftfreq(n)[None,:]
+    g=np.exp(-2*(math.pi*sigma)**2*(fx*fx+fy*fy))
+    if a.ndim==2: return np.fft.irfft2(np.fft.rfft2(a)*g,s=a.shape)
+    return np.stack([np.fft.irfft2(np.fft.rfft2(a[...,c])*g,s=a.shape[:2]) for c in range(a.shape[2])],axis=-1)
+
+def _raster(mask,tri,value):
+    """Fills one UV triangle (pixel coordinates) of `mask` with max(value)."""
+    (x0,y0),(x1,y1),(x2,y2)=tri
+    xa=max(0,int(min(x0,x1,x2))); xb=min(mask.shape[1]-1,int(max(x0,x1,x2))+1)
+    ya=max(0,int(min(y0,y1,y2))); yb=min(mask.shape[0]-1,int(max(y0,y1,y2))+1)
+    if xb<xa or yb<ya: return
+    yy,xx=np.mgrid[ya:yb+1,xa:xb+1]+.5
+    d=(y1-y2)*(x0-x2)+(x2-x1)*(y0-y2)
+    if abs(d)<1e-9: return
+    a=((y1-y2)*(xx-x2)+(x2-x1)*(yy-y2))/d; b=((y2-y0)*(xx-x2)+(x0-x2)*(yy-y2))/d; c=1-a-b
+    inside=(a>=-.02)&(b>=-.02)&(c>=-.02)
+    patch=mask[ya:yb+1,xa:xb+1]
+    if np.ndim(value)==0: np.maximum(patch,np.where(inside,value,0),out=patch)
+    else:
+        v=value[0]*a+value[1]*b+value[2]*c
+        np.maximum(patch,np.where(inside,v,0),out=patch)
+
+def khmer_driver_skin(verts,faces,faceuv,uvs,joint,size=2048):
+    """Fifty-odd years of Phnom Penh sun on the old Asian male skin: the darker
+    photo blended in for a Khmer complexion, wrinkles and pores drawn out of the
+    photo's own detail, two days' grey stubble along the jaw, sweat-dark creases."""
+    light=_pixels(DRIVER_SRC/'old_lightskinned_male_diffuse2.png',size)
+    dark=_pixels(DRIVER_SRC/'old_darkskinned_male_diffuse.png',size)
+    rgb=light*.58+dark*.42
+    # Warm it: sun-browned, a little sallow (linear values).
+    rgb*=np.array([.82,.75,.69],dtype=np.float32)
+    lum=rgb@np.array([.2126,.7152,.0722],dtype=np.float32)
+    # Age is mostly contrast in the fine detail: deepen the creases the photos already hold.
+    detail=lum-_blur(lum,5)
+    rgb*=np.clip(1+detail[...,None]/np.maximum(lum[...,None],1e-3)*1.4,.55,1.5)
+    # Region masks are drawn in UV space from where each face sits on the head.
+    chin=joint('jaw____tail'); hinge=joint('jaw____head'); mouth=(joint('oris01____head')+joint('oris05____head'))/2
+    eyes=(joint('eye.L____head')+joint('eye.R____head'))/2
+    head=joint('head____head'); crown=joint('head____tail')
+    stubble=np.zeros((size,size),dtype=np.float32); creases=np.zeros((size,size),dtype=np.float32)
+    weather=np.zeros((size,size),dtype=np.float32)
+    span=eyes.y-chin.y
+    for f,uvf in zip(faces,faceuv):
+        c=sum((verts[i] for i in f),Vector())/len(f)
+        tri=[(uvs[k][0]*size,uvs[k][1]*size) for k in uvf]  # Blender rows run bottom-up, like V
+        if chin.y-span*.9<c.y<crown.y-span*.25:
+            # The whole face and neck front catch the sun; the top of the scalp is hair.
+            weather_amount=1.0 if c.z>hinge.z-span*.15 else .5
+            for k in range(1,len(tri)-1): _raster(weather,(tri[0],tri[k],tri[k+1]),weather_amount)
+        front=c.z>hinge.z-span*.05
+        below_nose=c.y<mouth.y+span*.2
+        above_neck=c.y>chin.y-span*.16
+        lips=abs(c.x-mouth.x)<span*.19 and abs(c.y-mouth.y)<span*.075 and c.z>mouth.z-span*.15
+        if front and below_nose and above_neck and not lips:
+            # Thickest on the chin and upper lip, thinning up the cheeks towards the ears.
+            amount=float(np.clip(1.2-max(0.,c.y-mouth.y)/(span*.25)-max(0.,abs(c.x)-span*.35)/(span*.5),.25,1))
+            for k in range(1,len(tri)-1): _raster(stubble,(tri[0],tri[k],tri[k+1]),amount)
+        # Nasolabial folds and the corners of the mouth hold sweat and grime.
+        if front and abs(abs(c.x-mouth.x)-span*.2)<span*.08 and mouth.y-span*.12<c.y<mouth.y+span*.32:
+            for k in range(1,len(tri)-1): _raster(creases,(tri[0],tri[k],tri[k+1]),1.0)
+    stubble=_blur(stubble,6); creases=_blur(creases,8); weather=_blur(weather,10)
+    rng=np.random.default_rng(1934)
+    # Short grey-black hairs: a dense speckle, darker where the shadow of the beard is.
+    hairs=(rng.random((size,size))<.24).astype(np.float32)
+    hairs=np.maximum(hairs,_blur(hairs,.6)*1.8)
+    grey=rng.random((size,size))<.45
+    hair_colour=np.where(grey[...,None],np.array([.30,.29,.27],dtype=np.float32),np.array([.018,.015,.013],dtype=np.float32))
+    shadow=np.clip(stubble,0,1)[...,None]
+    rgb=rgb*(1-shadow*.2)
+    k=np.clip(stubble*hairs*.7,0,1)[...,None]
+    rgb=rgb*(1-k)+hair_colour*k
+    # Sun-darkened, blotchy where the face and neck were never covered.
+    blotch=_blur(rng.normal(size=(size,size)).astype(np.float32),18)
+    blotch=blotch/(blotch.std()+1e-6)
+    rgb*=(1-weather[...,None]*(.1+.06*blotch[...,None])*np.array([.6,.9,1.15],dtype=np.float32))
+    rgb*=(1-creases[...,None]*.22)
+    rgb=np.clip(rgb,0,1).astype(np.float32)
+    out=bpy.data.images.new('T_taxi_driver_skin_BC',width=size,height=size,alpha=True)
+    out.pixels.foreach_set(np.concatenate([rgb,np.ones((size,size,1),dtype=np.float32)],axis=-1).ravel())
+    out.filepath_raw=str(TEX/'T_taxi_driver_skin_BC.png'); out.file_format='PNG'; out.save()
+    return out
+
+def krama_material():
+    """A faded red-and-white chequered krama, soft from a thousand washes."""
+    n=256; rng=np.random.default_rng(1932)
+    yy,xx=np.mgrid[:n,:n]
+    check=16
+    a=(xx//check)%2; b=(yy//check)%2
+    red=np.array([.30,.035,.03]); white=np.array([.62,.57,.48]); pink=(red+white)/2
+    rgb=np.where((a&b)[...,None]==1,red,np.where((a^b)[...,None]==1,pink,white))
+    # The weave: fine warp and weft lines and slubs in the thread.
+    weave=.92+.08*np.sin(xx*math.pi/1.5)*np.sin(yy*math.pi/1.5)+rng.normal(0,.035,(n,n))
+    rgb=rgb*weave[...,None]*(1-.18*_blur(rng.random((n,n)),10)[...,None])
+    img=bpy.data.images.new('T_taxi_driver_krama_BC',width=n,height=n,alpha=True)
+    img.pixels.foreach_set(np.concatenate([np.clip(rgb,0,1),np.ones((n,n,1))],axis=-1).astype(np.float32).ravel())
+    img.filepath_raw=str(TEX/'T_taxi_driver_krama_BC.png'); img.file_format='PNG'; img.save()
+    mat=plain('M_taxi_driver_krama',(1,1,1),.92); nodes=mat.node_tree.nodes
+    t=nodes.new('ShaderNodeTexImage'); t.image=img
+    mat.node_tree.links.new(t.outputs['Color'],nodes['Principled BSDF'].inputs['Base Color'])
+    mat.use_backface_culling=False
+    return mat
+
+def krama(surface_points,joint,rig):
+    """A krama wound once round his neck, both ends hanging down the shirt front.
+    Built at rest in MakeHuman space (decimetres) over the skin and shirt
+    (`surface_points`: position, outward normal, bone weights) and weighted from
+    the nearest of them, so the pose and every glance carry it."""
+    from mathutils.kdtree import KDTree
+    tree=KDTree(len(surface_points))
+    for k,(co,_,_) in enumerate(surface_points): tree.insert(co,k)
+    tree.balance()
+    def surface(p,lift):
+        _,k,_=tree.find(p); co,nrm,_=surface_points[k]; return co+nrm*lift, nrm
+    base=joint('neck01____head'); top=joint('neck02____head'); centre=base.lerp(top,.15)
+    ring=[]; steps=28
+    for s in range(steps):
+        a=s/steps*math.tau
+        p=centre+Vector((math.sin(a)*.9,-.2*max(0.,math.cos(a))**2,math.cos(a)*.9))
+        q,_=surface(p,.1); q.y=p.y; ring.append(q)
+    # Smooth the wound band so it reads as cloth rather than a cast of the neck.
+    for _ in range(3): ring=[(ring[s-1]+ring[s]*2+ring[(s+1)%steps])/4 for s in range(steps)]
+    vs=[]; fs=[]; uvs=[]
+    def sweep(path,closed,section,width,thick,ustart):
+        start=len(vs); sides=12
+        for s,p in enumerate(path):
+            nxt=path[(s+1)%len(path)] if closed or s+1<len(path) else p+(p-path[s-1])
+            prv=path[s-1] if closed or s>0 else p-(nxt-p)
+            tangent=(nxt-prv).normalized()
+            out,across=section(p,tangent)
+            for k in range(sides):
+                b=k/sides*math.tau
+                vs.append(p+out*math.cos(b)*thick+across*math.sin(b)*width)
+                uvs.append((ustart+s/len(path)*6,k/sides))
+        rows=len(path) if closed else len(path)-1
+        for s in range(rows):
+            for k in range(sides):
+                a=start+s*sides+k; b=start+((s+1)%len(path))*sides+k
+                fs.append((a,start+s*sides+(k+1)%sides,start+((s+1)%len(path))*sides+(k+1)%sides,b))
+    def band_section(p,tangent):
+        out=(p-centre); out.y=0; out.normalize()
+        return out, Vector((0,1,0))
+    sweep(ring,True,band_section,.2,.075,0)
+    # Both ends tucked under the front of the band and falling down the chest, one longer.
+    for side,length in [(-1,7),(1,5)]:
+        path=[]
+        for s in range(length):
+            p=Vector((side*.3+side*.03*s,centre.y-.24-s*.36,0))
+            p.z=max(v.z for v in ring)+.6
+            q,_=surface(p,.12); path.append(q)
+        for _ in range(2): path=[path[0]]+[(path[s-1]+path[s]*2+path[s+1])/4 for s in range(1,len(path)-1)]+[path[-1]]
+        def tail_section(p,tangent):
+            _,nrm=surface(p,0); across=tangent.cross(nrm).normalized()
+            return nrm, across
+        sweep(path,False,tail_section,.36,.025,.5+side)
+    m=bpy.data.meshes.new('taxi_driver_krama'); m.from_pydata(vs,[],fs); m.update()
+    o=bpy.data.objects.new('taxi_driver_krama',m); bpy.context.collection.objects.link(o)
+    layer=m.uv_layers.new(name='UVMap')
+    for poly in m.polygons:
+        poly.use_smooth=True
+        for li,vi in zip(poly.loop_indices,poly.vertices): layer.data[li].uv=uvs[vi]
+    groups={}
+    for vi,v in enumerate(vs):
+        _,k,_=tree.find(v)
+        for bone,weight in surface_points[k][2].items():
+            g=groups.get(bone) or groups.setdefault(bone,o.vertex_groups.new(name=bone))
+            g.add([vi],weight,'ADD')
+    mod=o.modifiers.new('Seated anatomical driving pose','ARMATURE'); mod.object=rig
+    return o
 
 def driver(black):
     """A real middle-aged Khmer driver from MakeHuman's CC0 body and fitted proxies:
@@ -714,7 +955,8 @@ def driver(black):
         elif a[0]=='f' and group=='body':
             q=[t.split('/') for t in a[1:]]; faces.append([int(t[0])-1 for t in q]); faceuv.append([int(t[1])-1 for t in q])
     # Different from Sok: neutral open eyes, a weathered middle-aged man, no mortuary expression.
-    for name,weight in [('asian-male-old.target',.55),('universal-male-old-averagemuscle-averageweight.target',.8)]:
+    # Lean and wiry from years of heat and work: fully old Asian proportions, below average weight.
+    for name,weight in [('asian-male-old.target',1.0),('universal-male-old-averagemuscle-averageweight.target',.4),('universal-male-old-averagemuscle-minweight.target',.6)]:
         for line in (src/name).read_text().splitlines():
             if line and not line.startswith('#'):
                 a=line.split(); verts[int(a[0])]+=Vector(map(float,a[1:4]))*weight
@@ -744,7 +986,7 @@ def driver(black):
             if i in remap: vg.add([remap[i]],weight,'REPLACE')
     mod=body.modifiers.new('Seated anatomical driving pose','ARMATURE'); mod.object=rig; mod.use_deform_preserve_volume=True
     proxies={}
-    for name,stem in [('hair','short02'),('brows','eyebrow002'),('lashes','eyelashes01'),('eyes','high-poly'),('suit','male_casualsuit01')]:
+    for name,stem in [('hair','short04'),('brows','eyebrow002'),('lashes','eyelashes01'),('eyes','high-poly'),('suit','male_casualsuit01')]:
         refs,scales,_=suit if stem=='male_casualsuit01' else read_mhclo(DRIVER_SRC/(stem+'.mhclo'))
         coords=fit_proxy(refs,scales,verts)
         proxies[name]=(proxy_object('taxi_driver_'+name,coords,DRIVER_SRC/(stem+'.obj'),refs,bone_weights,rig),refs,scales)
@@ -840,7 +1082,16 @@ def driver(black):
         bpy.context.view_layer.update()
         ev=obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
         return [place(v.co) for v in ev.data.vertices]
-    driven=[body]+[proxies[n][0] for n in ['hair','brows','lashes','eyes','suit']]
+    points=[(verts[i].copy(),body.data.vertices[k].normal.copy(),bone_weights.get(i,{})) for k,i in enumerate(used)]
+    suit_obj,suit_refs,_=proxies['suit']
+    for k,v in enumerate(suit_obj.data.vertices):
+        (i,j,l),(a,b,c),_=suit_refs[k]
+        mixed={}
+        for ref,share in ((i,a),(j,b),(l,c)):
+            for bone,weight in bone_weights.get(ref,{}).items(): mixed[bone]=mixed.get(bone,0)+weight*share
+        points.append((v.co.copy(),v.normal.copy(),mixed))
+    proxies['krama']=(krama(points,joint,rig),None,None)
+    driven=[body]+[proxies[n][0] for n in ['hair','brows','lashes','eyes','suit','krama']]
     shapes={o.name:{} for o in driven}
     def capture(name,objects=driven):
         for o in objects: shapes[o.name][name]=posed(o)
@@ -894,16 +1145,17 @@ def driver(black):
                 key.value=0  # at rest; the runtime drives each shape
         return baked
     baked=bake(body)
-    skin=character_skin('M_taxi_driver_skin',src,'old_lightskinned_male_diffuse2.png')
+    skin=character_skin('M_taxi_driver_skin',src,None,image=khmer_driver_skin(verts,faces,faceuv,uvs,joint),strength=.6)
     baked.materials.append(skin)
     for poly in baked.polygons: poly.use_smooth=True
-    for name in ['hair','brows','eyes','suit','lashes']: bake(proxies[name][0])
-    proxies['hair'][0].data.materials.append(proxy_material('M_taxi_driver_hair','short02_diffuse.png',.55,clip=True,tint=(.2,.18,.17),normal='short02_normal.png'))
+    for name in ['hair','brows','eyes','suit','lashes','krama']: bake(proxies[name][0])
+    proxies['krama'][0].data.materials.append(krama_material())
+    proxies['hair'][0].data.materials.append(proxy_material('M_taxi_driver_hair','short04_diffuse.png',.74,clip=True,tint=(.3,.29,.275)))
     proxies['brows'][0].data.materials.append(proxy_material('M_taxi_driver_brows','eyebrow002.png',.7,clip=True,tint=(.35,.3,.27)))
     proxies['lashes'][0].data.materials.append(proxy_material('M_taxi_driver_lashes','eyelashes01.png',.7,clip=True))
     proxies['eyes'][0].data.materials.append(proxy_material('M_taxi_driver_eye','brown_eye.png',.12,tint=(.82,.78,.72)))
     # Washed cotton shirt over faded dark trousers, split at his waist.
-    shirt=faded_cotton('M_taxi_driver_cotton',(.66,.62,.52)); trousers=faded_cotton('M_taxi_driver_trousers',(.13,.13,.12))
+    shirt=faded_cotton('M_taxi_driver_cotton',(.6,.56,.46),stains=1); trousers=faded_cotton('M_taxi_driver_trousers',(.13,.13,.12),stains=.6)
     suit_mesh=proxies['suit'][0].data; suit_mesh.materials.append(shirt); suit_mesh.materials.append(trousers)
     waist=place(Vector((0,hip.y+1.0,0))).z
     for poly in suit_mesh.polygons:
@@ -931,9 +1183,6 @@ def road_lateral(x,z):
         t+=((x-centre)*slope+z-t)/(1+slope*slope)
     angle=np.arctan(3.8*.018*np.cos(t*.018)+2.2*.037*np.cos(t*.037))
     return (x-3.8*np.sin(t*.018)-2.2*np.sin(t*.037))*np.cos(angle)-(z-t)*np.sin(angle)
-
-# Where the journey's set pieces stand, in metres along the route (TaxiApparitions reads the same).
-RITUAL_Z=212.0
 
 def roadside():
     bpy.ops.wm.open_mainfile(filepath=str(ART/'ep1_area_village.blend'))
@@ -992,66 +1241,55 @@ def roadside():
         mod=obj.modifiers.new('Distant canopy LOD','DECIMATE');mod.ratio=.4
         bpy.ops.object.modifier_apply(modifier=mod.name)
         templates['far_'+name]=obj;far_templates.append(obj)
-    # Keep the set pieces' ground clear of trunks so they read in the headlights.
-    def clearing(side,z):
-        if side>0 and abs(z-RITUAL_Z)<7: return True
-        return False
-    # Old-growth jungle closes both sides as tightly as at the village: giants with lianas,
-    # saplings under them, dead snags and termite mounds, and a second wall behind.
+    # Old growth closes both sides as Episode 2's forest does: rank after rank of tall
+    # giants, trunks behind trunks behind trunks, with only a little young growth, the odd
+    # sugar palm and dead snag under them, and almost no bamboo. Past the last modelled
+    # rank the runtime's far tree cards (taxiFarForest.ts) carry the forest on to the haze.
+    tallest=giants[len(giants)//2:]
     for side in [-1,1]:
         z=-24+float(rng.random()*6)
         while z<510:
-            kind=str(rng.choice(giants+['bamboo_0','coco_0','palm_0']+dead,p=None))
-            if kind in ['coco_0','palm_0','bamboo_0'] and rng.random()<.6: kind=str(rng.choice(giants))
-            if kind in dead and rng.random()<.5: kind=str(rng.choice(giants))
-            # Behind the rite the giants stand back and frame the clearing.
-            lateral=float(rng.uniform(9.5,12)) if clearing(side,z) else float(rng.uniform(4.2,9.5))
-            plant(kind,side*lateral,z,float(rng.uniform(.55,1.0) if kind in giants else rng.uniform(.8,1.15)))
-            z+=float(rng.uniform(3.0,5.2))
-        # A middle wall of full crowns, unshadowed like the far wall, fills the gaps between trunks.
+            kind=str(rng.choice(tallest)) if rng.random()<.6 else str(rng.choice(giants))
+            roll=rng.random()
+            if roll<.05: kind='palm_0'
+            elif roll<.11: kind=str(rng.choice(dead))
+            plant(kind,side*float(rng.uniform(4.2,9.0)),z,float(rng.uniform(.85,1.3) if kind in giants else rng.uniform(.85,1.15)))
+            z+=float(rng.uniform(3.2,5.4))
+        # A second rank of full giants close behind the first, offset so the gaps never line up.
+        z=-22+float(rng.random()*5)
+        while z<510:
+            plant(str(rng.choice(tallest)),side*float(rng.uniform(9.5,14)),z,float(rng.uniform(.9,1.3)))
+            z+=float(rng.uniform(3.8,6.0))
         z=-24+float(rng.random()*5)
         while z<510:
-            kind=str(rng.choice(giants))
-            plant('far_'+str(rng.choice(giants[-3:-1])),side*float(rng.uniform(9,13)),z,float(rng.uniform(.6,.95)))
-            z+=float(rng.uniform(4.0,6.5))
-        z=-24+float(rng.random()*5)
-        while z<510:
-            if not clearing(side,z):
-                # Young growth under the giants: snags, bamboo, sugar palms, the odd sapling.
-                kind=str(rng.choice(dead+['bamboo_0','palm_0',str(rng.choice(giants))],p=None))
-                scale=float(rng.uniform(.22,.38) if kind in giants else rng.uniform(.5,.85))
-                plant(kind,side*float(rng.uniform(3.6,6.5)),z,scale)
+            # Young growth under the giants: saplings, snags, sugar palms; bamboo only rarely.
+            roll=rng.random()
+            kind='bamboo_0' if roll<.02 else 'palm_0' if roll<.16 else str(rng.choice(dead)) if roll<.45 else str(rng.choice(giants))
+            scale=float(rng.uniform(.22,.4) if kind in giants else rng.uniform(.5,.85))
+            plant(kind,side*float(rng.uniform(3.6,6.5)),z,scale)
             z+=float(rng.uniform(4.5,7.5))
-        z=-24+float(rng.random()*4)
-        while z<510:
-            plant('far_'+str(rng.choice(giants[-3:-1])),side*float(rng.uniform(13,21)),z,float(rng.uniform(.6,1.0)))
-            z+=float(rng.uniform(4.5,7.0))
-        # Deeper still, sparser crowns, then painted walls of forest beyond them, so no
-        # gap or horizon ever opens between the trunks.
-        z=-24+float(rng.random()*6)
-        while z<510:
-            plant('far_'+str(rng.choice(giants[-3:-1])),side*float(rng.uniform(22,31)),z,float(rng.uniform(.8,1.15)))
-            z+=float(rng.uniform(6,9))
-        forest_wall(side,rng)
+        # Lighter crowns for the deeper ranks, ever taller towards the back.
+        for near,far,step,lo,hi in [(14,21,(4.0,6.0),.95,1.3),(21,29,(4.0,6.0),1.0,1.4),(29,37,(4.5,6.5),1.05,1.45)]:
+            z=-24+float(rng.random()*5)
+            while z<510:
+                plant('far_'+str(rng.choice(giants[-3:-1])),side*float(rng.uniform(near,far)),z,float(rng.uniform(lo,hi)))
+                z+=float(rng.uniform(*step))
         # A continuous understory and leaf-litter floor beyond the shoulder, as under the village canopy.
         z=-24+float(rng.random()*3)
         while z<510:
-            if clearing(side,z): z+=3; continue
             plant(str(rng.choice(understory)),side*float(rng.uniform(3.8,7.5)),z,float(rng.uniform(.9,1.25)))
             if rng.random()<.6: plant(str(rng.choice(litter)),side*float(rng.uniform(4,9)),z+float(rng.uniform(-2,2)),1.0)
             z+=float(rng.uniform(3.2,4.6))
         z=-24+float(rng.random()*3)
         while z<510:
-            if clearing(side,z): z+=3; continue
             plant(str(rng.choice(sedge)),side*float(rng.uniform(3.6,4.4)),z,float(rng.uniform(.7,1.0)))
             z+=float(rng.uniform(5,8))
         for i in range(420):
             z=float(rng.uniform(-24,510))
-            if clearing(side,z): continue
             plant(str(rng.choice(small)),side*float(rng.uniform(3.4,9)),z,float(rng.uniform(.65,1.35)))
         for i in range(26):
             z=float(rng.uniform(-20,505))
-            if not clearing(side,z): plant(str(rng.choice(mounds)),side*float(rng.uniform(5,12)),z,float(rng.uniform(.7,1.1)))
+            plant(str(rng.choice(mounds)),side*float(rng.uniform(5,12)),z,float(rng.uniform(.7,1.1)))
         z=-24+float(rng.random()*4)
         while z<510:
             plant('fern_02_a.001',side*float(rng.uniform(3.5,4.2)),z,float(rng.uniform(.4,.72)))
@@ -1071,7 +1309,6 @@ def roadside():
         plant(guard,side*4.1,z,1,yaw=math.pi if side>0 else 0,clear=3.4,label='guardian_'+guard,ground=True,lift=-.22)
     for z,side in [(38,-1),(238,-1),(438,-1)]:
         plant('milestone',side*3.45,z,1,yaw=math.pi/2,clear=None,label='milestone_'+str(z),lift=-.2,ground=True)
-    roadside_rite(dead[-1],plant,mats,rng)
     for obj in far_templates:bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.scenes.remove(original)
     bpy.data.orphans_purge(do_recursive=True)
@@ -1084,44 +1321,6 @@ def smooth(obj):
     # Shared smooth normals keep one vertex per grid point instead of four.
     for poly in obj.data.polygons: poly.use_smooth=True
     return obj
-
-FOREST_WALL=None
-def forest_wall(side,rng):
-    """Overlapping cut-out cards of trunks, lianas and canopy at 34 and 44 metres, black-
-    green under the storm: the forest goes on past the far plane on both sides."""
-    global FOREST_WALL
-    if FOREST_WALL is None:
-        n=512; r=np.random.default_rng(77); alpha=np.zeros((n,n)); shade=np.zeros((n,n))
-        yy,xx=np.mgrid[:n,:n]/n
-        for k in range(26):  # trunks, a few leaning, flaring at the foot
-            x0=r.uniform(0,1); w=r.uniform(.006,.03); lean=r.normal(0,.03)
-            d=np.abs(xx-(x0+lean*(1-yy)))-w*(1+1.5*np.clip(.15-yy,0,1)/.15)
-            alpha=np.maximum(alpha,(d<0)*(yy<r.uniform(.55,.85))); shade+=(d<0)*r.uniform(-.2,.2)
-        for k in range(60):  # canopy masses
-            cx,cy,rad=r.uniform(-.05,1.05),r.uniform(.45,.98),r.uniform(.05,.16)
-            alpha=np.maximum(alpha,((xx-cx)**2+((yy-cy)*1.3)**2<rad**2)*1.0)
-        for k in range(40):  # undergrowth along the foot
-            cx,cy,rad=r.uniform(0,1),r.uniform(-.02,.12),r.uniform(.03,.08)
-            alpha=np.maximum(alpha,((xx-cx)**2+((yy-cy)*2)**2<rad**2)*1.0)
-        ragged=r.random((n,n))<.86
-        alpha=alpha*np.where(yy>.5,ragged,1)
-        colour=np.stack([.012+.004*shade,.019+.006*shade,.014+.004*shade],axis=-1).clip(0,1)
-        rgba=np.concatenate([colour,alpha[...,None]],axis=-1)
-        img=bpy.data.images.new('T_taxi_forest_wall',width=n,height=n,alpha=True)
-        img.pixels.foreach_set(rgba.astype(np.float32).ravel())
-        img.filepath_raw=str(TEX/'T_taxi_forest_wall_BC.png'); img.file_format='PNG'; img.save()
-        mat=plain('M_taxi_forest_wall',(1,1,1),.95); nodes=mat.node_tree.nodes; bs=nodes['Principled BSDF']
-        t=nodes.new('ShaderNodeTexImage'); t.image=img; mat.node_tree.links.new(t.outputs['Color'],bs.inputs['Base Color'])
-        cut=nodes.new('ShaderNodeMath'); cut.operation='GREATER_THAN'; cut.inputs[1].default_value=.5
-        mat.node_tree.links.new(t.outputs['Alpha'],cut.inputs[0]); mat.node_tree.links.new(cut.outputs[0],bs.inputs['Alpha'])
-        mat.use_backface_culling=False; FOREST_WALL=mat
-    for lateral,width,height in [(34,18,24),(44,22,30)]:
-        z=-30+float(rng.random()*8)
-        while z<520:
-            l=lateral+float(rng.uniform(-2,2)); w_=width*float(rng.uniform(.85,1.15)); h=height*float(rng.uniform(.85,1.1))
-            corners=[road_point(side*l,-.4,z),road_point(side*l,-.4,z+w_),road_point(side*l,h,z+w_),road_point(side*l,h,z)]
-            o=quad('taxi_road_far_tree_wall',corners if side>0 else [corners[1],corners[0],corners[3],corners[2]],FOREST_WALL)
-            z+=w_*float(rng.uniform(.55,.75))
 
 def road_surface(mats,rng):
     """A laterite cart track: two deep wheel ruts with mud pushed up beside them, a grassy
@@ -1256,86 +1455,6 @@ def telegraph_line(mats,rng):
             for i in range(13):
                 t=i/12; v=p.lerp(q,t); v.y-=sag*4*t*(1-t); points.append(tuple(v))
             tube('taxi_telegraph_wire',points,.0045,iron)
-
-def roadside_rite(dead,plant,mats,rng):
-    """A sending-away rite left where the forest meets the road (advisor review): a lone
-    dead tree bound in white cloth, the spirit house and offerings at its foot, flags,
-    a Ting Mong keeping watch, and inside a ring of bamboo stakes and white thread a
-    banana-stem raft carrying a cloth-wrapped effigy among candles still burning in the rain."""
-    z0=RITUAL_Z
-    cotton=mats.get('M_funeral_linen',mats.get('M_tent_cotton')); thread=mats.get('M_white_thread',cotton)
-    bamboo=mats.get('M_bamboo',mats['M_wet_bark']); banana=mats.get('M_banana_stem',bamboo)
-    leaf=mats.get('M_shrine_folded_banana_leaf',mats.get('M_banana_leaf',banana))
-    wax=mats.get('M_candle_wax',mats.get('M_funeral_wax',cotton)); clay=mats.get('M_shrine_clay',mats.get('M_clay',cotton))
-    incense=mats.get('M_incense',bamboo); red=mats.get('M_wet_cloth_red',cotton); ash=mats.get('M_shrine_ash',clay)
-    flame=plain('M_taxi_ritual_flame',(1,.62,.25),.5,emission=(1,.55,.18),strength=6)
-    tree=plant(dead,7.6,z0+1.0,1.2,yaw=.3,clear=6.4,label='rite_dead_tree')
-    if tree:
-        foot=tree.matrix_world.translation
-        bark=Vector((-foot.x,foot.z,-foot.y))
-        for h,r in [(1.05,.42),(1.22,.44),(1.4,.41)]:
-            tube('taxi_rite_trunk_cloth',[tuple(bark+Vector((math.cos(a)*r,h+.03*math.sin(a*3),math.sin(a)*r))) for a in [i/24*math.tau for i in range(25)]],.06,cotton)
-    plant('spirit_house',4.3,z0-2.9,1,yaw=-1.57,clear=None,label='rite_spirit_house',lift=-.18,ground=True)
-    plant('ground_offering_0',4.15,z0-1.4,1,yaw=0,clear=None,label='rite_offering_0',lift=-.2,ground=True)
-    plant('ground_offering_1',4.2,z0-3.0,1,yaw=.6,clear=None,label='rite_offering_1',lift=-.2,ground=True)
-    plant('old_flag_1',4.4,z0-5.0,1,yaw=.2,clear=None,label='rite_flag_0',ground=True,lift=-.25)
-    plant('old_flag_3',5.2,z0+5.2,1,yaw=-.3,clear=None,label='rite_flag_1',ground=True,lift=-.25)
-    plant('tingmong_1',4.3,z0+3.8,1,yaw=math.pi,clear=None,label='rite_tingmong',ground=True,lift=-.22)
-    plant('path_threads_1',4.15,z0+.2,1,yaw=math.pi/2,clear=None,label='rite_threads',lift=.15)
-    # The ring: ten bamboo stakes with a white cotton cord run three times round their tops.
-    cx=5.4; r=1.45; stakes=[]
-    for i in range(10):
-        a=i/10*math.tau+.2
-        lat=cx+math.cos(a)*r; zz=z0+math.sin(a)*r*1.25; h=float(rng.uniform(.68,.86)); tilt=float(rng.normal(0,.04))
-        tube('taxi_rite_stake',[road_point(lat,-.3,zz),road_point(lat+tilt,h-.2,zz+tilt)],.018,bamboo)
-        stakes.append((lat+tilt,h-.24,zz+tilt))
-    for loop,drop in enumerate([0,.08,.16]):
-        points=[]
-        for i in range(11):
-            a=stakes[i%10]; b=stakes[(i+1)%10]
-            points.append(road_point(a[0],a[1]-drop,a[2]))
-            points.append(road_point((a[0]+b[0])/2,(a[1]+b[1])/2-drop-.05,(a[2]+b[2])/2))
-        if loop==2: points=points[:13]+[road_point(stakes[6][0]-.1,-.2,stakes[6][2]+.15)]  # snapped, trailing in the mud
-        tube('taxi_rite_cord',points,.0045,thread)
-    # Banana-stem raft carrying a life-size effigy bound in white cloth, its face covered.
-    for k,dx in enumerate([-.2,-.07,.07,.2]):
-        tube('taxi_rite_raft_stem',[road_point(cx+dx,-.17,z0-1.0),road_point(cx+dx,-.17,z0+1.0)],.07,banana)
-    for dz in [-.75,0,.75]:
-        tube('taxi_rite_raft_pin',[road_point(cx-.32,-.12,z0+dz),road_point(cx+.32,-.12,z0+dz)],.009,bamboo)
-    body=[(-.62,.07,.17,.14),(-.42,.1,.3,.15),(-.15,.11,.34,.16),(.12,.1,.3,.15),(.38,.08,.24,.13),(.62,.06,.18,.11)]
-    for along,height,width,length in body:
-        ellipsoid('taxi_rite_effigy_wrap',road_point(cx,-.05+height*.5,z0+along),(width,height*1.6,length*2.4),cotton)
-    ellipsoid('taxi_rite_effigy_head',road_point(cx,.0,z0-.86),(.2,.17,.22),cotton)
-    for along in [-.86,-.7,-.48,-.2,.1,.36,.6,.78]:
-        loop=[road_point(cx+math.cos(a)*.16,-.02+math.sin(a)*.1,z0+along) for a in [i/18*math.tau for i in range(19)]]
-        tube('taxi_rite_effigy_binding',loop,.004,thread)
-    ellipsoid('taxi_rite_effigy_red_cloth',road_point(cx,.0,z0+.74),(.3,.07,.26),red)
-    # Two bamboo poles hung with long white banners at the road edge catch the headlights first.
-    for k,(lat,zz,h) in enumerate([(3.65,z0-1.6,3.1),(3.75,z0+1.9,2.7)]):
-        tube('taxi_rite_banner_pole',[road_point(lat,-.3,zz),road_point(lat+.05,h,zz+.04)],.025,bamboo)
-        vs=[];fs=[]
-        for i in range(13):
-            t=i/12; y=h-.12-t*1.9; sway=.06*math.sin(t*4+k)*t
-            for u in [-.13,.13]: vs.append(road_point(lat+.04+sway,y,zz+.04+u+.02*math.sin(t*7)))
-        for i in range(12): a=i*2; fs.append((a,a+1,a+3,a+2))
-        banner=mesh('taxi_rite_banner',vs,fs,cotton)
-    cotton.use_backface_culling=False
-    # Banana-leaf cones, a clay bowl of incense ash, and candles round the raft and the stakes.
-    for k in range(8):
-        a=k/8*math.tau+.4; lat=cx+math.cos(a)*.72; zz=z0+math.sin(a)*1.15
-        ellipsoid('taxi_rite_leaf_cone',road_point(lat,-.06,zz),(.08,.24,.08),leaf)
-    ellipsoid('taxi_rite_bowl',road_point(cx-.75,-.2,z0-.1),(.26,.11,.26),clay)
-    ellipsoid('taxi_rite_ash',road_point(cx-.75,-.15,z0-.1),(.22,.02,.22),ash)
-    for k in range(11):
-        a=float(rng.uniform(0,math.tau)); rr=float(rng.uniform(0,.08)); tilt=float(rng.normal(0,.05))
-        base=road_point(cx-.75+math.cos(a)*rr,-.16,z0-.1+math.sin(a)*rr)
-        tube('taxi_rite_incense',[base,(base[0]+tilt,base[1]+.26,base[2]+tilt*.5)],.003,incense)
-    spots=[(-.5,-1.15),(.5,-1.15),(-.5,1.15),(.5,1.15),(-.95,.4),(.95,-.3),(.8,.6)]
-    spots+=[(stake[0]-cx+.06,stake[2]-z0) for stake in stakes[::2]]
-    for k,(dx,dz) in enumerate(spots):
-        h=float(rng.uniform(.09,.18)); base=road_point(cx+dx,-.2,z0+dz)
-        tube('taxi_rite_candle',[base,(base[0],base[1]+h,base[2])],.013,wax)
-        ellipsoid('taxi_rite_candle_flame',(base[0],base[1]+h+.024,base[2]),(.013,.036,.013),flame)
 
 mode=sys.argv[sys.argv.index('--')+1] if '--' in sys.argv else 'all'
 if mode in ['all','roadside']: roadside()

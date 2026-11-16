@@ -27,7 +27,9 @@ def material(name, color, rough=.9):
     return m
 
 
-def anatomy(name, seated=False, variant=0):
+def anatomy(name, seated=False, variant=0, rest=False):
+    """The sculpted body. `rest` keeps MakeHuman's own skeleton and weights instead of baking
+    the shrine pose: the rig is returned too, for a figure that moves (build-neakta-roadside.py)."""
     verts,uvs,faces,faceuv=[],[],[],[];group=''
     for line in (SRC/'base.obj').read_text().splitlines():
         a=line.split()
@@ -98,7 +100,7 @@ def anatomy(name, seated=False, variant=0):
         q=current.rotation_difference(Vector(direction).normalized()) @ b.matrix.to_quaternion()
         b.matrix=Matrix.LocRotScale(b.head,q,b.matrix.to_scale())
         bpy.context.view_layer.update()
-    for side,sign in [('L',1),('R',-1)]:
+    for side,sign in ([] if rest else [('L',1),('R',-1)]):
         aim('upperarm01.'+side,(sign*(.65 if seated else .30),-.90,.02))
         aim('lowerarm01.'+side,(sign*.08,-.50,.65) if seated else (sign*.18,-1,.055))
         for finger in range(1,6):
@@ -108,10 +110,11 @@ def anatomy(name, seated=False, variant=0):
             aim('upperleg01.'+side,(sign*.95,-.12,.62))
             aim('lowerleg01.'+side,(-sign*.96,-.08,-.10))
             aim('foot.'+side,(-sign*.9,0,.10))
-    rotate('spine01',(1,0,0),7 if seated else 13)
-    rotate('neck01',(1,0,0),-4 if seated else 5)
-    rotate('head',(0,0,1),(-3 if variant else 2) if seated else -4)
-    rotate('head',(1,0,0),-5 if seated else -4)
+    if not rest:
+        rotate('spine01',(1,0,0),7 if seated else 13)
+        rotate('neck01',(1,0,0),-4 if seated else 5)
+        rotate('head',(0,0,1),(-3 if variant else 2) if seated else -4)
+        rotate('head',(1,0,0),-5 if seated else -4)
     bpy.context.view_layer.update()
     posed=body.evaluated_get(bpy.context.evaluated_depsgraph_get());posedmesh=posed.to_mesh()
     coords=[v.co.copy() for v in posedmesh.vertices];posed.to_mesh_clear()
@@ -121,7 +124,15 @@ def anatomy(name, seated=False, variant=0):
     coords=[convert(v) for v in coords];bottom=min(v.z for v in coords)
     for v in coords:v.z-=bottom
     for v,p in zip(mesh.vertices,coords):v.co=p
-    mesh.update();body.modifiers.clear();bpy.data.objects.remove(rig,do_unlink=True)
+    mesh.update();body.modifiers.clear()
+    if rest:
+        # The skeleton follows the body into metres, Z up, feet on the floor.
+        bpy.context.view_layer.objects.active=rig;bpy.ops.object.mode_set(mode='EDIT')
+        for n,b in rd['bones'].items():
+            bone=arm.edit_bones[n];bone.head=convert(joint(b['head']))-Vector((0,0,bottom));bone.tail=convert(joint(b['tail']))-Vector((0,0,bottom))
+        bpy.ops.object.mode_set(mode='OBJECT')
+    else:
+        bpy.data.objects.remove(rig,do_unlink=True)
     # One subdivision is baked: round eyelids, nostrils, ears and knuckles.
     bpy.context.view_layer.objects.active=body
     sub=body.modifiers.new('Sculpt_surface','SUBSURF');sub.levels=1;bpy.ops.object.modifier_apply(modifier=sub.name)
@@ -134,7 +145,7 @@ def anatomy(name, seated=False, variant=0):
     for face in filled.get('faces',[]):face.material_index=0
     bm.to_mesh(body.data);bm.free();body.data.update()
     eyes=[convert(v)-Vector((0,0,bottom)) for v in eyes]
-    return body,eyes
+    return (body,eyes,rig) if rest else (body,eyes)
 
 
 def painted_material(body):
