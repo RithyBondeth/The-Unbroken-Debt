@@ -14,9 +14,8 @@ import { PhoneBell } from "../audio/PhoneBell";
 import { studioRoom } from "@/audio/sounds/dreadSounds";
 import { newGameSave } from "@/systems/saves/SaveData";
 import { INK_BLOT_ENTRY, KIT, LINES, STARTING_MATCHES, TIMING, type Line } from "../data/prologue";
-import { StudioLights } from "./Studio";
+import { loadStudioLightmap, StudioLights } from "./Studio";
 import { Rain } from "@/render/weather/Rain";
-import { DRAWING_VIEW_RADIUS, drawingFocus } from "@/player/drawingPose";
 import { InkMarks } from "./InkMarks";
 import { t, type StringKey } from "@/data/strings";
 import { Objectives, type Objective } from "@/ui/html/StoryUi";
@@ -61,7 +60,7 @@ type SoundMaker = (sampleRate: number, rand: () => number) => Float32Array;
 export class Prologue {
   area!: Area;
   lights!: StudioLights;
-  private rain!: Rain;
+  private readonly rain: Rain[] = [];
   private ink!: InkMarks;
   private readonly waiting = new Map<string, () => void>();
   private readonly loops: StaticSound[] = [];
@@ -95,12 +94,19 @@ export class Prologue {
         "matchbox",
         /^letter_\d/,
         /^desk_lamp_/,
+        /^window_glass/,
+        // Lamp fixtures stay apart so their own lights can leave them out (Studio.ts).
+        /^sconce_/,
+        /^airwell_bulb/,
+        /^back_room_pendant/,
       ],
     });
     this.details = new StudioDetails(game.scene, this.area);
-    this.lights = new StudioLights(game.scene, this.area, game.preset);
-    const glass = game.scene.getMeshByName("window_glass");
-    if (glass) this.rain = new Rain(game.scene, glass);
+    const lightmap = await loadStudioLightmap(game.scene, game.preset);
+    this.lights = new StudioLights(game.scene, this.area, game.preset, lightmap);
+    // Rain runs down the glass of both balcony doors.
+    for (const glass of game.scene.meshes.filter((m) => /^window_glass/.test(m.name)))
+      this.rain.push(new Rain(game.scene, glass));
     this.ink = new InkMarks(game.scene, this.mesh(ILLUSTRATION), game.hands);
 
     // The lantern has open space through its centre. Give the whole visible
@@ -138,14 +144,18 @@ export class Prologue {
     }
     if (game.flags.get("ep1.studio.drawerOpen", false)) this.openDrawer(true);
 
+    // The illustration is no longer something to use (the opening drawing beat was
+    // cut in November 2026): it is simply there, half inked, until the ink spills.
     for (const { name, node } of this.area.level.interactables)
-      if (node.isEnabled()) game.interaction.add(name, node);
+      if (node.isEnabled() && name !== ILLUSTRATION) game.interaction.add(name, node);
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
-    new SavePoint(game, "interact_save_studio", new Vector3(-0.18, 0.8, -3.12), "STUDIO", () =>
+    const savePoint =
+      this.area.level.markers.get("save_studio")?.position.clone() ??
+      new Vector3(-0.18, 0.8, -3.12);
+    new SavePoint(game, "interact_save_studio", savePoint, "STUDIO", () =>
       game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
     );
     game.bus.on("interact:focus", ({ id }) => {
-      if (id === ILLUSTRATION) game.hints.show("hint.use");
       if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
       if (id === "matchbox") game.hints.show("hint.takeMatches", 8);
       if (id === PHONE) {
@@ -172,7 +182,7 @@ export class Prologue {
     this.playTime += dt;
     this.lights.update(dt);
     this.details.updateTelephoneCord(game.hands.phoneCordPoint);
-    this.rain?.update(dt, this.lights.lightning.intensity / 60);
+    for (const rain of this.rain) rain.update(dt, this.lights.lightning.intensity / 60);
     this.ink.update(dt);
     this.score.update(dt);
     this.bell.update(dt);
@@ -196,26 +206,17 @@ export class Prologue {
     });
     await this.makeSounds();
 
-    // P01: rain, the storm and the desk lamp. Pencil hints if the player sits still.
+    // P01: rain, the storm and the desk lamp; Sora at her drafting table, the Wat
+    // Phnom illustration inked to the middle. Look and move hints if she sits still.
     void game.fade.to(0, 3);
     game.cutscene = false;
-    game.interaction.allow = (id) => id === ILLUSTRATION || id === "interact_save_studio";
+    game.interaction.allow = () => true;
     void this.idleHints();
+    void this.ink.inkLine(0.01);
 
     game.flags.set("ep1.opening.version", 2);
     if (!game.flags.has("game.run")) game.flags.set("game.run", crypto.randomUUID());
     if (!game.resumedSave) await this.saveProgress("Studio · Drafting table");
-    // Completed studio beats do not replay after a reload.
-    if (!game.flags.get("ep1.illustration.inked", false)) {
-      this.objectives.show([{ text: t("objective.drawing") }]);
-      await this.used(ILLUSTRATION);
-      game.cutscene = true;
-      await this.drawIllustration();
-      game.flags.set("ep1.illustration.inked", true);
-      game.cutscene = false;
-      await this.saveProgress("Studio · Packing for home");
-    } else void this.ink.inkLine(0.01);
-    game.interaction.allow = () => true;
 
     // P03–P04: the drawer, the letters and the kit, in any order (see onUse).
     this.objectives.show(this.packingList());
@@ -256,27 +257,6 @@ export class Prologue {
     await this.used(DOOR);
     this.objectives.hide();
     await this.leave();
-  }
-
-  private async drawIllustration(): Promise<void> {
-    const game = this.game;
-    const yaw = game.player.yaw,
-      pitch = game.player.pitch;
-    const heldStill = game.gated.holdStill,
-      heldLook = game.gated.holdLook;
-    game.inspectObject(drawingFocus(this.mesh(ILLUSTRATION)), DRAWING_VIEW_RADIUS);
-    game.gated.holdStill = true;
-    game.gated.holdLook = true;
-    try {
-      this.play("pen");
-      await this.ink.inkLine(3.6);
-    } finally {
-      game.stopInspecting();
-      game.player.yaw = yaw;
-      game.player.pitch = pitch;
-      game.gated.holdStill = heldStill;
-      game.gated.holdLook = heldLook;
-    }
   }
 
   private async phoneCall(): Promise<void> {
@@ -364,8 +344,14 @@ export class Prologue {
     this.waiting.delete(id);
 
     const pickup = PICKUPS[id];
-    if (pickup) return void this.take(id, pickup.item, pickup.count);
-    if (id === DRAWER && !this.drawerOpen) return this.openDrawer();
+    if (pickup) {
+      void this.take(id, pickup.item, pickup.count);
+      return void setTimeout(() => this.lights.refreshShadows(), 600);
+    }
+    if (id === DRAWER && !this.drawerOpen) {
+      setTimeout(() => this.lights.refreshShadows(), 600);
+      return this.openDrawer();
+    }
     if (
       (id === PHONE || id === DOOR) &&
       !this.ringing &&

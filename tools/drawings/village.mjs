@@ -19,7 +19,7 @@ import { join } from "node:path";
 const ARCHIVE = join("art-source", "library", "archive");
 
 /** Helpers shared by every painter, defined again inside each page. */
-const LIB = String.raw`
+export const LIB = String.raw`
 function rng(seed) {
   let a = seed >>> 0;
   const next = () => {
@@ -83,7 +83,7 @@ function hardAlpha(ctx, w, h, cut = 110) {
 `;
 
 /** A page that runs `painter(ctx, w, h, data)` on a w x h canvas; `uses` are painters it calls. */
-function canvasPage(w, h, painter, data = null, uses = []) {
+export function canvasPage(w, h, painter, data = null, uses = []) {
   return `<canvas id="c" width="${w}" height="${h}"></canvas><script>${LIB}
 ${uses.map((f) => f.toString()).join("\n")}
 const DATA = ${JSON.stringify(data)};

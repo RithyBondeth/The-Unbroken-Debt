@@ -1,543 +1,1888 @@
-"""Builds Sora's studio in Phnom Penh (Episode 1 prologue) as a near-final room.
+"""Builds Sora's floor of a Phnom Penh shophouse (Episode 1 prologue), 8 PM, 1932.
 
-Episode 1 Beat Sheet 4.1: a single room 6 x 5 m, ceiling 3.2 m, on the third floor
-of a 1930s shophouse; one door (east), one tall window (south); drafting table
-under the window, desk with drawer on the west wall, shelf with candle and
-satchel (north), brass wall telephone and coat hook with the hurricane lamp by the
-door, wall clock above the desk.
+The top floor of a Sino-Khmer shophouse: long and narrow between masonry party walls.
+- Front studio (south, 4.6 x 6 m): two tall French doors onto the street balcony,
+  the drafting table under the east door, the writing desk with its drawer on the
+  west wall, a plan chest and bookcase, a tea corner, and the period prints on the
+  walls (real public-domain posters, postcards and photographs, 1906-1921).
+- Airwell (3 m): open to the sky, the rain falling into a sunken basin with water
+  jars and plants; covered walkways round it; the stairs down (the way out, behind
+  a child gate), the wall telephone and the hurricane lamp on its hook.
+- Back room (north, 4.6 x 4.8 m): the bed under its mosquito net, a wardrobe, the
+  washstand and mirror, the family altar shelf.
+Clean, swept and old: cement tiles, limewash over a painted dado, worn teak.
 
-Library models and materials come from art-source/library/ (CC0, Poly Haven;
-`npm run fetch-library`); the rest is modelled here. Run (repository root):
+The writing desk, its drawer and the drafting table stand where the prologue's code
+expects them (Blender (x, y, z) is runtime (-x, z, -y)).
+
+Library models and materials: art-source/library/ (CC0, Poly Haven; `npm run
+fetch-library`), decimated to a polygon budget each. Prints: tools/drawings/studio.mjs
+(`npm run drawings -- ep1`), laid out by tools/areas/studio_prints.json. Run:
     blender -b --factory-startup -P tools/areas/ep1_area_studio.py
-Sora's drawings and the prints on the walls are rendered first by
-`npm run drawings -- ep1` (tools/drawings/ep1.mjs, with Khmer lettering) into
-art-source/textures/ep1/. This writes art-source/blender/ep1/ep1_area_studio.blend;
-then `npm run export -- ep1 && npm run assets -- ep1`.
-
-Blender axes: X east, Y north, Z up; metres. Object names follow the Technical
-Design Document, section 7.1 (col_, interact_, spawn_, light_flame_, marker_).
+    blender -b art-source/blender/ep1/ep1_area_studio.blend -P tools/areas/bake_studio_lightmap.py
+    npm run export -- ep1 && npm run assets -- ep1
+Blender axes: X east, Y north, Z up; metres. Names follow the TDD, section 7.1.
 """
 
+import json
 import math
 import os
 import sys
 
 import bpy
+import mathutils
+import mathutils.bvhtree
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 from kit import *  # noqa: E402,F403  (shared materials and geometry)
 
 BLEND = os.path.join(ROOT, "art-source", "blender", "ep1", "ep1_area_studio.blend")
+PRINTS = json.load(open(os.path.join(os.path.dirname(__file__), "studio_prints.json")))
 
-W, D, H = 6.0, 5.0, 3.2
-WALL = 0.2
-DOOR = {"y0": 2.0, "y1": 3.0, "top": 2.25}
-WINDOW = {"x0": 2.25, "x1": 3.75, "bottom": 0.75, "top": 2.85}
+W = 4.6                      # inside width between the party walls
+PARTY = 0.3                  # party wall thickness
+H = 3.4                      # ceiling height in the rooms
+FRONT = 6.0                  # front studio depth (y 0..6)
+P1 = (6.0, 6.12)             # timber partition between studio and airwell
+AIR = (6.12, 9.12)           # airwell zone
+P2 = (9.12, 9.27)            # masonry wall between airwell and back room
+BACK = 14.0                  # back room's north wall (inside face)
+FACADE = 0.3                 # street facade thickness (y -0.3..0)
+DOORS = [(0.75, 1.65), (2.95, 3.85)]   # French doors onto the balcony
+DOOR_TOP = 2.72
+FAN_TOP = 3.18               # fanlight above each door
+P1_DOOR = (0.15, 1.15)       # studio -> airwell walkway
+P2_DOOR = (0.15, 1.05)       # walkway -> back room
+WALK = 0.8                   # covered walkway width along the airwell's south side
+COURT = (1.15, 3.35)         # open basin, x
+STAIR = (3.45, 4.5, 7.0, 9.05)  # stair opening x0, x1, y0, y1 (going down northwards)
+DADO = 1.05
+
 rng = np.random.default_rng(1932)
+area = None
+m = {}
 
 
-# ------------------------------------------------------------------- room
+# =============================================================== helpers
 
 
-def build():
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    area = bpy.data.collections.new("ep1_area_studio")
-    bpy.context.scene.collection.children.link(area)
-    layer = bpy.context.view_layer.layer_collection.children[area.name]
-    bpy.context.view_layer.active_layer_collection = layer
-    os.makedirs(TEXTURES, exist_ok=True)
+def lib(model_id, location, rot_deg=0.0, name=None, collide=True, scale=1.0, budget=6000, **props):
+    """A library model, decimated to about `budget` faces (Poly Haven scans arrive with
+    up to 200k faces; at room scale 6k is plenty)."""
+    parent = import_model(area, model_id, location, rot_deg, name=name, collide=collide, scale=scale, **props)
+    return fit_budget(parent, budget)
 
-    m = {
-        "floor": library_material("floor_tiles_06", "M_studio_floor_tiles"),
-        "plaster": library_material("yellow_plaster", "M_studio_plaster"),
-        "ceiling": library_material("dark_wooden_planks", "M_studio_ceiling"),
-        "wood": library_material("dark_wood", "M_dark_wood"),
-        "teak": library_material("teak_veneer", "M_teak_veneer"),
-        "worn": library_material("wood_table_worn", "M_wood_worn"),
-        "linen": library_material("rough_linen", "M_linen", colour=(0.78, 0.72, 0.6)),
-        "krama": library_material("fabric_pattern_07", "M_krama"),
-        "rug": library_material("quatrefoil_jacquard_fabric", "M_rug", tint=(0.75, 0.6, 0.5)),
+
+PROPS = []   # every imported model, for shrink_prop_textures()
+
+
+def fit_budget(parent, budget):
+    PROPS.append(parent)
+    meshes = [o for o in parent.children_recursive if o.type == "MESH"]
+    # Library glass (lamp chimneys) arrives alpha-blended; Blender 5's exporter only keeps
+    # that if the material renders blended, otherwise the chimney comes out black.
+    for o in meshes:
+        for slot in o.material_slots:
+            mat = slot.material
+            if mat and any(k in mat.name.lower() for k in ("glass", "flame")) and hasattr(mat, "surface_render_method"):
+                mat.surface_render_method = "BLENDED"
+    faces = sum(len(o.data.polygons) for o in meshes)
+    if faces > budget:
+        ratio = budget / faces
+        for o in meshes:
+            if o.data.users > 1:
+                o.data = o.data.copy()
+            mod = o.modifiers.new("budget", "DECIMATE")
+            mod.ratio = max(ratio, 0.02)
+            mod.use_collapse_triangulate = True
+    return parent
+
+
+def shrink_prop_textures():
+    """Texture size to suit each model's size in the room: a lime or a spoon does not need
+    the 1K maps a table has (each 1K normal map is about 1.3 MB in the game's download).
+    A texture shared by several models keeps the size its largest user needs."""
+    bpy.context.view_layer.update()
+    need = {}
+    for parent in PROPS:
+        pts = [o.matrix_world @ mathutils.Vector(c) for o in parent.children_recursive if o.type == "MESH" for c in o.bound_box]
+        if not pts:
+            continue
+        size = max(max(p[k] for p in pts) - min(p[k] for p in pts) for k in range(3))
+        cap = 256 if size < 0.2 else 512 if size < 0.55 else 1024
+        if parent.name.startswith("interact_"):
+            cap = 1024   # picked up and seen close
+        for o in parent.children_recursive:
+            for slot in getattr(o, "material_slots", []):
+                if not slot.material or not slot.material.node_tree:
+                    continue
+                for nd in slot.material.node_tree.nodes:
+                    if nd.type == "TEX_IMAGE" and nd.image:
+                        need[nd.image] = max(need.get(nd.image, 0), cap)
+    shrunk = 0
+    for img, cap in need.items():
+        w, h = img.size
+        if max(w, h) > cap:
+            k = cap / max(w, h)
+            img.scale(max(1, round(w * k)), max(1, round(h * k)))
+            img.pack()
+            shrunk += 1
+    print(f"shrank {shrunk} prop textures")
+
+
+def scan(key, location, rot_deg=0.0, name=None, collide=True, scale=1.0, budget=None):
+    """A Sketchfab scan from art-source/library/scans (CC BY; downloads need an account,
+    so they are kept in LFS rather than fetched). tools/areas/studio_scans.py has already
+    stood each one on its base centre at the origin, at life size in metres, and reduced it.
+    It is not decimated again here: a photo scan's fragmented texture layout tears apart
+    when it is (the glazed jar came out like crumpled foil). Returns None when the scan is
+    not there, so the build still runs without it."""
+    path = os.path.join(LIB, "scans", f"{key}.glb")
+    if not os.path.exists(path):
+        print(f"scan {key} is not in art-source/library/scans; left out")
+        return None
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path)
+    new = [o for o in bpy.data.objects if o not in before]
+    parent = empty(name or f"prop_{key}", area, location, (0, 0, math.radians(rot_deg)))
+    parent.scale = (scale, scale, scale)
+    for obj in new:
+        for c in list(obj.users_collection):
+            c.objects.unlink(obj)
+        area.objects.link(obj)
+        if obj.parent is None:
+            obj.parent = parent
+    bpy.context.view_layer.update()
+    if collide:
+        pts = [o.matrix_world @ v.co for o in new if o.type == "MESH" for v in o.data.vertices]
+        xs, ys, zs = [p.x for p in pts], [p.y for p in pts], [p.z for p in pts]
+        collider(name or key, area, min(xs), max(xs), min(ys), max(ys), min(zs), max(zs))
+    return fit_budget(parent, budget or 10**9)
+
+
+def surface_z(x, y, z_from=H - 0.25):
+    """Height of the first surface below (x, y, z_from), ignoring collision boxes: props
+    are set down on whatever shelf board or table top the scanned furniture really has."""
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    origin = mathutils.Vector((x, y, z_from))
+    down = mathutils.Vector((0, 0, -1))
+    for _ in range(12):
+        hit, loc, _n, _i, obj, _m = bpy.context.scene.ray_cast(depsgraph, origin, down)
+        if not hit:
+            return 0.0
+        if obj.name.startswith("col_") or obj.type != "MESH":
+            origin = loc + down * 0.002
+            continue
+        return loc.z
+    return 0.0
+
+
+def set_down(model_id, x, y, rot=0.0, z_from=H - 0.25, scale=1.0, budget=1500, name=None, lift=0.0):
+    """A small library prop stood on the surface below (x, y, z_from)."""
+    z = surface_z(x, y, z_from)
+    return lib(model_id, (x, y, z + lift), rot, name=name, collide=False, scale=scale, budget=budget)
+
+
+def plain_paint(name, colour, rough=0.75):
+    return plain(name, colour, rough=rough)
+
+
+def atlas_material(key):
+    spec = PRINTS["atlases"][key]
+    return image_material(f"M_studio_print_{key}", os.path.join(TEXTURES, f"{spec['file']}.png"), rough=0.92)
+
+
+def print_sheet(name, key, item, centre, right, up, width, thickness=0.0012, tilt=0.0, mat=None):
+    """A printed sheet (or card) on a wall: `right`/`up` are world directions across its
+    face as seen by someone looking at it; its face shows `item`'s rect in atlas `key`.
+    The height follows the rect's aspect. Returns the sheet."""
+    spec = PRINTS["atlases"][key]
+    S = spec["size"][0]
+    x, y, w, h = spec["items"][item]["rect"]
+    height = width * h / w
+    r = np.array(right, float); r /= np.linalg.norm(r)
+    u = np.array(up, float); u /= np.linalg.norm(u)
+    if tilt:
+        c, s = math.cos(tilt), math.sin(tilt)
+        r, u = r * c + u * s, u * c - r * s
+    n = np.cross(r, u)
+    cx = np.array(centre, float)
+    corners = []
+    for du, dv in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
+        p = cx + r * du * width / 2 + u * dv * height / 2
+        corners.append(p)
+    verts = [tuple(p) for p in corners] + [tuple(p - n * thickness) for p in corners]
+    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    # Face: the rect; back and edges: a sliver of the rect's border (paper colour).
+    u0, u1 = x / S, (x + w) / S
+    v0, v1 = 1 - (y + h) / S, 1 - y / S
+    edge = (u0 + 0.002, v1 - 0.002)
+    uvs = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)] + [edge] * 20
+    return mesh_object(name, area, verts, faces, mat or m[f"print_{key}"], uvs=uvs)
+
+
+def frame_print(name, key, item, centre, right, up, width, moulding=0.035, depth=0.025, mat=None):
+    """A mounted print in a plain moulded frame (walls are axis-aligned, so the four
+    mouldings are boxes)."""
+    sheet = print_sheet(name, key, item, centre, right, up, width)
+    spec = PRINTS["atlases"][key]
+    _, _, w, h = spec["items"][item]["rect"]
+    height = width * h / w
+    r = np.array(right, float); r /= np.linalg.norm(r)
+    u = np.array(up, float); u /= np.linalg.norm(u)
+    n = np.cross(r, u)
+    c = np.array(centre, float)
+    hw, hh = width / 2, height / 2
+    bars = {"bottom": ((-hw - moulding, -hh - moulding), (hw + moulding, -hh)), "top": ((-hw - moulding, hh), (hw + moulding, hh + moulding)),
+            "left": ((-hw - moulding, -hh), (-hw, hh)), "right": ((hw, -hh), (hw + moulding, hh))}
+    for k, ((a0, b0), (a1, b1)) in bars.items():
+        pts = [c + r * a + u * b + n * d for a in (a0, a1) for b in (b0, b1) for d in (-0.002, depth)]
+        lo, hi = np.min(pts, axis=0), np.max(pts, axis=0)
+        box(f"{name}_frame_{k}", area, lo[0], hi[0], lo[1], hi[1], lo[2], hi[2], mat or m["frame"], edge=0.004)
+    # A card mount bevel just inside the frame.
+    return sheet
+
+
+def attach(child, parent):
+    """Parents `child` to `parent` keeping its world placement."""
+    bpy.context.view_layer.update()
+    child.parent = parent
+    child.matrix_parent_inverse = parent.matrix_world.inverted()
+    return child
+
+
+def pin(name, at, normal, mat=None):
+    """A brass drawing pin pushed into plaster or board at `at`, its head facing `normal`."""
+    nx, ny, nz = normal
+    head = cylinder(name, area, 0, 0, 0, 0.0025, 0.0055, mat or m["brass"], verts=10)
+    head.location = (at[0] + nx * 0.0013, at[1] + ny * 0.0013, at[2] + nz * 0.0013)
+    head.rotation_euler = (math.atan2(-ny, nz) if abs(nx) < 0.5 else 0, math.pi / 2 if abs(nx) > 0.5 else 0, 0)
+    return head
+
+
+def outline_slab(name, outline, z0, z1, mat, edge=0.0):
+    """A slab extruded vertically from a 2D outline (x, y) points, counter-clockwise."""
+    n = len(outline)
+    verts = [(x, y, z0) for x, y in outline] + [(x, y, z1) for x, y in outline]
+    faces = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))]
+    faces += [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    obj = mesh_object(name, area, verts, faces, mat)
+    if edge:
+        bevel(obj, edge)
+    return obj
+
+
+def boards(name, x0, x1, y0, y1, z0, z1, mat, width=0.12, axis="x", gap=0.004, edge=0.002):
+    """Tongue-and-groove boards: a run of narrow boxes with a hairline between them."""
+    out = []
+    if axis == "x":
+        n = max(1, round((x1 - x0) / width))
+        w = (x1 - x0) / n
+        for i in range(n):
+            out.append(box(f"{name}_{i}", area, x0 + i * w + gap / 2, x0 + (i + 1) * w - gap / 2, y0, y1, z0, z1, mat, edge=edge))
+    elif axis == "y":
+        n = max(1, round((y1 - y0) / width))
+        w = (y1 - y0) / n
+        for i in range(n):
+            out.append(box(f"{name}_{i}", area, x0, x1, y0 + i * w + gap / 2, y0 + (i + 1) * w - gap / 2, z0, z1, mat, edge=edge))
+    else:
+        n = max(1, round((z1 - z0) / width))
+        w = (z1 - z0) / n
+        for i in range(n):
+            out.append(box(f"{name}_{i}", area, x0, x1, y0, y1, z0 + i * w + gap / 2, z0 + (i + 1) * w - gap / 2, mat, edge=edge))
+    return out
+
+
+def turned(name, profile, x, y, z, mat, segments=16):
+    return lathe(name, area, profile, x, y, z, mat, segments=segments)
+
+
+BALUSTER = [(0.0, 0.0), (0.028, 0.0), (0.028, 0.06), (0.018, 0.08), (0.024, 0.16), (0.014, 0.3), (0.02, 0.42),
+            (0.026, 0.5), (0.016, 0.58), (0.016, 0.66), (0.024, 0.68), (0.024, 0.74), (0.0, 0.74)]
+
+
+# =============================================================== materials
+
+
+def cement_tile_textures():
+    """Encaustic cement tiles of the kind laid in Phnom Penh shophouses in the 1920s-30s:
+    20 cm tiles with a corner-ring and four-petal motif in ochre, oxblood and charcoal on
+    cream; worn by forty years of bare feet, swept clean. 4 x 4 tiles per map (0.8 m)."""
+    N, T = 2048, 4
+    px = N // T
+    yy, xx = np.mgrid[:N, :N].astype(np.float32)
+    u = (xx % px) / px
+    v = (yy % px) / px
+    tx, ty = (xx // px).astype(int), (yy // px).astype(int)
+    cream = np.array((0.80, 0.74, 0.60)); ochre = np.array((0.66, 0.46, 0.20))
+    oxblood = np.array((0.42, 0.15, 0.11)); charcoal = np.array((0.13, 0.12, 0.11)); sage = np.array((0.42, 0.46, 0.38))
+    col = np.empty((N, N, 3), np.float32); col[:] = cream
+    def paint(mask, c):
+        col[mask] = c
+    # Corner rings: quarter circles that join into full rings across four tiles.
+    for cu in (0, 1):
+        for cv in (0, 1):
+            d = np.hypot(u - cu, v - cv)
+            paint((d > 0.255) & (d < 0.315), ochre)
+            paint((d > 0.315) & (d < 0.33), charcoal)
+            paint(d < 0.12, sage)
+    # Diamond line and the central four-petal flower.
+    dd = np.abs(u - 0.5) + np.abs(v - 0.5)
+    paint((dd > 0.395) & (dd < 0.415), charcoal)
+    a = np.arctan2(v - 0.5, u - 0.5)
+    rr = np.hypot(u - 0.5, v - 0.5)
+    petal = rr < 0.2 * (0.35 + 0.65 * np.abs(np.cos(2 * a)) ** 1.5)
+    paint(petal, oxblood)
+    paint((rr < 0.2 * (0.35 + 0.65 * np.abs(np.cos(2 * a)) ** 1.5) - 0.025) & petal, np.array((0.52, 0.22, 0.15)))
+    paint(rr < 0.045, charcoal)
+    # Edge line round each tile (makes the grid of the floor read from standing height).
+    edge = np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v))
+    paint((edge > 0.012) & (edge < 0.022), sage * 0.9)
+    # Per-tile shade (each tile pressed separately), wear and cement speckle.
+    tile_shade = rng.uniform(0.94, 1.05, (T, T))
+    col *= tile_shade[ty, tx][..., None]
+    def smooth_noise(cell, seed):
+        r = np.random.default_rng(seed)
+        g = r.random((N // cell + 2, N // cell + 2)).astype(np.float32)
+        gx, gy = xx / cell, yy / cell
+        ix, iy = gx.astype(int), gy.astype(int)
+        fx, fy = gx - ix, gy - iy
+        fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+        a0 = g[iy, ix] * (1 - fx) + g[iy, ix + 1] * fx
+        a1 = g[iy + 1, ix] * (1 - fx) + g[iy + 1, ix + 1] * fx
+        return a0 * (1 - fy) + a1 * fy
+    wear = 0.6 * smooth_noise(256, 3) + 0.4 * smooth_noise(64, 4)
+    col = col * (0.9 + 0.12 * wear[..., None])
+    # Worn paths: the pigment layer fades towards grey cement where feet go.
+    fadew = np.clip((wear - 0.55) * 2.5, 0, 1)[..., None] * 0.35
+    col = col * (1 - fadew) + np.array((0.62, 0.60, 0.55)) * fadew
+    speck = np.random.default_rng(5).random((N, N)).astype(np.float32)
+    col *= (1 + (speck[..., None] - 0.5) * 0.08)
+    col[(speck > 0.9985)] *= 0.55
+    grout = edge < 0.004
+    col[grout] = np.array((0.28, 0.27, 0.25))
+    col = np.clip(col, 0, 1)
+    # Normal: grout recessed, each tile slightly out of level, fine pitting.
+    height = np.where(grout, -1.0, 0.0) + (tile_shade[ty, tx] - 1) * 4 * u + (speck - 0.5) * 0.15
+    gy_, gx_ = np.gradient(height)
+    nrm = np.stack([-gx_ * 0.6, gy_ * 0.6, np.ones_like(gx_)], -1)
+    nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True)
+    nrm = nrm * 0.5 + 0.5
+    rough = np.clip(0.5 - 0.12 * fadew[..., 0] / 0.35 + 0.1 * (wear - 0.5) + np.where(grout, 0.4, 0), 0.25, 0.95)
+    orm = np.stack([np.where(grout, 0.65, 1.0), rough, np.zeros_like(rough)], -1)
+    paths = {}
+    for suffix, arr, non_color in (("BC", col, False), ("N", nrm, True), ("ORM", orm, True)):
+        img = bpy.data.images.new(f"T_studio_cement_tiles_{suffix}", N, N, alpha=False)
+        rgba = np.ones((N, N, 4), np.float32)
+        rgba[..., :3] = arr[::-1]
+        if non_color:
+            img.colorspace_settings.name = "Non-Color"
+        img.pixels.foreach_set(rgba.ravel())
+        path = os.path.join(TEXTURES, f"T_studio_cement_tiles_{suffix}.png")
+        img.filepath_raw = path
+        img.file_format = "PNG"
+        img.save()
+        paths[suffix] = path
+    return paths
+
+
+def textured_material(name, paths, tile, tint=None):
+    """Principled material from BC/N/ORM image paths, like kit.library_material."""
+    mat = bpy.data.materials.new(name)
+    mat.use_backface_culling = True
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    bc = nodes.new("ShaderNodeTexImage"); bc.image = image(paths["BC"], False)
+    if tint:
+        mix = nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0; mix.inputs[7].default_value = (*tint, 1)
+        links.new(bc.outputs["Color"], mix.inputs[6]); links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+    else:
+        links.new(bc.outputs["Color"], bsdf.inputs["Base Color"])
+    nrm = nodes.new("ShaderNodeTexImage"); nrm.image = image(paths["N"], True)
+    nmap = nodes.new("ShaderNodeNormalMap")
+    links.new(nrm.outputs["Color"], nmap.inputs["Color"]); links.new(nmap.outputs["Normal"], bsdf.inputs["Normal"])
+    orm = nodes.new("ShaderNodeTexImage"); orm.image = image(paths["ORM"], True)
+    split = nodes.new("ShaderNodeSeparateColor")
+    links.new(orm.outputs["Color"], split.inputs["Color"])
+    links.new(split.outputs["Green"], bsdf.inputs["Roughness"])
+    links.new(split.outputs["Blue"], bsdf.inputs["Metallic"])
+    out = nodes.new("ShaderNodeGroup"); out.node_tree = gltf_output_group()
+    links.new(split.outputs["Red"], out.inputs["Occlusion"])
+    mat["tile"] = tile
+    return mat
+
+
+def materials():
+    tiles = cement_tile_textures()
+    lm = library_material
+    m.update({
+        "floor": textured_material("M_studio_cement_tiles", tiles, 0.8),
+        "floor_border": textured_material("M_studio_cement_border", tiles, 0.8, tint=(0.36, 0.3, 0.26)),
+        "limewash": lm("painted_plaster_wall", "M_studio_limewash", tint=(0.96, 0.86, 0.66), tile=2.0),
+        "dado": lm("painted_plaster_wall", "M_studio_dado_paint", colour=(0.36, 0.40, 0.33), tile=2.0),
+        "dado_line": plain("M_studio_dado_line", (0.22, 0.09, 0.06), rough=0.6),
+        "outside": lm("white_plaster_rough_01", "M_studio_outside_plaster", tint=(0.85, 0.78, 0.62), tile=2.5),
+        "ceiling": lm("dark_wooden_planks", "M_studio_ceiling", tile=2.0),
+        "joist": lm("dark_wood", "M_studio_joist"),
+        "wood": lm("dark_wood", "M_dark_wood"),
+        "teak": lm("teak_veneer", "M_teak_veneer"),
+        "rosewood": lm("rosewood_veneer1", "M_studio_rosewood", tile=1.0),
+        "worn": lm("wood_table_worn", "M_wood_worn"),
+        "planks": lm("weathered_planks", "M_studio_old_planks", tint=(0.78, 0.7, 0.6), tile=1.2),
+        "bark": lm("bark_brown_02", "M_studio_firewood_bark", tile=0.4),
+        "boards": lm("stair_planks", "M_studio_partition_boards", tint=(0.8, 0.7, 0.58), tile=1.5),
+        "stair": lm("stair_planks", "M_studio_stair_treads", tile=1.5),
+        "shutter": lm("wood_shutter", "M_studio_shutter", tint=(0.55, 0.62, 0.5), tile=1.0),
+        "cement": lm("concrete_floor_worn_001", "M_studio_cement", tint=(0.8, 0.76, 0.7), tile=2.0),
+        "wet_cement": lm("concrete_floor_worn_001", "M_studio_wet_cement", tint=(0.45, 0.43, 0.4), tile=2.0),
+        "roof": lm("clay_roof_tiles_02", "M_studio_roof_tiles"),
+        "rust": lm("rusty_metal", "M_studio_rusted_iron", tint=(0.5, 0.45, 0.42), tile=1.0),
+        "linen": lm("rough_linen", "M_linen", colour=(0.78, 0.72, 0.6)),
+        "krama": lm("fabric_pattern_07", "M_krama", tile=0.12),
+        "rug": lm("quatrefoil_jacquard_fabric", "M_rug", tint=(0.72, 0.55, 0.45)),
+        "brick": lm("red_brick", "M_studio_old_brick", tint=(0.8, 0.7, 0.62), tile=1.2),
+        "sampot": lm("fabric_pattern_07", "M_studio_sampot", tint=(0.35, 0.42, 0.75), tile=0.22),
+        "bamboo": plain("M_studio_bamboo", (0.55, 0.45, 0.25), rough=0.55),
+        "red_lacquer": plain("M_studio_shrine_lacquer", (0.42, 0.04, 0.03), rough=0.3),
+        "gold": plain("M_studio_gilt", (0.75, 0.55, 0.2), rough=0.35, metal=1.0),
+        "enamel": plain("M_studio_enamel", (0.78, 0.8, 0.76), rough=0.25),
+        "orange": plain("M_studio_orange", (0.85, 0.38, 0.05), rough=0.5),
+        "incense": plain("M_studio_incense", (0.45, 0.18, 0.1), rough=0.9),
+        "crack": plain("M_studio_crack", (0.06, 0.05, 0.04), rough=1.0),
+        "mat": lm("bamboo_wall", "M_studio_reed_mat", tint=(0.8, 0.7, 0.5), tile=0.5),
+        "mesh_cover": plain("M_studio_wire_mesh", (0.05, 0.05, 0.045), rough=0.55, metal=0.5, alpha=0.32),
+        "enamel_green": plain("M_studio_green_enamel", (0.12, 0.25, 0.18), rough=0.3),
         "brass": plain("M_brass", (0.62, 0.45, 0.2), rough=0.35, metal=1.0),
+        "nickel": plain("M_studio_nickel", (0.72, 0.7, 0.66), rough=0.28, metal=1.0),
         "iron": plain("M_black_iron", (0.03, 0.03, 0.03), rough=0.5, metal=0.8),
+        "japan": plain("M_studio_japanned_iron", (0.025, 0.022, 0.02), rough=0.25, metal=0.3),
+        "ebonite": plain("M_studio_ebonite", (0.035, 0.033, 0.03), rough=0.3),
+        "porcelain": plain("M_studio_porcelain", (0.86, 0.84, 0.78), rough=0.2),
         "paper": plain("M_paper", (0.86, 0.82, 0.72), rough=0.95),
+        "newsprint": plain("M_newsprint", (0.62, 0.6, 0.55), rough=0.95),
         "leather": plain("M_leather", (0.24, 0.12, 0.06), rough=0.55),
+        "satchel_leather": lm("brown_leather", "M_studio_satchel_leather", tint=(0.85, 0.72, 0.6), tile=0.5),
         "book": plain("M_book_cover", (0.08, 0.06, 0.05), rough=0.6),
-        "glass": plain("M_window_glass", (0.6, 0.65, 0.7), rough=0.05, alpha=0.18),
-        "green_glass": plain("M_lamp_green_glass", (0.05, 0.35, 0.15), rough=0.15, emission=(0.2, 0.7, 0.3), strength=0.6),
+        "frame": plain("M_studio_frame", (0.09, 0.055, 0.035), rough=0.45),
+        "glass": plain("M_window_glass", (0.015, 0.017, 0.02), rough=0.06, alpha=0.86),
+        "green_glass": plain("M_lamp_green_glass", (0.03, 0.26, 0.11), rough=0.12, emission=(0.1, 0.55, 0.22), strength=0.35),
+        "opal": plain("M_lamp_opal_glass", (0.9, 0.88, 0.8), rough=0.3, emission=(1, 0.85, 0.6), strength=0.8),
         "bulb": plain("M_lamp_bulb", (1, 0.9, 0.7), rough=0.3, emission=(1, 0.85, 0.6), strength=6.0),
         "ink": plain("M_ink", (0.02, 0.02, 0.025), rough=0.1),
         "candle": plain("M_candle_wax", (0.9, 0.86, 0.75), rough=0.5),
-        "facade": library_material("yellow_plaster", "M_facade_plaster", tint=(0.35, 0.33, 0.3)),
+        "string": plain("M_string", (0.55, 0.5, 0.42), rough=0.9),
+        "cord": plain("M_studio_braided_cord", (0.12, 0.09, 0.06), rough=0.85),
+        "water": plain("M_studio_water", (0.02, 0.025, 0.03), rough=0.04),
+        "glaze": plain("M_studio_jar_glaze", (0.2, 0.13, 0.06), rough=0.18),
+        "terracotta": lm("clay_plaster", "M_studio_terracotta", tint=(0.62, 0.36, 0.24), tile=0.6),
         "neighbour": plain("M_neighbour_window", (0.1, 0.07, 0.04), emission=(1, 0.62, 0.3), strength=0.6),
+        "dark": plain("M_studio_dark_room", (0.01, 0.01, 0.01), rough=1.0),
         "net": plain("M_mosquito_net", (0.9, 0.9, 0.88), rough=0.9, alpha=0.22),
-    }
+        "mirror": plain("M_studio_mirror", (0.55, 0.55, 0.5), rough=0.08, metal=1.0),
+        "flame": plain("M_studio_oil_flame", (1, 0.6, 0.25), emission=(1, 0.55, 0.2), strength=8.0),
+    })
     m["illustration"] = drawing("M_studio_illustration", "T_studio_illustration_BC")
-    m["tonle_sap"] = drawing("M_studio_print_tonle_sap", "T_studio_print_tonle_sap_BC")
-    m["alphabet"] = drawing("M_studio_print_alphabet", "T_studio_print_alphabet_BC")
-    m["angkor"] = drawing("M_studio_print_angkor", "T_studio_print_angkor_BC")
-    for study in ("palms", "house", "ornament", "lettering", "boats"):
-        m[study] = drawing(f"M_studio_study_{study}", f"T_studio_study_{study}_BC")
+    m["print_posters"] = atlas_material("posters")
+    m["print_cards"] = atlas_material("cards")
+    m["print_colour"] = atlas_material("colour")
+    m["cobweb"] = cobweb_material()
+    # Cracks are thin overlays: they show from either side.
+    for key in ("crack",):
+        m[key].use_backface_culling = False
 
-    # ---- Shell: floor, timber ceiling with beams, ochre plaster walls, skirting, picture rail.
-    box("floor", area, 0, W, 0, D, -0.05, 0, m["floor"])
-    collider("floor", area, 0, W, 0, D, -0.2, 0, surface="stone")
-    box("ceiling", area, 0, W, 0, D, H, H + 0.05, m["ceiling"])
-    for i, x in enumerate([1.0, 2.25, 3.5, 4.75]):
-        box(f"ceiling_beam_{i}", area, x - 0.08, x + 0.08, 0, D, H - 0.2, H, m["wood"], edge=0.01)
 
-    def wall(name, x0, x1, y0, y1, z0=0.0, z1=H, solid=True):
-        box(name, area, x0, x1, y0, y1, z0, z1, m["plaster"])
-        if solid:
-            collider(name, area, x0, x1, y0, y1, z0, z1)
+# =============================================================== shell
 
-    wall("wall_west", -WALL, 0, 0, D)
-    wall("wall_north", -WALL, W + WALL, D, D + WALL)
-    wall("wall_east_south", W, W + WALL, 0, DOOR["y0"])
-    wall("wall_east_north", W, W + WALL, DOOR["y1"], D)
-    wall("wall_east_head", W, W + WALL, DOOR["y0"], DOOR["y1"], DOOR["top"], H, solid=False)
-    wall("wall_south_west", -WALL, WINDOW["x0"], -WALL, 0)
-    wall("wall_south_east", WINDOW["x1"], W + WALL, -WALL, 0)
-    wall("wall_south_sill", WINDOW["x0"], WINDOW["x1"], -WALL, 0, 0, WINDOW["bottom"])
-    wall("wall_south_head", WINDOW["x0"], WINDOW["x1"], -WALL, 0, WINDOW["top"], H, solid=False)
-    # Skirting and picture rail in dark wood (colonial detail).
-    for name, a in [("west", (0, 0.02, 0, D)), ("north", (0, W, D - 0.02, D)), ("east_s", (W - 0.02, W, 0, DOOR["y0"] - 0.08)),
-                    ("east_n", (W - 0.02, W, DOOR["y1"] + 0.08, D)), ("south_w", (0, WINDOW["x0"], 0, 0.02)), ("south_e", (WINDOW["x1"], W, 0, 0.02))]:
-        x0, x1, y0, y1 = a
-        box(f"skirting_{name}", area, x0, x1, y0, y1, 0, 0.14, m["wood"], edge=0.004)
-        box(f"picture_rail_{name}", area, x0, x1, y0, y1, 2.45, 2.49, m["wood"], edge=0.003)
 
-    # ---- Window: tall casement, glass, sill, linen curtains; louvred shutters outside.
-    wx0, wx1, wb, wt = WINDOW["x0"], WINDOW["x1"], WINDOW["bottom"], WINDOW["top"]
-    xm = (wx0 + wx1) / 2
-    box("window_sill", area, wx0 - 0.08, wx1 + 0.08, -0.12, 0.08, wb - 0.04, wb, m["wood"], edge=0.006)
-    for name, a in [("left", (wx0, wx0 + 0.07)), ("right", (wx1 - 0.07, wx1)), ("mid", (xm - 0.035, xm + 0.035))]:
-        box(f"window_frame_{name}", area, a[0], a[1], -0.12, -0.06, wb, wt, m["wood"], edge=0.004)
-    for z in (wb, (wb + wt) / 2 + 0.3, wt - 0.07):
-        box(f"window_bar_{z:.2f}", area, wx0, wx1, -0.12, -0.06, z, z + 0.06, m["wood"], edge=0.004)
-    box("window_glass", area, wx0, wx1, -0.1, -0.095, wb, wt, m["glass"])
-    for side, (a, b) in {"left": (wx0 - 0.75, wx0 - 0.05), "right": (wx1 + 0.05, wx1 + 0.75)}.items():
-        # Shutters folded back against the facade outside, slats catching lightning.
-        box(f"shutter_{side}_frame", area, a, b, -0.3, -0.26, wb, wt, m["wood"], edge=0.004)
-        for k in range(22):
-            z = wb + 0.08 + k * (wt - wb - 0.16) / 22
-            box(f"shutter_{side}_slat_{k}", area, a + 0.04, b - 0.04, -0.33, -0.29, z, z + 0.05, m["wood"], tilt=(0.5, 0, 0))
-    box("curtain_rail", area, wx0 - 0.5, wx1 + 0.5, 0.06, 0.09, wt + 0.12, wt + 0.15, m["brass"])
-    cloth("curtain_left", area, wx0 - 0.48, wx0 + 0.12, 0.2, wt + 0.12, 0.12, m["linen"], folds=5)
-    cloth("curtain_right", area, wx1 - 0.12, wx1 + 0.48, 0.2, wt + 0.12, 0.12, m["linen"], folds=5)
-    # The street outside: the shophouse opposite, one window lit behind its shutters.
-    box("facade_opposite", area, -4, 10, -6.2, -6.0, -8, 6, m["facade"])
-    box("facade_opposite_window_lit", area, 2.0, 2.9, -5.99, -5.98, 0.6, 2.4, m["neighbour"])
-    box("facade_opposite_window_dark", area, 4.6, 5.5, -5.99, -5.98, 0.6, 2.4, m["ink"])
-    empty("marker_lightning", area, (xm, -2.5, 3.0))
+def wall(name, x0, x1, y0, y1, z0, z1, mat, solid=True):
+    obj = box(name, area, x0, x1, y0, y1, z0, z1, mat)
+    if solid:
+        collider(name, area, x0, x1, y0, y1, z0, z1)
+    return obj
 
-    # ---- Door (east): panelled, with frame and brass handle. Closed until Sora has her kit.
-    door = box("interact_door", area, W - 0.02, W + 0.03, DOOR["y0"] + 0.02, DOOR["y1"] - 0.02, 0, DOOR["top"] - 0.02, m["wood"],
-               edge=0.006, action="open")
-    door["requires"] = "ep1.kit.collected"
-    for k, (z0, z1) in enumerate([(0.2, 1.0), (1.2, 2.1)]):
-        box(f"door_panel_{k}", area, W - 0.04, W - 0.02, DOOR["y0"] + 0.12, DOOR["y1"] - 0.12, z0, z1, m["wood"], edge=0.008)
-    box("door_handle", area, W - 0.09, W - 0.04, DOOR["y0"] + 0.1, DOOR["y0"] + 0.22, 1.0, 1.04, m["brass"], edge=0.01)
-    for name, a in [("s", (DOOR["y0"] - 0.08, DOOR["y0"])), ("n", (DOOR["y1"], DOOR["y1"] + 0.08))]:
-        box(f"door_frame_{name}", area, W - 0.04, W, a[0], a[1], 0, DOOR["top"] + 0.08, m["wood"], edge=0.004)
-    box("door_frame_top", area, W - 0.04, W, DOOR["y0"] - 0.08, DOOR["y1"] + 0.08, DOOR["top"], DOOR["top"] + 0.08, m["wood"], edge=0.004)
-    collider("door", area, W - 0.05, W + 0.05, DOOR["y0"], DOOR["y1"], 0, DOOR["top"])
 
-    # ---- Drafting table under the window (P02), with Sora's half-finished illustration.
+def room_walls(name, x0, x1, y0, y1, faces, gaps=()):
+    """Lining for one room: a painted dado to 1.05 m with a red-brown line, limewash
+    above, a cement skirting. `faces` lists which inside faces get lining
+    ('w', 'e', 's', 'n'); `gaps` are (face, a, b, top) openings (doorways)."""
+    t = 0.012
+    spans = {"w": ((x0, x0 + t), (y0, y1), "y"), "e": ((x1 - t, x1), (y0, y1), "y"),
+             "s": ((x0, x1), (y0, y0 + t), "x"), "n": ((x0, x1), (y1 - t, y1), "x")}
+    for f in faces:
+        (ax0, ax1), (ay0, ay1), along = spans[f]
+        cuts = sorted((a, b, top) for g, a, b, top in gaps if g == f)
+        lo = ay0 if along == "y" else ax0
+        hi = ay1 if along == "y" else ax1
+        segs, at = [], lo
+        for a, b, top in cuts:
+            if a > at:
+                segs.append((at, a, None))
+            segs.append((a, b, top))
+            at = b
+        if at < hi:
+            segs.append((at, hi, None))
+        for k, (a, b, top) in enumerate(segs):
+            def span(z0, z1, mat, nm, inset=0.0):
+                if along == "y":
+                    xa, xb = (ax0 + (inset if f == "e" else 0), ax1 - (inset if f == "w" else 0)) if inset else (ax0, ax1)
+                    if f == "w":
+                        xa, xb = ax0, ax1 + inset
+                    if f == "e":
+                        xa, xb = ax0 - inset, ax1
+                    return box(f"{name}_{nm}_{f}{k}", area, xa, xb, a, b, z0, z1, mat)
+                ya, yb = ay0, ay1
+                if f == "s":
+                    ya, yb = ay0, ay1 + inset
+                if f == "n":
+                    ya, yb = ay0 - inset, ay1
+                return box(f"{name}_{nm}_{f}{k}", area, a, b, ya, yb, z0, z1, mat)
+            if top is None:
+                span(0, 0.14, m["cement"], "skirting", 0.012)
+                span(0.14, DADO, m["dado"], "dado")
+                span(DADO, DADO + 0.025, m["dado_line"], "dado_line", 0.004)
+                span(DADO + 0.025, H, m["limewash"], "limewash")
+            else:
+                span(top, H, m["limewash"], "head")
+
+
+def shell():
+    # Party walls (brick, plastered), the full length, rising above the roof round the airwell.
+    for side, (x0, x1) in (("west", (-PARTY, 0)), ("east", (W, W + PARTY))):
+        wall(f"party_wall_{side}", x0, x1, -FACADE, BACK + 0.3, -0.3, H + 0.05, m["limewash"])
+    # Floors: tiles with a plain border band in each room; cement in the walkways.
+    collider("floor", area, -PARTY, W + PARTY, -1.3, BACK + 0.3, -0.3, 0, surface="stone")
+    for name, (y0, y1) in (("front", (0, FRONT)), ("back", (P2[1], BACK))):
+        box(f"floor_{name}_border", area, 0, W, y0, y1, -0.05, -0.001, m["floor_border"])
+        box(f"floor_{name}_tiles", area, 0.3, W - 0.3, y0 + 0.3, y1 - 0.3, -0.05, 0.0, m["floor"])
+    # The hall: tiles round the stair opening (x 3.45-4.5, y 7.0-9.05).
+    box("floor_hall_border_w", area, 0, STAIR[0], P1[0], AIR[1], -0.05, -0.001, m["floor_border"])
+    box("floor_hall_border_landing", area, STAIR[0], W, P1[0], STAIR[2], -0.05, -0.001, m["floor_border"])
+    box("floor_hall_border_e", area, STAIR[1], W, STAIR[2], AIR[1], -0.05, -0.001, m["floor_border"])
+    box("floor_hall_tiles", area, 0.3, STAIR[0] - 0.3, P1[1] + 0.3, AIR[1] - 0.3, -0.05, 0.0, m["floor"])
+    box("floor_threshold_p2", area, P2_DOOR[0], P2_DOOR[1], P2[0], P2[1], -0.05, 0.01, m["cement"], edge=0.004)
+
+    # Ceilings: planks on exposed joists in both rooms.
+    for name, (y0, y1) in (("front", (0, P1[0])), ("hall", (P1[1], P2[0])), ("back", (P2[1], BACK))):
+        box(f"ceiling_{name}", area, 0, W, y0, y1, H, H + 0.04, m["ceiling"])
+        n = int((y1 - y0) / 0.55)
+        for i in range(1, n + 1):
+            y = y0 + (y1 - y0) * i / (n + 1)
+            box(f"ceiling_{name}_joist_{i}", area, 0, W, y - 0.045, y + 0.045, H - 0.17, H, m["joist"], edge=0.006)
+
+    # Street facade (south) with the two French doors and their fanlights.
+    xs = [0] + [v for d in DOORS for v in d] + [W]
+    for k in range(0, len(xs), 2):
+        a, b = xs[k], xs[k + 1]
+        wall(f"facade_pier_{k}", a, b, -FACADE, 0, 0, H, m["limewash"])
+        box(f"facade_pier_{k}_outside", area, a, b, -FACADE - 0.01, -FACADE, -0.3, H + 0.3, m["outside"])
+    for k, (a, b) in enumerate(DOORS):
+        wall(f"facade_head_{k}", a, b, -FACADE, 0, FAN_TOP + 0.06, H, m["limewash"], solid=False)
+        box(f"facade_head_{k}_outside", area, a, b, -FACADE - 0.01, -FACADE, FAN_TOP + 0.06, H + 0.3, m["outside"])
+        collider(f"french_door_{k}", area, a, b, -FACADE, -0.02, 0, FAN_TOP)
+        french_door(k, a, b)
+    # Inside linings of the front room (dado etc.), with gaps for the doors.
+    room_walls("front", 0, W, 0, P1[0], "wes",
+               gaps=[("s", a - 0.05, b + 0.05, FAN_TOP + 0.06) for a, b in DOORS])
+    # Door reveals and architraves round each opening.
+    for k, (a, b) in enumerate(DOORS):
+        for s, (u0, u1) in (("w", (a - 0.09, a)), ("e", (b, b + 0.09))):
+            box(f"door_architrave_{k}_{s}", area, u0, u1, -0.004, 0.018, 0, FAN_TOP + 0.09, m["wood"], edge=0.004)
+        box(f"door_architrave_{k}_top", area, a - 0.09, b + 0.09, -0.004, 0.022, FAN_TOP + 0.06, FAN_TOP + 0.16, m["wood"], edge=0.005)
+
+    balcony_and_street()
+    partition_p1()
+    hall()
+    wall_p2()
+    back_room_shell()
+
+
+def french_door(k, a, b):
+    """A pair of glazed casement doors (closed: it is raining), panelled below, six panes
+    each above, and a fanlight with radiating glazing bars over the transom."""
+    y0, y1 = -0.16, -0.11
+    wood = m["teak"]
+    box(f"french_door_{k}_frame_w", area, a, a + 0.06, y0 - 0.01, y1 + 0.01, 0, FAN_TOP, wood, edge=0.004)
+    box(f"french_door_{k}_frame_e", area, b - 0.06, b, y0 - 0.01, y1 + 0.01, 0, FAN_TOP, wood, edge=0.004)
+    box(f"french_door_{k}_transom", area, a, b, y0 - 0.01, y1 + 0.01, DOOR_TOP, DOOR_TOP + 0.07, wood, edge=0.004)
+    box(f"french_door_{k}_sill", area, a - 0.03, b + 0.03, y0 - 0.06, y1 + 0.03, 0, 0.035, m["cement"], edge=0.006)
+    leaf_w = (b - a - 0.12) / 2
+    panes = []
+    for s in range(2):
+        lx0 = a + 0.06 + s * leaf_w
+        lx1 = lx0 + leaf_w
+        for nm, (u0, u1, z0, z1) in {"stile_a": (lx0, lx0 + 0.055, 0.035, DOOR_TOP), "stile_b": (lx1 - 0.055, lx1, 0.035, DOOR_TOP),
+                                     "bottom": (lx0, lx1, 0.035, 0.2), "lock": (lx0, lx1, 0.82, 0.92), "top": (lx0, lx1, DOOR_TOP - 0.06, DOOR_TOP)}.items():
+            box(f"french_door_{k}_{s}_{nm}", area, u0, u1, y0, y1, z0, z1, wood, edge=0.004)
+        # Raised lower panel.
+        box(f"french_door_{k}_{s}_panel", area, lx0 + 0.055, lx1 - 0.055, y0 + 0.012, y1 - 0.012, 0.2, 0.82, wood)
+        box(f"french_door_{k}_{s}_panel_raise", area, lx0 + 0.085, lx1 - 0.085, y0 + 0.006, y1 - 0.006, 0.24, 0.78, wood, edge=0.012)
+        # Glazing bars: two columns, three rows.
+        gx0, gx1, gz0, gz1 = lx0 + 0.055, lx1 - 0.055, 0.92, DOOR_TOP - 0.06
+        box(f"french_door_{k}_{s}_bar_v", area, (gx0 + gx1) / 2 - 0.012, (gx0 + gx1) / 2 + 0.012, y0 + 0.01, y1 - 0.01, gz0, gz1, wood)
+        for j in (1, 2):
+            z = gz0 + (gz1 - gz0) * j / 3
+            box(f"french_door_{k}_{s}_bar_h{j}", area, gx0, gx1, y0 + 0.01, y1 - 0.01, z - 0.012, z + 0.012, wood)
+        panes.append((gx0, gx1, gz0, gz1))
+        # Espagnolette bolt and brass handle on the meeting stile.
+        if s == 0:
+            box(f"french_door_{k}_espagnolette", area, lx1 - 0.035, lx1 - 0.022, y1, y1 + 0.012, 0.05, DOOR_TOP - 0.02, m["brass"])
+            box(f"french_door_{k}_handle", area, lx1 - 0.05, lx1 - 0.015, y1 + 0.012, y1 + 0.03, 1.02, 1.12, m["brass"], edge=0.006)
+    # One glass sheet per door (the rain on the glass is fitted to it at runtime).
+    verts, faces = [], []
+    for gx0, gx1, gz0, gz1 in panes:
+        i = len(verts)
+        yg = (y0 + y1) / 2
+        verts += [(gx0, yg, gz0), (gx1, yg, gz0), (gx1, yg, gz1), (gx0, yg, gz1)]
+        faces.append((i, i + 1, i + 2, i + 3))
+    mesh_object("window_glass" if k == 1 else "window_glass_west", area, verts, faces, m["glass"])
+    # Transom light over the doors: one rectangular pane with sunburst glazing bars.
+    fz0, fz1 = DOOR_TOP + 0.07, FAN_TOP
+    box(f"fanlight_{k}_head", area, a, b, y0 - 0.01, y1 + 0.01, FAN_TOP, FAN_TOP + 0.06, wood, edge=0.004)
+    mesh_object(f"fanlight_glass_{k}", area, [(a + 0.06, -0.135, fz0), (b - 0.06, -0.135, fz0), (b - 0.06, -0.135, fz1), (a + 0.06, -0.135, fz1)], [(0, 1, 2, 3)], m["glass"])
+    cx, r = (a + b) / 2, min((b - a) / 2 - 0.06, fz1 - fz0 - 0.01)
+    tube(f"fanlight_{k}_arch", area, [(cx + math.cos(t) * r, -0.135, fz0 + math.sin(t) * r) for t in np.linspace(0, math.pi, 17)], 0.012, wood, sides=6)
+    for t in np.linspace(0.0, math.pi, 7):
+        far = min((b - a) / 2 - 0.06, (fz1 - fz0) / max(math.sin(t), 1e-3)) if 0.05 < t < math.pi - 0.05 else (b - a) / 2 - 0.06
+        tube(f"fanlight_{k}_ray_{t:.2f}", area, [(cx, -0.135, fz0), (cx + math.cos(t) * far, -0.135, fz0 + math.sin(t) * far)], 0.008, wood, sides=5)
+    # Louvred shutters folded back against the outside wall.
+    for side, (s0, s1) in {"w": (a - 0.5, a - 0.04), "e": (b + 0.04, b + 0.5)}.items():
+        if s0 < -0.1 or s1 > W + 0.1:
+            continue
+        box(f"shutter_{k}_{side}_frame_l", area, s0, s0 + 0.045, -FACADE - 0.07, -FACADE - 0.03, 0.04, DOOR_TOP, m["shutter"], edge=0.004)
+        box(f"shutter_{k}_{side}_frame_r", area, s1 - 0.045, s1, -FACADE - 0.07, -FACADE - 0.03, 0.04, DOOR_TOP, m["shutter"], edge=0.004)
+        for j in range(26):
+            z = 0.1 + j * (DOOR_TOP - 0.2) / 26
+            box(f"shutter_{k}_{side}_slat_{j}", area, s0 + 0.045, s1 - 0.045, -FACADE - 0.075, -FACADE - 0.035, z, z + 0.05, m["shutter"], tilt=(0.55, 0, 0))
+
+
+def balcony_and_street():
+    # The balcony: a cement slab on iron brackets with a cast-iron railing.
+    box("balcony_slab", area, -0.1, W + 0.1, -1.25, -FACADE, -0.12, -0.02, m["cement"], edge=0.01)
+    collider("balcony_edge", area, -0.1, W + 0.1, -1.25, -1.15, 0, 1.0)
+    collider("balcony_slab", area, -0.1, W + 0.1, -1.25, -FACADE, -0.3, -0.02, surface="stone")
+    box("balcony_rail_top", area, -0.05, W + 0.05, -1.2, -1.15, 0.95, 0.99, m["rust"], edge=0.008)
+    box("balcony_rail_bottom", area, -0.05, W + 0.05, -1.2, -1.16, 0.06, 0.09, m["rust"])
+    for i in range(int(W / 0.11) + 1):
+        x = 0.02 + i * 0.11
+        cylinder(f"balcony_baluster_{i}", area, x, -1.18, 0.09, 0.95, 0.008, m["rust"], verts=6)
+        if i % 4 == 2:
+            for dz in (0.35, 0.65):
+                tube(f"balcony_scroll_{i}_{dz}", area, [(x + 0.055 * math.sin(t), -1.18, dz + 0.1 * (1 - math.cos(t)) * 0.5) for t in np.linspace(0, math.tau, 13)], 0.005, m["rust"], sides=5)
+    for x in (0.2, W / 2, W - 0.2):
+        box(f"balcony_bracket_{x:.1f}", area, x - 0.03, x + 0.03, -1.15, -FACADE, -0.45, -0.12, m["rust"], tilt=(0, 0, 0))
+    # The eave of the roof over the balcony (tiles above, rafters beneath).
+    box("street_eave_tiles", area, -0.3, W + 0.3, -1.45, -FACADE, H + 0.35, H + 0.42, m["roof"], tilt=(-0.18, 0, 0))
+    for i in range(9):
+        x = i * W / 8
+        box(f"street_eave_rafter_{i}", area, x - 0.03, x + 0.03, -1.45, -FACADE, H + 0.22, H + 0.32, m["wood"], tilt=(-0.18, 0, 0))
+    # The shophouse opposite, eight metres across the street: three floors of shutters,
+    # one window lit, a balcony in the dark.
+    box("facade_opposite", area, -6, 11, -9.6, -9.4, -9, 7, m["outside"])
+    for fl, z in enumerate((-3.8, -0.3, 3.0)):
+        for k, x in enumerate((-3.2, -1.1, 1.2, 3.4, 5.6, 7.8)):
+            lit = (fl, k) == (1, 2)
+            box(f"opposite_window_{fl}_{k}", area, x, x + 0.9, -9.39, -9.38, z, z + 2.3, m["neighbour"] if lit else m["dark"])
+            box(f"opposite_shutter_{fl}_{k}", area, x - 0.04, x + 0.94, -9.37, -9.33, z - 0.04, z + 2.34, m["shutter"]) if not lit else None
+        box(f"opposite_balcony_{fl}", area, -6, 11, -9.4, -8.6, z - 0.15, z - 0.05, m["cement"])
+    empty("marker_lightning", area, (2.6, -4.0, H + 0.4))
+
+
+def partition_p1():
+    """Timber partition between the studio and the airwell: vertical boards, a doorway
+    at the west end with a lattice transom."""
+    y0, y1 = P1
+    d0, d1 = P1_DOOR
+    for name, (x0, x1) in (("west", (0, d0)), ("east", (d1, W))):
+        boards(f"partition_boards_{name}", x0, x1, y0, y1, 0, H, m["boards"], width=0.14)
+        collider(f"partition_{name}", area, x0, x1, y0, y1, 0, H)
+    boards("partition_boards_head", d0, d1, y0, y1, 2.65, H, m["boards"], width=0.14)
+    for x in (d0, d1):
+        box(f"partition_door_post_{x:.2f}", area, x - 0.05, x + 0.05, y0 - 0.02, y1 + 0.02, 0, 2.65, m["wood"], edge=0.006)
+    box("partition_door_head", area, d0 - 0.05, d1 + 0.05, y0 - 0.02, y1 + 0.02, 2.2, 2.28, m["wood"], edge=0.006)
+    # Lattice transom (fretwork) between the door head and the boards.
+    for i in range(1, 9):
+        x = d0 + (d1 - d0) * i / 9
+        box(f"partition_lattice_v_{i}", area, x - 0.008, x + 0.008, y0 + 0.03, y1 - 0.03, 2.28, 2.65, m["wood"])
+    for z in (2.4, 2.53):
+        box(f"partition_lattice_h_{z}", area, d0, d1, y0 + 0.03, y1 - 0.03, z - 0.008, z + 0.008, m["wood"])
+    # Skirting and dado rail on the studio side.
+    box("partition_skirting_east", area, d1, W, y0 - 0.015, y0, 0, 0.12, m["wood"], edge=0.003)
+    box("partition_skirting_west", area, 0, d0, y0 - 0.015, y0, 0, 0.12, m["wood"], edge=0.003)
+    box("partition_rail", area, d1, W, y0 - 0.025, y0, DADO, DADO + 0.04, m["wood"], edge=0.004)
+
+
+def draped(name, xa, xb, y, z, drop, mat, segments=(28, 22)):
+    """Cloth hung over a pole: a front and a back fall, soft vertical folds, a sagging
+    uneven hem, and the fold over the pole itself."""
+    nx, nz = segments
+    verts, faces, uvs = [], [], []
+    rows = []
+    for side in (-1, 1):
+        length = drop * (1.0 if side < 0 else 0.82)
+        for j in range(nz + 1):
+            t = j / nz
+            row = []
+            for i in range(nx + 1):
+                u = i / nx
+                x = xa + (xb - xa) * u
+                fold = math.sin(u * math.tau * 3.2 + side) * 0.018 * t + math.sin(u * math.tau * 7.1) * 0.006 * t
+                hem = (0.05 * math.sin(u * 5.3 + side) + 0.04 * math.cos(u * 9.1)) * t * t
+                zz = z - length * t + hem
+                yy = y + side * (0.026 + 0.03 * t) + fold
+                row.append(len(verts))
+                verts.append((x, yy, zz))
+                uvs_ = (u * (xb - xa) / 0.4, (t * length) / 0.4)
+            rows.append(row)
+        base = len(rows) - (nz + 1)
+        for j in range(nz):
+            for i in range(nx):
+                a, b = rows[base + j][i], rows[base + j][i + 1]
+                c, d = rows[base + j + 1][i + 1], rows[base + j + 1][i]
+                faces.append((a, b, c, d) if side > 0 else (d, c, b, a))
+    # The fold over the pole joins the two tops.
+    front_top, back_top = rows[0], rows[nz + 1]
+    for i in range(nx):
+        faces.append((front_top[i], front_top[i + 1], back_top[i + 1], back_top[i]))
+    obj = mesh_object(name, area, verts, faces, mat, smooth=True)
+    mat.use_backface_culling = False
+    return obj
+
+
+def peg_cloth(name, tip, width, drop, mat, seed=0, segments=(14, 18)):
+    """A cloth hung by its middle from a peg: both layers pinched together at the peg,
+    spreading into soft folds below, the back layer a little shorter and nearer the wall."""
+    r = np.random.default_rng(seed)
+    nx, nz = segments
+    tx, ty, tz = tip
+    ph = r.uniform(0, math.tau, 3)
+    verts, faces = [], []
+    for side, length in ((1, drop), (-1, drop * 0.86)):
+        base = len(verts)
+        for j in range(nz + 1):
+            t = j / nz
+            half = 0.012 + (width / 2 - 0.012) * (1 - (1 - t) ** 2.2)
+            for i in range(nx + 1):
+                u = 2 * i / nx - 1
+                fold = (math.sin(u * math.pi * 2.5 + ph[0] + side) * 0.022 + math.sin(u * math.pi * 5.3 + ph[1]) * 0.007) * min(1.0, t * 3) * (1 - 0.35 * t)
+                hem = (0.03 * math.sin(u * 4.1 + ph[2]) + 0.02 * u * u) * t ** 3
+                verts.append((tx + u * half, ty + side * (0.008 + 0.022 * math.sqrt(t)) + fold * (1.0 if side > 0 else 0.6), tz - length * t + hem))
+        for j in range(nz):
+            for i in range(nx):
+                a = base + j * (nx + 1) + i
+                q = (a, a + 1, a + nx + 2, a + nx + 1)
+                faces.append(q if side > 0 else tuple(reversed(q)))
+    obj = mesh_object(name, area, verts, faces, mat, smooth=True)
+    mat.use_backface_culling = False
+    return obj
+
+
+def pegged_sheet(name, top, along, normal, size, front, back, seed=0, n=8):
+    """A sheet of paper pegged to a line by its top edge: `front` shows on the side facing
+    `normal` (the image upright for someone looking at it), `back` on the other; the lower
+    corners curl a little towards the room as it dries."""
+    r = np.random.default_rng(seed)
+    a = np.array(along, float); a /= np.linalg.norm(a)
+    nv = np.array(normal, float); nv /= np.linalg.norm(nv)
+    top = np.array(top, float)
+    curl = r.uniform(0.008, 0.02)
+    pts = []
+    for j in range(n + 1):
+        v = j / n
+        for i in range(n + 1):
+            u = i / n - 0.5
+            off = curl * v * v * (abs(u) * 2) ** 1.5 + 0.004 * math.sin(v * math.pi) + 0.002 * math.sin(u * 7 + seed)
+            pts.append(top - a * u * size + nv * off - np.array((0, 0, v * size)))
+    quads = []
+    for j in range(n):
+        for i in range(n):
+            k = j * (n + 1) + i
+            quads.append((k, k + n + 1, k + n + 2, k + 1))
+    def uv(k):
+        i, j = k % (n + 1), k // (n + 1)
+        return (i / n, 1 - j / n)
+    fr = mesh_object(f"{name}_front", area, [tuple(p) for p in pts], quads, front, uvs=[uv(k) for q in quads for k in q])
+    back_pts = [tuple(np.array(p) - nv * 0.0006) for p in pts]
+    bk = mesh_object(f"{name}_back", area, back_pts, [tuple(reversed(q)) for q in quads], back, uvs=[uv(k) for q in quads for k in reversed(q)])
+    return fr, bk
+
+
+def cobweb_material():
+    """Cobweb cards: radial threads and a sagging spiral, alpha-tested."""
+    n = 512
+    yy, xx = np.mgrid[:n, :n].astype(np.float32)
+    # The web hangs in a corner: its centre near one corner of the card.
+    cx, cy = 0.08 * n, 0.08 * n
+    dx, dy = xx - cx, yy - cy
+    r = np.hypot(dx, dy) / n
+    a = np.arctan2(dy, dx)
+    radial = np.zeros((n, n), bool)
+    for t in np.linspace(0.02, math.pi / 2 - 0.02, 9):
+        radial |= (np.abs(np.sin(a - t)) * r * n < 0.9) & (r < 1.1)
+    spiral = (np.abs(((r * 34 + a * 0.9) % 1.0) - 0.5) < 0.035) & (r < 0.95) & (r > 0.05)
+    rng_ = np.random.default_rng(7)
+    broken = rng_.random((n, n)) < 0.25
+    web = (radial | (spiral & ~broken)).astype(np.float32)
+    rgba = np.zeros((n, n, 4), np.float32)
+    rgba[..., :3] = (0.78, 0.76, 0.72)
+    rgba[..., 3] = web * 0.85
+    img = bpy.data.images.new("T_studio_cobweb_BC", n, n, alpha=True)
+    img.pixels.foreach_set(rgba[::-1].ravel())
+    path = os.path.join(TEXTURES, "T_studio_cobweb_BC.png")
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    return image_material("M_studio_cobweb", path, rough=1.0, cutout=True)
+
+
+def cobweb(name, corner, u, v, size):
+    """A web card spanning a corner: `corner` is the corner point, `u` and `v` the two
+    directions along the surfaces it is strung between."""
+    c = np.array(corner, float)
+    u = np.array(u, float) * size
+    v = np.array(v, float) * size
+    verts = [tuple(c), tuple(c + u), tuple(c + u + v * 0.9), tuple(c + v)]
+    return mesh_object(name, area, verts, [(0, 1, 2, 3)], m["cobweb"], uvs=[(0, 0), (1, 0), (1, 1), (0, 1)])
+
+
+def crack(name, points):
+    tube(name, area, points, 0.0016, m["crack"], sides=4)
+
+
+def hall():
+    """The middle of the house: the hall between the studio and the back room, where the
+    household cooks, eats and dries its washing in the rains, and where the stairs go
+    down. Old: limewash flaking to the render, cracks from the door heads, soot over the
+    brazier, a ceiling stain with a tin catching the drip, cobwebs in the high corners."""
+    y0, y1 = AIR
+    room_walls("hall", 0, W, y0, y1, "wen", gaps=[("n", P2_DOOR[0] - 0.05, P2_DOOR[1] + 0.05, 2.28)])
+    # Picture rail and the old electric run along the walls.
+    box("hall_picture_rail_w", area, 0, 0.025, y0, y1, 2.45, 2.49, m["wood"], edge=0.003)
+    box("hall_picture_rail_e", area, W - 0.025, W, y0, STAIR[2], 2.45, 2.49, m["wood"], edge=0.003)
+
+    # ---- Age: cracks, a brick patch, soot, a stained ceiling and a drip.
+    box("hall_brick_patch", area, W - 0.016, W - 0.0125, 6.35, 6.75, 0.18, 0.45, m["brick"])
+    crack("hall_crack_door_head", [(P2_DOOR[1] + 0.05, y1 - 0.0125, 2.3), (1.22, y1 - 0.0125, 2.42), (1.3, y1 - 0.0125, 2.47), (1.45, y1 - 0.0125, 2.7), (1.52, y1 - 0.0125, 2.95)])
+    crack("hall_crack_w", [(0.0125, 8.9, 3.38), (0.0125, 8.82, 3.1), (0.0125, 8.86, 2.85), (0.0125, 8.75, 2.6)])
+    crack("hall_crack_e", [(W - 0.0125, 6.4, 1.06), (W - 0.0125, 6.48, 0.8), (W - 0.0125, 6.44, 0.6), (W - 0.0125, 6.55, 0.35)])
+    # The roof leaks over the east of the hall; a rusty basin catches the drip. The soot over
+    # the fire and the leak's stain are in the bake (MARKS in bake_studio_lightmap.py).
+    dx_, dy_ = 3.05, 7.4
+    basin = [(0.0, 0.0), (0.13, 0.0), (0.17, 0.08), (0.165, 0.09), (0.0, 0.085)]
+    turned("hall_drip_basin", basin, dx_, dy_, 0.0, m["rust"], segments=24)
+    box("hall_drip_water", area, dx_ - 0.11, dx_ + 0.11, dy_ - 0.11, dy_ + 0.11, 0.05, 0.052, m["water"])
+    collider("hall_drip_basin", area, dx_ - 0.17, dx_ + 0.17, dy_ - 0.17, dy_ + 0.17, 0, 0.1)
+
+    # ---- The dining table under the hanging lamp: scanned furniture and kitchenware.
+    tx, ty = 2.1, 7.95
+    lib("wooden_table_02", (tx, ty, 0), 0, name="hall_table", budget=2000)
+    top = surface_z(tx, ty, 1.2)
+    box("hall_table_mat", area, tx - 0.36, tx + 0.36, ty - 0.24, ty + 0.24, top, top + 0.004, m["mat"], edge=0.002)
+    top += 0.004
+    dome = [(0.0, 0.22)] + [(0.2 * math.sin(t), 0.22 * math.cos(t)) for t in np.linspace(0.15, math.pi / 2, 10)]
+    turned("hall_food_cover", [(r_, z) for r_, z in reversed(dome)], tx + 0.12, ty + 0.04, top, m["mesh_cover"], segments=28)
+    turned("hall_food_cover_knob", [(0.0, 0.0), (0.012, 0.0), (0.01, 0.02), (0.0, 0.025)], tx + 0.12, ty + 0.04, top + 0.216, m["worn"], segments=10)
+    lib("wooden_bowl_02", (tx + 0.12, ty + 0.04, top), 0, name="hall_bowl_under_cover", collide=False, budget=600)
+    lib("ceramic_pot", (tx - 0.22, ty + 0.06, top), 25, name="hall_rice_pot", collide=False, scale=0.42, budget=1500)
+    for k, (bx, by) in enumerate(((tx - 0.3, ty - 0.2), (tx + 0.02, ty - 0.22))):
+        turned(f"hall_rice_bowl_{k}", [(0.0, 0.0), (0.03, 0.0), (0.06, 0.045), (0.058, 0.048), (0.0, 0.015)], bx, by, top, m["porcelain"], segments=20)
+        for e in (-1, 1):
+            tube(f"hall_chopstick_{k}_{e}", area, [(bx + 0.075 + e * 0.006, by - 0.1, top + 0.0025), (bx + 0.08 + e * 0.009, by + 0.12, top + 0.0025)], 0.0025, m["worn"], sides=4)
+    lib("carved_wooden_plate", (tx + 0.4, ty - 0.12, top), 30, name="hall_fruit_plate", collide=False, scale=0.8, budget=600)
+    for k, (dx, dy) in enumerate(((-0.04, 0.0), (0.03, 0.03), (0.0, -0.04), (0.05, -0.03))):
+        lib("food_lime_01", (tx + 0.4 + dx, ty - 0.12 + dy, top + 0.012), k * 70, name=f"hall_lime_{k}", collide=False, budget=250)
+    for k, (dx, dy) in enumerate(((-0.06, 0.05), (-0.03, 0.08), (0.06, 0.06))):
+        lib("food_lychee_01", (tx + 0.4 + dx, ty - 0.12 + dy, top + 0.01), k * 50, name=f"hall_lychee_{k}", collide=False, budget=200)
+    for k, (sx_, sy_, rot, mid, sc) in enumerate(((tx - 0.3, ty - 0.68, 10, "wooden_stool_01", 1.0), (tx + 0.32, ty - 0.66, 35, "painted_wooden_stool", 1.0),
+                                                   (tx + 0.88, ty + 0.03, 80, "chinese_stool", 0.85))):
+        lib(mid, (sx_, sy_, 0), rot, name=f"hall_stool_{k}", scale=sc, budget=2000)
+
+    # ---- The hanging lamp over the table: an enamelled steel shade on its rod, the hall's light.
+    lamp = lib("hanging_industrial_lamp", (tx, ty, H), 0, name="hall_lamp", collide=False, scale=0.6, budget=2500)
+    bpy.context.view_layer.update()
+    # The bulb is the faces with the glass material; the baked light sits just under it,
+    # inside the shade's mouth (a light inside the glass would be lost in the bake).
+    glass = []
+    for o in lamp.children_recursive:
+        if o.type != "MESH":
+            continue
+        slots = [i for i, sl in enumerate(o.material_slots) if sl.material and "glass" in sl.material.name.lower()]
+        for poly in o.data.polygons:
+            if poly.material_index in slots:
+                glass += [o.matrix_world @ o.data.vertices[i].co for i in poly.vertices]
+    bz = min(p.z for p in glass) if glass else 2.62
+    empty("marker_airwell_bulb", area, (tx, ty, bz - 0.025))
+    wire = [(0.0125, y0 + 0.4, 1.4), (0.0125, y0 + 0.4, H - 0.03), (tx, y0 + 0.4, H - 0.03), (tx, ty, H - 0.03)]
+    tube("hall_wiring", area, wire, 0.0035, m["cord"], sides=5)
+    for k, p in enumerate(((0.0125, y0 + 0.4, 2.1), (0.0125, y0 + 0.4, 2.9), (1.0, y0 + 0.4, H - 0.03))):
+        turned(f"hall_cleat_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.02), (0.008, 0.024), (0.0, 0.024)], p[0], p[1], p[2] - 0.012, m["porcelain"], segments=10)
+    box("hall_switch_plate", area, 0.0125, 0.024, y0 + 0.36, y0 + 0.44, 1.3, 1.41, m["ebonite"], edge=0.004)
+
+    # ---- The food safe against the back wall: screened doors, legs standing in tins of
+    # water against the ants. A scanned cupboard stands in for it when it is there.
+    fx0, fx1, fy1 = 1.45, 2.3, y1 - 0.0125
+    fy0 = fy1 - 0.4
+    for e, x in (("w", fx0), ("e", fx1 - 0.04)):
+        for yy in (fy0, fy1 - 0.04):
+            box(f"food_safe_post_{e}_{yy:.2f}", area, x, x + 0.04, yy, yy + 0.04, 0.12, 1.55, m["planks"], edge=0.004)
+            turned(f"food_safe_ant_tin_{e}_{yy:.2f}", [(0.0, 0.0), (0.04, 0.0), (0.042, 0.06), (0.038, 0.06), (0.0, 0.004)], x + 0.02, yy + 0.02, 0.0, m["rust"], segments=14)
+            box(f"food_safe_ant_water_{e}_{yy:.2f}", area, x - 0.012, x + 0.052, yy - 0.012, yy + 0.052, 0.05, 0.052, m["water"])
+    for z in (0.12, 0.62, 1.1, 1.52):
+        box(f"food_safe_shelf_{z}", area, fx0 + 0.04, fx1 - 0.04, fy0 + 0.02, fy1 - 0.02, z, z + 0.025, m["planks"])
+    box("food_safe_top", area, fx0 - 0.02, fx1 + 0.02, fy0 - 0.02, fy1, 1.55, 1.59, m["planks"], edge=0.006)
+    box("food_safe_back", area, fx0, fx1, fy1 - 0.01, fy1, 0.12, 1.55, m["planks"])
+    for e, (a, b) in (("w", (fx0 + 0.04, (fx0 + fx1) / 2)), ("e", ((fx0 + fx1) / 2, fx1 - 0.04))):
+        for nm, (u0, u1, z0, z1) in (("l", (a, a + 0.03, 0.15, 1.52)), ("r", (b - 0.03, b, 0.15, 1.52)), ("b", (a, b, 0.15, 0.2)), ("t", (a, b, 1.47, 1.52)), ("m", (a, b, 0.6, 0.65))):
+            box(f"food_safe_door_{e}_{nm}", area, u0, u1, fy0 - 0.02, fy0, z0, z1, m["planks"], edge=0.003)
+        for z0, z1 in ((0.2, 0.6), (0.65, 1.47)):
+            box(f"food_safe_screen_{e}_{z0}", area, a + 0.03, b - 0.03, fy0 - 0.012, fy0 - 0.008, z0, z1, m["mesh_cover"])
+        box(f"food_safe_turnbuckle_{e}", area, b - 0.045 if e == "w" else a + 0.015, b - 0.015 if e == "w" else a + 0.045, fy0 - 0.03, fy0 - 0.02, 0.98, 1.0, m["brass"])
+    collider("food_safe", area, fx0 - 0.02, fx1 + 0.02, fy0 - 0.03, fy1, 0, 1.6)
+    # Behind the screens: crocks, a brass pot, the oil tin; bananas and a crock on top.
+    for k, (mid, xx, z, sc, rot) in enumerate((("ceramic_pot", fx0 + 0.22, 1.125, 0.38, 20), ("brass_pot_01", fx0 + 0.6, 1.125, 0.5, 0),
+                                               ("oil_tin", fx0 + 0.25, 0.645, 0.9, 40), ("jug_01", fx0 + 0.6, 0.645, 0.75, 200),
+                                               ("wooden_bowl_02", fx0 + 0.25, 0.145, 1.0, 0), ("ceramic_pot", fx0 + 0.6, 0.145, 0.4, 70))):
+        lib(mid, (xx, fy0 + 0.2, z), rot, name=f"food_safe_store_{k}", collide=False, scale=sc, budget=900)
+    lib("bananas", (fx0 + 0.3, fy0 + 0.2, 1.59), 20, collide=False, scale=0.8, budget=1500)
+    lib("ceramic_pot", (fx0 + 0.66, fy0 + 0.2, 1.59), 160, name="food_safe_top_crock", collide=False, scale=0.4, budget=900)
+
+    # ---- The big glazed water jar in the corner by the stairs, its lid half off, a dipper;
+    # a smaller jar beside it.
+    jx, jy = 2.95, y1 - 0.38
+    jar = scan("water_jar", (jx, jy, 0.0), 30, name="hall_water_jar", collide=False)
+    if jar is None:
+        prof = [(0.0, 0.0), (0.16, 0.0), (0.24, 0.12), (0.29, 0.32), (0.28, 0.5), (0.2, 0.64), (0.155, 0.69), (0.17, 0.71), (0.165, 0.73), (0.0, 0.73)]
+        turned("hall_water_jar", prof, jx, jy, 0.0, m["glaze"], segments=32)
+    rim = top_of(jar) if jar else 0.73
+    cylinder("hall_water_jar_water", area, jx, jy, rim - 0.05, rim - 0.048, 0.085, m["water"], verts=20)
+    lid = turned("hall_jar_lid", [(0.0, 0.0), (0.15, 0.0), (0.15, 0.02), (0.0, 0.02)], 0, 0, 0, m["planks"], segments=24)
+    lid.location = (jx - 0.08, jy + 0.05, rim - 0.004)
+    lid.rotation_euler = (0.12, -0.3, 0)
+    turned("hall_dipper_shell", [(0.0, 0.0), (0.05, 0.005), (0.07, 0.035), (0.068, 0.045), (0.0, 0.03)], jx + 0.13, jy - 0.12, rim - 0.01, m["leather"], segments=16)
+    tube("hall_dipper_handle", area, [(jx + 0.13, jy - 0.12, rim + 0.02), (jx + 0.0, jy - 0.03, rim + 0.09)], 0.008, m["bamboo"], sides=6)
+    collider("hall_water_jar", area, jx - 0.3, jx + 0.3, jy - 0.3, jy + 0.3, 0, rim + 0.02)
+    scan("jar_handles", (jx + 0.1, jy - 0.58, 0.0), 200, name="hall_small_jar")
+
+    # ---- West wall, from the door: the rice chest with baskets hung above it, the cooking
+    # fire, the kettle's brazier, firewood, the kitchen shelves. A crowded working corner,
+    # sooted and swept.
+    lib("wooden_crate_01", (0.215, 6.74, 0), 90, name="hall_rice_chest", budget=3000)
+    lid_z = surface_z(0.215, 6.6, 1.0)
+    lib("wicker_basket_02", (0.2, 6.55, lid_z), 100, name="hall_chest_basket", collide=False, budget=2500)
+    for k, (dx, dy) in enumerate(((0.0, 0.0), (0.06, 0.04), (-0.05, 0.05), (0.03, -0.05))):
+        lib("yellow_onion", (0.24 + dx, 6.58 + dy, lid_z + 0.02), k * 80, name=f"hall_onion_{k}", collide=False, budget=300)
+    lib("sweet_potato", (0.25, 6.95, lid_z + 0.03), 30, name="hall_sweet_potato_0", collide=False, budget=300)
+    lib("sweet_potato", (0.18, 7.02, lid_z + 0.03), 100, name="hall_sweet_potato_1", collide=False, budget=300)
+    # The winnowing tray and two baskets on nails above the chest, their bottoms to the wall.
+    tray = scan("winnowing_tray", (0.015, 6.74, 1.95), 0, name="kitchen_winnowing_tray", collide=False)
+    if tray is None:
+        tray = lib("carved_wooden_plate", (0.015, 6.74, 1.95), 0, name="kitchen_winnowing_tray", collide=False, scale=1.6, budget=900)
+    tray.rotation_euler = (0.0, math.pi / 2 - 0.06, 0.0)
+    for key, yy, z in (("basket_round", 6.5, 1.36), ("basket_deep", 6.98, 1.3)):
+        b = scan(key, (0.015, yy, z), 0, name=f"kitchen_hung_{key}", collide=False)
+        if b is not None:
+            b.rotation_euler = (0.0, math.pi / 2 - 0.1, 0.0)
+    for k, (yy, z) in enumerate(((6.74, 2.27), (6.5, 1.56), (6.98, 1.48))):
+        tube(f"kitchen_nail_{k}", area, [(0.0125, yy, z), (0.045, yy, z + 0.006)], 0.0025, m["iron"], sides=4)
+
+    # The cooking fire: a clay pot on its clay stove, the cook's low stool in front.
+    cx_, cy_ = 0.25, 7.47
+    stove = scan("cooking_pot", (cx_, cy_, 0.0), 90, name="kitchen_stove")
+    if stove is None:
+        prof = [(0.0, 0.0), (0.14, 0.0), (0.16, 0.06), (0.15, 0.2), (0.17, 0.26), (0.13, 0.27), (0.11, 0.22), (0.0, 0.22)]
+        turned("kitchen_brazier", prof, cx_, cy_, 0.0, m["terracotta"], segments=24)
+        collider("kitchen_brazier", area, cx_ - 0.18, cx_ + 0.18, cy_ - 0.18, cy_ + 0.18, 0, 0.3)
+    lib("wooden_stool_02", (cx_ + 0.42, cy_ + 0.02, 0.0), 95, name="kitchen_squat_stool", budget=1200)
+    # The brazier for the kettle, and the brass wok hung on the wall over it.
+    kx, ky = 0.22, 7.93
+    brazier = scan("clay_stove", (kx, ky, 0.0), 40, name="kitchen_kettle_brazier")
+    if brazier is not None:
+        # The kettle sits down in the bowl's mouth: the rim, not the wire handle over it.
+        bpy.context.view_layer.update()
+        ring = sorted((o.matrix_world @ v.co).z for o in brazier.children_recursive if o.type == "MESH" for v in o.data.vertices
+                      if 0.12 < math.hypot((o.matrix_world @ v.co).x - kx, (o.matrix_world @ v.co).y - ky) < 0.17)
+        rim_z = ring[int(len(ring) * 0.8)] if ring else 0.3
+        scan("kettle", (kx, ky, rim_z - 0.03), 115, name="kitchen_kettle", collide=False)
+    wok = lib("brass_pot_02", (0.016, 7.52, 0.92), 0, name="kitchen_wok", collide=False, scale=0.8, budget=1200)
+    wok.rotation_euler = (0.0, math.pi / 2, 0.0)
+    tube("kitchen_nail_wok", area, [(0.0125, 7.52, 1.07), (0.045, 7.52, 1.076)], 0.0025, m["iron"], sides=4)
+    # Firewood stacked against the wall, the hatchet on top.
+    for k in range(9):
+        yy = 8.15 + (k % 3) * 0.048
+        zz = 0.025 + (k // 3) * 0.045
+        tube(f"kitchen_firewood_{k}", area, [(0.03, yy, zz), (0.4 + 0.03 * (k % 2), yy + 0.012 * ((k % 3) - 1), zz)], 0.021 + 0.004 * (k % 3), m["bark"], sides=7)
+    collider("kitchen_firewood", area, 0.0, 0.45, 8.11, 8.3, 0, 0.15)
+    lib("hatchet", (0.22, 8.2, 0.17), 0, name="kitchen_hatchet", collide=False, budget=800).rotation_euler = (0.0, math.pi / 2, 0.15)
+
+    # The painted kitchen shelves, standing against the wall.
+    sy = 8.56
+    lib("painted_wooden_shelves", (0.0125, sy, 0.0), 90, name="kitchen_shelves", budget=1200)
+    picks = (("wooden_bowl_02", -0.12, 0.0, 1.0), ("jug_01", 0.1, 90, 0.8), ("oil_tin", 0.0, 20, 1.0),
+             ("ceramic_pot", -0.1, 60, 0.35), ("antique_ceramic_vase_01", 0.12, 0, 0.45), ("wooden_bowl_02", 0.05, 0, 0.9))
+    levels = sorted({round(surface_z(0.2, sy, z), 3) for z in (0.3, 0.6, 0.9, 1.3)})
+    levels = [z for z in levels if 0.05 < z < 1.2]
+    for k, (mid, dy, rot, sc) in enumerate(picks):
+        if not levels:
+            break
+        z = levels[k % len(levels)]
+        lib(mid, (0.19, sy + dy, z), rot, name=f"kitchen_shelf_ware_{k}", collide=False, scale=sc, budget=900)
+    lib("wooden_cutting_board", (0.06, sy, (levels[-1] if levels else 1.12) + 0.13), 90, name="kitchen_cutting_board", collide=False, budget=600).rotation_euler = (0.0, -1.25, math.pi / 2)
+
+    # Plank shelves on iron brackets over the fire: glazed jars, crocks, pots, a jug; the
+    # spoon hanging.
+    for k, z in enumerate((1.3, 1.68)):
+        box(f"kitchen_plank_shelf_{k}", area, 0.012, 0.28, 7.2, 8.12, z, z + 0.028, m["planks"], edge=0.004)
+        for yy in (7.32, 8.0):
+            tube(f"kitchen_bracket_{k}_{yy}", area, [(0.014, yy, z - 0.2), (0.014, yy, z), (0.25, yy, z)], 0.006, m["iron"], sides=4)
+            tube(f"kitchen_bracket_brace_{k}_{yy}", area, [(0.014, yy, z - 0.18), (0.2, yy, z - 0.004)], 0.005, m["iron"], sides=4)
+    collider("kitchen_plank_shelves", area, 0, 0.28, 7.2, 8.12, 1.1, 1.75)
+    for k, (mid, yy, z, sc, rot) in enumerate((("ceramic_pot", 7.36, 1.328, 0.36, 0), ("antique_ceramic_vase_01", 7.98, 1.328, 0.5, 0),
+                                               ("brass_pot_01", 7.34, 1.708, 0.5, 0), ("jug_01", 7.62, 1.708, 0.7, 260), ("oil_tin", 7.82, 1.708, 0.85, 10))):
+        lib(mid, (0.15, yy, z), rot, name=f"kitchen_store_{k}", collide=False, scale=sc, budget=900)
+    scan("jar_plain", (0.15, 8.0, 1.708), 30, name="kitchen_store_glazed_jar", collide=False, scale=0.62)
+    scan("jar_handles", (0.15, 7.68, 1.328), 120, name="kitchen_store_handled_jar", collide=False, scale=0.5)
+    lib("wooden_spoon", (0.27, 7.86, 1.12), 0, name="kitchen_ladle", collide=False, budget=600).rotation_euler = (math.pi / 2 - 0.05, 0.0, math.pi / 2)
+
+    # The rice sack by the back door, against the wall beside the food safe.
+    scan("rice_sack", (1.27, y1 - 0.24, 0.0), 95, name="hall_rice_sack")
+
+    # ---- Washing drying indoors in the rains, on a line across the stairwell: the glow from
+    # the floor below comes up behind it.
+    a_, b_ = (W - 0.02, 7.15, 2.45), (3.55, y1 - 0.02, 2.45)
+    line = sag(a_, b_, 0.06, n=14)
+    tube("hall_washing_line", area, line, 0.002, m["string"], sides=4)
+    for name, t, width, drop, mat in (("krama", 0.3, 0.45, 0.85, m["krama"]), ("sampot", 0.62, 0.5, 1.0, m["sampot"])):
+        p = line[round(t * (len(line) - 1))]
+        d = np.array(b_[:2]) - np.array(a_[:2])
+        d /= np.linalg.norm(d)
+        obj = draped(f"hall_laundry_{name}", -width / 2, width / 2, 0.0, 0.0, drop, mat)
+        obj.location = (p[0], p[1], p[2] + 0.02)
+        obj.rotation_euler = (0, 0, math.atan2(d[1], d[0]))
+
+    # ---- Pegs by the door with a krama and a cotton cloth; the sleeping mat; the broom.
+    box("hall_peg_rail", area, 1.3, 1.75, y0, y0 + 0.02, 1.62, 1.68, m["wood"], edge=0.004)
+    for k, x in enumerate((1.38, 1.53, 1.68)):
+        tube(f"hall_peg_{k}", area, [(x, y0 + 0.02, 1.65), (x, y0 + 0.09, 1.67)], 0.008, m["wood"], sides=6)
+    peg_cloth("hall_peg_krama", (1.68, y0 + 0.075, 1.685), 0.24, 0.62, m["krama"], seed=3)
+    peg_cloth("hall_peg_sampot", (1.38, y0 + 0.075, 1.685), 0.22, 0.5, m["sampot"], seed=8)
+    mat_roll = scan("straw_mat", (W - 0.13, 6.72, 2.02 - 0.72), 90, name="hall_sleeping_mat", collide=False)
+    if mat_roll is None:
+        tube("hall_sleeping_mat", area, [(W - 0.12, STAIR[2] - 0.15, 0.04), (W - 0.12, STAIR[2] - 0.15, 0.9)], 0.06, m["mat"], sides=14)
+    else:
+        for k, yy in enumerate((6.52, 6.92)):
+            tube(f"hall_mat_nail_{k}", area, [(W - 0.0125, yy, 2.02), (W - 0.05, yy, 2.026)], 0.0025, m["iron"], sides=4)
+    # The straw broom, bristles down, leaning into the corner by the stairs.
+    broom = scan("broom", (W - 0.12, 6.24, 0.35), 0, name="hall_broom", collide=False)
+    if broom is not None:
+        broom.rotation_euler = (0.0, math.radians(72), math.pi)
+
+    # ---- Cobwebs in the high corners and over the stairs.
+    for k, (corner, u, v, size) in enumerate((((0.0125, y0 + 0.01, H), (1, 0, 0), (0, 1, -0.6), 0.55),
+                                                ((W - 0.0125, y1 - 0.0125, H), (-1, 0, 0), (0, -1, -0.5), 0.6),
+                                                ((0.0125, y1 - 0.0125, H), (1, 0, 0), (0, -1, -0.7), 0.45),
+                                                ((W - 0.0125, STAIR[2] + 0.4, 2.0), (0, 1, 0.4), (-1, 0, -0.3), 0.5))):
+        cobweb(f"hall_cobweb_{k}", corner, u, v, size)
+
+    # The earth-god shrine low against the partition: red lacquer, incense, fruit.
+    sx, sy = 1.9, P1[1]
+    box("shrine_base", area, sx - 0.2, sx + 0.2, sy, sy + 0.2, 0.0, 0.12, m["red_lacquer"], edge=0.006)
+    box("shrine_back", area, sx - 0.18, sx + 0.18, sy, sy + 0.03, 0.12, 0.5, m["red_lacquer"], edge=0.004)
+    for e in (-1, 1):
+        box(f"shrine_side_{e}", area, sx + e * 0.18 - 0.02, sx + e * 0.18 + 0.02, sy, sy + 0.18, 0.12, 0.5, m["red_lacquer"], edge=0.004)
+    box("shrine_roof", area, sx - 0.24, sx + 0.24, sy, sy + 0.21, 0.5, 0.54, m["red_lacquer"], edge=0.008)
+    box("shrine_gilt_trim", area, sx - 0.2, sx + 0.2, sy + 0.2, sy + 0.21, 0.47, 0.5, m["gold"])
+    box("shrine_gilt_panel", area, sx - 0.12, sx + 0.12, sy + 0.031, sy + 0.035, 0.18, 0.44, m["gold"])
+    turned("shrine_incense_pot", [(0.0, 0.0), (0.05, 0.0), (0.06, 0.05), (0.055, 0.07), (0.0, 0.06)], sx, sy + 0.11, 0.12, m["brass"], segments=18)
+    for k in range(3):
+        stick = cylinder(f"shrine_incense_{k}", area, sx + (k - 1) * 0.012, sy + 0.11, 0.17, 0.33, 0.0015, m["incense"], verts=4)
+        stick.rotation_euler = (0.06 * (k - 1), 0.05 * (k - 1), 0)
+    for k, e in enumerate((-1, 1)):
+        turned(f"shrine_candle_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.09), (0.0, 0.09)], sx + e * 0.12, sy + 0.12, 0.12, m["red_lacquer"], segments=10)
+    for k, (dx, dy) in enumerate(((-0.06, 0.16), (0.0, 0.17), (0.06, 0.16), (-0.03, 0.16))):
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.028, segments=12, ring_count=8, location=(sx + dx, sy + dy, 0.15 + (0.04 if k == 3 else 0)))
+        orange = bpy.context.active_object
+        orange.name = f"shrine_orange_{k}"
+        for c in orange.users_collection:
+            c.objects.unlink(orange)
+        area.objects.link(orange)
+        orange.data.materials.append(m["orange"])
+    collider("shrine", area, sx - 0.24, sx + 0.24, sy, sy + 0.21, 0, 0.55)
+
+    # The stairs down: an opening in the floor, treads descending north into the dark,
+    # a turned balustrade on the open side and a child gate at the head (the way out).
+    sx0, sx1, sy0, sy1 = STAIR
+    rise, going = 0.19, 0.25
+    for i in range(int((sy1 - sy0) / going)):
+        y = sy0 + i * going
+        z = -rise * (i + 1)
+        box(f"stair_tread_{i}", area, sx0, sx1, y, y + going + 0.02, z - 0.035, z, m["stair"], edge=0.006)
+        box(f"stair_riser_{i}", area, sx0, sx1, y, y + 0.02, z, z + rise - 0.035, m["wood"])
+    box("stair_well_wall_west", area, sx0 - 0.04, sx0, sy0, sy1, -3.2, 0, m["limewash"])
+    box("stair_well_wall_north", area, sx0, sx1, sy1, sy1 + 0.04, -3.2, 0, m["limewash"])
+    box("stair_floor_edge", area, sx0 - 0.06, sx1, sy0 - 0.04, sy0, -0.06, 0.0, m["wood"], edge=0.006)
+    box("stair_handrail", area, sx0 - 0.07, sx0 - 0.01, sy0, sy1, 0.92, 0.97, m["teak"], edge=0.01)
+    box("stair_bottom_rail", area, sx0 - 0.06, sx0 - 0.02, sy0, sy1, 0.0, 0.06, m["teak"])
+    for i in range(int((sy1 - sy0) / 0.13)):
+        turned(f"stair_baluster_{i}", [(r * 0.7, z * 1.15) for r, z in BALUSTER], sx0 - 0.04, sy0 + 0.07 + i * 0.13, 0.06, m["teak"], segments=8)
+    for y in (sy0, sy1):
+        box(f"stair_newel_{y:.2f}", area, sx0 - 0.08, sx0, y - 0.04, y + 0.04, 0, 1.08, m["teak"], edge=0.01)
+    collider("stair_balustrade", area, sx0 - 0.08, sx0, sy0, sy1, 0, 1.0)
+    collider("stair_well", area, sx0, sx1, sy0 + 0.05, sy1, -0.5, 1.0)
+    # The gate: closed until Sora has packed (interact_door, P07).
+    gate = empty("interact_door", area, ((sx0 + sx1) / 2, sy0 - 0.02, 0.5), action="open")
+    gate["requires"] = "ep1.kit.collected"
+    for nm, a in (("top", (sx0 + 0.02, sx1 - 0.02, 0.86, 0.92)), ("bottom", (sx0 + 0.02, sx1 - 0.02, 0.08, 0.13)),
+                  ("stile_w", (sx0 + 0.02, sx0 + 0.07, 0.08, 0.92)), ("stile_e", (sx1 - 0.07, sx1 - 0.02, 0.08, 0.92))):
+        attach(box(f"stair_gate_{nm}", area, a[0], a[1], sy0 - 0.035, sy0 - 0.005, a[2], a[3], m["teak"], edge=0.006), gate)
+    for i in range(8):
+        x = sx0 + 0.12 + i * (sx1 - sx0 - 0.24) / 7
+        attach(cylinder(f"stair_gate_bar_{i}", area, x, sy0 - 0.02, 0.13, 0.86, 0.011, m["teak"], verts=8), gate)
+    for k, z in enumerate((0.25, 0.75)):
+        attach(box(f"stair_gate_hinge_{k}", area, sx1 - 0.03, sx1 + 0.01, sy0 - 0.04, sy0, z - 0.03, z + 0.03, m["iron"]), gate)
+    attach(box("stair_gate_latch", area, sx0 - 0.01, sx0 + 0.06, sy0 - 0.045, sy0 - 0.03, 0.82, 0.86, m["iron"]), gate)
+    collider("door", area, sx0, sx1, sy0 - 0.05, sy0 + 0.02, 0, 0.95)
+    # Warm light rising from the floor below: the bulb is in the bake only.
+    empty("marker_stair_glow", area, ((sx0 + sx1) / 2, sy1 - 0.4, -2.4))
+    # Telephone and lantern on the hall side of the partition.
+    telephone((2.95, P1[1], 1.47))
+    lantern_hook((2.42, P1[1], 1.62))
+    # Electric wiring on porcelain cleats along the partition, up to the ceiling joists.
+    wire = [(3.1, P1[1] + 0.012, 1.7), (3.1, P1[1] + 0.012, H - 0.6), (4.4, P1[1] + 0.012, H - 0.6)]
+    tube("airwell_wiring", area, wire, 0.0035, m["cord"], sides=5)
+    for k, z in enumerate((1.9, 2.4)):
+        turned(f"airwell_cleat_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.02), (0.008, 0.024), (0.0, 0.024)], 3.1, P1[1] + 0.024, z - 0.012, m["porcelain"], segments=10)
+
+
+def wall_p2():
+    """Masonry wall between the hall and the back room, with its doorway and the door
+    standing open into the dark room."""
+    y0, y1 = P2
+    d0, d1 = P2_DOOR
+    wall("wall_p2_east", d1, W, y0, y1, 0, H, m["limewash"])
+    wall("wall_p2_west", 0, d0, y0, y1, 0, H, m["limewash"])
+    wall("wall_p2_head", d0, d1, y0, y1, 2.2, H, m["limewash"], solid=False)
+    for x in (d0, d1):
+        box(f"wall_p2_door_frame_{x:.2f}", area, x - 0.05, x + 0.05, y0 - 0.02, y1 + 0.02, 0, 2.25, m["wood"], edge=0.006)
+    box("wall_p2_door_frame_head", area, d0 - 0.05, d1 + 0.05, y0 - 0.02, y1 + 0.02, 2.2, 2.28, m["wood"], edge=0.006)
+    # The door, hinged on its west side, open about 70 degrees into the back room.
+    leaf = (d1 - d0) - 0.02
+    door = empty("back_room_door_hinge", area, (d0 + 0.01, y1, 0), (0, 0, math.radians(95)))
+    parts = [("stile_a", (0, 0.07, 0, 2.18)), ("stile_b", (leaf - 0.07, leaf, 0, 2.18)), ("rail_b", (0, leaf, 0, 0.2)),
+             ("rail_m", (0, leaf, 0.95, 1.07)), ("rail_t", (0, leaf, 2.06, 2.18))]
+    for nm, (u0, u1, z0, z1) in parts:
+        p = box(f"back_room_door_{nm}", area, u0, u1, 0, 0.04, z0, z1, m["teak"], edge=0.004)
+        p.parent = door
+    for nm, (z0, z1) in (("low", (0.2, 0.95)), ("high", (1.07, 2.06))):
+        p = box(f"back_room_door_panel_{nm}", area, 0.07, leaf - 0.07, 0.008, 0.032, z0, z1, m["teak"])
+        p.parent = door
+        p = box(f"back_room_door_raise_{nm}", area, 0.1, leaf - 0.1, 0.004, 0.036, z0 + 0.03, z1 - 0.03, m["teak"], edge=0.01)
+        p.parent = door
+    knob = turned("back_room_door_knob", [(0.0, 0.0), (0.012, 0.0), (0.008, 0.03), (0.02, 0.05), (0.0, 0.065)], 0, 0, 0, m["brass"], segments=12)
+    knob.parent = door
+    knob.location = (leaf - 0.08, 0.04, 1.0)
+    knob.rotation_euler = (-math.pi / 2, 0, 0)
+    bpy.context.view_layer.update()
+    hinge_world = door.matrix_world.copy()
+    pts = [hinge_world @ mathutils.Vector(c) for c in ((0, 0, 0), (leaf, 0, 0), (leaf, 0.04, 2.2), (0, 0.04, 2.2))]
+    xs, ys = [p.x for p in pts], [p.y for p in pts]
+    collider("back_room_door", area, min(xs), max(xs) + 0.02, min(ys), max(ys) + 0.02, 0, 2.2)
+
+
+def back_room_shell():
+    y0, y1 = P2[1], BACK
+    wall("wall_north", -PARTY, W + PARTY, y1, y1 + 0.3, 0, H + 0.05, m["limewash"])
+    room_walls("back", 0, W, y0, y1, "wens", gaps=[("s", P2_DOOR[0] - 0.05, P2_DOOR[1] + 0.05, 2.28)])
+    # North window: closed shutters inside, iron bars.
+    wx0, wx1, wz0, wz1 = 2.0, 2.9, 0.95, 2.25
+    box("north_window_frame", area, wx0 - 0.06, wx1 + 0.06, y1 - 0.06, y1 + 0.005, wz0 - 0.06, wz1 + 0.06, m["wood"], edge=0.006)
+    for s, (a, b) in enumerate(((wx0, (wx0 + wx1) / 2), ((wx0 + wx1) / 2, wx1))):
+        box(f"north_shutter_{s}_frame", area, a, b, y1 - 0.09, y1 - 0.06, wz0, wz1, m["shutter"], edge=0.004)
+        for j in range(20):
+            z = wz0 + 0.06 + j * (wz1 - wz0 - 0.12) / 20
+            box(f"north_shutter_{s}_slat_{j}", area, a + 0.04, b - 0.04, y1 - 0.1, y1 - 0.065, z, z + 0.045, m["shutter"], tilt=(0.55, 0, 0))
+    box("north_window_bolt", area, (wx0 + wx1) / 2 - 0.01, (wx0 + wx1) / 2 + 0.01, y1 - 0.11, y1 - 0.09, 1.3, 1.9, m["iron"])
+
+
+# =============================================================== front studio
+
+
+def front_studio():
     tx, ty = 3.0, 0.72
+    drafting_table(tx, ty)
+    bankers_lamp(2.05, 0.77)
+    writing_desk()
+    plan_chest(0.0, 3.35)
+    case = lib("wooden_bookshelf_worn", (0.3, 5.15, 0), 90, budget=5000)
+    shelf_books_on_bookcase(case)
+    # Candle shelf, satchel and books on the partition, east of the doorway (P04/P05).
+    shelf_and_candle()
+    # Tea corner against the east wall, under the colour poster.
+    lib("chinese_tea_table", (3.75, 2.75, 0), 0, budget=3000)
+    tea_tray(3.62, 2.7, 0.5)
+    # A paraffin lamp left burning low on the tea table: the posters' light.
+    lamp = lib("vintage_oil_lamp", (4.0, 2.95, 0.5), 0, collide=False, scale=0.42, budget=3000)
+    empty("marker_tea_lamp", area, flame_point(lamp))
+    lib("chinese_armchair", (3.75, 3.5, 0), 0, scale=0.74, budget=3000)
+    lib("wooden_stool_01", (3.05, 2.55, 0), 10, budget=2500)
+    box("rug", area, 2.6, 4.45, 1.85, 3.9, 0.0, 0.012, m["rug"], edge=0.003)
+    for k, y in enumerate(np.linspace(1.9, 3.85, 34)):
+        tube(f"rug_fringe_w_{k}", area, [(2.6, y, 0.006), (2.555, y + 0.004, 0.003)], 0.0015, m["paper"], sides=4)
+        tube(f"rug_fringe_e_{k}", area, [(4.45, y, 0.006), (4.495, y - 0.004, 0.003)], 0.0015, m["paper"], sides=4)
+    lib("chinese_sofa", (W - 0.4, 4.95, 0), 270, scale=0.78, budget=2500)
+    # Prints on the walls: the colour poster and the Petit Journal cover over the tea
+    # corner, the postcards pinned in a row above the bench, Wat Phnom by the drafting
+    # table (her reference for the illustration), the dancer over the plan chest.
+    east = (0, -1, 0)
+    print_sheet("poster_danses_cambodgiennes", "posters", "PD1906", (W - 0.014, 2.6, 1.95), (0, -1, 0), (0, 0, 1), 0.62, tilt=0.012)
+    for dx, dz in ((-0.29, 0.41), (0.29, 0.41), (-0.29, -0.41), (0.29, -0.41)):
+        pin(f"poster_pin_{dx}_{dz}", (W - 0.013, 2.6 - dx, 1.95 + dz), (-1, 0, 0))
+    print_sheet("petit_journal_1906", "posters", "PJ1906", (W - 0.014, 3.45, 1.85), east, (0, 0, 1), 0.36, tilt=-0.02)
+    for k, (item, dy, dz, tl) in enumerate((("DIEU1658", 4.25, 1.62, 0.03), ("DIEU1662", 4.47, 1.66, -0.02), ("DIEUPROM", 4.69, 1.6, 0.04),
+                                             ("DIEU1604", 4.91, 1.65, -0.03), ("THRONE1910", 5.13, 1.61, 0.02))):
+        print_sheet(f"postcard_{k}", "cards", item, (W - 0.013, dy, dz), east, (0, 0, 1), 0.14, thickness=0.0006, tilt=tl)
+        pin(f"postcard_pin_{k}", (W - 0.012, dy, dz + 0.04), (-1, 0, 0))
+    print_sheet("wat_phnom_reference", "posters", "A35914", (2.3, 0.014, 1.62), (-1, 0, 0), (0, 0, 1), 0.3, tilt=-0.015)
+    pin("wat_phnom_pin", (2.3, 0.013, 1.73), (0, 1, 0))
+    frame_print("framed_dancer", "posters", "A36113", (0.013, 4.0, 1.85), (0, 1, 0), (0, 0, 1), 0.36)
+    tube("framed_dancer_cord", area, [(0.012, 3.88, 2.08), (0.012, 4.0, 2.45), (0.012, 4.12, 2.08)], 0.0015, m["string"], sides=4)
+    # More colour: a 1920s travel poster, the Petit Journal's colour map of Siam and
+    # Cambodia (1893) over the candle shelf, two of Busy's royal dancers in costume.
+    print_sheet("poster_kuling", "colour", "KULING", (0.014, 1.1, 1.8), (0, 1, 0), (0, 0, 1), 0.5, tilt=-0.015)
+    for dy, dz in ((-0.23, 0.33), (0.23, 0.33), (-0.23, -0.33), (0.23, -0.33)):
+        pin(f"kuling_pin_{dy}_{dz}", (0.013, 1.1 + dy, 1.8 + dz), (1, 0, 0))
+    print_sheet("map_siam_1893", "colour", "SIAM1893", (2.75, P1[0] - 0.014, 1.98), (1, 0, 0), (0, 0, 1), 0.42, tilt=0.01)
+    for dx, dz in ((-0.19, 0.28), (0.19, 0.28)):
+        pin(f"siam_pin_{dx}_{dz}", (2.75 + dx, P1[0] - 0.013, 1.98 + dz), (0, -1, 0))
+    frame_print("framed_hanuman", "colour", "A36116", (4.05, P1[0] - 0.013, 1.75), (1, 0, 0), (0, 0, 1), 0.34)
+    frame_print("framed_yaksa", "colour", "A36112", (W - 0.013, 1.15, 1.75), (0, -1, 0), (0, 0, 1), 0.34)
+    box("picture_rail_west", area, 0, 0.025, 0, P1[0], 2.45, 2.49, m["wood"], edge=0.003)
+    box("picture_rail_east", area, W - 0.025, W, 0, P1[0], 2.45, 2.49, m["wood"], edge=0.003)
+    ceiling_fan(2.3, 3.0)
+    # Wiring on porcelain cleats from the ceiling to the sconce over the desk.
+    wire = [(0.013, 2.15, 1.75), (0.013, 2.15, H - 0.2), (0.6, 2.15, H - 0.2)]
+    tube("studio_surface_wiring", area, wire, 0.0035, m["cord"], sides=5)
+    for k, z in enumerate((2.2, 2.8)):
+        cl = turned(f"studio_cleat_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.02), (0.008, 0.024), (0.0, 0.024)], 0, 0, 0, m["porcelain"], segments=10)
+        cl.location = (0.0, 2.15, z)
+        cl.rotation_euler = (0, math.pi / 2, 0)
+    # Bakelite switch by the doorway.
+    box("studio_switch_plate", area, 1.3, 1.38, P1[0] - 0.012, P1[0], 1.25, 1.36, m["ebonite"], edge=0.004)
+    box("studio_switch_toggle", area, 1.33, 1.35, P1[0] - 0.03, P1[0] - 0.012, 1.3, 1.32, m["porcelain"], edge=0.003)
+    dress_working_studio(tx, ty)
+    empty("spawn_player", area, (tx, ty + 0.95, 0), (0, 0, math.pi), checkpoint="CP0")
+
+
+def drafting_table(tx, ty):
+    """Sora's drafting table under the east door (P02): oak trestles with an iron ratchet,
+    a breadboarded top tilted toward her, the Wat Phnom illustration inked to the middle."""
     for s in (-1, 1):
-        box(f"drafting_trestle_{s}", area, tx + s * 0.55 - 0.03, tx + s * 0.55 + 0.03, ty - 0.3, ty + 0.3, 0.05, 0.86, m["wood"], edge=0.005)
-        box(f"drafting_foot_{s}", area, tx + s * 0.55 - 0.04, tx + s * 0.55 + 0.04, ty - 0.34, ty + 0.34, 0, 0.05, m["wood"], edge=0.005)
-    box("drafting_stretcher", area, tx - 0.55, tx + 0.55, ty - 0.02, ty + 0.02, 0.2, 0.26, m["wood"], edge=0.004)
-    box("drafting_top", area, tx - 0.65, tx + 0.65, ty - 0.38, ty + 0.38, 0.88, 0.91, m["teak"], tilt=(-0.26, 0, 0), edge=0.004)
-    box("drafting_ledge", area, tx - 0.62, tx + 0.62, ty + 0.36, ty + 0.4, 0.86, 0.9, m["wood"], edge=0.003)
-    collider("drafting_table", area, tx - 0.65, tx + 0.65, ty - 0.4, ty + 0.4, 0, 1.0)
-    # Wat Phnom for a Phnom Penh printer, inked up to the middle (seen from the stool, the top is south).
+        x = tx + s * 0.55
+        box(f"drafting_trestle_{s}", area, x - 0.028, x + 0.028, ty - 0.3, ty + 0.3, 0.05, 0.86, m["worn"], edge=0.006)
+        box(f"drafting_foot_{s}", area, x - 0.045, x + 0.045, ty - 0.36, ty + 0.36, 0, 0.055, m["worn"], edge=0.008)
+        box(f"drafting_ratchet_{s}", area, x - 0.004 * s - 0.006, x - 0.004 * s + 0.006, ty + 0.1, ty + 0.34, 0.7, 0.86, m["iron"])
+        for j in range(5):
+            box(f"drafting_ratchet_tooth_{s}_{j}", area, x - 0.008, x + 0.008, ty + 0.12 + j * 0.045, ty + 0.14 + j * 0.045, 0.85, 0.87, m["iron"])
+    box("drafting_stretcher", area, tx - 0.55, tx + 0.55, ty - 0.02, ty + 0.02, 0.2, 0.26, m["worn"], edge=0.004)
+    box("drafting_top", area, tx - 0.62, tx + 0.62, ty - 0.38, ty + 0.38, 0.88, 0.91, m["teak"], tilt=(-0.26, 0, 0), edge=0.004)
+    for s in (-1, 1):
+        box(f"drafting_breadboard_{s}", area, tx + s * 0.62 - 0.035, tx + s * 0.62 + 0.035, ty - 0.39, ty + 0.39, 0.878, 0.912, m["worn"], tilt=(-0.26, 0, 0), edge=0.004)
+    box("drafting_ledge", area, tx - 0.62, tx + 0.62, ty + 0.36, ty + 0.4, 0.86, 0.9, m["worn"], edge=0.003)
+    collider("drafting_table", area, tx - 0.66, tx + 0.66, ty - 0.4, ty + 0.4, 0, 1.0)
     illustration = box("interact_illustration", area, tx - 0.3, tx + 0.3, ty - 0.21, ty + 0.21, 0.912, 0.914, m["illustration"],
-                       tilt=(-0.26, 0, 0), action="examine", beat="P02")
+                       tilt=(-0.26, 0, 0), action="examine")
     picture_uvs(illustration, (-1, 0, 0), (0, -1, 0))
+    # Brass clips holding the sheet, a T-square and set squares, ink and brushes.
+    for s in (-1, 1):
+        box(f"drafting_clip_{s}", area, tx + s * 0.28 - 0.015, tx + s * 0.28 + 0.015, ty - 0.24, ty - 0.2, 0.915, 0.922, m["brass"], tilt=(-0.26, 0, 0), edge=0.002)
     box("t_square_blade", area, tx - 0.5, tx + 0.25, ty + 0.22, ty + 0.25, 0.892, 0.902, m["teak"], tilt=(-0.26, 0, 0))
     box("t_square_head", area, tx - 0.55, tx - 0.5, ty - 0.12, ty + 0.3, 0.9, 0.93, m["wood"], tilt=(-0.26, 0, 0))
     cylinder("ink_jar", area, tx + 0.45, ty + 0.38, 0.9, 0.97, 0.03, m["ink"])
-    cylinder("brush_pot", area, tx + 0.55, ty + 0.38, 0.9, 1.0, 0.035, m["worn"])
-    for k in range(4):
-        b = cylinder(f"brush_{k}", area, tx + 0.55 + (k - 1.5) * 0.008, ty + 0.38, 0.98, 1.16, 0.004, m["wood"], verts=6)
-        b.rotation_euler = (0.08 * (k - 1.5), 0.1 * (k - 1.5), 0)
-    import_model(area, "chinese_stool", (tx, ty + 0.75, 0), 0, collide=False)
-    # Green glass banker's lamp on a stand at the table's left: the key light Sora works by.
-    lx, ly = tx - 0.95, ty + 0.05
-    box("lamp_stand_top", area, lx - 0.2, lx + 0.2, ly - 0.2, ly + 0.2, 0.86, 0.9, m["wood"], edge=0.005)
-    for ox in (-0.16, 0.16):
-        for oy in (-0.16, 0.16):
-            box(f"lamp_stand_leg_{ox}_{oy}", area, lx + ox - 0.02, lx + ox + 0.02, ly + oy - 0.02, ly + oy + 0.02, 0, 0.86, m["wood"])
-    collider("lamp_stand", area, lx - 0.2, lx + 0.2, ly - 0.2, ly + 0.2, 0, 0.9)
-    cylinder("desk_lamp_base", area, lx, ly, 0.9, 0.92, 0.07, m["brass"])
-    cylinder("desk_lamp_stem", area, lx, ly, 0.92, 1.26, 0.008, m["brass"], verts=8)
-    shade = cylinder("desk_lamp_shade", area, lx + 0.08, ly, 1.24, 1.32, 0.11, m["green_glass"], radius_top=0.05)
-    shade.scale = (1.6, 1, 1)
-    cylinder("desk_lamp_bulb", area, lx + 0.08, ly, 1.22, 1.25, 0.02, m["bulb"], verts=8)
-    empty("marker_desk_lamp", area, (lx + 0.12, ly, 1.18))
+    cylinder("ink_jar_cap", area, tx + 0.45, ty + 0.38, 0.97, 0.985, 0.022, m["iron"])
+    cylinder("water_jar_for_brushes", area, tx - 0.42, ty + 0.38, 0.9, 1.0, 0.04, plain("M_studio_jar_glass", (0.16, 0.2, 0.18), rough=0.12, alpha=0.35))
+    cylinder("water_jar_for_brushes_water", area, tx - 0.42, ty + 0.38, 0.905, 0.97, 0.037, m["water"])
+    cylinder("drafting_ruler_stub", area, tx + 0.2, ty + 0.38, 0.9, 0.905, 0.006, m["worn"], verts=6)
+    lib("chinese_stool", (tx, ty + 0.75, 0), 0, collide=False, budget=2000)
 
-    # ---- Writing desk on the west wall: drawer (letters and matchbox, P03/P04), lamp, sketchbook.
+
+def bankers_lamp(lx, ly):
+    """Green-shaded banker's lamp on its stand: the key light (bulb in the bake; marker
+    for the runtime light). Shade: cased glass, green outside, opal white inside."""
+    box("lamp_stand_top", area, lx - 0.21, lx + 0.21, ly - 0.21, ly + 0.21, 0.86, 0.9, m["rosewood"], edge=0.006)
+    for ox in (-0.17, 0.17):
+        for oy in (-0.17, 0.17):
+            turned(f"lamp_stand_leg_{ox}_{oy}", [(0.0, 0.0), (0.016, 0.0), (0.02, 0.1), (0.018, 0.5), (0.024, 0.78), (0.024, 0.86), (0.0, 0.86)], lx + ox, ly + oy, 0, m["rosewood"], segments=10)
+    box("lamp_stand_shelf", area, lx - 0.19, lx + 0.19, ly - 0.19, ly + 0.19, 0.25, 0.27, m["rosewood"], edge=0.004)
+    collider("lamp_stand", area, lx - 0.21, lx + 0.21, ly - 0.21, ly + 0.21, 0, 0.9)
+    z = 0.9
+    turned("desk_lamp_base", [(0.0, 0.0), (0.09, 0.0), (0.095, 0.01), (0.085, 0.024), (0.055, 0.033), (0.024, 0.037), (0.0, 0.037)], lx, ly, z, m["brass"], segments=32)
+    turned("desk_lamp_stem", [(0.0, 0.0), (0.011, 0.0), (0.011, 0.25), (0.0, 0.25)], lx, ly, z + 0.035, m["brass"], segments=12)
+    turned("desk_lamp_collar", [(0.0, 0.0), (0.02, 0.0), (0.02, 0.012), (0.0, 0.012)], lx, ly, z + 0.04, m["brass"], segments=16)
+    sy = ly - 0.07
+    tube("desk_lamp_harp", area, [(lx, ly, z + 0.28), (lx, ly - 0.02, z + 0.31), (lx, sy, z + 0.31)], 0.007, m["brass"], sides=8)
+    # The shade: a half-cylinder 0.30 m long with rounded ends, outer green, inner opal.
+    for name, rad, mat in (("desk_lamp_shade", 0.078, m["green_glass"]), ("desk_lamp_shade_inner", 0.074, m["opal"])):
+        verts, faces = [], []
+        n, length = 20, 0.3
+        for i in range(n + 1):
+            a = math.pi * i / n
+            for x in (-length / 2, length / 2):
+                verts.append((lx + x, sy + math.cos(a) * rad, z + 0.31 + math.sin(a) * rad * 0.85 - 0.02))
+        for i in range(n):
+            k = i * 2
+            faces.append((k, k + 1, k + 3, k + 2) if mat is m["green_glass"] else (k + 2, k + 3, k + 1, k))
+        obj = mesh_object(name, area, verts, faces, mat, smooth=True)
+        for side in (-1, 1):
+            cap = [(lx + side * length / 2, sy + math.cos(math.pi * i / n) * rad, z + 0.31 + math.sin(math.pi * i / n) * rad * 0.85 - 0.02) for i in range(n + 1)]
+            base = len(verts)
+            mesh_object(f"{name}_cap_{side}", area, cap, [tuple(range(n + 1)) if side > 0 else tuple(reversed(range(n + 1)))], mat)
+    tube("desk_lamp_shade_binding", area, [(lx - 0.15, sy + math.cos(a) * 0.079, z + 0.31 + math.sin(a) * 0.079 * 0.85 - 0.02) for a in np.linspace(0, math.pi, 13)], 0.003, m["brass"], sides=5)
+    tube("desk_lamp_shade_binding_e", area, [(lx + 0.15, sy + math.cos(a) * 0.079, z + 0.31 + math.sin(a) * 0.079 * 0.85 - 0.02) for a in np.linspace(0, math.pi, 13)], 0.003, m["brass"], sides=5)
+    cylinder("desk_lamp_bulb", area, lx, sy, z + 0.25, z + 0.29, 0.022, m["bulb"], verts=12)
+    tube("desk_lamp_pull_chain", area, [(lx + 0.05, sy - 0.02, z + 0.27), (lx + 0.05, sy - 0.025, z + 0.16)], 0.0012, m["brass"], sides=4)
+    turned("desk_lamp_pull", [(0.0, 0.0), (0.006, 0.004), (0.004, 0.02), (0.0, 0.024)], lx + 0.05, sy - 0.025, z + 0.14, m["brass"], segments=8)
+    tube("desk_lamp_braided_lead", area, [(lx - 0.06, ly + 0.05, z + 0.012), (lx - 0.15, ly + 0.12, z + 0.003), (lx - 0.2, ly + 0.2, 0.86), (lx - 0.22, ly + 0.22, 0.4), (lx - 0.3, ly + 0.3, 0.01), (0.5, 0.05, 0.01)], 0.003, m["cord"], sides=6)
+    empty("marker_desk_lamp", area, (lx, sy, z + 0.26))
+
+
+def writing_desk():
+    """The writing desk on the west wall, as the prologue code expects it: top x 0.02-0.68,
+    y 1.75-3.25, the drawer at y 2.25-2.75 facing the room (+x)."""
     dx0, dx1, dy0, dy1 = 0.02, 0.68, 1.75, 3.25
-    box("desk_top", area, dx0, dx1, dy0, dy1, 0.74, 0.78, m["wood"], edge=0.006)
+    box("desk_top", area, dx0, dx1, dy0, dy1, 0.74, 0.78, m["rosewood"], edge=0.008)
+    box("desk_top_moulding", area, dx1 - 0.01, dx1 + 0.012, dy0, dy1, 0.735, 0.765, m["rosewood"], edge=0.006)
     for k, (y0, y1) in enumerate([(dy0 + 0.03, dy0 + 0.08), (dy1 - 0.08, dy1 - 0.03)]):
         for x0, x1 in [(dx0 + 0.03, dx0 + 0.08), (dx1 - 0.08, dx1 - 0.03)]:
-            box(f"desk_leg_{k}_{x0:.2f}", area, x0, x1, y0, y1, 0, 0.74, m["wood"], edge=0.004)
-    box("desk_apron", area, dx1 - 0.04, dx1 - 0.02, dy0 + 0.08, dy1 - 0.08, 0.6, 0.74, m["wood"], edge=0.003)
+            turned(f"desk_leg_{k}_{x0:.2f}", [(0.0, 0.0), (0.02, 0.0), (0.026, 0.05), (0.018, 0.18), (0.022, 0.5), (0.028, 0.6), (0.028, 0.74), (0.0, 0.74)],
+                   (x0 + x1) / 2, (y0 + y1) / 2, 0, m["rosewood"], segments=12)
+    box("desk_apron_s", area, dx1 - 0.04, dx1 - 0.02, dy0 + 0.08, 2.24, 0.6, 0.74, m["rosewood"], edge=0.003)
+    box("desk_apron_n", area, dx1 - 0.04, dx1 - 0.02, 2.76, dy1 - 0.08, 0.6, 0.74, m["rosewood"], edge=0.003)
     collider("desk", area, dx0, dx1, dy0, dy1, 0, 0.78)
-    drawer = box("interact_drawer", area, dx1 - 0.03, dx1 + 0.0, 2.25, 2.75, 0.62, 0.72, m["worn"], edge=0.004,
-                 action="open", items="letters,matchbox", beat="P03")
+    box("interact_drawer", area, dx1 - 0.03, dx1 + 0.0, 2.25, 2.75, 0.62, 0.72, m["worn"], edge=0.004, action="open", items="letters,matchbox", beat="P03")
     box("drawer_knob", area, dx1 + 0.0, dx1 + 0.025, 2.48, 2.52, 0.66, 0.68, m["brass"])
-    # Yay Mey's letters, tied with red string, and the brass matchbox, inside the drawer.
     for k in range(5):
         box(f"letter_{k}", area, 0.35, 0.55, 2.4 + rng.uniform(-0.01, 0.01), 2.56, 0.64 + k * 0.006, 0.645 + k * 0.006, m["paper"])
     box("letters_string", area, 0.44, 0.46, 2.39, 2.57, 0.64, 0.675, plain("M_red_string", (0.5, 0.05, 0.04)))
     box("matchbox", area, 0.25, 0.3, 2.62, 2.66, 0.64, 0.655, m["brass"], edge=0.002)
     box("interact_sketchbook", area, 0.18, 0.42, 2.0, 2.32, 0.78, 0.805, m["book"], edge=0.004, action="pickup", item="sketchbook")
-    for k in range(6):
-        box(f"desk_paper_{k}", area, 0.12, 0.42, 2.38 + k * 0.004, 2.68, 0.78 + k * 0.002, 0.781 + k * 0.002, m["paper"],
-            tilt=(0, 0, rng.uniform(-0.12, 0.12)))
-    cylinder("desk_ink_bottle", area, 0.55, 1.95, 0.78, 0.86, 0.025, m["ink"])
-    import_model(area, "standing_picture_frame_01", (0.18, 3.12, 0.78), 70, collide=False)
-    import_model(area, "wicker_basket_01", (0.35, 1.45, 0), 0, collide=False)
-    # Art Deco clock on a bracket above the desk: stops at 8:12 (P05).
-    box("clock_bracket", area, 0.0, 0.26, 2.3, 2.7, 1.92, 1.95, m["wood"], edge=0.004)
-    import_model(area, "mantel_clock_01", (0.13, 2.5, 1.95), 90, collide=False)
-    empty("marker_clock", area, (0.15, 2.5, 2.1))
-    # The gilt frame holds a print of Angkor Wat (its own canvas is a European landscape).
-    import_model(area, "fancy_picture_frame_01", (0.02, 1.5, 1.7), 90, collide=False,
-                 swap={"fancy_picture_frame_01_canvas": m["angkor"]})
-    # Sora's studies pinned to the plaster, a little crooked.
-    for k, (y, z, subject, turn) in enumerate([(2.95, 1.5, "lettering", 0.05), (3.35, 1.35, "ornament", -0.08), (2.0, 1.32, "palms", 0.03)]):
-        sheet = box(f"pinned_drawing_{k}", area, 0.002, 0.004, y - 0.15, y + 0.15, z - 0.15, z + 0.15, m[subject], tilt=(turn, 0, 0))
-        picture_uvs(sheet, (0, math.cos(turn), math.sin(turn)), (0, -math.sin(turn), math.cos(turn)))
-        cylinder(f"pin_{k}", area, 0.006, y, z + 0.13, z + 0.135, 0.004, m["brass"], verts=6)
-    for k, (x, z, subject, turn) in enumerate([(1.85, 1.55, "house", -0.04), (4.2, 1.6, "boats", 0.06)]):
-        sheet = box(f"pinned_drawing_s_{k}", area, x - 0.14, x + 0.14, 0.002, 0.004, z - 0.14, z + 0.14, m[subject], tilt=(0, turn, 0))
-        picture_uvs(sheet, (-math.cos(turn), 0, math.sin(turn)), (math.sin(turn), 0, math.cos(turn)))
-
-    # ---- North wall: shelf with the candle and the satchel (P04), books; Chinese cabinet.
-    sx0, sx1 = 2.2, 3.8
-    box("shelf", area, sx0, sx1, D - 0.3, D, 1.3, 1.34, m["wood"], edge=0.004)
-    for x in (sx0 + 0.1, sx1 - 0.1):
-        box(f"shelf_bracket_{x:.1f}", area, x - 0.02, x + 0.02, D - 0.25, D, 1.12, 1.3, m["wood"])
-    collider("shelf", area, sx0, sx1, D - 0.3, D, 1.1, 1.34)
-    stick = import_model(area, "wooden_candlestick", (3.62, D - 0.18, 1.34), 0, collide=False)
-    candle_top = top_of(stick)
-    cylinder("shelf_candle_wax", area, 3.62, D - 0.18, candle_top - 0.008, candle_top + 0.07, 0.015, m["candle"], verts=32, radius_top=0.013)
-    cylinder("shelf_candle_wick", area, 3.62, D - 0.18, candle_top + 0.07, candle_top + 0.081, 0.0015, m["iron"], verts=8)
-    empty("light_flame_candle", area, (3.62, D - 0.18, candle_top + 0.091), radius=3.0, intensity=0.85)
-    satchel = empty("interact_satchel", area, (2.55, D - 0.16, 1.34), action="pickup", item="satchel")
-    for name, a in [("body", (-0.17, 0.17, -0.07, 0.07, 0, 0.25)), ("flap", (-0.175, 0.175, -0.075, 0.02, 0.12, 0.26))]:
-        part = box(f"satchel_{name}", area, *a, m["leather"], edge=0.015)
-        part.parent = satchel
-    build_shelf_books(area, m)
-    import_model(area, "chinese_cabinet", (0.75, D - 0.3, 0), 0)
-    import_model(area, "vintage_oil_lamp", (0.75, D - 0.3, 1.21), 0, collide=False)
-    # Over the bed: one of her own drawings, framed.
-    box("bed_frame_picture", area, 4.55, 5.35, D - 0.03, D, 1.15, 1.75, m["wood"], edge=0.006)
-    bed_picture = box("bed_picture", area, 4.62, 5.28, D - 0.035, D - 0.03, 1.22, 1.68, m["tonle_sap"])
-    picture_uvs(bed_picture, (1, 0, 0), (0, 0, 1))
-    import_model(area, "book_encyclopedia_set_01", (1.6, D - 0.25, 0), 15, collide=False)
-
-    # ---- Iron bed in the north-east corner, linen, a krama, mosquito net tied above.
-    import_model(area, "old_bed_frame", (4.95, D - 0.55, 0), 90)
-    box("mattress", area, 4.0, 5.9, D - 0.98, D - 0.12, 0.42, 0.56, m["linen"], edge=0.05)
-    box("pillow", area, 5.45, 5.85, D - 0.9, D - 0.2, 0.56, 0.66, m["linen"], edge=0.04)
-    box("krama_folded", area, 4.15, 4.6, D - 0.95, D - 0.15, 0.56, 0.58, m["krama"], edge=0.008)
-    # Tied up above the bed: a gathered bundle of net hanging from a hook.
-    build_gathered_net(area, m)
-    import_model(area, "vintage_suitcase", (3.75, D - 0.35, 0), 90, collide=False)
-
-    # ---- Tea corner by the window: armchair, side table, jug and pot; rug; plant.
-    import_model(area, "chinese_armchair", (4.75, 1.35, 0), 205)
-    import_model(area, "WoodenTable_02", (4.05, 0.85, 0), 0)
-    import_model(area, "jug_01", (4.0, 0.82, 0.42), 30, collide=False)
-    import_model(area, "pot_enamel_01", (4.12, 0.92, 0.42), 0, collide=False)
-    cylinder("teacup", area, 3.95, 0.95, 0.42, 0.47, 0.03, m["candle"], radius_top=0.035)
-    cylinder("saucer", area, 3.95, 0.95, 0.415, 0.42, 0.055, m["candle"])
-    cloth("krama_on_chair", area, 1.05, 1.65, 0.25, 0.75, 4.95, m["krama"], folds=3, depth=0.02, segments=(16, 8), axis="y")
-    box("rug", area, 2.0, 4.2, 1.7, 3.5, 0.0, 0.012, m["rug"], edge=0.003)
-    import_model(area, "potted_plant_02", (1.65, 0.35, 0), 0)
-
-    # ---- By the door: console table, brass wall telephone (P06), coat hook with the lantern (P04).
-    import_model(area, "chinese_console_table", (W - 0.2, 0.95, 0), 90)
-    # A printed Khmer alphabet chart, framed, above the console table.
-    box("alphabet_frame", area, W - 0.03, W, 0.62, 1.1, 1.12, 1.78, m["wood"], edge=0.004)
-    chart = box("alphabet_print", area, W - 0.036, W - 0.03, 0.65, 1.07, 1.15, 1.75, m["alphabet"])
-    picture_uvs(chart, (0, -1, 0), (0, 0, 1))
-    import_model(area, "brass_vase_01", (W - 0.2, 0.45, 0.66), 0, collide=False)
-    import_model(area, "ceramic_vase_02", (W - 0.2, 1.3, 0.66), 0, collide=False)
-    phone = empty("interact_telephone", area, (W - 0.02, 3.55, 1.45), action="use", beat="P06")
-    parts = [
-        ("backboard", (-0.03, 0.0, -0.13, 0.13, -0.2, 0.2), m["wood"]),
-        ("box", (-0.1, -0.03, -0.1, 0.1, -0.12, 0.12), m["wood"]),
-        ("mouth_arm", (-0.18, -0.1, -0.01, 0.01, 0.0, 0.02), m["brass"]),
-        ("hook", (-0.13, -0.1, 0.1, 0.12, 0.02, 0.1), m["brass"]),
-    ]
-    for name, a, mat in parts:
-        part = box(f"telephone_{name}", area, *a, mat, edge=0.006)
-        part.parent = phone
-    for k, y in enumerate((-0.05, 0.05)):
-        bell = cylinder(f"telephone_bell_{k}", area, -0.11, y, 0.12, 0.15, 0.04, m["brass"], verts=16)
-        bell.rotation_euler = (0, math.pi / 2, 0)
-        bell.parent = phone
-    mouth = cylinder("telephone_mouthpiece", area, -0.2, 0.0, -0.02, 0.06, 0.03, m["iron"], radius_top=0.045)
-    mouth.rotation_euler = (0, math.pi / 2, 0)
-    mouth.parent = phone
-    ear = cylinder("telephone_earpiece", area, -0.12, 0.13, -0.08, 0.06, 0.02, m["iron"], verts=12)
-    ear.parent = phone
-    lantern = import_model(area, "Lantern_01", (W - 0.18, 1.575, 1.5), 0, name="interact_lamp", collide=False, action="pickup", item="lamp")
-    # Locate the bail's actual highest vertices, rather than guessing from the model origin.
-    bail = np.array([tuple(o.matrix_world @ v.co) for o in lantern.children_recursive if o.type == "MESH" for v in o.data.vertices])
-    top = float(bail[:, 2].max())
-    contact = bail[bail[:, 2] > top - 0.003].mean(axis=0)
-    hx, hy = float(contact[0]), float(contact[1])
-    box("coat_hook_backplate", area, W - 0.016, W + 0.001, hy - 0.032, hy + 0.032, top - 0.035, top + 0.115, m["brass"], edge=0.009)
-    path = [(W - 0.018, hy, top + 0.064), (W - 0.085, hy, top + 0.064), (hx - 0.022, hy, top + 0.049)]
-    path += [(hx + math.cos(a) * 0.022, hy, top + 0.016 + math.sin(a) * 0.022) for a in np.linspace(math.pi, 2 * math.pi, 13)]
-    path.append((hx + 0.022, hy, top + 0.042))
-    tube("coat_hook_curved_arm", area, path, 0.006, m["brass"], sides=12)
-    for k, z in enumerate((top - 0.019, top + 0.097)):
-        screw = cylinder(f"coat_hook_screw_{k}", area, W - 0.018, hy, z - 0.002, z + 0.002, 0.006, m["iron"], verts=16)
-        screw.rotation_euler.y = math.pi / 2
-
-    # ---- 1930s ceiling fan (brass and dark wood), still tonight.
-    cylinder("fan_rod", area, 3.0, 2.5, H - 0.5, H - 0.2, 0.012, m["brass"], verts=8)
-    cylinder("fan_motor", area, 3.0, 2.5, H - 0.62, H - 0.5, 0.11, m["brass"])
+    # On the desk: letters waiting for an answer, a blotter, ink, a dip pen, the brush cup.
+    box("desk_blotter", area, 0.12, 0.6, 2.45, 3.05, 0.78, 0.786, plain("M_studio_blotter", (0.18, 0.22, 0.16), rough=0.95), edge=0.002)
     for k in range(4):
-        blade = box(f"fan_blade_{k}", area, 3.12, 3.72, 2.44, 2.56, H - 0.58, H - 0.565, m["wood"], edge=0.004)
-        blade.rotation_euler = (0, 0, k * math.pi / 2 + 0.3)
-        # rotate around the fan's axis
-        blade.location = (3.0 + math.cos(k * math.pi / 2 + 0.3) * 0.42, 2.5 + math.sin(k * math.pi / 2 + 0.3) * 0.42, H - 0.57)
+        box(f"desk_envelope_{k}", area, 0.18, 0.3, 2.78 + k * 0.004, 2.86 + k * 0.004, 0.786 + k * 0.0016, 0.787 + k * 0.0016, m["paper"], tilt=(0, 0, 0.08))
+    cylinder("desk_ink_bottle", area, 0.55, 1.95, 0.78, 0.86, 0.025, m["ink"])
+    cylinder("desk_ink_bottle_cap", area, 0.55, 1.95, 0.86, 0.875, 0.016, m["iron"])
+    cup = [(0.0, 0.0), (0.026, 0.0), (0.03, 0.008), (0.034, 0.082), (0.036, 0.088), (0.032, 0.09), (0.029, 0.016), (0.0, 0.016)]
+    turned("desk_brush_cup", cup, 0.22, 1.92, 0.78, m["porcelain"], segments=20)
+    for i in range(4):
+        pen = cylinder(f"desk_dip_pen_{i}", area, 0.22 + (i - 1.5) * 0.009, 1.92, 0.79, 0.96, 0.0028, m["wood"] if i % 2 else m["rosewood"], verts=6)
+        pen.rotation_euler = (0.13 * (i - 1.5), 0.1, 0)
+    ruler = box("desk_ruler", area, 0.25, 0.56, 3.08, 3.107, 0.786, 0.789, m["worn"], tilt=(0, 0, -0.14))
+    for k, (w, d, h, mat) in enumerate(((0.2, 0.28, 0.04, m["book"]), (0.18, 0.25, 0.035, m["leather"]), (0.16, 0.23, 0.03, m["book"]))):
+        z = 0.786 + sum(s for s in (0.04, 0.035, 0.03)[:k])
+        box(f"desk_book_{k}", area, 0.3 - w / 2, 0.3 + w / 2, 3.12 - d / 2 + 0.05, 3.12 + d / 2 - 0.05, z, z + h, mat, tilt=(0, 0, rng.uniform(-0.15, 0.15)), edge=0.004)
+    lib("standing_picture_frame_01", (0.14, 3.2, 0.786), 70, collide=False)
+    lib("wicker_basket_01", (0.35, 1.45, 0), 0, collide=False, budget=3000)
+    lib("chinese_armchair", (1.0, 2.5, 0), 270, scale=0.74, budget=2500)
+    # Clock on its bracket above the desk (stops at 8:12, P05) and the wall sconce.
+    box("clock_bracket", area, 0.0, 0.24, 2.85, 3.2, 1.92, 1.95, m["rosewood"], edge=0.004)
+    lib("mantel_clock_01", (0.12, 3.02, 1.95), 90, collide=False, budget=3000)
+    empty("marker_clock", area, (0.14, 3.02, 2.1))
+    wall_sconce(0.0, 2.15, 1.62)
 
-    dress_working_studio(area, m, tx, ty)
 
-    # Sora starts on the stool at the drafting table, facing the window (south).
-    empty("spawn_player", area, (tx, ty + 0.95, 0), (0, 0, math.pi), checkpoint="CP0")
+def wall_sconce(x, y, z):
+    """Brass gooseneck sconce with a glazed shade over the desk (bulb in the bake)."""
+    turned("sconce_rosette", [(0.0, 0.0), (0.055, 0.0), (0.05, 0.012), (0.0, 0.014)], 0, 0, 0, m["brass"], segments=20).location = (x, y, z)
+    bpy.data.objects["sconce_rosette"].rotation_euler = (0, math.pi / 2, 0)
+    tube("sconce_gooseneck", area, [(x + 0.01, y, z), (x + 0.08, y, z + 0.02), (x + 0.17, y, z + 0.015), (x + 0.21, y, z - 0.025)], 0.008, m["brass"], sides=8)
+    shade = [(0.019, 0.0), (0.025, -0.012), (0.052, -0.075), (0.071, -0.094), (0.073, -0.103), (0.067, -0.104), (0.046, -0.08), (0.019, -0.02)]
+    turned("sconce_shade", shade, x + 0.21, y, z - 0.005, m["porcelain"], segments=24)
+    cylinder("sconce_bulb", area, x + 0.21, y, z - 0.085, z - 0.045, 0.012, m["bulb"], verts=10)
+    empty("marker_writing_sconce", area, (x + 0.21, y, z - 0.07))
 
-    os.makedirs(os.path.dirname(BLEND), exist_ok=True)
-    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
-    print(f"Saved {BLEND}")
+
+def flame_point(lamp):
+    """Centre of a library oil lamp's own flame mesh (its flame material), for the light."""
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ v.co for o in lamp.children_recursive if o.type == "MESH"
+           and any(s.material and "flame" in s.material.name for s in o.material_slots) for v in o.data.vertices]
+    if not pts:
+        top = top_of(lamp)
+        return (lamp.location.x, lamp.location.y, top - 0.12)
+    return tuple(sum(p[i] for p in pts) / len(pts) for i in range(3))
 
 
-# ------------------------------------------------------------------- the working studio
+def tea_tray(x, y, z):
+    """A red lacquer tray with a Chinese teapot and four small cups, one poured."""
+    lacquer = plain("M_studio_red_lacquer", (0.32, 0.06, 0.04), rough=0.3)
+    celadon = plain("M_studio_celadon", (0.62, 0.7, 0.6), rough=0.15)
+    tray = box("tea_tray", area, x - 0.2, x + 0.2, y - 0.14, y + 0.14, z, z + 0.012, lacquer, edge=0.004)
+    for nm, a in (("n", (x - 0.2, x + 0.2, y + 0.13, y + 0.14)), ("s", (x - 0.2, x + 0.2, y - 0.14, y - 0.13)),
+                  ("w", (x - 0.2, x - 0.19, y - 0.14, y + 0.14)), ("e", (x + 0.19, x + 0.2, y - 0.14, y + 0.14))):
+        box(f"tea_tray_rim_{nm}", area, a[0], a[1], a[2], a[3], z + 0.012, z + 0.03, lacquer, edge=0.003)
+    pot = [(0.0, 0.0), (0.04, 0.0), (0.06, 0.02), (0.068, 0.05), (0.06, 0.085), (0.035, 0.1), (0.028, 0.104), (0.0, 0.104)]
+    turned("tea_pot", pot, x - 0.07, y + 0.02, z + 0.012, celadon, segments=28)
+    turned("tea_pot_lid_knob", [(0.0, 0.0), (0.01, 0.0), (0.008, 0.016), (0.0, 0.02)], x - 0.07, y + 0.02, z + 0.115, celadon, segments=12)
+    tube("tea_pot_spout", area, [(x - 0.015, y + 0.02, z + 0.04), (x + 0.02, y + 0.02, z + 0.07), (x + 0.035, y + 0.02, z + 0.095)], 0.008, celadon, sides=8, radius_end=0.005)
+    tube("tea_pot_handle", area, [(x - 0.13, y + 0.02, z + 0.03), (x - 0.155, y + 0.02, z + 0.06), (x - 0.13, y + 0.02, z + 0.09)], 0.005, celadon, sides=6)
+    cup = [(0.0, 0.0), (0.016, 0.0), (0.02, 0.004), (0.028, 0.035), (0.027, 0.036), (0.022, 0.006), (0.0, 0.006)]
+    for k, (cx, cy) in enumerate(((x + 0.06, y - 0.06), (x + 0.12, y + 0.05), (x + 0.12, y - 0.05), (x + 0.03, y + 0.07))):
+        turned(f"tea_cup_{k}", cup, cx, cy, z + 0.012, celadon, segments=20)
+    box("tea_cup_tea", area, x + 0.04, x + 0.08, y - 0.08, y - 0.04, z + 0.036, z + 0.037, plain("M_studio_tea", (0.18, 0.08, 0.02), rough=0.05))
+    return tray
 
-def build_gathered_net(area, m):
-    """An open, folded gauze bundle tied above the bed, with no solid end caps."""
+
+def plan_chest(x0, y0):
+    """A flat-file plan chest for drawings: ten shallow drawers with brass label holders."""
+    x1, y1, top = x0 + 0.72, y0 + 1.05, 0.95
+    box("plan_chest_body", area, x0 + 0.01, x1, y0, y1, 0.08, top, m["rosewood"], edge=0.006)
+    box("plan_chest_top", area, x0, x1 + 0.02, y0 - 0.02, y1 + 0.02, top, top + 0.035, m["rosewood"], edge=0.008)
+    box("plan_chest_plinth", area, x0 + 0.02, x1 - 0.01, y0 + 0.01, y1 - 0.01, 0, 0.08, m["wood"])
+    for i in range(10):
+        z0 = 0.1 + i * 0.083
+        box(f"plan_chest_drawer_{i}", area, x1 - 0.004, x1 + 0.006, y0 + 0.03, y1 - 0.03, z0, z0 + 0.075, m["rosewood"], edge=0.003)
+        for s in (0.3, 0.7):
+            box(f"plan_chest_pull_{i}_{s}", area, x1 + 0.006, x1 + 0.02, y0 + (y1 - y0) * s - 0.035, y0 + (y1 - y0) * s + 0.035, z0 + 0.03, z0 + 0.045, m["brass"], edge=0.003)
+        box(f"plan_chest_label_{i}", area, x1 + 0.006, x1 + 0.009, y0 + (y1 - y0) / 2 - 0.03, y0 + (y1 - y0) / 2 + 0.03, z0 + 0.04, z0 + 0.06, m["brass"])
+    collider("plan_chest", area, x0, x1 + 0.03, y0, y1, 0, top + 0.04)
+    # On top: a portfolio, rolled drawings, a jar of brushes.
+    t = top + 0.035
+    box("plan_chest_portfolio", area, x0 + 0.08, x0 + 0.6, y0 + 0.08, y0 + 0.62, t, t + 0.022, m["leather"], tilt=(0, 0, 0.04), edge=0.006)
+    for k in range(3):
+        box(f"plan_chest_portfolio_tie_{k}", area, x0 + 0.58, x0 + 0.62, y0 + 0.2 + k * 0.17, y0 + 0.22 + k * 0.17, t + 0.004, t + 0.018, m["string"])
+    # Rolled drawings lying along the chest, each tied with string, the paper's spiral
+    # showing at the ends.
+    aged = plain("M_studio_rolled_paper", (0.78, 0.7, 0.54), rough=0.95)
+    for k, (length, r) in enumerate(((0.62, 0.028), (0.55, 0.024), (0.66, 0.03))):
+        y = y0 + 0.72 + k * 0.062
+        z = t + r
+        x_mid = x0 + 0.36 + (k - 1) * 0.02
+        pts = [(x_mid - length / 2, y, z), (x_mid + length / 2, y, z)]
+        tube(f"plan_chest_roll_{k}", area, pts, r, aged, sides=14)
+        for e in (-1, 1):
+            spiral = [(x_mid + e * (length / 2 + 0.0005), y + math.cos(a) * r * (a / 18), z + math.sin(a) * r * (a / 18)) for a in np.linspace(1, 18, 40)]
+            tube(f"plan_chest_roll_end_{k}_{e}", area, spiral, 0.0012, m["paper"], sides=4)
+        for sx in (-0.15, 0.15):
+            tie = [(x_mid + sx, y + math.cos(a) * (r + 0.002), z + math.sin(a) * (r + 0.002)) for a in np.linspace(0, math.tau, 17)]
+            tube(f"plan_chest_roll_tie_{k}_{sx}", area, tie, 0.0016, m["string"], sides=4)
+
+
+def shelf_books_on_bookcase(case):
+    """Books, portfolios and boxes on each shelf of the bookcase: shelf heights are found
+    by casting rays down through the imported model."""
+    bpy.context.view_layer.update()
+    verts, polys = [], []
+    for o in case.children_recursive:
+        if o.type != "MESH":
+            continue
+        base = len(verts)
+        verts += [o.matrix_world @ v.co for v in o.data.vertices]
+        polys += [[base + i for i in p.vertices] for p in o.data.polygons]
+    tree = mathutils.bvhtree.BVHTree.FromPolygons(verts, polys)
+    xs, ys = [v.x for v in verts], [v.y for v in verts]
+    x_mid, y_lo, y_hi = (min(xs) + max(xs)) / 2, min(ys) + 0.06, max(ys) - 0.06
+    shelves, z = [], max(v.z for v in verts) + 0.1
+    while True:
+        hit = tree.ray_cast(mathutils.Vector((x_mid, (y_lo + y_hi) / 2, z)), mathutils.Vector((0, 0, -1)))
+        if hit[0] is None:
+            break
+        if hit[1].z > 0.05 and (not shelves or shelves[-1] - hit[1].z > 0.18):
+            shelves.append(hit[1].z)
+        z = hit[0].z - 0.01
+    covers = [(0.12, 0.20, 0.17), (0.24, 0.11, 0.07), (0.10, 0.15, 0.23), (0.30, 0.24, 0.14), (0.2, 0.18, 0.12)]
+    cloth_mats = [plain(f"M_studio_cloth_{i}", c, rough=0.8) for i, c in enumerate(covers)]
+    depth = min(0.24, max(xs) - min(xs) - 0.08)
+    for s_i, z in enumerate(sorted(shelves)[1:5]):
+        y = y_lo
+        k = 0
+        room = min(0.32, (sorted(shelves) + [z + 0.4])[sorted(shelves).index(z) + 1] - z - 0.03) if z != max(shelves) else 0.3
+        while y < y_hi - 0.03:
+            w = rng.uniform(0.025, 0.06)
+            h = min(room, rng.uniform(0.2, 0.31))
+            box(f"bookcase_book_{s_i}_{k}", area, x_mid - depth / 2, x_mid + depth / 2, y, y + w, z, z + h, cloth_mats[(s_i + k) % 5], edge=0.002)
+            y += w + 0.003 + (0.06 if rng.random() < 0.08 else 0)
+            k += 1
+
+
+def shelf_and_candle():
+    sx0, sx1, z = 2.05, 3.55, 1.32
+    y1 = P1[0]
+    box("shelf", area, sx0, sx1, y1 - 0.3, y1 - 0.015, z, z + 0.035, m["rosewood"], edge=0.004)
+    for x in (sx0 + 0.12, sx1 - 0.12):
+        box(f"shelf_bracket_{x:.2f}", area, x - 0.018, x + 0.018, y1 - 0.25, y1 - 0.015, z - 0.18, z, m["rosewood"], edge=0.003)
+    collider("shelf", area, sx0, sx1, y1 - 0.3, y1, z - 0.2, z + 0.035)
+    stick = lib("wooden_candlestick", (3.38, y1 - 0.16, z + 0.035), 0, collide=False, budget=2500)
+    top = top_of(stick)
+    cylinder("shelf_candle_wax", area, 3.38, y1 - 0.16, top - 0.008, top + 0.07, 0.015, m["candle"], verts=24, radius_top=0.013)
+    cylinder("shelf_candle_wick", area, 3.38, y1 - 0.16, top + 0.07, top + 0.081, 0.0015, m["iron"], verts=6)
+    empty("light_flame_candle", area, (3.38, y1 - 0.16, top + 0.091), radius=3.0, intensity=0.85)
+    satchel = empty("interact_satchel", area, (2.35, y1 - 0.16, z + 0.035), action="pickup", item="satchel")
+    build_satchel(satchel)
+    for k, (x, w, h) in enumerate(((2.62, 0.05, 0.26), (2.675, 0.045, 0.24), (2.725, 0.06, 0.28), (2.79, 0.04, 0.22), (2.84, 0.055, 0.27))):
+        box(f"shelf_book_{k}", area, x, x + w - 0.003, y1 - 0.26, y1 - 0.04, z + 0.035, z + 0.035 + h, plain(f"M_studio_shelf_book_{k}", [(0.24, 0.11, 0.07), (0.1, 0.15, 0.23), (0.3, 0.24, 0.14), (0.12, 0.2, 0.17), (0.2, 0.18, 0.12)][k], rough=0.8), edge=0.002)
+    lib("ceramic_vase_02", (3.05, y1 - 0.15, z + 0.035), 0, collide=False, scale=0.6, budget=2000)
+
+
+def build_satchel(satchel):
+    """Sora's satchel: a brown leather artist's bag, worn soft at the corners, the flap
+    buckled down with two straps, a folded shoulder strap; built round its own origin
+    (base centre), front facing the room (-y)."""
+    leather = m["satchel_leather"]
+    dark = m["leather"]
+    w, d, h = 0.36, 0.11, 0.26
+    parts = []
+    body = box("satchel_body", area, -w / 2, w / 2, -d / 2, d / 2, 0.0, h, leather, edge=0.028)
+    body.modifiers["bevel"].segments = 4
+    parts.append(body)
+    # Gussets: a darker seam strip round each end.
+    for s in (-1, 1):
+        parts.append(box(f"satchel_gusset_{s}", area, s * w / 2 - 0.004, s * w / 2 + 0.004, -d / 2 + 0.012, d / 2 - 0.012, 0.015, h - 0.01, dark, edge=0.003))
+    # The flap: over the top and down the front, rounded at the bottom corners.
+    top = box("satchel_flap_top", area, -w / 2 - 0.004, w / 2 + 0.004, -d / 2 - 0.006, d / 2 + 0.004, h - 0.004, h + 0.006, leather, edge=0.004)
+    front = box("satchel_flap_front", area, -w / 2 - 0.004, w / 2 + 0.004, -d / 2 - 0.012, -d / 2 - 0.004, h * 0.38, h + 0.004, leather, edge=0.02)
+    front.modifiers["bevel"].segments = 4
+    parts += [top, front]
+    # Two straps down the flap to buckles on the body, with brass frames and tongues.
+    for s in (-1, 1):
+        x = s * 0.095
+        parts.append(box(f"satchel_strap_{s}", area, x - 0.012, x + 0.012, -d / 2 - 0.015, -d / 2 - 0.011, h * 0.3, h + 0.006, dark, edge=0.002))
+        parts.append(box(f"satchel_keeper_{s}", area, x - 0.016, x + 0.016, -d / 2 - 0.008, -d / 2 - 0.002, 0.05, 0.075, dark, edge=0.002))
+        buckle = [(x - 0.017, -d / 2 - 0.016, 0.09), (x + 0.017, -d / 2 - 0.016, 0.09), (x + 0.017, -d / 2 - 0.016, 0.125), (x - 0.017, -d / 2 - 0.016, 0.125), (x - 0.017, -d / 2 - 0.016, 0.09)]
+        parts.append(tube(f"satchel_buckle_{s}", area, buckle, 0.0022, m["brass"], sides=6))
+        parts.append(tube(f"satchel_tongue_{s}", area, [(x, -d / 2 - 0.016, 0.107), (x, -d / 2 - 0.02, 0.125)], 0.0014, m["brass"], sides=5))
+    # Stitching along the flap edge: a row of small dashes.
+    for i in range(30):
+        u = -w / 2 + 0.02 + i * (w - 0.04) / 29
+        parts.append(box(f"satchel_stitch_{i}", area, u - 0.0035, u + 0.0035, -d / 2 - 0.0125, -d / 2 - 0.011, h * 0.38 + 0.012, h * 0.38 + 0.014, m["string"]))
+    # Shoulder strap: D-rings at the ends, the strap folded over the top.
+    for s in (-1, 1):
+        ring = [(s * (w / 2 + 0.004), math.cos(a) * 0.012, h - 0.03 + math.sin(a) * 0.016) for a in np.linspace(-math.pi / 2, math.pi / 2, 9)]
+        parts.append(tube(f"satchel_dring_{s}", area, ring, 0.0022, m["brass"], sides=6))
+    strap = [(-w / 2 - 0.006, 0.0, h - 0.03), (-w / 2 - 0.02, 0.01, h + 0.05), (-0.1, 0.03, h + 0.075), (0.1, 0.035, h + 0.07), (w / 2 + 0.02, 0.01, h + 0.04), (w / 2 + 0.006, 0.0, h - 0.03)]
+    parts.append(tube("satchel_shoulder_strap", area, strap, 0.006, dark, sides=6))
+    for part in parts:
+        part.parent = satchel
+
+
+def ceiling_fan(cx, cy):
+    """A 1930s ceiling fan, brass motor and four wooden blades, still tonight."""
+    cylinder("fan_rod", area, cx, cy, H - 0.6, H - 0.17, 0.012, m["brass"], verts=8)
+    turned("fan_canopy", [(0.0, 0.0), (0.07, 0.0), (0.05, 0.06), (0.0, 0.07)], cx, cy, H - 0.24, m["brass"], segments=20)
+    turned("fan_motor", [(0.0, 0.0), (0.09, 0.0), (0.12, 0.04), (0.12, 0.09), (0.09, 0.12), (0.0, 0.13)], cx, cy, H - 0.73, m["brass"], segments=24)
+    for k in range(4):
+        a = k * math.pi / 2 + 0.3
+        blade = box(f"fan_blade_{k}", area, -0.3, 0.3, -0.06, 0.06, -0.006, 0.006, m["rosewood"], edge=0.004)
+        blade.location = (cx + math.cos(a) * 0.42, cy + math.sin(a) * 0.42, H - 0.68)
+        blade.rotation_euler = (0.12, 0, a)
+        arm = box(f"fan_arm_{k}", area, -0.08, 0.08, -0.012, 0.012, -0.006, 0.006, m["brass"])
+        arm.location = (cx + math.cos(a) * 0.15, cy + math.sin(a) * 0.15, H - 0.67)
+        arm.rotation_euler = (0, 0, a)
+
+
+def dress_working_studio(tx, ty):
+    """An illustrator works here every day: a drying line with sheets, canvases against
+    the wall, rolled paper, a tied stack of fresh paper, yesterday's newspapers."""
+    a, b = (0.0, 0.6, 2.35), (2.3, 0.0, 2.35)
+    line = sag(a, b, 0.06, n=12)
+    tube("drying_line", area, line, 0.002, m["string"], sides=4)
+    along = np.array((b[0] - a[0], b[1] - a[1])); along /= np.linalg.norm(along)
+    normal = (-along[1], along[0], 0)
+    # Sora's ink studies (tools/drawings/ep1.mjs) pegged up to dry, facing into the room.
+    for k, (t, study) in enumerate(((0.3, "boats"), (0.55, "palms"), (0.8, "house"))):
+        p = line[round(t * (len(line) - 1))]
+        ink = drawing(f"M_studio_study_{study}", f"T_studio_study_{study}_BC")
+        pegged_sheet(f"drying_sheet_{k}", (p[0], p[1], p[2] - 0.006), (along[0], along[1], 0), normal, 0.3, ink, m["paper"], seed=k)
+        for s in (-1, 1):
+            box(f"drying_peg_{k}_{s}", area, p[0] + s * 0.1 * along[0] - 0.006, p[0] + s * 0.1 * along[0] + 0.006, p[1] + s * 0.1 * along[1] - 0.004, p[1] + s * 0.1 * along[1] + 0.004, p[2] - 0.035, p[2] + 0.01, m["worn"])
+    canvas_back = plain("M_canvas_back", (0.46, 0.4, 0.31), rough=0.95)
+    for k, (y, w, h) in enumerate(((0.55, 0.5, 0.7), (0.95, 0.45, 0.6))):
+        lean = -0.13
+        cx = 0.03 + 0.01 * k + h / 2 * math.sin(-lean)
+        box(f"canvas_board_{k}", area, cx - 0.004, cx + 0.004, y - w / 2, y + w / 2, 0.0, h, canvas_back, tilt=(0, lean, 0))
+    for k in range(6):
+        ang = k * math.tau / 6 + rng.uniform(-0.3, 0.3)
+        r = 0.05 + 0.02 * (k % 2)
+        x, y = 0.35 + r * math.cos(ang), 1.45 + r * math.sin(ang)
+        roll = cylinder(f"paper_roll_{k}", area, x, y, 0.04, 0.04 + rng.uniform(0.6, 0.85), rng.uniform(0.018, 0.028), m["paper"] if k % 3 else m["newsprint"], verts=10)
+        roll.rotation_euler = (rng.uniform(-0.12, 0.12) + 0.1 * math.sin(ang), rng.uniform(-0.12, 0.12) - 0.1 * math.cos(ang), 0)
+    px, py = tx + 0.25, ty - 0.1
+    for k in range(14):
+        j = rng.uniform(-0.008, 0.008)
+        box(f"paper_stack_{k}", area, px - 0.21 + j, px + 0.21 + j, py - 0.15, py + 0.15, k * 0.0035, k * 0.0035 + 0.0025, m["paper"], tilt=(0, 0, rng.uniform(-0.03, 0.03)))
+    box("paper_stack_string_a", area, px - 0.215, px + 0.215, py - 0.006, py + 0.006, 0.0, 0.051, m["string"])
+    box("paper_stack_string_b", area, px - 0.006, px + 0.006, py - 0.155, py + 0.155, 0.0, 0.052, m["string"])
+    for k in range(7):
+        box(f"newspaper_{k}", area, 4.0, 4.35, 1.2, 1.45, k * 0.004, k * 0.004 + 0.003, m["newsprint"], tilt=(0, 0, rng.uniform(-0.2, 0.2)))
+    umbrella = plain("M_umbrella_cloth", (0.03, 0.03, 0.035), rough=0.75)
+    shaft = cylinder("umbrella_folded", area, 1.25, P1[0] - 0.12, 0.08, 0.85, 0.045, umbrella, verts=8, radius_top=0.012)
+    shaft.rotation_euler = (-0.12, 0.08, 0)
+    tube("umbrella_handle", area, [(1.25, P1[0] - 0.16, 0.86), (1.26, P1[0] - 0.17, 0.95), (1.23, P1[0] - 0.19, 0.99)], 0.008, m["wood"], sides=6)
+
+
+# =============================================================== telephone and lantern
+
+
+def telephone(at):
+    """A French magneto wall telephone of the 1920s: walnut backboard, the bell box with
+    two nickel gongs, the crank, the transmitter on its arm, the sloped writing shelf and
+    battery box, and the earpiece hanging on the switch hook (P06). It faces into the
+    airwell (+y). The earpiece matches the one in Sora's hand (src/player/telephoneReceiver.ts)."""
+    ax, ay, az = at
+    root = empty("interact_telephone", area, (ax, ay, az), action="use", beat="P06")
+    def P(u, v, w):
+        """Local (u right as seen from the front, v up, w out of the wall) to world."""
+        return (ax - u, ay + w, az + v)
+    def pbox(name, u0, u1, v0, v1, w0, w1, mat, edge=0.0):
+        xa, xb = sorted((ax - u0, ax - u1))
+        obj = box(name, area, xa, xb, ay + w0, ay + w1, az + v0, az + v1, mat, edge=edge)
+        return attach(obj, root)
+    def parent(obj):
+        return attach(obj, root)
+    walnut = m["rosewood"]
+    # Backboard with a shaped crest and foot.
+    pbox("telephone_backboard", -0.15, 0.15, -0.42, 0.34, 0.0, 0.022, walnut, edge=0.006)
+    pbox("telephone_backboard_crest", -0.11, 0.11, 0.34, 0.4, 0.0, 0.022, walnut, edge=0.01)
+    pbox("telephone_backboard_foot", -0.1, 0.1, -0.47, -0.42, 0.0, 0.022, walnut, edge=0.01)
+    # Bell box with a raised panel door, hinge and the maker's plate.
+    pbox("telephone_bell_box", -0.115, 0.115, 0.04, 0.3, 0.022, 0.13, walnut, edge=0.008)
+    pbox("telephone_bell_box_door", -0.09, 0.09, 0.065, 0.275, 0.13, 0.142, walnut, edge=0.006)
+    pbox("telephone_bell_box_hinge", -0.115, -0.105, 0.09, 0.25, 0.128, 0.138, m["brass"])
+    pbox("telephone_makers_plate", -0.04, 0.04, 0.2, 0.225, 0.142, 0.145, m["brass"], edge=0.001)
+    # Two nickel gongs on the box top's front, a striker between them.
+    for k, u in enumerate((-0.055, 0.055)):
+        g = turned(f"telephone_gong_{k}", [(0.0, 0.0), (0.042, 0.0), (0.045, 0.004), (0.04, 0.02), (0.022, 0.032), (0.0, 0.035)], 0, 0, 0, m["nickel"], segments=24)
+        g.location = P(u, 0.31, 0.1)
+        g.rotation_euler = (-math.pi / 2, 0, 0)
+        parent(g)
+    pbox("telephone_striker_rod", -0.003, 0.003, 0.3, 0.355, 0.12, 0.126, m["nickel"])
+    s = turned("telephone_striker_ball", [(0.0, 0.0), (0.008, 0.002), (0.009, 0.008), (0.006, 0.014), (0.0, 0.016)], 0, 0, 0, m["nickel"], segments=10)
+    s.location = P(0, 0.35, 0.123)
+    parent(s)
+    # Crank on the right side of the box: shaft, arm and wooden knob.
+    shaft = cylinder("telephone_crank_shaft", area, 0, 0, 0, 0.03, 0.006, m["nickel"], verts=8)
+    shaft.location = P(-0.13, 0.18, 0.08)
+    shaft.rotation_euler = (0, math.pi / 2, 0)
+    parent(shaft)
+    pbox("telephone_crank_arm", -0.148, -0.14, 0.12, 0.19, 0.072, 0.088, m["nickel"], edge=0.002)
+    k = turned("telephone_crank_knob", [(0.0, 0.0), (0.009, 0.0), (0.011, 0.02), (0.008, 0.04), (0.0, 0.042)], 0, 0, 0, m["ebonite"], segments=10)
+    k.location = P(-0.148, 0.125, 0.088)
+    k.rotation_euler = (-math.pi / 2, 0, 0)
+    parent(k)
+    # Transmitter: a nickel body on a swan-neck arm, black mouthpiece facing out.
+    arm = tube("telephone_transmitter_arm", area, [P(0, 0.08, 0.13), P(0, 0.06, 0.17), P(0, 0.035, 0.19)], 0.007, m["nickel"], sides=8)
+    parent(arm)
+    body = turned("telephone_transmitter_body", [(0.0, 0.0), (0.04, 0.0), (0.042, 0.01), (0.042, 0.03), (0.036, 0.04), (0.0, 0.04)], 0, 0, 0, m["nickel"], segments=24)
+    body.location = P(0, 0.03, 0.19)
+    body.rotation_euler = (-math.pi / 2, 0, 0)
+    parent(body)
+    mouth = turned("telephone_mouthpiece", [(0.0, 0.0), (0.016, 0.0), (0.016, 0.01), (0.022, 0.03), (0.032, 0.045), (0.034, 0.05), (0.026, 0.05), (0.014, 0.012), (0.0, 0.012)], 0, 0, 0, m["ebonite"], segments=24)
+    mouth.location = P(0, 0.03, 0.23)
+    mouth.rotation_euler = (-math.pi / 2, 0, 0)
+    parent(mouth)
+    # Sloped writing shelf and the battery box below it.
+    pbox("telephone_battery_box", -0.1, 0.1, -0.38, -0.12, 0.022, 0.12, walnut, edge=0.008)
+    pbox("telephone_battery_door", -0.08, 0.08, -0.355, -0.15, 0.12, 0.13, walnut, edge=0.006)
+    shelf = pbox("telephone_writing_shelf", -0.14, 0.14, -0.12, -0.1, 0.02, 0.2, walnut, edge=0.006)
+    shelf.rotation_euler = (math.radians(-12), 0, 0)
+    # Binding posts and the line wires leaving the top.
+    for kk, u in enumerate((-0.06, 0.06)):
+        t = cylinder(f"telephone_terminal_{kk}", area, 0, 0, 0, 0.018, 0.006, m["brass"], verts=10)
+        t.location = P(u, 0.385, 0.02)
+        parent(t)
+        wire = tube(f"telephone_line_wire_{kk}", area, [P(u, 0.4, 0.02), P(u * 0.6, 0.6, 0.012), P(u * 0.4, H - az - 0.25, 0.012)], 0.002, m["cord"], sides=4)
+        parent(wire)
+    # Switch hook on the left: a nickel lever with a fork; the earpiece hangs in it.
+    hook = tube("telephone_switch_hook", area, [P(0.115, 0.22, 0.07), P(0.16, 0.23, 0.07), P(0.175, 0.235, 0.07)], 0.005, m["nickel"], sides=8)
+    parent(hook)
+    for side in (-1, 1):
+        f = tube(f"telephone_hook_fork_{side}", area, [P(0.175, 0.235, 0.07 + side * 0.006), P(0.19, 0.25, 0.07 + side * 0.016), P(0.2, 0.265, 0.07 + side * 0.016)], 0.0035, m["nickel"], sides=6)
+        parent(f)
+    # The earpiece: a turned ebonite grip with the ear shell at the top, hung by its neck.
+    ear = attach(empty("telephone_earpiece", area, P(0.19, 0.14, 0.07)), root)
+    E = mathutils.Vector(P(0.19, 0.14, 0.07))
+    grip = [(0.0, -0.102), (0.009, -0.102), (0.015, -0.094), (0.018, -0.079), (0.016, -0.063), (0.013, -0.044), (0.013, 0.034), (0.017, 0.056), (0.021, 0.069), (0.021, 0.089), (0.0, 0.094)]
+    g = turned("telephone_earpiece_grip", [(r, z + 0.102) for r, z in grip], 0, 0, 0, m["ebonite"], segments=24)
+    g.location = (E.x, E.y, E.z - 0.102)
+    attach(g, ear)
+    shell = [(0.0, -0.012), (0.023, -0.012), (0.039, 0.0), (0.048, 0.016), (0.051, 0.033), (0.05, 0.043), (0.044, 0.046), (0.04, 0.036), (0.0, 0.032)]
+    sh = turned("telephone_earpiece_shell", [(r * 0.8, z * 0.8) for r, z in shell], 0, 0, 0, m["ebonite"], segments=28)
+    sh.location = (E.x, E.y + 0.01, E.z + 0.092)
+    sh.rotation_euler = (-math.pi / 2, 0, 0)
+    attach(sh, ear)
+    for kk, z in enumerate((-0.087, -0.061, 0.058)):
+        band = turned(f"telephone_earpiece_band_{kk}", [(0.0, 0.0), (0.0185, 0.0), (0.0185, 0.004), (0.0, 0.004)], 0, 0, 0, m["nickel"], segments=20)
+        band.location = (E.x, E.y, E.z + z)
+        attach(band, ear)
+    rest = empty("telephone_cord_rest", area, (E.x, E.y, E.z - 0.116))
+    attach(rest, ear)
+    attach(empty("telephone_cord_terminal", area, P(0.105, 0.06, 0.06)), root)
+    collider("telephone", area, ax - 0.2, ax + 0.16, ay, ay + 0.15, az - 0.47, az + 0.4)
+
+
+def lantern_hook(at):
+    """The hurricane lamp hanging on a brass hook (interact_lamp, P04)."""
+    hx, hy, hz = at
+    lantern = lib("Lantern_01", (hx, hy + 0.12, hz - 0.33), 0, name="interact_lamp", collide=False, action="pickup", item="lamp", budget=5000)
+    bpy.context.view_layer.update()
+    pts = np.array([tuple(o.matrix_world @ v.co) for o in lantern.children_recursive if o.type == "MESH" for v in o.data.vertices])
+    top = float(pts[:, 2].max())
+    contact = pts[pts[:, 2] > top - 0.003].mean(axis=0)
+    cx, cy = float(contact[0]), float(contact[1])
+    box("coat_hook_backplate", area, cx - 0.032, cx + 0.032, hy, hy + 0.016, top - 0.035, top + 0.115, m["brass"], edge=0.009)
+    path = [(cx, hy + 0.018, top + 0.064), (cx, hy + 0.085, top + 0.064), (cx, cy - 0.022, top + 0.049)]
+    path += [(cx, cy + math.cos(a) * 0.022, top + 0.016 + math.sin(a) * 0.022) for a in np.linspace(math.pi, 2 * math.pi, 13)]
+    path.append((cx, cy + 0.022, top + 0.042))
+    tube("coat_hook_curved_arm", area, path, 0.006, m["brass"], sides=12)
+
+
+# =============================================================== back room
+
+
+def back_room():
+    y0, y1 = P2[1], BACK
+    # The bed, head against the north wall, under its mosquito net.
+    lib("old_bed_frame", (3.85, y1 - 1.05, 0), 0, budget=6000)
+    box("mattress", area, 3.42, 4.28, y1 - 1.98, y1 - 0.12, 0.42, 0.56, m["linen"], edge=0.05)
+    box("pillow", area, 3.5, 4.2, y1 - 0.55, y1 - 0.16, 0.56, 0.66, m["linen"], edge=0.04)
+    box("krama_folded", area, 3.45, 4.25, y1 - 1.9, y1 - 1.45, 0.56, 0.58, m["krama"], edge=0.008)
+    gathered_net(3.85, y1 - 1.05)
+    lib("vintage_suitcase", (2.45, y1 - 0.2, 0), 0, collide=True, scale=0.45, budget=3000)
+    for k, x in enumerate((3.2, 3.36)):
+        box(f"slipper_{k}", area, x - 0.05, x + 0.05, y1 - 2.35, y1 - 2.11, 0.0, 0.025, m["leather"], tilt=(0, 0, rng.uniform(-0.2, 0.2)), edge=0.01)
+    frame_print("framed_throne_hall", "posters", "A35915", (W - 0.013, y1 - 2.6, 1.7), (0, -1, 0), (0, 0, 1), 0.5)
+    frame_print("framed_piot_dancer", "colour", "PIOT", (2.7, y0 + 0.014, 1.7), (-1, 0, 0), (0, 0, 1), 0.42)
+    frame_print("framed_princess", "colour", "A36107", (W - 0.013, y0 + 0.95, 1.7), (0, -1, 0), (0, 0, 1), 0.34)
+    # A wardrobe on the west wall: teak, two panelled doors, a cornice.
+    wardrobe(0.0, y0 + 1.6)
+    # Washstand with a brass basin and a jug; the towel over a rail on its front; the
+    # mirror above it.
+    ws_y = y0 + 3.3
+    cab = lib("painted_wooden_cabinet", (0.33, ws_y, 0), 90, scale=0.75, budget=2500)
+    bpy.context.view_layer.update()
+    corners = [o.matrix_world @ mathutils.Vector(c) for o in cab.children_recursive if o.type == "MESH" for c in o.bound_box]
+    front = max(c.x for c in corners)
+    cy0, cy1 = min(c.y for c in corners), max(c.y for c in corners)
+    ws_top = surface_z(0.3, ws_y, 1.2)
+    lib("brass_pot_02", (0.3, ws_y + 0.07, ws_top), 0, name="washstand_basin", collide=False, scale=0.9, budget=1500)
+    lib("jug_01", (0.28, ws_y - 0.2, ws_top), 70, name="washstand_jug", collide=False, budget=2500)
+    lib("ornate_mirror_01", (0.03, ws_y, 1.62), 90, collide=False, budget=4000)
+    rail_x, rail_z = front + 0.09, ws_top - 0.08   # far enough out that the towel's back fall clears the doors
+    for k, yy in enumerate((cy0 + 0.07, cy1 - 0.07)):
+        box(f"washstand_rail_bracket_{k}", area, front - 0.005, rail_x + 0.012, yy - 0.012, yy + 0.012, rail_z - 0.012, rail_z + 0.016, m["wood"], edge=0.003)
+    tube("washstand_towel_rail", area, [(rail_x, cy0 + 0.05, rail_z), (rail_x, cy1 - 0.05, rail_z)], 0.009, m["wood"], sides=10)
+    towel = draped("washstand_towel", -0.17, 0.17, 0.0, 0.0, 0.42, m["linen"], segments=(20, 18))
+    towel.location = (rail_x, ws_y - 0.02, rail_z + 0.004)
+    towel.rotation_euler = (0, 0, math.pi / 2)
+    # The family altar: a high shelf on the north wall with the Emerald Buddha print,
+    # candles, an incense bowl and an oil lamp burning low.
+    ax0, ax1, az = 0.5, 1.75, 1.72
+    box("altar_shelf", area, ax0, ax1, y1 - 0.34, y1 - 0.015, az, az + 0.04, m["rosewood"], edge=0.006)
+    box("altar_shelf_valance", area, ax0, ax1, y1 - 0.345, y1 - 0.33, az - 0.08, az + 0.04, m["rosewood"], edge=0.003)
+    for x in (ax0 + 0.1, ax1 - 0.1):
+        box(f"altar_bracket_{x:.2f}", area, x - 0.02, x + 0.02, y1 - 0.28, y1 - 0.015, az - 0.25, az, m["rosewood"], edge=0.004)
+    frame_print("altar_buddha_print", "posters", "A35913", ((ax0 + ax1) / 2, y1 - 0.013, az + 0.42), (1, 0, 0), (0, 0, 1), 0.3)
+    lib("brass_candleholders", (ax0 + 0.25, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.3, budget=3000)
+    lib("wooden_bowl_01", ((ax0 + ax1) / 2, y1 - 0.18, az + 0.04), 0, collide=False, scale=0.6, budget=1500)
+    for k in range(5):
+        stick = cylinder(f"altar_incense_{k}", area, (ax0 + ax1) / 2 + (k - 2) * 0.012, y1 - 0.18 + (k % 2) * 0.01, az + 0.08, az + 0.28, 0.0015, m["incense"], verts=4)
+        stick.rotation_euler = (0.05 * (k - 2), 0.08 * (k % 3 - 1), 0)
+    lamp = lib("vintage_oil_lamp", (ax1 - 0.22, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.45, budget=3000)
+    empty("marker_altar_lamp", area, flame_point(lamp))
+    lib("ceramic_vase_02", (ax0 + 0.08, y1 - 0.15, az + 0.04), 0, collide=False, scale=0.5, budget=1500)
+    # A lacquered folding screen half-open beside the bed.
+    lib("chinese_screen_panels", (2.7, y0 + 1.2, 0), 205, budget=2500)
+    # A bare bulb with an enamel shade hanging from the ceiling (off).
+    tube("back_room_pendant_flex", area, [(2.3, (y0 + y1) / 2, H), (2.3, (y0 + y1) / 2, H - 0.7)], 0.003, m["cord"], sides=5)
+    turned("back_room_pendant_shade", [(0.012, 0.0), (0.018, -0.02), (0.12, -0.09), (0.14, -0.1), (0.13, -0.102), (0.11, -0.09), (0.016, -0.025)], 2.3, (y0 + y1) / 2, H - 0.7, m["porcelain"], segments=24)
+    cylinder("back_room_pendant_bulb", area, 2.3, (y0 + y1) / 2, H - 0.82, H - 0.76, 0.026, m["glass"], verts=12)
+
+
+def wardrobe(x0, y0):
+    x1, y1, top = x0 + 0.62, y0 + 1.15, 2.05
+    box("wardrobe_body", area, x0 + 0.01, x1, y0, y1, 0.1, top, m["teak"], edge=0.006)
+    box("wardrobe_cornice", area, x0, x1 + 0.04, y0 - 0.04, y1 + 0.04, top, top + 0.09, m["teak"], edge=0.012)
+    box("wardrobe_plinth", area, x0, x1 + 0.02, y0 - 0.02, y1 + 0.02, 0, 0.1, m["wood"], edge=0.006)
+    for s, (a, b) in enumerate(((y0 + 0.03, (y0 + y1) / 2 - 0.004), ((y0 + y1) / 2 + 0.004, y1 - 0.03))):
+        box(f"wardrobe_door_{s}", area, x1, x1 + 0.018, a, b, 0.14, top - 0.04, m["teak"], edge=0.004)
+        for k, (z0, z1) in enumerate(((0.22, 0.95), (1.05, top - 0.12))):
+            box(f"wardrobe_door_{s}_panel_{k}", area, x1 + 0.018, x1 + 0.026, a + 0.07, b - 0.07, z0, z1, m["teak"], edge=0.01)
+        box(f"wardrobe_handle_{s}", area, x1 + 0.018, x1 + 0.035, (b if s == 0 else a) - 0.02 * (1 if s == 0 else -1) - 0.006,
+            (b if s == 0 else a) - 0.02 * (1 if s == 0 else -1) + 0.006, 1.0, 1.1, m["brass"], edge=0.004)
+    collider("wardrobe", area, x0, x1 + 0.04, y0, y1, 0, top + 0.09)
+
+
+def gathered_net(cx, cy):
+    """The mosquito net gathered and tied above the bed, an open gauze bundle."""
     n = 512
     yy, xx = np.mgrid[:n, :n]
     thread = ((xx % 8) < 1) | ((yy % 8) < 1)
     rgba = np.empty((n, n, 4), dtype=np.float32)
     rgba[:, :, :3] = (0.80, 0.77, 0.66)
     rgba[:, :, 3] = np.where(thread, 0.70, 0.045)
-    image = bpy.data.images.new("T_studio_net_weave_BC", width=n, height=n, alpha=True)
-    image.pixels.foreach_set(rgba.ravel())
-    image.filepath_raw = os.path.join(TEXTURES, "T_studio_net_weave_BC.png")
-    image.file_format = "PNG"; image.save()
-    mat = m["net"]; mat.use_backface_culling = False
+    img = bpy.data.images.new("T_studio_net_weave_BC", width=n, height=n, alpha=True)
+    img.pixels.foreach_set(rgba.ravel())
+    img.filepath_raw = os.path.join(TEXTURES, "T_studio_net_weave_BC.png")
+    img.file_format = "PNG"
+    img.save()
+    mat = m["net"]
+    mat.use_backface_culling = False
     nodes, links = mat.node_tree.nodes, mat.node_tree.links
-    tex = nodes.new("ShaderNodeTexImage"); tex.image = image
+    tex = nodes.new("ShaderNodeTexImage"); tex.image = img
     bsdf = nodes.get("Principled BSDF")
     links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     links.new(tex.outputs["Alpha"], bsdf.inputs["Alpha"])
-    bsdf.inputs["Roughness"].default_value = 0.95
-    rows, sides = 48, 96
+    rows, sides = 40, 72
+    top = H - 0.14
     vertices, faces, uvs = [], [], []
     for j in range(rows + 1):
         t = j / rows
-        # Gather at the ceiling, loosen into folds, cinch at the tie, then drape below it.
         radius = float(np.interp(t, [0, .10, .46, .66, .76, 1], [.018, .10, .16, .055, .10, .23]))
         for i in range(sides + 1):
             a = i / sides * math.tau
             pleat = 1 + .19 * math.sin(a * 13 + t * 2) + .07 * math.sin(a * 23 - t * 3)
             r = radius * pleat
-            vertices.append((4.95 + .055 * math.sin(t * 2.5) + math.cos(a) * r,
-                             4.45 + .045 * t + math.sin(a) * r * .72,
-                             3.06 - t * 1.11 + .028 * t**5 * math.sin(a * 7)))
+            vertices.append((cx + .055 * math.sin(t * 2.5) + math.cos(a) * r, cy + .045 * t + math.sin(a) * r * .72, top - t * 1.11 + .028 * t ** 5 * math.sin(a * 7)))
     for j in range(rows):
         for i in range(sides):
             a = j * (sides + 1) + i
             faces.append((a, a + sides + 1, a + sides + 2, a + 1))
-            uvs += [(i / sides * 4, j / rows * 8), (i / sides * 4, (j + 1) / rows * 8),
-                    ((i + 1) / sides * 4, (j + 1) / rows * 8), ((i + 1) / sides * 4, j / rows * 8)]
+            uvs += [(i / sides * 4, j / rows * 8), (i / sides * 4, (j + 1) / rows * 8), ((i + 1) / sides * 4, (j + 1) / rows * 8), ((i + 1) / sides * 4, j / rows * 8)]
     mesh_object("mosquito_net_folded_gauze", area, vertices, faces, mat, uvs=uvs, smooth=True)
-    # A stitched hem follows the irregular open edge rather than a flat cylinder cap.
-    hem = vertices[-(sides + 1):]
-    tube("mosquito_net_stitched_hem", area, hem, .002, m["linen"], sides=5)
-    seam = [vertices[j * (sides + 1)] for j in range(rows + 1)]
-    tube("mosquito_net_edge_seam", area, seam, .0016, m["linen"], sides=5)
-    tie_z = 3.06 - .66 * 1.11
-    tie_x = 4.95 + .055 * math.sin(.66 * 2.5)
-    for dz in [-.008, .008]:
-        points = [(tie_x + math.cos(a) * .063, 4.48 + math.sin(a) * .046, tie_z + dz) for a in np.linspace(0, math.tau, 49)]
-        tube("mosquito_net_cotton_tie", area, points, .005, m["krama"], sides=6)
-    tube("mosquito_net_tie_ends", area, [(tie_x, 4.428, tie_z), (tie_x + .055, 4.41, tie_z - .045), (tie_x + .04, 4.405, tie_z - .13)], .008, m["krama"], sides=6)
-    tube("mosquito_net_hanging_loop", area, [(4.95, 4.45, 3.055), (4.94, 4.45, 3.13), (4.96, 4.45, 3.16), (4.98, 4.45, 3.13), (4.95, 4.45, 3.055)], .003, m["linen"], sides=6)
-    tube("mosquito_net_ceiling_hook", area, [(4.95, 4.45, 3.2), (4.95, 4.45, 3.15), (4.96, 4.45, 3.145), (4.97, 4.45, 3.155)], .004, m["brass"], sides=8)
-
-def build_shelf_books(area, m):
-    """Individual clothbound study volumes, clear of the satchel and candle."""
-    covers = [(0.12, 0.20, 0.17), (0.24, 0.11, 0.07), (0.10, 0.15, 0.23), (0.30, 0.24, 0.14)]
-    titles = ["STUDIES", "BOTANY", "FIGURES", "PERSPECTIVE", "KHMER", "ORNAMENT", "INK", "LETTERS", "PLANTS"]
-    widths = [0.055, 0.059, 0.048, 0.064, 0.051, 0.058, 0.046, 0.060, 0.052]
-    heights = [0.264, 0.285, 0.248, 0.308, 0.277, 0.292, 0.255, 0.281, 0.268]
-    gilt = plain("M_studio_book_stamping", (0.50, 0.37, 0.18), rough=0.85)
-    x = 2.84
-    def lettering(name, body, at, size):
-        text = bpy.data.curves.new(name, "FONT")
-        text.body = body; text.size = size; text.align_x = "CENTER"; text.align_y = "CENTER"
-        text.space_line = 0.9; text.extrude = 0.0001
-        obj = bpy.data.objects.new(name, text); area.objects.link(obj)
-        obj.location = at; obj.rotation_euler.x = math.pi / 2
-        text.materials.append(gilt)
-        bpy.ops.object.select_all(action="DESELECT"); obj.select_set(True)
-        bpy.context.view_layer.objects.active = obj
-        bpy.ops.object.convert(target="MESH")
-    for i, (width, height, title) in enumerate(zip(widths, heights, titles)):
-        cover = library_material("rough_linen", f"M_studio_book_cloth_{i}", tint=covers[i % len(covers)], tile=0.16)
-        front = 4.724 + (i % 3) * 0.009; back = 4.954 - (i % 2) * 0.015
-        bottom = 1.341; top = bottom + height
-        box(f"shelf_book_pages_{i}", area, x + 0.004, x + width - 0.004, front + 0.009, back - 0.004, bottom + 0.006, top - 0.006, m["paper"], edge=0.001)
-        for side in (x, x + width - 0.003):
-            box(f"shelf_book_board_{i}", area, side, side + 0.003, front, back, bottom, top, cover, edge=0.001)
-        box(f"shelf_book_spine_{i}", area, x, x + width, front - 0.003, front + 0.007, bottom, top, cover, edge=0.003)
-        for z in (bottom + 0.022, top - 0.024):
-            box(f"shelf_book_binding_{i}", area, x + 0.004, x + width - 0.004, front - 0.004, front - 0.003, z, z + 0.002, gilt)
-        lettering(f"shelf_book_title_{i}", "\n".join(title), (x + width / 2, front - 0.0045, bottom + height * 0.57), 0.010)
-        lettering(f"shelf_book_volume_{i}", str(i + 1), (x + width / 2, front - 0.0045, bottom + 0.048), 0.013)
-        x += width + 0.004
+    tie_z = top - .66 * 1.11
+    tie_x = cx + .055 * math.sin(.66 * 2.5)
+    for dz in (-.008, .008):
+        tube("mosquito_net_cotton_tie", area, [(tie_x + math.cos(a) * .063, cy + .03 + math.sin(a) * .046, tie_z + dz) for a in np.linspace(0, math.tau, 33)], .005, m["krama"], sides=6)
+    tube("mosquito_net_ceiling_hook", area, [(cx, cy, H), (cx, cy, top - 0.01)], .004, m["brass"], sides=8)
 
 
-def crumpled_sheet(name, coll, x, y, radius, mat):
-    """A sheet balled up and thrown aside: a lumpy low sphere resting on the floor."""
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=radius, location=(x, y, radius * 0.8))
-    obj = bpy.context.active_object
-    obj.name = name
-    for c in obj.users_collection:
-        c.objects.unlink(obj)
-    coll.objects.link(obj)
-    for v in obj.data.vertices:
-        v.co *= rng.uniform(0.7, 1.15)
-    obj.scale = (1.0, rng.uniform(0.8, 1.0), rng.uniform(0.7, 0.85))
-    obj.rotation_euler = (0, 0, rng.uniform(0, math.tau))
-    obj.data.materials.append(mat)
-    world_uvs(obj)
-    return obj
+# =============================================================== build
 
 
-def hanging_sheet(name, coll, centre, along, width, height, mat):
-    """A drawing clipped to the drying line by its top edge, facing into the room."""
-    angle = math.atan2(along[1], along[0])
-    x, y, z = centre
-    sheet = box(name, coll, x - width / 2, x + width / 2, y - 0.001, y + 0.001, z - height, z, mat, tilt=(0, 0, angle))
-    normal = (-along[1], along[0])
-    picture_uvs(sheet, (-normal[1], normal[0], 0), (0, 0, 1))
-    return sheet
-
-
-def dress_working_studio(area, m, tx, ty):
-    """Art Bible pillar 'grounded and lived-in': an illustrator works here every day.
-    Drawings drying on a line, boards against the wall, rolls of paper, sheets she
-    gave up on. Nothing here has a collider, and nothing stands on the route from
-    the stool to the desk, the shelf, the hook and the door."""
-    newsprint = plain("M_newsprint", (0.62, 0.6, 0.55), rough=0.95)
-    string = plain("M_string", (0.55, 0.5, 0.42), rough=0.9)
-    umbrella = plain("M_umbrella_cloth", (0.03, 0.03, 0.035), rough=0.75)
-    aged = plain("M_aged_paper", (0.66, 0.6, 0.48), rough=0.95)
-
-    # A drying line across the south-west corner, high above head height, with three
-    # drawings pegged to it; lightning through the window throws them into silhouette.
-    a, b = (0.0, 1.0, 2.32), (1.75, 0.0, 2.32)
-    line = sag(a, b, 0.07, n=12)
-    tube("drying_line", area, line, 0.002, string, sides=4)
-    along = (b[0] - a[0], b[1] - a[1])
-    length = math.hypot(*along)
-    along = (along[0] / length, along[1] / length)
-    for k, (t, subject) in enumerate(((0.26, "palms"), (0.52, "lettering"), (0.78, "ornament"))):
-        p = line[round(t * (len(line) - 1))]
-        hanging_sheet(f"drying_sheet_{k}", area, (p[0], p[1], p[2] - 0.005), along, 0.26, 0.34, m[subject])
-        for s in (-1, 1):
-            cx, cy = p[0] + s * 0.1 * along[0], p[1] + s * 0.1 * along[1]
-            box(f"drying_peg_{k}_{s}", area, cx - 0.006, cx + 0.006, cy - 0.004, cy + 0.004, p[2] - 0.035, p[2] + 0.01,
-                m["worn"], tilt=(0, 0, math.atan2(along[1], along[0])))
-
-    # Stretched canvases leaning on the west wall in the corner: two show their raw
-    # backs and stretcher frames, one faces out with a study on it.
-    canvas_back = plain("M_canvas_back", (0.46, 0.4, 0.31), rough=0.95)
-    for k, (y, w, h, face) in enumerate(((0.32, 0.5, 0.7, False), (0.62, 0.6, 0.8, True), (0.95, 0.45, 0.6, False))):
-        lean = -0.13
-        cx = 0.03 + 0.01 * k + h / 2 * math.sin(-lean)
-        box(f"canvas_board_{k}", area, cx - 0.004, cx + 0.004, y - w / 2, y + w / 2, 0.0, h, canvas_back, tilt=(0, lean, 0))
-        if face:
-            art = box(f"canvas_study_{k}", area, cx + 0.005, cx + 0.007, y - w / 2 + 0.03, y + w / 2 - 0.03, 0.03, h - 0.03,
-                      m["boats"], tilt=(0, lean, 0))
-            picture_uvs(art, (0, 1, 0), (math.sin(lean), 0, math.cos(lean)))
-            continue
-        # Stretcher frame on the back: four bars round the edge and a cross brace.
-        bars = [(y - w / 2, y + w / 2, 0.0, 0.035), (y - w / 2, y + w / 2, h - 0.035, h),
-                (y - w / 2, y - w / 2 + 0.035, 0.0, h), (y + w / 2 - 0.035, y + w / 2, 0.0, h),
-                (y - w / 2, y + w / 2, h / 2 - 0.0175, h / 2 + 0.0175)]
-        for j, (y0, y1, z0, z1) in enumerate(bars):
-            bar = box(f"canvas_stretcher_{k}_{j}", area, cx + 0.004, cx + 0.022, y0, y1, z0, z1, m["worn"])
-            # Lean each bar with the canvas, about the canvas's own centre.
-            dz = (z0 + z1) / 2 - h / 2
-            bar.location = (cx + 0.013 + dz * math.sin(lean), (y0 + y1) / 2, h / 2 + dz * math.cos(lean))
-            bar.rotation_euler = (0, lean, 0)
-
-    # Rolled paper standing in the wicker basket by the desk.
-    for k in range(6):
-        ang = k * math.tau / 6 + rng.uniform(-0.3, 0.3)
-        r = 0.05 + 0.02 * (k % 2)
-        x, y = 0.35 + r * math.cos(ang), 1.45 + r * math.sin(ang)
-        roll = cylinder(f"paper_roll_{k}", area, x, y, 0.04, 0.04 + rng.uniform(0.6, 0.85), rng.uniform(0.018, 0.028),
-                        aged if k % 3 else newsprint, verts=10)
-        roll.rotation_euler = (rng.uniform(-0.12, 0.12) + 0.1 * math.sin(ang), rng.uniform(-0.12, 0.12) - 0.1 * math.cos(ang), 0)
-
-    # Sheets she gave up on, balled and thrown under the drafting table.
-    for k, (x, y) in enumerate(((tx - 0.35, ty - 0.15), (tx - 0.1, ty + 0.25), (tx + 0.62, ty + 0.35),
-                                (tx - 0.75, ty + 0.4), (tx + 0.45, ty + 0.55))):
-        crumpled_sheet(f"crumpled_sheet_{k}", area, x, y, rng.uniform(0.035, 0.05), m["paper"])
-
-    # A tied stack of fresh paper on the floor under the drafting table.
-    px, py = tx + 0.25, ty - 0.1
-    for k in range(14):
-        jitter = rng.uniform(-0.008, 0.008)
-        box(f"paper_stack_{k}", area, px - 0.21 + jitter, px + 0.21 + jitter, py - 0.15, py + 0.15, k * 0.0035, k * 0.0035 + 0.0025,
-            m["paper"], tilt=(0, 0, rng.uniform(-0.03, 0.03)))
-    box("paper_stack_string_a", area, px - 0.215, px + 0.215, py - 0.006, py + 0.006, 0.0, 0.051, string)
-    box("paper_stack_string_b", area, px - 0.006, px + 0.006, py - 0.155, py + 0.155, 0.0, 0.052, string)
-
-    # Pinned studies spreading along the walls she faces from the desk and the bed.
-    for k, (y, z, subject, turn) in enumerate(((4.15, 1.75, "house", 0.04), (4.5, 1.95, "boats", -0.05), (3.85, 1.95, "palms", -0.02))):
-        sheet = box(f"pinned_drawing_n_{k}", area, 0.002, 0.004, y - 0.13, y + 0.13, z - 0.17, z + 0.17, m[subject], tilt=(turn, 0, 0))
-        picture_uvs(sheet, (0, math.cos(turn), math.sin(turn)), (0, -math.sin(turn), math.cos(turn)))
-        cylinder(f"pin_n_{k}", area, 0.006, y, z + 0.15, z + 0.155, 0.004, m["brass"], verts=6)
-    for k, (x, z, subject, turn) in enumerate(((1.55, 1.65, "lettering", 0.05), (1.85, 1.95, "ornament", -0.04))):
-        sheet = box(f"pinned_drawing_nw_{k}", area, x - 0.14, x + 0.14, D - 0.004, D - 0.002, z - 0.18, z + 0.18, m[subject],
-                    tilt=(0, turn, 0))
-        picture_uvs(sheet, (math.cos(turn), 0, -math.sin(turn)), (math.sin(turn), 0, math.cos(turn)))
-        cylinder(f"pin_nw_{k}", area, x, D - 0.006, z + 0.16, z + 0.165, 0.004, m["brass"], verts=6)
-
-    # A stack of books at the back of the desk, the top one open-faced down.
-    for k, (w, d, h, mat) in enumerate(((0.2, 0.28, 0.04, m["book"]), (0.18, 0.25, 0.035, m["leather"]), (0.16, 0.23, 0.03, m["book"]))):
-        z = 0.78 + sum(s[2] for s in ((0.2, 0.28, 0.04), (0.18, 0.25, 0.035), (0.16, 0.23, 0.03))[:k])
-        box(f"desk_book_{k}", area, 0.3 - w / 2, 0.3 + w / 2, 2.88 - d / 2, 2.88 + d / 2, z, z + h, mat,
-            tilt=(0, 0, rng.uniform(-0.15, 0.15)), edge=0.004)
-
-    # Yesterday's newspapers, folded, on the floor by the armchair.
-    for k in range(9):
-        box(f"newspaper_{k}", area, 5.15, 5.5, 0.35, 0.6, k * 0.004, k * 0.004 + 0.003, newsprint,
-            tilt=(0, 0, rng.uniform(-0.2, 0.2)))
-
-    # A black umbrella leaning in the corner by the console table, and slippers by the bed.
-    shaft = cylinder("umbrella_folded", area, W - 0.12, 0.12, 0.08, 0.85, 0.045, umbrella, verts=8, radius_top=0.012)
-    shaft.rotation_euler = (0.12, -0.1, 0)
-    tube("umbrella_handle", area, [(W - 0.08, 0.16, 0.86), (W - 0.07, 0.17, 0.95), (W - 0.1, 0.19, 0.99)], 0.008, m["wood"], sides=6)
-    for k, x in enumerate((4.25, 4.42)):
-        box(f"slipper_{k}", area, x - 0.05, x + 0.05, D - 1.3, D - 1.06, 0.0, 0.025, m["leather"],
-            tilt=(0, 0, rng.uniform(-0.2, 0.2)), edge=0.01)
+def build():
+    global area
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    area = bpy.data.collections.new("ep1_area_studio")
+    bpy.context.scene.collection.children.link(area)
+    layer = bpy.context.view_layer.layer_collection.children[area.name]
+    bpy.context.view_layer.active_layer_collection = layer
+    os.makedirs(TEXTURES, exist_ok=True)
+    # The glTF importer reuses an existing "glTF Material Output" group and expects all of
+    # its sockets (Iridescence and the rest); kit.gltf_output_group() makes one with only
+    # Occlusion, which breaks importing scans that carry occlusion maps. Make the full one first.
+    from io_scene_gltf2.blender.com.material_helpers import create_settings_group, get_gltf_node_name
+    if get_gltf_node_name() not in bpy.data.node_groups:
+        create_settings_group(get_gltf_node_name())
+    materials()
+    shell()
+    front_studio()
+    back_room()
+    empty("marker_save_studio", area, (0.18, 3.12, 0.8))
+    shrink_prop_textures()
+    os.makedirs(os.path.dirname(BLEND), exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=BLEND)
+    faces = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == "MESH")
+    print(f"Saved {BLEND}: {len(bpy.data.objects)} objects, {faces} faces before decimation")
 
 
 build()

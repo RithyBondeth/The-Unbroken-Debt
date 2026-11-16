@@ -1,11 +1,9 @@
-import { WallTelephone } from "../act1/WallTelephone";
+import { TelephoneCord } from "@/player/TelephoneCord";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
-import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
-import { CreateTorus } from "@babylonjs/core/Meshes/Builders/torusBuilder";
 import { CreateTube } from "@babylonjs/core/Meshes/Builders/tubeBuilder";
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -31,7 +29,7 @@ export class StudioDetails {
   private readonly ceramic: PBRMaterial;
   private readonly staticMeshes: Mesh[] = [];
   private batching = false;
-  private telephone!: WallTelephone;
+  private cord!: TelephoneCord;
 
   constructor(
     private readonly scene: Scene,
@@ -57,9 +55,6 @@ export class StudioDetails {
     this.buildMatchbox();
     this.buildLetters();
     this.batching = true;
-    this.buildWorkingDetails();
-    this.buildWallSconce();
-    this.buildBankersLamp();
     mergeStaticMeshes(this.staticMeshes, { cellSize: 3 });
   }
 
@@ -175,29 +170,6 @@ export class StudioDetails {
     );
   }
 
-  private lathe(
-    parent: TransformNode | null,
-    name: string,
-    profile: number[][],
-    at: number[],
-    mat: PBRMaterial,
-  ): Mesh {
-    return this.attach(
-      CreateLathe(
-        `studio_${name}`,
-        {
-          shape: profile.map(([r, y]) => new Vector3(r, y, 0)),
-          tessellation: 48,
-          sideOrientation: Mesh.DOUBLESIDE,
-        },
-        this.scene,
-      ),
-      parent,
-      at,
-      mat,
-    );
-  }
-
   private tube(
     parent: TransformNode | null,
     name: string,
@@ -220,25 +192,6 @@ export class StudioDetails {
       [0, 0, 0],
       mat,
     );
-  }
-
-  private ring(
-    parent: TransformNode | null,
-    name: string,
-    diameter: number,
-    thickness: number,
-    at: number[],
-    mat: PBRMaterial,
-    front = true,
-  ): Mesh {
-    const mesh = this.attach(
-      CreateTorus(`studio_${name}`, { diameter, thickness, tessellation: 48 }, this.scene),
-      parent,
-      at,
-      mat,
-    );
-    if (front) mesh.rotation.x = Math.PI / 2;
-    return mesh;
   }
 
   /** A chamfered slab: bevels catch the practical lights rather than infinitely sharp box edges. */
@@ -337,31 +290,33 @@ export class StudioDetails {
    * (`WallTelephone`), so the instrument Sora answers in Phnom Penh is the one
    * she meets again at the funeral house.
    */
+  /**
+   * The telephone is modelled in Blender (tools/areas/ep1_area_studio.py): a French
+   * magneto wall set with its earpiece on the switch hook. Here: the cloth cord from
+   * the case to the earpiece, which follows Sora's hand during the call, and one
+   * invisible target over the whole instrument so the gaps round it still count.
+   */
   private buildPhone(anchor: TransformNode): void {
-    for (const mesh of anchor.getChildMeshes(false)) {
-      if (mesh.name === "telephone_earpiece") mesh.name = "telephone_earpiece_legacy";
-      mesh.setEnabled(false);
-    }
-    const at = anchor.getAbsolutePosition();
-    // Turned to face into the room (+X), its board's back flat on the plaster.
-    this.telephone = new WallTelephone(this.scene, {
-      name: "studio_wall_phone",
-      position: [at.x + 0.198, at.y - 0.02, at.z],
-      turn: Math.PI,
-      receiverName: "telephone_earpiece",
-    });
-    const root = this.telephone.root;
-    // A continuous interior target, including the gaps round the receiver.
-    const hit = this.box(root, "phone_pickup_volume", [0.36, 0.52, 0.44], [0.02, 0, 0], this.black);
+    const terminal = this.scene.getTransformNodeByName("telephone_cord_terminal");
+    const rest = this.scene.getTransformNodeByName("telephone_cord_rest");
+    if (!terminal || !rest) throw new Error("[Studio] telephone cord anchors missing");
+    const cord = this.mat("telephone_cloth_cord", "#2c2620", 0.85);
+    this.cord = new TelephoneCord(this.scene, "studio_phone_cord", terminal, rest, cord, 0.0035);
+    anchor.computeWorldMatrix(true);
+    const { min, max } = anchor.getHierarchyBoundingVectors(true);
+    const size = max.subtract(min);
+    const hit = CreateBox(
+      "phone_pickup_volume",
+      { width: size.x + 0.04, height: size.y + 0.04, depth: size.z + 0.04 },
+      this.scene,
+    );
+    hit.position.copyFrom(Vector3.Center(min, max));
     hit.visibility = 0;
-    this.batchParts(root, this.telephone.receiver);
-    // Imported Blender roots mirror an axis: attach while preserving the world
-    // pose, otherwise the phone grows into the wall.
-    root.setParent(anchor);
+    hit.setParent(anchor);
   }
 
   updateTelephoneCord(heldEnd: Vector3 | null = null): void {
-    this.telephone.updateTelephoneCord(heldEnd);
+    this.cord.update(heldEnd);
   }
 
   private buildDrawer(drawer: TransformNode): void {
@@ -601,256 +556,5 @@ export class StudioDetails {
       0.0013,
       cotton,
     );
-  }
-
-  private buildWallSconce(): void {
-    const root = new TransformNode("studio_writing_sconce", this.scene);
-    root.position.set(-0.06, 1.65, -2.5);
-    root.rotation.y = -Math.PI / 2;
-    this.cylinder(root, "sconce_rosette", 0.11, 0.012, [0, 0, 0], this.darkBrass).rotation.x =
-      Math.PI / 2;
-    this.tube(
-      root,
-      "sconce_gooseneck",
-      [
-        [0, 0, 0.01],
-        [0, 0.02, 0.08],
-        [0, 0.015, 0.17],
-        [0, -0.025, 0.21],
-      ],
-      0.009,
-      this.brass,
-    );
-    const shade = this.lathe(
-      root,
-      "sconce_shade",
-      [
-        [0.018, 0.02],
-        [0.025, 0.008],
-        [0.052, -0.055],
-        [0.071, -0.074],
-        [0.073, -0.083],
-        [0.067, -0.084],
-        [0.046, -0.06],
-        [0.019, 0],
-      ],
-      [0, -0.02, 0.21],
-      this.ceramic,
-    );
-    shade.rotation.x = 0.22;
-    const bulb = this.mat("sconce_bulb", "#f3dfb2", 0.38);
-    bulb.emissiveColor.set(0.8, 0.52, 0.23);
-    this.cylinder(root, "sconce_bulb", 0.025, 0.04, [0, -0.074, 0.2], bulb);
-    this.tube(
-      root,
-      "sconce_wiring",
-      [
-        [0, -0.04, 0.007],
-        [0, -0.23, 0.007],
-        [0.006, -0.38, 0.007],
-      ],
-      0.0025,
-      this.black,
-    );
-    this.box(root, "sconce_switch", [0.03, 0.05, 0.016], [0.006, -0.39, 0.012], this.ceramic);
-  }
-
-  private buildBankersLamp(): void {
-    for (const mesh of this.scene.meshes)
-      if (/^desk_lamp_(?:base|stem|shade|bulb)/.test(mesh.name)) mesh.setEnabled(false);
-    const root = new TransformNode("studio_bankers_lamp", this.scene);
-    root.position.set(-2.05, 0.9, -0.77);
-    this.lathe(
-      root,
-      "banker_weighted_base",
-      [
-        [0, 0],
-        [0.085, 0],
-        [0.09, 0.009],
-        [0.081, 0.023],
-        [0.053, 0.032],
-        [0.025, 0.035],
-      ],
-      [0, 0, 0],
-      this.brass,
-    );
-    this.cylinder(root, "banker_column", 0.018, 0.25, [0, 0.16, 0], this.brass);
-    this.ring(root, "banker_base_collar", 0.036, 0.006, [0, 0.041, 0], this.darkBrass, false);
-    this.tube(
-      root,
-      "banker_shade_bracket",
-      [
-        [0, 0.27, 0],
-        [0, 0.31, 0.015],
-        [0, 0.31, 0.07],
-      ],
-      0.008,
-      this.brass,
-    );
-    const green = this.mat("banker_green_glass", "#28593e", 0.2);
-    green.clearCoat.isEnabled = true;
-    green.clearCoat.intensity = 0.8;
-    green.clearCoat.roughness = 0.13;
-    const positions: number[] = [],
-      indices: number[] = [],
-      normals: number[] = [],
-      uvs: number[] = [];
-    for (let i = 0; i <= 32; i++) {
-      const a = (i / 32) * Math.PI;
-      for (const x of [-0.16, 0.16]) {
-        positions.push(x, 0.31 + Math.sin(a) * 0.075, 0.07 + Math.cos(a) * 0.075);
-        uvs.push(x < 0 ? 0 : 1, i / 32);
-      }
-      if (i < 32) {
-        const k = i * 2;
-        indices.push(k, k + 1, k + 3, k, k + 3, k + 2);
-      }
-    }
-    VertexData.ComputeNormals(positions, indices, normals);
-    const data = new VertexData();
-    data.positions = positions;
-    data.indices = indices;
-    data.normals = normals;
-    data.uvs = uvs;
-    const shade = new Mesh("studio_banker_glass_shade", this.scene);
-    data.applyToMesh(shade);
-    green.backFaceCulling = false;
-    this.attach(shade, root, [0, 0, 0], green);
-    for (const x of [-0.16, 0.16]) {
-      const path: number[][] = [];
-      for (let i = 0; i <= 24; i++) {
-        const a = (i / 24) * Math.PI;
-        path.push([x, 0.31 + Math.sin(a) * 0.075, 0.07 + Math.cos(a) * 0.075]);
-      }
-      this.tube(root, "shade_brass_binding", path, 0.0025, this.brass);
-    }
-    this.tube(
-      root,
-      "lamp_braided_lead",
-      [
-        [0, 0.013, -0.06],
-        [0.09, 0.009, -0.13],
-        [0.16, 0.003, -0.17],
-        [0.18, -0.35, -0.18],
-        [0.2, -0.8, -0.16],
-      ],
-      0.003,
-      this.black,
-    );
-  }
-
-  private buildWorkingDetails(): void {
-    // A ruler with engraved divisions, pen holder and stained porcelain cup.
-    const ruler = new TransformNode("studio_drafting_ruler", this.scene);
-    ruler.position.set(-3.38, 0.965, -1.03);
-    ruler.rotation.y = -0.14;
-    this.box(ruler, "ruler", [0.31, 0.003, 0.027], [0, 0, 0], this.drawerWood);
-    for (let i = 0; i <= 30; i++)
-      this.box(
-        ruler,
-        "ruler_engraving",
-        [0.00065, 0.0003, i % 5 === 0 ? 0.014 : 0.007],
-        [-0.15 + i * 0.01, 0.0017, -0.004],
-        this.black,
-      );
-    const cup = new TransformNode("studio_brush_cup", this.scene);
-    cup.position.set(-0.22, 0.78, -1.92);
-    this.lathe(
-      cup,
-      "brush_pot",
-      [
-        [0.026, 0],
-        [0.03, 0.008],
-        [0.034, 0.082],
-        [0.036, 0.088],
-        [0.032, 0.09],
-        [0.029, 0.016],
-      ],
-      [0, 0, 0],
-      this.ceramic,
-    );
-    this.ring(cup, "brush_pot_ink_stain", 0.065, 0.002, [0, 0.083, 0], this.black, false);
-    for (let i = 0; i < 4; i++) {
-      const pen = this.cylinder(
-        cup,
-        "wooden_dip_pen",
-        0.004,
-        0.17,
-        [(i - 1.5) * 0.009, 0.12, 0],
-        i % 2 ? this.walnut : this.darkBrass,
-      );
-      pen.rotation.z = (i - 1.5) * 0.13;
-    }
-    // Paper edges, string and wax distinguish correspondence from a flat white block.
-    for (let i = 0; i < 4; i++) {
-      const envelope = this.box(
-        null,
-        "desk_envelope",
-        [0.12, 0.0015, 0.08],
-        [-0.23 + i * 0.002, 0.783 + i * 0.002, -2.82 + i * 0.003],
-        this.paper,
-      );
-      envelope.rotation.y = 0.08;
-    }
-    this.tube(
-      null,
-      "envelope_fold",
-      [
-        [-0.29, 0.791, -2.85],
-        [-0.23, 0.791, -2.81],
-        [-0.17, 0.791, -2.85],
-      ],
-      0.0005,
-      this.drawerWood,
-    );
-    // Grounding details: old surface wiring, skirting nail heads and rug fringe.
-    this.tube(
-      null,
-      "door_surface_wiring",
-      [
-        [-5.94, 0.22, -2.99],
-        [-5.94, 2.76, -2.99],
-        [-5.94, 2.76, -4.72],
-      ],
-      0.004,
-      this.darkBrass,
-    );
-    const switchRoot = new TransformNode("studio_door_switch", this.scene);
-    switchRoot.position.set(-5.945, 1.22, -3.02);
-    switchRoot.rotation.y = Math.PI / 2;
-    this.slab(switchRoot, "bakelite_switch_plate", 0.075, 0.11, 0.012, [0, 0, 0], this.black);
-    this.cylinder(
-      switchRoot,
-      "switch_toggle",
-      0.017,
-      0.023,
-      [0, 0.006, 0.018],
-      this.ceramic,
-    ).rotation.x = 0.6;
-    for (const z of [-1.71, -3.49])
-      for (let i = 0; i < 36; i++) {
-        const x = -2.03 - i * 0.06;
-        this.tube(
-          null,
-          "rug_cotton_fringe",
-          [
-            [x, 0.007, z],
-            [x + 0.006, 0.004, z + (z > -2 ? 0.045 : -0.045)],
-          ],
-          0.0015,
-          this.paper,
-        );
-      }
-    for (let i = 0; i < 7; i++) {
-      const nail = this.cylinder(
-        null,
-        "skirting_nail",
-        0.004,
-        0.002,
-        [-0.023, 0.08, -0.6 - i * 0.64],
-        this.darkBrass,
-      );
-      nail.rotation.z = Math.PI / 2;
-    }
   }
 }

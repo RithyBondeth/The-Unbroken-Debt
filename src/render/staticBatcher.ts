@@ -26,7 +26,10 @@ export function mergeStaticMeshes(meshes: readonly Mesh[], options: BatchOptions
     const c = mesh.getBoundingInfo().boundingSphere.centerWorld;
     const size = options.cellSizeFor?.(mesh) ?? options.cellSize;
     const cell = [c.x, c.y, c.z].map((v) => Math.floor(v / size)).join(",");
-    const key = `${mesh.material.uniqueId}|${cell}|${options.group?.(mesh) ?? ""}`;
+    // Only meshes with the same vertex attributes can merge (a lightmapped mesh has a
+    // second UV set; a decimated library mesh may lack tangents).
+    const kinds = mesh.getVerticesDataKinds().sort().join(",");
+    const key = `${mesh.material.uniqueId}|${cell}|${options.group?.(mesh) ?? ""}|${kinds}`;
     groupNames.set(key, options.group?.(mesh) ?? "");
     let list = groups.get(key);
     if (!list) groups.set(key, (list = []));
