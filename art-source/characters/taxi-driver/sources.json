@@ -151,5 +151,50 @@
     "compressedSize": 1729674,
     "method": 8,
     "sha256": "ff029fc5a3350ebc72813cdf050afcffd23064c7701d99e664572713cfa98a5f"
+  },
+  {
+    "file": "old_darkskinned_male_diffuse.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "skins/old_african_male/old_darkskinned_male_diffuse.png",
+    "zipOffset": 63237790,
+    "compressedSize": 3332979,
+    "method": 8,
+    "sha256": "4bcc74baf88f28a0ac4887f22d3cf395bbcb60810121697dafbf0bf3293d0e72"
+  },
+  {
+    "file": "short04.obj",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short04/short04.obj",
+    "zipOffset": 265877789,
+    "compressedSize": 20042,
+    "method": 8,
+    "sha256": "676964a133ee35ffcea1195382bf75542da7a298931e4001bc7b0d7b707225de"
+  },
+  {
+    "file": "short04.mhclo",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short04/short04.mhclo",
+    "zipOffset": 265897913,
+    "compressedSize": 20793,
+    "method": 8,
+    "sha256": "d60640aa4c4ffce1aa269647ba436b6ee0bb21bb948f927b84e27a48d2107157"
+  },
+  {
+    "file": "short04_diffuse.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "hair/short04/short04_diffuse.png",
+    "zipOffset": 265918790,
+    "compressedSize": 2294596,
+    "method": 8,
+    "sha256": "0bef7fc0e403db5a40fabb2111ebfa6f7e8158e204c6e56b8da98e9ef527846e"
+  },
+  {
+    "file": "old_lightskinned_male_diffuse2.png",
+    "url": "https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip",
+    "zipEntry": "skins/old_asian_male/old_lightskinned_male_diffuse2.png",
+    "zipOffset": 39306669,
+    "compressedSize": 4480595,
+    "method": 8,
+    "sha256": "8b3232676c5b271b4f44ead68845155d93f15de641b6819561781e16701a6c59"
   }
 ]
