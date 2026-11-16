@@ -13,7 +13,8 @@ WANTED=['hair/short02/short02.obj','hair/short02/short02.mhclo','hair/short02/sh
     'eyelashes/eyelashes01/eyelashes01.obj','eyelashes/eyelashes01/eyelashes01.mhclo','eyelashes/eyelashes01/eyelashes01.png',
     'eyes/high-poly/high-poly.obj','eyes/high-poly/high-poly.mhclo','eyes/materials/brown_eye.png',
     'clothes/male_casualsuit01/male_casualsuit01.obj','clothes/male_casualsuit01/male_casualsuit01.mhclo',
-    'clothes/male_casualsuit01/male_casualsuit01_diffuse.png','clothes/male_casualsuit01/male_casualsuit01_normal.png']
+    'clothes/male_casualsuit01/male_casualsuit01_diffuse.png','clothes/male_casualsuit01/male_casualsuit01_normal.png',
+    'skins/old_african_male/old_darkskinned_male_diffuse.png','hair/short04/short04.obj','hair/short04/short04.mhclo','hair/short04/short04_diffuse.png','skins/old_asian_male/old_lightskinned_male_diffuse2.png']
 def get(a,b):
     with urllib.request.urlopen(urllib.request.Request(PACK,headers={'Range':f'bytes={a}-{b}'}),timeout=120) as r:
         if r.status!=206: raise RuntimeError('Asset host must support byte ranges')

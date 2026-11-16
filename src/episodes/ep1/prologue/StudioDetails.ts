@@ -1,5 +1,4 @@
-import { createTelephoneReceiver } from "@/player/telephoneReceiver";
-import { TelephoneCord } from "@/player/TelephoneCord";
+import { WallTelephone } from "../act1/WallTelephone";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
@@ -32,9 +31,7 @@ export class StudioDetails {
   private readonly ceramic: PBRMaterial;
   private readonly staticMeshes: Mesh[] = [];
   private batching = false;
-  private phoneCord!: TelephoneCord;
-  private phoneCordRest!: TransformNode;
-  private phoneCordSocket!: TransformNode;
+  private telephone!: WallTelephone;
 
   constructor(
     private readonly scene: Scene,
@@ -335,214 +332,36 @@ export class StudioDetails {
     }
   }
 
+  /**
+   * The same rotary wall telephone that hangs in the village house's hall
+   * (`WallTelephone`), so the instrument Sora answers in Phnom Penh is the one
+   * she meets again at the funeral house.
+   */
   private buildPhone(anchor: TransformNode): void {
     for (const mesh of anchor.getChildMeshes(false)) {
       if (mesh.name === "telephone_earpiece") mesh.name = "telephone_earpiece_legacy";
       mesh.setEnabled(false);
     }
-    const root = new TransformNode("studio_magneto_phone", this.scene);
-    root.position.copyFrom(anchor.getAbsolutePosition());
-    root.rotation.y = Math.PI / 2;
-    // Imported Blender roots mirror an axis. Preserve our world-space pose
-    // when attaching the replacement, otherwise the phone grows into the wall.
-    root.setParent(anchor);
-    this.slab(root, "phone_walnut_backboard", 0.33, 0.62, 0.033, [0, 0, 0.025], this.walnut);
-    this.slab(root, "phone_panel_rebate", 0.282, 0.45, 0.016, [0, -0.025, 0.048], this.walnut);
-    this.slab(root, "phone_magneto_case", 0.26, 0.29, 0.07, [0, -0.105, 0.087], this.walnut);
-    for (const x of [-0.088, 0.088]) {
-      const bell = this.lathe(
-        root,
-        "phone_bell_dome",
-        [
-          [0, 0],
-          [0.024, 0.006],
-          [0.049, 0.024],
-          [0.066, 0.05],
-          [0.067, 0.058],
-          [0.061, 0.063],
-          [0.054, 0.048],
-        ],
-        [x, 0.178, 0.15],
-        this.brass,
-      );
-      bell.rotation.x = -Math.PI / 2;
-      this.ring(root, "bell_rolled_rim", 0.129, 0.004, [x, 0.178, 0.09], this.darkBrass);
-      const pin = this.cylinder(root, "bell_nut", 0.014, 0.012, [x, 0.178, 0.154], this.darkBrass);
-      pin.rotation.x = Math.PI / 2;
-    }
-    this.tube(
-      root,
-      "bell_clapper",
-      [
-        [0, 0.14, 0.07],
-        [0, 0.198, 0.071],
-      ],
-      0.004,
-      this.darkBrass,
-    );
-    this.cylinder(root, "clapper_head", 0.019, 0.01, [0, 0.204, 0.07], this.brass);
-    const mouth = this.lathe(
-      root,
-      "transmitter_trumpet",
-      [
-        [0.023, 0],
-        [0.027, 0.013],
-        [0.036, 0.037],
-        [0.061, 0.069],
-        [0.072, 0.08],
-        [0.074, 0.087],
-        [0.065, 0.088],
-        [0.045, 0.063],
-        [0.019, 0.032],
-      ],
-      [0.02, -0.032, 0.126],
-      this.black,
-    );
-    mouth.rotation.x = Math.PI / 2;
-    this.ring(root, "mouthpiece_brass_lip", 0.142, 0.006, [0.02, -0.032, 0.214], this.brass);
-    const diaphragm = this.cylinder(
-      root,
-      "transmitter_diaphragm",
-      0.08,
-      0.004,
-      [0.02, -0.032, 0.177],
-      this.black,
-    );
-    diaphragm.rotation.x = Math.PI / 2;
-    for (let i = 0; i < 7; i++) {
-      const angle = (i / 7) * Math.PI * 2;
-      const hole = this.cylinder(
-        root,
-        "diaphragm_perforation",
-        0.006,
-        0.001,
-        [0.02 + Math.cos(angle) * 0.022, -0.032 + Math.sin(angle) * 0.022, 0.18],
-        this.darkBrass,
-      );
-      hole.rotation.x = Math.PI / 2;
-    }
-    const receiver = createTelephoneReceiver(this.scene, "telephone_earpiece");
-    receiver.parent = root;
-    receiver.position.set(-0.193, -0.075, 0.105);
-    this.phoneCordRest = new TransformNode("telephone_cord_rest", this.scene);
-    this.phoneCordRest.parent = receiver;
-    this.phoneCordRest.position.set(0, -0.116, 0);
-    this.phoneCordSocket = new TransformNode("telephone_cord_terminal", this.scene);
-    this.phoneCordSocket.parent = root;
-    this.phoneCordSocket.position.set(-0.055, -0.32, 0.05);
-    this.tube(
-      root,
-      "receiver_hook",
-      [
-        [-0.12, 0.01, 0.07],
-        [-0.175, 0.01, 0.07],
-        [-0.19, 0.016, 0.11],
-      ],
-      0.006,
-      this.brass,
-    );
-    this.tube(
-      root,
-      "magneto_crank",
-      [
-        [0.13, -0.125, 0.09],
-        [0.194, -0.125, 0.09],
-        [0.194, -0.197, 0.09],
-        [0.227, -0.197, 0.09],
-      ],
-      0.006,
-      this.brass,
-    );
-    const crank = this.lathe(
-      root,
-      "crank_turned_grip",
-      [
-        [0.008, 0],
-        [0.014, 0.008],
-        [0.016, 0.03],
-        [0.014, 0.052],
-        [0.008, 0.06],
-      ],
-      [0.223, -0.197, 0.09],
-      this.black,
-    );
-    crank.rotation.z = -Math.PI / 2;
-    for (const x of [-0.13, 0.13])
-      for (const y of [-0.263, 0.263]) {
-        const screw = this.cylinder(
-          root,
-          "phone_slotted_screw",
-          0.012,
-          0.003,
-          [x, y, 0.045],
-          this.brass,
-        );
-        screw.rotation.x = Math.PI / 2;
-        this.box(root, "screw_slot", [0.008, 0.0014, 0.001], [x, y, 0.047], this.black).rotation.z =
-          0.36;
-      }
-    const plaque = this.label("phone_enamel_plate", 512, 192, (c) => {
-      c.fillStyle = "#cbc3a7";
-      c.fillRect(0, 0, 512, 192);
-      c.strokeStyle = "#70614a";
-      c.lineWidth = 7;
-      c.strokeRect(12, 12, 488, 168);
-      c.textAlign = "center";
-      c.fillStyle = "#3b382d";
-      c.font = "28px serif";
-      c.fillText("TÉLÉPHONE", 256, 73);
-      c.font = "bold 46px serif";
-      c.fillText("Nº 17", 256, 132);
+    const at = anchor.getAbsolutePosition();
+    // Turned to face into the room (+X), its board's back flat on the plaster.
+    this.telephone = new WallTelephone(this.scene, {
+      name: "studio_wall_phone",
+      position: [at.x + 0.198, at.y - 0.02, at.z],
+      turn: Math.PI,
+      receiverName: "telephone_earpiece",
     });
-    this.box(
-      root,
-      "phone_number_plate_rim",
-      [0.108, 0.044, 0.003],
-      [0.005, -0.216, 0.124],
-      this.darkBrass,
-    );
-    const number = this.attach(
-      CreatePlane("studio_phone_enamel_number", { width: 0.102, height: 0.038 }, this.scene),
-      root,
-      [0.005, -0.216, 0.126],
-      plaque,
-    );
-    number.rotation.y = Math.PI;
-    for (const x of [-0.055, 0.055]) {
-      this.cylinder(root, "porcelain_terminal", 0.02, 0.022, [x, -0.318, 0.042], this.ceramic);
-      this.tube(
-        root,
-        "terminal_lead",
-        [
-          [x, -0.32, 0.042],
-          [x, -0.37, 0.022],
-          [x * 0.8, -0.43, 0.01],
-        ],
-        0.002,
-        this.black,
-      );
-    }
-    // A continuous interior target, including gaps between the bells and receiver.
-    const hit = this.box(
-      root,
-      "phone_pickup_volume",
-      [0.44, 0.65, 0.19],
-      [-0.025, -0.015, 0.1],
-      this.black,
-    );
+    const root = this.telephone.root;
+    // A continuous interior target, including the gaps round the receiver.
+    const hit = this.box(root, "phone_pickup_volume", [0.36, 0.52, 0.44], [0.02, 0, 0], this.black);
     hit.visibility = 0;
-    this.batchParts(root, receiver);
-    this.phoneCord = new TelephoneCord(
-      this.scene,
-      "studio_cloth_telephone_cord",
-      this.phoneCordSocket,
-      this.phoneCordRest,
-      this.black,
-    );
+    this.batchParts(root, this.telephone.receiver);
+    // Imported Blender roots mirror an axis: attach while preserving the world
+    // pose, otherwise the phone grows into the wall.
+    root.setParent(anchor);
   }
 
   updateTelephoneCord(heldEnd: Vector3 | null = null): void {
-    this.phoneCord.update(heldEnd);
+    this.telephone.updateTelephoneCord(heldEnd);
   }
 
   private buildDrawer(drawer: TransformNode): void {
