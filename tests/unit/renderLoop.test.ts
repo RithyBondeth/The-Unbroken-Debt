@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FrameFailures, MAX_LOGGED_ERRORS } from "@/render/renderLoop";
+import { FrameFailures, MAX_LOGGED_ERRORS, refreshesPerFrame } from "@/render/renderLoop";
 
 const FRAME = 1000 / 60;
 
@@ -89,5 +89,22 @@ describe("FrameFailures", () => {
     // Ten seconds without frames, then one more failure: still a short streak.
     expect(f.failed(new Error("x"), 10_000).stalled).toBe(false);
     expect(f.rendered(10_000 + FRAME)?.ms).toBeLessThan(500);
+  });
+});
+
+describe("refreshesPerFrame", () => {
+  it("renders every refresh up to about 75 Hz and every second refresh on 120-165 Hz panels", () => {
+    expect(refreshesPerFrame(1000 / 60)).toBe(1);
+    expect(refreshesPerFrame(1000 / 75)).toBe(1);
+    expect(refreshesPerFrame(1000 / 90)).toBe(1);
+    expect(refreshesPerFrame(1000 / 120)).toBe(2);
+    expect(refreshesPerFrame(1000 / 144)).toBe(2);
+    expect(refreshesPerFrame(1000 / 165)).toBe(2);
+    expect(refreshesPerFrame(1000 / 240)).toBe(4);
+  });
+
+  it("falls back to every refresh when the interval is unknown", () => {
+    expect(refreshesPerFrame(0)).toBe(1);
+    expect(refreshesPerFrame(Number.NaN)).toBe(1);
   });
 });

@@ -1,4 +1,3 @@
-import { Matrix } from "@babylonjs/core/Maths/math.vector";
 import { expect, it, vi } from "vitest";
 import { Prologue } from "@/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "@/audio/DreadScore";
@@ -108,39 +107,3 @@ it("rings the phone the moment the kit is packed, without opening the notebook",
     vi.useRealTimers();
   }
 });
-
-it.each([false, true])(
-  "releases drawing input and restores the view after completion or failure (failure=%s)",
-  async (fail) => {
-    const game = {
-      player: { yaw: 1.2, pitch: 0.6 },
-      gated: { holdStill: false, holdLook: false },
-      inspectObject: vi.fn(),
-      stopInspecting: vi.fn(),
-    };
-    const state = {
-      game,
-      mesh: () => ({
-        scaling: { x: 1 },
-        computeWorldMatrix: () => Matrix.Translation(-3, 0.914, -0.72),
-      }),
-      play: vi.fn(),
-      ink: {
-        inkLine: vi.fn(() => {
-          expect(game.gated.holdStill && game.gated.holdLook).toBe(true);
-          game.player.yaw = 3;
-          return fail ? Promise.reject(new Error("drawing failed")) : Promise.resolve();
-        }),
-      },
-    };
-    const draw = Reflect.get(Prologue.prototype, "drawIllustration") as (
-      this: typeof state,
-    ) => Promise<void>;
-    if (fail) await expect(draw.call(state)).rejects.toThrow("drawing failed");
-    else await draw.call(state);
-    expect(state.ink.inkLine).toHaveBeenCalledWith(3.6);
-    expect(game.stopInspecting).toHaveBeenCalledOnce();
-    expect(game.player).toEqual({ yaw: 1.2, pitch: 0.6 });
-    expect(game.gated).toEqual({ holdStill: false, holdLook: false });
-  },
-);

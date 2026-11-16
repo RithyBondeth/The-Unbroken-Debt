@@ -210,6 +210,134 @@
   "island_tree_02": {
    "resolution": "1k",
    "format": "gltf"
+  },
+  "antique_ceramic_vase_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "chinese_commode": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "chinese_screen_panels": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "chinese_sofa": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "chinese_tea_table": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "ornate_mirror_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "painted_wooden_cabinet": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "potted_plant_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "tea_set_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "vintage_cabinet_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "vintage_wooden_drawer_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_bookshelf_worn": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_stool_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_table_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_stool_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "painted_wooden_stool": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "brass_pot_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_bowl_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_spoon": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_cutting_board": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "carved_wooden_plate": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "food_ginger_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "food_lime_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "food_lychee_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "sweet_potato": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "yellow_onion": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "hanging_industrial_lamp": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "hatchet": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_crate_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "wooden_bucket_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "painted_wooden_shelves": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "oil_tin": {
+   "resolution": "1k",
+   "format": "gltf"
   }
  },
  "materials": {
@@ -420,10 +548,82 @@
     "N": "nor_gl",
     "ORM": "arm"
    }
+  },
+  "painted_plaster_wall": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "stair_planks": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "wood_shutter": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "rosewood_veneer1": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "white_plaster_rough_01": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "rusty_metal": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "concrete_floor_worn_001": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "brown_leather": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "red_brick": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
   }
  },
  "archive": {
-  "_about": "Public-domain (CC0) archive photographs from Wikimedia Commons, downloaded into art-source/library/archive/.",
+  "_about": "Public-domain (CC0 or PD-old) archive photographs, postcards and posters from Wikimedia Commons, downloaded into art-source/library/archive/.",
   "A36130": {
    "file": "Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg",
    "url": "https://upload.wikimedia.org/wikipedia/commons/6/61/Un_fonctionnaire_cambodgien_et_sa_famille_m%C3%AAlant_les_styles_de_v%C3%AAtements_traditionnels_%28sampot%29_et_occidentaux_-_A36130.jpg",
@@ -442,6 +642,180 @@
    "licence": "CC0 1.0",
    "use": "Framed devotional photograph in the hall (T_ep1_house_photos)",
    "title": "Un bonze revenant de la quête"
+  },
+  "PD1906": {
+   "file": "PD1906.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Exposition_coloniale_nationale_de_Marseille._1906._Cambodge._Th%C3%A9%C3%A2tre_indo-chinois._Danses_cambodgiennes.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Exposition_coloniale_nationale_de_Marseille._1906._Cambodge._Th%C3%A9%C3%A2tre_indo-chinois._Danses_cambodgiennes.jpg",
+   "author": "Charles-Henri Beauvais (1862 - 1909)",
+   "date": "1906",
+   "licence": "Public domain",
+   "use": "Ep1 studio: front studio poster",
+   "title": "Poster for the Cambodian dance theatre, Marseille colonial exhibition"
+  },
+  "DIEU1662": {
+   "file": "DIEU1662.jpg",
+   "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Pierre_Dieulefils_postcard_1662.jpg/3840px-Pierre_Dieulefils_postcard_1662.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+   "page": "https://commons.wikimedia.org/wiki/File:Pierre_Dieulefils_postcard_1662.jpg",
+   "author": "Pierre Dieulefils",
+   "date": "1907",
+   "licence": "Public domain",
+   "use": "Ep1 studio: postcard pinned in the studio",
+   "title": "Pierre Dieulefils postcard 1662"
+  },
+  "DIEU1658": {
+   "file": "DIEU1658.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Phnom-Penh-Danseuses_du_Roi_se_pr%C3%A9parant_%C3%A0_la_danse..jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Phnom-Penh-Danseuses_du_Roi_se_pr%C3%A9parant_%C3%A0_la_danse..jpg",
+   "author": "Pierre Dieulefils",
+   "date": "before 1910",
+   "licence": "Public domain",
+   "use": "Ep1 studio: postcard pinned in the studio",
+   "title": "Phnom-Penh, Danseuses du Roi se préparant à la danse (Dieulefils 1658)"
+  },
+  "DIEU1604": {
+   "file": "DIEU1604.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/1604bis._Cambodge-Phnom-Penh_-_Prisons_du_Protectorat.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:1604bis._Cambodge-Phnom-Penh_-_Prisons_du_Protectorat.jpg",
+   "author": "P. Dieulefils",
+   "date": "early 20th century",
+   "licence": "Public domain",
+   "use": "Ep1 studio: postcard pinned in the studio",
+   "title": "Cambodge, Phnom-Penh, Prisons du Protectorat (Dieulefils 1604bis)"
+  },
+  "DIEUPROM": {
+   "file": "DIEUPROM.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/d/d1/Phnom-Penh-Danseuses_en_promenade_dans_le_Palais.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Phnom-Penh-Danseuses_en_promenade_dans_le_Palais.jpg",
+   "author": "Pierre Dieulefils",
+   "date": "before 1910",
+   "licence": "Public domain",
+   "use": "Ep1 studio: postcard pinned in the studio",
+   "title": "Phnom-Penh, Danseuses en promenade dans le Palais"
+  },
+  "THRONE1910": {
+   "file": "THRONE1910.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/7/71/Palais_royal_de_Phnom_Penh_%28salle_du_tr%C3%B4ne%2C_avant_1910%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Palais_royal_de_Phnom_Penh_(salle_du_tr%C3%B4ne,_avant_1910).jpg",
+   "author": "Pierre Dieulefils",
+   "date": "before 1910",
+   "licence": "Public domain",
+   "use": "Ep1 studio: postcard pinned in the studio",
+   "title": "Palais royal de Phnom Penh, salle du trône"
+  },
+  "A35914": {
+   "file": "A35914.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Le_Vat_Phnom_%28%22_colline_du_temple_%22%29_-_A35914.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Le_Vat_Phnom_(%22_colline_du_temple_%22)_-_A35914.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: reference print by the drafting table",
+   "title": "Le Vat Phnom (colline du temple)"
+  },
+  "A36113": {
+   "file": "A36113.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/3/30/Danseuse_du_ballet_royal_en_costume_de_nymphe_maritime_-_A36113.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Danseuse_du_ballet_royal_en_costume_de_nymphe_maritime_-_A36113.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: framed print",
+   "title": "Danseuse du ballet royal en costume de nymphe maritime"
+  },
+  "A35915": {
+   "file": "A35915.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Le_b%C3%A2timent_de_la_salle_du_tr%C3%B4ne_-_A35915.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Le_b%C3%A2timent_de_la_salle_du_tr%C3%B4ne_-_A35915.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: framed print",
+   "title": "Le bâtiment de la salle du trône"
+  },
+  "A35913": {
+   "file": "A35913.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Bouddha_d%27Emeraude%2C_entour%C3%A9_d%27autres_statues_-_A35913.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Bouddha_d%27Emeraude,_entour%C3%A9_d%27autres_statues_-_A35913.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: devotional print above the family altar",
+   "title": "Bouddha d'Emeraude, entouré d'autres statues"
+  },
+  "PJ1906": {
+   "file": "PJ1906.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/LePetitJournal_1906_06_24.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:LePetitJournal_1906_06_24.jpg",
+   "author": "Le Petit Journal",
+   "date": "1906",
+   "licence": "Public domain",
+   "use": "Ep1 studio: colour magazine cover pinned in the studio",
+   "title": "Le Petit Journal, supplément illustré, 24 juin 1906: A l'Exposition coloniale de Marseille, la Danse des Nymphes dans la forêt, by King Sisowath's dancers"
+  },
+  "KULING": {
+   "file": "KULING.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Kuling_Poster_in_1920_s.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Kuling_Poster_in_1920_s.png",
+   "author": "Unknown artist, for Butterfield & Swire and Jardine Matheson (uploaded by Talk to aoi)",
+   "date": "1920s",
+   "licence": "Public domain",
+   "use": "Ep1 studio: colour travel poster in the studio",
+   "title": "Try Kuling, China's premier health resort (Butterfield & Swire, Jardine Matheson)",
+   "note": "Published before 1931; the original is a PNG, converted to JPEG on download."
+  },
+  "SIAM1893": {
+   "file": "SIAM1893.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/4/49/Carte_Du_Royaume_de_Siam_%28Thailand%29_Petit_Journal_1893.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+   "page": "https://commons.wikimedia.org/wiki/File:Carte_Du_Royaume_de_Siam_(Thailand)_Petit_Journal_1893.jpg",
+   "author": "Le Petit Journal",
+   "date": "1893",
+   "licence": "Public domain",
+   "use": "Ep1 studio: colour map pinned in the studio",
+   "title": "Carte du Royaume de Siam, Le Petit Journal, 12 August 1893 (with Cambodia)",
+   "note": "Downscaled to 1800 px tall on download (the atlas uses about 1000)."
+  },
+  "PIOT": {
+   "file": "PIOT.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Mus%C3%A9e_du_quai_Branly_Peintures_des_lointains_Ren%C3%A9_Piot_Danseuse_cambodgienne_03012019_6364.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Mus%C3%A9e_du_quai_Branly_Peintures_des_lointains_Ren%C3%A9_Piot_Danseuse_cambodgienne_03012019_6364.jpg",
+   "author": "René Piot (1866-1934); photograph by Vassil (CC0), Musée du quai Branly",
+   "date": "c. 1906",
+   "licence": "CC0",
+   "use": "Ep1 studio: colour print in the back room",
+   "title": "René Piot, Danseuse cambodgienne",
+   "note": "Downscaled to 1800 px tall on download (the atlas uses about 1000)."
+  },
+  "A36116": {
+   "file": "A36116.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Danseuse_du_ballet_royal_portant_le_costume_du_roi_des_singes_%28Haknuma%2C_aide_de_camp_du_roi_Rama%29_-_A36116.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Danseuse_du_ballet_royal_portant_le_costume_du_roi_des_singes_(Haknuma,_aide_de_camp_du_roi_Rama)_-_A36116.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: colour print",
+   "title": "Danseuse du ballet royal portant le costume du roi des singes"
+  },
+  "A36112": {
+   "file": "A36112.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/0/03/Danseuse_du_ballet_royal_en_costume_de_%22_Yaksa_%22_%28r%C3%B4le_du_%22_m%C3%A9chant_%22%29_-_A36112.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Danseuse_du_ballet_royal_en_costume_de_%22_Yaksa_%22_(r%C3%B4le_du_%22_m%C3%A9chant_%22)_-_A36112.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: colour print",
+   "title": "Danseuse du ballet royal en costume de Yaksa"
+  },
+  "A36107": {
+   "file": "A36107.jpg",
+   "url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Danseuse_du_ballet_royal_en_costume_de_%22_Mchas_Khsatrei_%22_%28princesse_de_rang_moyen%29_-_A36107.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+   "page": "https://commons.wikimedia.org/wiki/File:Danseuse_du_ballet_royal_en_costume_de_%22_Mchas_Khsatrei_%22_(princesse_de_rang_moyen)_-_A36107.jpg",
+   "author": "Busy Léon",
+   "date": "1921",
+   "licence": "CC0",
+   "use": "Ep1 studio: colour print",
+   "title": "Danseuse du ballet royal en costume de Mchas Khsatrei",
+   "note": "Downloaded as the 1280 px thumbnail."
   }
  }
 }

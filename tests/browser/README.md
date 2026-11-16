@@ -31,9 +31,11 @@ and recorded evidence are in `docs/production/opening-survival-checkpoints.md`.
 
 ## Studio and matchbox
 
-Open `/tests/browser/studio.html` for the actual studio's room, telephone, desk,
-drawer, matchbox, window and bed views. Press Enter to begin. The preview auto-inks the
-first illustration and uses an isolated database. E still uses real interaction
+Open `/tests/browser/studio.html` for the rebuilt shophouse floor (November 2026): the
+drawing table, writing desk and drawer, the period prints, the balcony doors, the airwell,
+telephone, lantern hook and stair gate, and the back room's bed and altar. Press Enter to
+begin. The opening drawing beat is gone; the illustration starts half inked. The fixture
+uses an isolated database. E still uses real interaction
 targets; movement keys leave close-up inspection. The detail pass and browser
 pickup evidence are in `docs/production/studio-detail-pass.md`.
 Use **Drawer hint** to focus the closed drawer and inspect the shared warm rim,

@@ -37,6 +37,56 @@ function maxTextureSize(file) {
   return /(^|\/)(shared_|hero_)/.test(file) ? 4096 : 2048;
 }
 
+/** Areas with a baked lightmap: their second UV set (TEXCOORD_1) is used by no glTF texture and must survive prune. */
+const LIGHTMAPPED = new Set(["ep1/ep1_area_studio.glb"]);
+
+/**
+ * Baked lightmaps (tools/areas/bake_studio_lightmap.py) to KTX2: UASTC with Zstandard,
+ * mipmapped, full size and half size (the Low preset). The PNG holds sRGB-encoded
+ * values; the KTX2 is tagged linear so every GPU returns those values unchanged and
+ * the shader decodes them (Studio.ts sets gammaSpace).
+ */
+const LIGHTMAPS = [
+  [
+    "ep1/ep1_area_studio.glb",
+    "art-source/textures/ep1/T_studio_lightmap.png",
+    "public/assets/ep1/studio_lightmap",
+  ],
+];
+
+function ktx(...args) {
+  execFileSync("ktx", args, { stdio: "inherit" });
+}
+
+function buildLightmaps() {
+  for (const [area, png, out] of LIGHTMAPS) {
+    if (!area.startsWith(filter)) continue;
+    if (!existsSync(png)) {
+      console.warn(`(no ${png}: bake it first)`);
+      continue;
+    }
+    const common = [
+      "create",
+      "--format",
+      "R8G8B8A8_UNORM",
+      "--assign-tf",
+      "linear",
+      "--encode",
+      "uastc",
+      "--uastc-quality",
+      "2",
+      "--zstd",
+      "18",
+      "--generate-mipmap",
+    ];
+    ktx(...common, png, `${out}.ktx2`);
+    ktx(...common, "--scale", "0.5", png, `${out}_2k.ktx2`);
+    console.log(
+      `✔ ${png} → ${out}.ktx2 (${kb(statSync(`${out}.ktx2`).size)}), ${out}_2k.ktx2 (${kb(statSync(`${out}_2k.ktx2`).size)})`,
+    );
+  }
+}
+
 function gltf(...args) {
   execFileSync("npx", ["gltf-transform", ...args], { stdio: "inherit" });
 }
@@ -55,6 +105,8 @@ const kb = (bytes) => `${(bytes / 1024).toFixed(0)} KB`;
 let totalIn = 0;
 let totalOut = 0;
 
+buildLightmaps();
+
 const files = findGlbs(SRC).filter((f) => relative(SRC, f).startsWith(filter));
 if (files.length === 0) {
   console.log(`No .glb files found in ${SRC}/${filter}`);
@@ -69,7 +121,14 @@ for (const input of files) {
 
   gltf("dedup", input, output);
   // Keep empty leaf nodes: spawn_ and patrol_ markers are empties (TDD section 7.1).
-  gltf("prune", output, output, "--keep-leaves", "true");
+  gltf(
+    "prune",
+    output,
+    output,
+    "--keep-leaves",
+    "true",
+    ...(LIGHTMAPPED.has(relative(SRC, input)) ? ["--keep-attributes", "true"] : []),
+  );
   gltf("weld", output, output);
   // Preserve the authored facial contours within 0.1% mesh-radius error while
   // keeping the shared ancestral apparition inside its 60K triangle budget.

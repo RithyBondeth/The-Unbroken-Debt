@@ -1,0 +1,40 @@
+{
+  "_about": "Where each archive print sits in the Ep1 studio print atlases (pixel rects [x, y, w, h], origin top-left). Read by tools/drawings/studio.mjs, which paints the aged prints, and tools/areas/ep1_area_studio.py, which maps each print's paper onto its rect. Sources and licences: art-source/library/polyhaven.json, archive section.",
+  "atlases": {
+    "posters": {
+      "file": "T_studio_print_posters_BC",
+      "size": [2048, 2048],
+      "items": {
+        "PD1906": { "rect": [0, 0, 720, 1008], "kind": "poster", "seed": 1906 },
+        "PJ1906": { "rect": [728, 0, 696, 1012], "kind": "magazine", "seed": 624 },
+        "A36113": { "rect": [1432, 0, 608, 810], "kind": "mounted", "seed": 36113 },
+        "A35913": { "rect": [0, 1024, 608, 810], "kind": "mounted", "seed": 35913 },
+        "A35914": { "rect": [616, 1024, 712, 540], "kind": "mounted", "seed": 35914 },
+        "A35915": { "rect": [1336, 1024, 712, 540], "kind": "mounted", "seed": 35915 }
+      }
+    },
+    "cards": {
+      "file": "T_studio_print_cards_BC",
+      "size": [2048, 2048],
+      "items": {
+        "DIEU1662": { "rect": [0, 0, 1000, 642], "kind": "postcard", "seed": 1662 },
+        "DIEU1658": { "rect": [1024, 0, 1000, 642], "kind": "postcard", "seed": 1658 },
+        "DIEU1604": { "rect": [0, 660, 1000, 642], "kind": "postcard", "seed": 1604 },
+        "DIEUPROM": { "rect": [1024, 660, 1000, 642], "kind": "postcard", "seed": 1605 },
+        "THRONE1910": { "rect": [0, 1320, 1000, 642], "kind": "postcard", "seed": 1626 }
+      }
+    },
+    "colour": {
+      "file": "T_studio_print_colour_BC",
+      "size": [2048, 2048],
+      "items": {
+        "KULING": { "rect": [0, 0, 700, 977], "kind": "poster", "seed": 1920 },
+        "SIAM1893": { "rect": [708, 0, 640, 924], "kind": "magazine", "seed": 1893 },
+        "PIOT": { "rect": [1356, 0, 680, 1004], "kind": "mounted", "seed": 1906 },
+        "A36116": { "rect": [0, 1010, 600, 800], "kind": "mounted", "seed": 36116 },
+        "A36112": { "rect": [608, 1010, 600, 800], "kind": "mounted", "seed": 36112 },
+        "A36107": { "rect": [1216, 1010, 600, 800], "kind": "mounted", "seed": 36107 }
+      }
+    }
+  }
+}

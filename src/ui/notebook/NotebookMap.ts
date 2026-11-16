@@ -30,123 +30,91 @@ export function notebookMap(
     shapes.push({ kind: "path", points, style });
   let bounds: NotebookMap["bounds"], labelSize: number, title: string, description: string;
   if (studio) {
-    bounds = [-6.45, -5.4, 6.9, 5.8];
+    // Sora's floor of the shophouse (tools/areas/ep1_area_studio.py), street at the top.
+    bounds = [-5.1, -14.5, 5.6, 15.3];
     bindingOffset = -16;
-    labelSize = 0.29;
+    labelSize = 0.34;
     title = "Studio · Phnom Penh";
-    rect(-6, -5, 6, 5, true);
+    rect(-4.6, -6, 4.6, 6, true);
+    rect(-4.6, -9.12, 4.6, 3.12, true);
+    rect(-4.6, -14, 4.6, 4.88, true);
+    // The balcony doors onto the street.
     path(
       [
-        [-6, -3],
-        [-6, -2],
-      ],
-      "door",
-    );
-    rect(-3.65, -1.1, 1.3, 0.76);
-    label(-4.3, -1.48, "Drawing table");
-    path(
-      [
-        [-3.8, -1.35],
-        [-3.4, -1.1],
-      ],
-      "detail",
-    );
-    rect(-0.68, -3.25, 0.66, 1.5);
-    label(-1.4, -2.5, "Desk");
-    label(-1.4, -2.17, "& drawer");
-    rect(-5.9, -4.88, 1.9, 0.86);
-    label(-4.7, -4.45, "Bed");
-    shapes.push({ kind: "rect", x: -5.78, y: -4.77, w: 0.35, h: 0.62, detail: true });
-    path(
-      [
-        [-5.3, -4.88],
-        [-5.3, -4.02],
-      ],
-      "detail",
-    );
-    rect(-5.85, -3.75, 0.45, 0.55);
-    path(
-      [
-        [-5.78, -3.64],
-        [-5.5, -3.64],
-        [-5.5, -3.56],
-        [-5.78, -3.56],
-      ],
-      "detail",
-    );
-    label(-4.75, -3.48, "Phone");
-    label(-5.1, -2.5, "Exit");
-    // Door leaf and swing, distinct from the blue window on the south wall.
-    path(
-      [
-        [-6, -3],
-        [-5.15, -3],
-      ],
-      "door",
-    );
-    path(
-      Array.from({ length: 17 }, (_, i) => [
-        -6 + 0.85 * Math.cos((i * Math.PI) / 32),
-        -3 + 0.85 * Math.sin((i * Math.PI) / 32),
-      ]),
-      "door",
-    );
-    rect(-3.7, -4.97, 2.5, 0.35);
-    label(-2.35, -4.2, "Shelf / satchel");
-    // A drawing sheet, pencil, and two desk drawers give furniture recognisable silhouettes.
-    shapes.push({ kind: "rect", x: -3.45, y: -0.99, w: 0.55, h: 0.48, detail: true });
-    path(
-      [
-        [-2.75, -0.99],
-        [-2.75, -0.57],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-0.64, -2.75],
-        [-0.06, -2.75],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-0.64, -2.25],
-        [-0.06, -2.25],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-0.45, -3.02],
-        [-0.25, -3.02],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-0.45, -2.52],
-        [-0.25, -2.52],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-6, -5],
-        [-6, -3.05],
-      ],
-      "detail",
-    );
-    path(
-      [
-        [-3.75, 0],
-        [-2.25, 0],
+        [-1.65, 0],
+        [-0.75, 0],
       ],
       "window",
     );
-    shapes.push({ kind: "you", x: at.x, y: at.z, r: 0.1 });
+    path(
+      [
+        [-3.85, 0],
+        [-2.95, 0],
+      ],
+      "window",
+    );
+    label(-2.3, 0.45, "Balcony · street");
+    rect(-3.65, -1.1, 1.3, 0.76);
+    label(-3.3, -1.5, "Drawing table");
+    shapes.push({ kind: "rect", x: -3.3, y: -0.95, w: 0.6, h: 0.45, detail: true });
+    rect(-0.68, -3.25, 0.66, 1.5);
+    label(-1.25, -2.5, "Desk");
+    label(-1.25, -2.17, "& drawer");
+    rect(-4.17, -3.17, 0.84, 0.84);
+    label(-3.75, -3.55, "Tea table");
+    rect(-0.72, -4.8, 0.72, 1.25);
+    label(-1.4, -4.2, "Plan chest");
+    rect(-3.55, -6.0, 1.5, 0.3);
+    label(-2.8, -5.35, "Shelf / satchel");
+    // Studio to airwell: the doorway at the west end of the partition.
+    path(
+      [
+        [-1.15, -6],
+        [-0.15, -6],
+      ],
+      "door",
+    );
+    label(-1.3, -7.0, "Hall");
+    rect(-2.4, -8.4, 0.9, 0.8);
+    label(-1.95, -8.75, "Table");
+    rect(-0.3, -8.55, 0.3, 1.3);
+    label(-0.9, -7.6, "Kitchen");
+    rect(-3.15, -6.38, 0.36, 0.26);
+    label(-2.97, -6.7, "Phone");
+    label(-2.15, -6.7, "Lamp");
+    rect(-4.5, -9.05, 1.05, 2.05);
+    for (let i = 1; i < 8; i++)
+      path(
+        [
+          [-4.5, -7 - i * 0.25],
+          [-3.45, -7 - i * 0.25],
+        ],
+        "detail",
+      );
+    path(
+      [
+        [-4.5, -7],
+        [-3.45, -7],
+      ],
+      "door",
+    );
+    label(-3.97, -9.45, "Stairs · Exit");
+    path(
+      [
+        [-1.05, -9.2],
+        [-0.15, -9.2],
+      ],
+      "door",
+    );
+    rect(-4.3, -13.95, 0.9, 2.0);
+    label(-3.85, -11.6, "Bed");
+    rect(-1.75, -14.0, 1.25, 0.33);
+    label(-1.1, -13.3, "Altar");
+    rect(-0.62, -12.02, 0.62, 1.15);
+    label(-1.2, -11.45, "Wardrobe");
+    shapes.push({ kind: "you", x: at.x, y: at.z, r: 0.12 });
     description =
-      "The drawing table stands by the window. The writing desk and its drawer are opposite the telephone and exit. A red dot marks your position.";
+      "Sora's floor of the shophouse: the studio on the street with the drawing table under the balcony doors and the writing desk and its drawer on the west wall; the hall with the kitchen corner, the telephone, the lamp on its hook and the stairs down, the way out; her bedroom and the family altar at the back. A red dot marks your position.";
   } else if (at.z > 15) {
     bounds = [-9, -10, 80, 22];
     bindingOffset = -12;

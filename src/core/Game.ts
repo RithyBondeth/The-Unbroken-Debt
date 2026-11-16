@@ -20,7 +20,7 @@ import type { DeviceProfile } from "@/render/DeviceProfile";
 import { getPreset, type QualityPreset } from "@/render/qualityPresets";
 import { createPostPipeline, type PostPipeline } from "@/render/renderSetup";
 import { DynamicResolution } from "@/render/DynamicResolution";
-import { runRenderLoop } from "@/render/renderLoop";
+import { FramePacer, runRenderLoop } from "@/render/renderLoop";
 import { keepLightBudgets } from "@/render/lightBudget";
 import { installSoftLampFalloff } from "@/render/softLampFalloff";
 import { renderStallNotice } from "@/ui/html/renderStallNotice";
@@ -270,6 +270,10 @@ export class Game {
     this.scene.onBeforeRenderObservable.add(() => this.update());
     void section.begin();
     this.started = true;
+    // An even frame rate on 120 Hz displays (see FramePacer); ?fps=max renders every refresh.
+    this.engine.customAnimationFrameRequester = new FramePacer(
+      new URLSearchParams(location.search).get("fps") !== "max",
+    );
     // Paused, the last frame stays on screen and the world stops (scripts run on frame time).
     runRenderLoop(
       this.engine,
