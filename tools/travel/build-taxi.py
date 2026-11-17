@@ -2,7 +2,7 @@
 blender -b --factory-startup -P tools/travel/build-taxi.py
 World helpers use Babylon axes (x right, y up, z forward); export uses project glTF conversion.
 """
-import bpy, math, sys, json, re, gzip
+import bpy, bmesh, math, sys, json, re, gzip
 import numpy as np
 from pathlib import Path
 from mathutils import Vector, Matrix, Quaternion
@@ -82,383 +82,247 @@ def export(name):
     bpy.ops.export_scene.gltf(filepath=str(OUT/(name+'.glb')), export_format='GLB', use_selection=True, export_extras=True, export_yup=True, export_apply=True, export_cameras=False, export_lights=False)
     print('TAXI_EXPORTED',name,len(bpy.context.scene.objects))
 
-def grain_material():
-    rng=np.random.default_rng(947)
-    n=1024
-    yy,xx=np.mgrid[:n,:n]
-    def smooth(scale):
-        noise=rng.normal(size=(n,n)); f=np.fft.rfft2(noise)
-        fy=np.fft.fftfreq(n)[:,None]; fx=np.fft.rfftfreq(n)[None,:]
-        a=np.fft.irfft2(f*np.exp(-(fx*fx+fy*fy)*scale*scale),s=(n,n))
-        return (a-a.mean())/(a.std()+1e-8)
-    pores=smooth(5); pebbles=smooth(22); age=smooth(95)
-    height=pores*.18+pebbles*.5
-    color=np.clip(.35+.055*pores+.045*pebbles+.035*age, .15,.65)
-    bc=np.stack([color*.82,color*.72,color*.53],axis=-1)
-    dx,dy=np.gradient(height)
-    normal=np.stack([-dy*.7,-dx*.7,np.ones_like(height)],axis=-1)
-    normal/=np.linalg.norm(normal,axis=-1,keepdims=True)
-    rough=np.clip(.68+pores*.04+age*.05,.45,.9)
-    orm=np.stack([np.ones_like(rough),rough,np.zeros_like(rough)],axis=-1)
-    def image(suffix,array):
-        img=bpy.data.images.new('T_taxi_vinyl_'+suffix,width=n,height=n,alpha=True)
-        img.pixels.foreach_set(np.concatenate([array,np.ones((n,n,1))],axis=-1).astype(np.float32).ravel())
-        img.filepath_raw=str(TEX/('T_taxi_vinyl_'+suffix+'.png')); img.file_format='PNG'
-        if suffix!='BC': img.colorspace_settings.name='Non-Color'
-        img.save(); return img
-    images=[image('BC',bc),image('N',normal*.5+.5),image('ORM',orm)]
-    mat=plain('M_taxi_worn_vinyl',(.08,.06,.035),.75); mat['tile']=.22
-    ns=mat.node_tree.nodes; links=mat.node_tree.links; bs=ns.get('Principled BSDF')
-    maps=[]
-    for img in images: t=ns.new('ShaderNodeTexImage'); t.image=img; maps.append(t)
-    links.new(maps[0].outputs['Color'],bs.inputs['Base Color'])
-    no=ns.new('ShaderNodeNormalMap'); links.new(maps[1].outputs['Color'],no.inputs['Color']); no.inputs['Strength'].default_value=.45; links.new(no.outputs['Normal'],bs.inputs['Normal'])
-    split=ns.new('ShaderNodeSeparateColor'); links.new(maps[2].outputs['Color'],split.inputs[0]); links.new(split.outputs['Green'],bs.inputs['Roughness'])
-    return mat
+# ----------------------------------------------------------------- the car
+# A real 1933 Citroën Rosalie (CC BY, art-source/library/scans/taxi_rosalie.glb, prepared
+# by taxi_scans.py) is the taxi: its own body, dashboard, wheel, seats and doors, lined
+# where its maps are flat colour with photo textures from the Poly Haven library.
+CAR_SCAN=ROOT/'art-source/library/scans/taxi_rosalie.glb'
+# The Rosalie's cabin floor in its own frame; the cabin is authored with it at height 0.
+CAR_FLOOR=.375
+# Measured from the car in cabin(): the driver's hands close on this rim.
+WHEEL_CENTRE=(-.265,.755,.275); WHEEL_FACING=(0,.6,-.8); WHEEL_RADIUS=.2
+# Hips on the front cushions, and Sora's eyes (game axes), set from the car in cabin().
+DRIVER_HIP=[-.27,.40,-.07]
+# Thigh and knee bends (degrees) for the low 1930s seats: knees up, feet on the floorboards.
+DRIVER_LEGS=(-86,48)
+SORA_LEGS=(-86,52,18)
+SORA_HIP=[.27,.40,-.12]
+SORA_EYE=[.27,1.06,-.07]
 
-# The steering wheel, shared by the cabin and the driver's grip.
-WHEEL_CENTRE=(-.39,1.02,.47); WHEEL_FACING=(0,.3,-.95); WHEEL_RADIUS=.211
+def game(v):
+    """The car's own (Blender) coordinates as game axes, once its floor is at 0."""
+    return Vector((-v.x,v.z,-v.y))
+
+def anchor(name,p):
+    """An empty the runtime reads: lamps, wipers, glass, mirror and seats."""
+    o=bpy.data.objects.new('taxi_anchor_'+name,None); bpy.context.collection.objects.link(o)
+    o.location=w(p); return o
+
+def import_glb(path):
+    before=set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=str(path))
+    new=[o for o in bpy.data.objects if o not in before]
+    meshes=[o for o in new if o.type=='MESH']
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in meshes: o.select_set(True)
+    bpy.context.view_layer.objects.active=meshes[0]
+    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
+    bpy.ops.object.transform_apply(location=True,rotation=True,scale=True)
+    for o in new:
+        if o.type!='MESH': bpy.data.objects.remove(o)
+    return meshes
+
+def islands(bm):
+    """Loose parts of a bmesh, as lists of faces."""
+    bm.faces.ensure_lookup_table()
+    seen=[False]*len(bm.faces); out=[]
+    for f in bm.faces:
+        if seen[f.index]: continue
+        seen[f.index]=True; stack=[f]; group=[]
+        while stack:
+            g=stack.pop(); group.append(g)
+            for v in g.verts:
+                for h in v.link_faces:
+                    if not seen[h.index]: seen[h.index]=True; stack.append(h)
+        out.append(group)
+    return out
+
+def box_of(faces):
+    co=[v.co for f in faces for v in f.verts]
+    lo=Vector((min(c.x for c in co),min(c.y for c in co),min(c.z for c in co)))
+    hi=Vector((max(c.x for c in co),max(c.y for c in co),max(c.z for c in co)))
+    return lo,hi
+
+def base_pixels(mat):
+    for nd in mat.node_tree.nodes:
+        if nd.type=='TEX_IMAGE' and nd.image and 'baseColor' in nd.image.name:
+            img=nd.image; return np.array(img.pixels[:],dtype=np.float32).reshape(img.size[1],img.size[0],4)
+    return None
+
+def slot(obj,mat):
+    for i,m in enumerate(obj.data.materials):
+        if m==mat: return i
+    obj.data.materials.append(mat); return len(obj.data.materials)-1
+
+def split_photo(obj,photo):
+    """Faces given a photo material become their own object with box-projected UVs at
+    that material's real size; the rest keep the car's own maps."""
+    bpy.ops.object.select_all(action='DESELECT'); obj.select_set(True); bpy.context.view_layer.objects.active=obj
+    bpy.ops.mesh.separate(type='MATERIAL')
+    for part in list(bpy.context.selected_objects):
+        mats=[m for m in part.data.materials if m]
+        if not mats: continue
+        used={p.material_index for p in part.data.polygons}
+        if len(used)==1:
+            mat=part.data.materials[used.pop()]
+            part.data.materials.clear(); part.data.materials.append(mat)
+            for p in part.data.polygons: p.material_index=0
+            if mat in photo:
+                for layer in list(part.data.uv_layers): part.data.uv_layers.remove(layer)
+                world_uvs(part)
+            part.name=part.data.name='taxi_car_'+mat.name.removeprefix('M_').lower()
+
+def ray_down(x,y,z=1.4):
+    """Height of the first car surface below (x, y) in the car's frame."""
+    dg=bpy.context.evaluated_depsgraph_get()
+    hit,loc,*_=bpy.context.scene.ray_cast(dg,Vector((x,y,z)),Vector((0,0,-1)))
+    return loc.z if hit else None
 
 def cabin():
+    global WHEEL_CENTRE,WHEEL_FACING,WHEEL_RADIUS
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    vinyl=grain_material()
-    felt=library_material('rough_linen','M_taxi_headliner',colour=(.075,.07,.055),tile=.12)
-    carpet=library_material('rough_linen','M_taxi_carpet',colour=(.022,.025,.021),tile=.08)
-    wood=library_material('teak_veneer','M_taxi_dashboard_walnut',tint=(.31,.21,.13),tile=.65)
-    rubber=plain('M_taxi_rubber',(.012,.014,.012),.75)
-    chrome=plain('M_taxi_aged_nickel',(.26,.285,.26),.3,.8)
-    black=plain('M_taxi_bakelite',(.021,.024,.021),.28)
-    thread=plain('M_taxi_stitching',(.11,.085,.048),.9)
-    metal=plain('M_taxi_painted_steel',(.045,.067,.058),.32,.45)
-    glass=plain('M_taxi_window_glass',(.07,.095,.11),.13,.05,alpha=.07)
-    glass.use_backface_culling=False
-    # A closed opaque tub: the trim and seat cushions are not the car body.
-    # Overlap seams so looking down/sideways never exposes the moving road.
-    for mat in [carpet,metal,vinyl,rubber]: mat.use_backface_culling=False
-    rounded('taxi_floorpan_sealed',(0,-.005,-.17),(1.86,.09,3.18),metal,.018)
-    rounded('taxi_firewall_sealed',(0,.44,1.20),(1.85,.96,.16),carpet,.035)
-    rounded('taxi_rear_bulkhead_sealed',(0,.56,-1.75),(1.85,1.18,.11),vinyl,.025)
-    for side in [-1,1]:
-        rounded(f'taxi_lower_body_sealed_{side}',(side*.885,.44,-.22),(.13,.94,2.98),metal,.025)
-        rounded(f'taxi_footwell_lining_{side}',(side*.813,.25,-.14),(.025,.48,2.83),carpet,.012)
-        rounded(f'taxi_door_sill_{side}',(side*.79,.105,-.23),(.115,.075,2.86),rubber,.015)
-        for z in [-1.36,-1.02,-.5,.08,.62,.99]:
-            ellipsoid('taxi_sill_fastener',(side*.79,.148,z),(.012,.004,.012),chrome)
-    # Raised toe boards, grooved mats, heater and pedals fill the real footwell.
-    for x in [-.43,.43]:
-        rounded('taxi_rubber_footmat',(x,.063,.51),(.62,.025,.95),rubber,.035)
-        for i in range(17):
-            rounded('taxi_footmat_rib',(x-.27+i*.033,.079,.51),(.009,.009,.84),black,.003)
-        tube('taxi_footmat_edge',[(x-.29,.077,.08),(x-.29,.077,.94),(x+.29,.077,.94),(x+.29,.077,.08),(x-.29,.077,.08)],.006,rubber)
-    rounded('taxi_under_dash_heater',(0,.53,1.08),(.31,.23,.14),metal,.025)
-    for i in range(9): rounded('taxi_heater_grille',(-.12+i*.03,.53,.997),(.008,.17,.007),black,.002)
-    for x in [-.61,-.43,-.25]:
-        tube('taxi_pedal_stalk',[(x,.08,.98),(x,.22,.83)],.008,chrome)
-        rounded('taxi_pedal_pad',(x,.225,.80),(.085,.10,.033),rubber,.012)
-
-    # Sculpted dashboard: curved top, vertical instrument fascia, padded lower roll.
-    cross=[(.84,1.025),(1.01,1.035),(1.11,1.04),(1.12,1.22),(1.0,1.35),(.87,1.35),(.79,1.18)] # y,z
-    vertices=[]
-    for x in [-.85,-.68,-.4,0,.4,.68,.85]:
-        for y,z in cross: vertices.append((x,y+.025*(1-(x/.85)**2),z))
-    faces=[]; m=len(cross)
-    for k in range(6):
-        for j in range(m): faces.append((k*m+j,k*m+(j+1)%m,(k+1)*m+(j+1)%m,(k+1)*m+j))
-    faces += [tuple(reversed(range(m))),tuple(6*m+j for j in range(m))]
-    o=mesh('taxi_dashboard_sculpted',vertices,faces,vinyl)
-    bevel=o.modifiers.new('Dashboard rolled lip','BEVEL'); bevel.width=.018; bevel.segments=4
-    o.modifiers.new('Weighted dashboard normals','WEIGHTED_NORMAL')
-    rounded('taxi_walnut_instrument_panel',(0,.958,1.014),(1.59,.18,.032),wood,.025)
-    tube('taxi_dash_nickel_bead',[(-.79,.865,1.005),(0,.87,1.005),(.79,.865,1.005)],.004,chrome)
-    rounded('taxi_glovebox',(.46,.933,.987),(.51,.112,.016),wood,.014)
-    for x in [.24,.68]:
-        rounded('taxi_glovebox_hinge',(x,.883,.973),(.065,.012,.011),chrome,.003)
-    rounded('taxi_switch_mounting_plate',(-.04,.825,1.018),(.45,.09,.025),metal,.009)
-    for x in [-.17,-.04,.09]:
-        tube('taxi_dash_pull_switch',[(x,.825,1.018),(x,.825,.983)],.005,chrome)
-        ellipsoid('taxi_dash_bakelite_switch',(x,.825,.974),(.026,.026,.016),black)
-    for x in [-.72,.73]:
-        ellipsoid('taxi_dash_mount_screw',(x,.958,.992),(.011,.011,.005),chrome)
-    rounded('taxi_glovebox_latch',(.46,.943,.972),(.054,.018,.011),chrome,.006)
-    rounded('taxi_radio',(-.02,.935,.977),(.205,.09,.025),black,.008)
-    for x in [-.15,.13]:
-        ellipsoid('taxi_radio_knob',(x,.935,.952),(.038,.038,.019),black)
-        ellipsoid('taxi_radio_knob_rim',(x,.935,.956),(.043,.043,.012),chrome)
-    for i in range(18): rounded('taxi_radio_grille',(-.108+i*.01,.935,.961),(.003,.061,.006),chrome,.001)
-    for x in [-.64,-.32,.32,.65]:
-        for j in range(6): rounded('taxi_demister_vent',(x+j*.009,1.08,1.18),(.003,.004,.075),rubber,.001)
-    ink=plain('M_taxi_ivory_engraving',(.49,.45,.32),.8)
-    rounded('taxi_cab_license_frame',(.45,1.021,.981),(.28,.027,.006),chrome,.003)
-    rounded('taxi_cab_license_enamel',(.45,1.021,.976),(.268,.021,.004),black,.002)
-    label('taxi_cab_license_letters','PHNOM PENH  /  208',(.45,1.021,.972),.010,ink)
-    for x,text in [(-.17,'LAMPS'),(-.04,'WIPER'),(.09,'CHOKE')]:
-        label('taxi_switch_engraving',text,(x,.799,1.002),.008,ink)
-    # Continuous roof and body panels; a true windshield/side-window opening.
-    vs=[]; fs=[]
-    for k in range(12):
-        z=-1.65+k/11*2.55
-        for j in range(16):
-            x=-.88+j/15*1.76; y=1.77+.10*(1-(x/.88)**2)-.04*((z+.4)/1.4)**2
-            vs.append((x,y,z))
-    for k in range(11):
-        for j in range(15): a=k*16+j; fs.append((a,a+1,a+17,a+16))
-    roof=mesh('taxi_headliner_curved',vs,fs,felt); roof.data.materials[0].use_backface_culling=False
-    solid=roof.modifiers.new('Roof lining thickness','SOLIDIFY'); solid.thickness=.035
-    for side in [-1,1]:
-        x=side*.86
-        rounded(f'taxi_door_trim_{side}',(x,.63,-.05),(.09,.53,2.17),vinyl,.045)
-        rounded(f'taxi_door_pocket_{side}',(x-side*.058,.43,-.05),(.08,.18,.51),vinyl,.025)
-        tube(f'taxi_door_pocket_binding_{side}',[(x-side*.105,.51,-.30),(x-side*.105,.525,-.05),(x-side*.105,.51,.20)],.005,thread)
-        for z in [-.92,.54]:
-            ellipsoid('taxi_door_card_screw',(x-side*.049,.79,z),(.006,.013,.013),chrome)
-        tube(f'taxi_door_card_stitch_{side}',[(x-side*.049,.39,-1.0),(x-side*.049,.84,-1.0),(x-side*.049,.84,.58)],.0018,thread)
-        rounded(f'taxi_armrest_{side}',(x-side*.043,.735,-.14),(.13,.085,.48),vinyl,.034)
-        rounded(f'taxi_door_handle_{side}',(x-side*.059,.849,.37),(.021,.023,.125),chrome,.01)
-        tube(f'taxi_window_crank_{side}',[(x-side*.068,.71,.29),(x-side*.068,.655,.34)],.009,chrome)
-        ellipsoid('taxi_crank_grip',(x-side*.087,.652,.35),(.033,.034,.035),black)
-        tube(f'taxi_door_sweep_{side}',[(x-side*.047,.88,-1.07),(x-side*.047,.91,-.3),(x-side*.047,.91,.65),(x-side*.047,1.05,1.23)],.014,rubber)
-        tube(f'taxi_A_pillar_{side}',[(side*.82,1.02,1.28),(side*.80,1.3,1.13),(side*.69,1.76,.86)],.038,felt)
-        tube(f'taxi_A_pillar_chrome_{side}',[(side*.83,1.03,1.28),(side*.81,1.3,1.13),(side*.70,1.76,.86)],.006,chrome)
-        tube(f'taxi_B_pillar_{side}',[(x,.89,-.63),(side*.78,1.79,-.63)],.034,felt)
-        tube(f'taxi_rear_pillar_{side}',[(x,.88,-1.3),(side*.76,1.77,-1.43)],.037,felt)
-        quad(f'taxi_side_glass_{side}',[(x,.91,-.62),(x,.96,.79),(side*.70,1.74,.82),(side*.78,1.76,-.62)],glass)
-        quad(f'taxi_quarter_glass_{side}',[(x,.89,-1.27),(x,.91,-.67),(side*.78,1.76,-.67),(side*.76,1.73,-1.39)],glass)
-        rounded('taxi_sunvisor',(side*.42,1.71,.72),(.48,.13,.025),felt,.026)
-    car_nose(chrome,black,rubber)
-    rounded('taxi_floor_carpet',(0,.048,-.15),(1.70,.026,3.01),carpet,.02)
-    rounded('taxi_transmission_tunnel',(0,.19,.1),(.21,.29,1.42),carpet,.09)
-    tube('taxi_gear_lever',[(.02,.3,.36),(.02,.65,.39),(.03,.70,.36)],.012,chrome)
-    ellipsoid('taxi_gear_knob',(.03,.70,.36),(.055,.055,.055),black)
-    # Metal-backed rear-view mirror and overhead grab handles.
-    tube('taxi_mirror_stem',[(0,1.79,.85),(0,1.64,.76)],.009,chrome)
-    rounded('taxi_mirror_frame',(0,1.63,.745),(.30,.10,.022),black,.022)
-    quad('taxi_mirror_surface',[(-.135,1.59,.731),(.135,1.59,.731),(.135,1.67,.731),(-.135,1.67,.731)],chrome)
-    for side in [-1,1]: tube('taxi_grab_handle',[(side*.76,1.69,-.08),(side*.76,1.65,-.1),(side*.76,1.65,-.34),(side*.76,1.69,-.36)],.013,black)
-    # Steering wheel in a 1930s upright driving position.
-    wheelcentre=Vector(WHEEL_CENTRE); normal=Vector(WHEEL_FACING).normalized(); right=Vector((1,0,0)); up=normal.cross(right).normalized()
-    tube('taxi_steering_rim',[wheelcentre+right*math.cos(k/64*math.tau)*WHEEL_RADIUS+up*math.sin(k/64*math.tau)*WHEEL_RADIUS for k in range(65)],.016,black)
-    for a in [math.pi/2,math.pi*7/6,math.pi*11/6]: tube('taxi_steering_spoke',[wheelcentre,wheelcentre+(right*math.cos(a)+up*math.sin(a))*.196],.009,chrome)
-    ellipsoid('taxi_steering_horn',wheelcentre,(.105,.105,.052),black)
-    tube('taxi_steering_column',[(-.39,.72,1.03),wheelcentre],.027,black)
-    # Instrument faces are painted at runtime and occupy recessed, circular bezels.
-    for x,r in [(-.49,.075),(-.29,.047)]:
-        tube('taxi_instrument_bezel',[(x+r*math.cos(k/64*math.tau),.975+r*math.sin(k/64*math.tau),.986) for k in range(65)],.0045,chrome)
-    mirror_charms(chrome,black)
-    taximeter(chrome,black,ink)
-    mourners_leavings()
-    cabin_detail(vinyl,felt,carpet,wood,rubber,chrome,black,thread,metal,glass)
-    driver(black)
-    passenger()
+    # The importer reuses a "glTF Material Output" group and expects all its sockets.
+    from io_scene_gltf2.blender.com.material_helpers import create_settings_group, get_gltf_node_name
+    if get_gltf_node_name() not in bpy.data.node_groups: create_settings_group(get_gltf_node_name())
+    parts={o.name.split('_M_')[0]+('' if '.0' not in o.name else o.name[-4:]):o for o in import_glb(CAR_SCAN)}
+    for o in parts.values(): o.data.transform(Matrix.Translation((0,0,-CAR_FLOOR)))
+    # Photo-textured linings for what the car's own maps leave as flat paint.
+    headliner=library_material('rough_linen','M_taxi_headliner',tint=(.1,.092,.076),tile=.22)
+    cloth=library_material('quatrefoil_jacquard_fabric','M_taxi_trim_cloth',tint=(.26,.22,.18),tile=.3)
+    carpet=library_material('dirty_carpet','M_taxi_carpet',tint=(.42,.38,.33),tile=.7)
+    fascia=library_material('rosewood_veneer1','M_taxi_dashboard_walnut',tint=(.26,.17,.11),tile=.28)
+    steel=library_material('rusty_metal','M_taxi_painted_steel',colour=(.028,.03,.028),tile=.5)
+    photo={headliner,cloth,carpet,fascia,steel}
+    nickel=plain('M_taxi_aged_nickel',(.42,.41,.37),.34,.9)
+    bakelite=plain('M_taxi_bakelite',(.018,.016,.014),.38)
+    rubber=plain('M_taxi_rubber',(.016,.016,.015),.8)
+    glass=plain('M_taxi_window_glass',(.07,.095,.11),.13,.05,alpha=.07); glass.use_backface_culling=False
+    lens=plain('M_taxi_headlamp_glass',(.55,.52,.46),.08,.0)
+    for mat in [carpet,cloth,steel,headliner]: mat.use_backface_culling=False
+    for o in parts.values():
+        name=o.name
+        bm=bmesh.new(); bm.from_mesh(o.data)
+        doomed=[]
+        mat=o.data.materials[0] if o.data.materials else None
+        pixels=base_pixels(mat) if mat else None
+        uvl=bm.loops.layers.uv.active
+        for group in islands(bm):
+            lo,hi=box_of(group); c=(lo+hi)/2; d=hi-lo; size=max(d); thin=sorted(d)[1]
+            def put(m):
+                i=slot(o,m)
+                for f in group: f.material_index=i
+            if name.startswith('SM_Glass'):
+                if -.52<c.y<-.42 and abs(c.x)<.1 and size>.6: doomed+=group   # windscreen: the runtime's wet glass
+                elif c.y>1.7: doomed+=group                                       # tail lamps
+                elif c.y<-1.5: put(lens)
+                else: put(glass)
+            elif name.startswith('SM_internal'):
+                if thin<.03 and size>.12: put(nickel)                              # rods: gear, brake, stalks
+                elif size<.13 and c.z<.25: put(rubber)                             # pedal pads
+                elif size<.13 or (abs(c.x)<.1 and c.z>.95 and size<.2): put(bakelite)  # knobs, mirror back
+            elif name.startswith('SM_interiorcarroserie'):
+                for f in group:
+                    n=f.normal; fc=f.calc_center_median()
+                    if n.z>.6 and fc.z<.15: f.material_index=slot(o,carpet)
+                    elif fc.z>1.1: f.material_index=slot(o,headliner)
+                    elif -.75<fc.y<-.45 and .35<fc.z<.85 and abs(fc.x)<.5: f.material_index=slot(o,fascia)
+                    elif fc.y<-.45: f.material_index=slot(o,steel)
+                    else: f.material_index=slot(o,cloth)
+            elif name.startswith('SM_door') or name.startswith('Object136') or name.startswith('SM_external'):
+                rgb=Vector((0,0,0))
+                if pixels is not None and uvl is not None:
+                    hgt,wid=pixels.shape[:2]
+                    for f in group[:40]:
+                        uv=sum((l[uvl].uv for l in f.loops),Vector((0,0)))/len(f.loops)
+                        px=pixels[int((uv.y%1)*(hgt-1)),int((uv.x%1)*(wid-1))]; rgb+=Vector(px[:3])
+                    rgb/=min(40,len(group))
+                bright=(rgb.x+rgb.y+rgb.z)/3
+                if size<.4 and bright>.45 and rgb.z>=rgb.x*.85:                    # handles, cranks, trim
+                    put(nickel); continue
+                # A door is one part inside and out: line its inner face below the sill with
+                # cloth, and the roof skin seen from the seats with the headliner.
+                for f in group:
+                    fc=f.calc_center_median(); n=f.normal
+                    inside=abs(fc.x)<.68 and -.45<fc.y<1.62
+                    # Pillars and roof are cloth-covered above the sills, as the headlining ran down them.
+                    if inside and abs(fc.x)<.645 and fc.z>.74 and fc.y>-.62 and (fc.y>-.42 or abs(fc.x)>.5): f.material_index=slot(o,headliner)
+                    # (The car's normals here are not reliable: the inner skin lies inboard of the outer.)
+                    elif abs(fc.x)<.645 and -.45<fc.y<1.62 and .0<fc.z<.74 and abs(n.x)>.5: f.material_index=slot(o,cloth)
+        bm.faces.ensure_lookup_table()
+        if doomed: bmesh.ops.delete(bm,geom=list(set(doomed)),context='FACES')
+        bm.to_mesh(o.data); bm.free(); o.data.update()
+    # The bonnet, wings and scuttle in old lacquer, which the runtime wets with rain.
+    for key in ['SM_door.001','SM_external','Sm_gardeboue','Sm_gardeboue.001']:
+        o=parts.get(key)
+        if not o: continue
+        for i,m in enumerate(list(o.data.materials)):
+            if not m or m.name not in ('M_door','M_external','M_gardeboue'): continue
+            lacquer=bpy.data.materials.get('M_taxi_body_lacquer_'+m.name[2:])
+            if lacquer is None: lacquer=m.copy(); lacquer.name='M_taxi_body_lacquer_'+m.name[2:]
+            k=slot(o,lacquer)
+            for p in o.data.polygons:
+                if p.material_index==i and p.center.y<-.45: p.material_index=k
+    for o in list(parts.values()):
+        if any(m in photo for m in o.data.materials): split_photo(o,photo)
+    # Sora's side window, for the marks left on it.
+    for o in [o for o in bpy.data.objects if o.type=='MESH' and any(m==glass for m in o.data.materials)]:
+        bm=bmesh.new(); bm.from_mesh(o.data)
+        sora=[f for f in bm.faces if f.calc_center_median().x<-.5 and -.4<f.calc_center_median().y<.4 and f.material_index==slot(o,glass)]
+        if sora:
+            pane=bmesh.new()
+            for f in sora:
+                pane.faces.new([pane.verts.new(v.co) for v in f.verts])
+            data=bpy.data.meshes.new('taxi_side_glass_sora'); pane.to_mesh(data); pane.free()
+            data.materials.append(glass)
+            plain_layer=data.uv_layers.new(name='UVMap')
+            lo,hi=Vector((min(v.co.x for v in data.vertices),min(v.co.y for v in data.vertices),min(v.co.z for v in data.vertices))),Vector((max(v.co.x for v in data.vertices),max(v.co.y for v in data.vertices),max(v.co.z for v in data.vertices)))
+            for li,loop in enumerate(data.loops):
+                v=data.vertices[loop.vertex_index].co
+                plain_layer.data[li].uv=((v.y-lo.y)/((hi.y-lo.y) or 1),(v.z-lo.z)/((hi.z-lo.z) or 1))
+            pane_obj=bpy.data.objects.new('taxi_side_glass_sora',data); bpy.context.collection.objects.link(pane_obj)
+            bmesh.ops.delete(bm,geom=sora,context='FACES'); bm.to_mesh(o.data)
+        bm.free()
+    bpy.context.view_layer.update()
+    # The wheel the driver holds: the car's own rim, a plane fitted through it.
+    inner=[o for o in bpy.data.objects if o.type=='MESH' and o.name.startswith('SM_internal')]
+    best=None
+    for o in inner:
+        bm=bmesh.new(); bm.from_mesh(o.data)
+        for group in islands(bm):
+            lo,hi=box_of(group); c=(lo+hi)/2; size=max(hi-lo)
+            if .35<size<.5 and .12<c.x<.42 and .55<c.z<.95 and (best is None or len(group)>best[0]):
+                best=(len(group),np.array([tuple(v.co) for f in group for v in f.verts]))
+        bm.free()
+    if best is not None:
+        pts=best[1]; centre=pts.mean(axis=0); _,_,vt=np.linalg.svd(pts-centre); normal=Vector(vt[2])
+        radius=float(np.mean(np.linalg.norm((pts-centre)-np.outer((pts-centre)@vt[2],vt[2]),axis=1)))
+        facing=game(normal)
+        if facing.z>0: facing=-facing
+        WHEEL_CENTRE=tuple(game(Vector(centre))); WHEEL_FACING=tuple(facing.normalized()); WHEEL_RADIUS=radius
+    print('TAXI_WHEEL',[round(v,3) for v in WHEEL_CENTRE],[round(v,3) for v in WHEEL_FACING],round(WHEEL_RADIUS,3))
+    # Hips sit on the cushions the car really has; Sora's eyes are a seated woman's above hers.
+    for hip,bx in [(DRIVER_HIP,.27),(SORA_HIP,-.27)]:
+        top=ray_down(bx,.02,1.2)
+        if top is not None: hip[1]=top+.075
+    SORA_EYE[1]=SORA_HIP[1]+.66; SORA_EYE[0]=SORA_HIP[0]; SORA_EYE[2]=SORA_HIP[2]+.06
+    rear=ray_down(-.25,1.05,1.2) or .35
+    print('TAXI_SEATS driver',DRIVER_HIP,'sora',SORA_HIP,'eye',SORA_EYE,'rear',round(rear,3))
+    # What the runtime needs to find: lamps, glass, wipers, mirror, dials, seats.
+    for side in [-1,1]: anchor(f'headlamp_{"l" if side<0 else "r"}',(side*.43,.485,1.74))
+    anchor('windscreen_min',(-.485,.875,.49)); anchor('windscreen_max',(.485,1.115,.45))
+    for side in [-1,1]: anchor(f'wiper_{"l" if side<0 else "r"}',(side*.23,1.112,.455))
+    anchor('dials',(0,.72,.508)); anchor('sora_eye',tuple(SORA_EYE)); anchor('rear_seat',(.25,rear,-1.05))
+    mirror_face=(0,1.102,.398)
+    anchor('mirror',mirror_face)
+    # The rear-view glass, just proud of the car's own mirror plate.
+    quad('taxi_mirror_surface',[(-.075,1.071,.397),(.075,1.071,.397),(.075,1.133,.397),(-.075,1.133,.397)],nickel)
+    mirror_charms(nickel,bakelite)
+    taximeter(nickel,bakelite)
+    mourners_leavings(rear)
+    driver(bakelite)
+    driver_on_scan()
+    passenger_on_scan()
     export('ep1_taxi_cabin')
-
-def pleated_cone(name,base,tip,r0,r1,mat,sides=16,rows=10):
-    # A furled umbrella: a tapering canopy whose eight ribs pinch the oiled paper into folds.
-    axis=(tip-base).normalized(); side=axis.cross(Vector((0,1,0))).normalized(); up=side.cross(axis)
-    vs=[];fs=[]
-    for i in range(rows+1):
-        t=i/rows; c=base.lerp(tip,t); r=r0+(r1-r0)*t
-        for j in range(sides):
-            a=j/sides*math.tau; rr=r*(1+.18*math.cos(a*8))
-            vs.append(tuple(c+side*math.cos(a)*rr+up*math.sin(a)*rr))
-    for i in range(rows):
-        for j in range(sides): a=i*sides+j; b=i*sides+(j+1)%sides; fs.append((a,b,b+sides,a+sides))
-    o=mesh(name,vs,fs,mat)
-    for poly in o.data.polygons: poly.use_smooth=True
-    return o
-
-def roof_y(x,z):
-    # Underside of the curved headliner (its lining is solidified inward).
-    return 1.77+.10*(1-(x/.88)**2)-.04*((z+.4)/1.4)**2-.04
-
-def upholstery(x,z0,z1,y,width,mat,thread,rolls=6,depth=.07,name='taxi_seat_roll'):
-    """Tuck-and-roll: plump channels side by side, stitched where they meet."""
-    pitch=width/rolls
-    for k in range(rolls):
-        xx=x-width/2+pitch*(k+.5)
-        rounded(name,(xx,y,(z0+z1)/2),(pitch*1.06,depth,abs(z1-z0)),mat,min(.03,pitch*.32))
-        if k: tube(name+'_seam',[(xx-pitch/2,y+depth*.42,z0+.02),(xx-pitch/2,y+depth*.42,z1-.02)],.0022,thread)
-
-def upright_upholstery(x,y0,y1,z,width,mat,thread,rolls=6,depth=.05,name='taxi_seatback_roll'):
-    pitch=width/rolls
-    for k in range(rolls):
-        xx=x-width/2+pitch*(k+.5)
-        rounded(name,(xx,(y0+y1)/2,z),(pitch*1.06,abs(y1-y0),depth),mat,min(.028,pitch*.3))
-        if k: tube(name+'_seam',[(xx-pitch/2,y0+.02,z+depth*.42),(xx-pitch/2,y1-.02,z+depth*.42)],.0022,thread)
-
-def car_nose(chrome,black,rubber):
-    """What a 1930s saloon shows through its windscreen: a long hinged bonnet in
-    old black-green lacquer, the nickel radiator shell with its filler cap and
-    thermometer, and the two big lamp bowls standing on their bar."""
-    lacquer=plain('M_taxi_body_lacquer',(.016,.024,.02),.24,.0)
-    # The bonnet: two hinged halves lofted over the engine, falling slightly to the radiator.
-    vs=[];fs=[];rows=18;cols=24
-    for i in range(rows+1):
-        t=i/rows; z=1.24+t*1.44; top=1.118-.045*t; half=.47-.035*t
-        for j in range(cols+1):
-            a=-math.pi/2+j/cols*math.pi
-            # A flattened superellipse: a crowned top and near-vertical sides down to the wings.
-            c,sn=math.cos(a),math.sin(a)
-            x=half*math.copysign(abs(sn)**.55,sn); y=top-(.4*(1-abs(c)**.35))-.012*(1-abs(sn))
-            vs.append((x,y,z))
-    for i in range(rows):
-        for j in range(cols):
-            k=i*(cols+1)+j; fs.append((k,k+1,k+cols+2,k+cols+1))
-    hood=mesh('taxi_bonnet_lacquer',vs,fs,lacquer)
-    for f in hood.data.polygons: f.use_smooth=True
-    lacquer.use_backface_culling=False
-    # The centre hinge and the seam either side where each half lifts.
-    tube('taxi_bonnet_centre_hinge',[(0,1.121,1.24),(0,1.098,2.0),(0,1.076,2.68)],.0055,chrome)
-    for x in [-.23,.23]: tube('taxi_bonnet_seam',[(x,1.106,1.26),(x*.97,1.084,2.0),(x*.95,1.06,2.66)],.0018,rubber)
-    # Louvres pressed into each side, catching the lamps' spill.
-    for side in [-1,1]:
-        for k in range(9):
-            z=1.62+k*.075
-            tube('taxi_bonnet_louvre',[(side*.425,.95,z),(side*.452,1.0,z+.012)],.006,lacquer)
-        rounded('taxi_bonnet_catch',(side*.468,.86,2.25),(.012,.05,.06),chrome,.004)
-    # Nickel radiator shell, its vertical slats, and the filler cap with the motor thermometer.
-    rounded('taxi_bonnet_radiator_shell',(0,.93,2.715),(.6,.44,.07),chrome,.03)
-    rounded('taxi_bonnet_radiator_core',(0,.92,2.755),(.5,.36,.02),black,.006)
-    for k in range(13): tube('taxi_bonnet_radiator_slat',[(-.24+k*.04,.75,2.762),(-.24+k*.04,1.1,2.762)],.003,chrome)
-    tube('taxi_bonnet_filler_neck',[(0,1.12,2.71),(0,1.165,2.71)],.022,chrome)
-    ellipsoid('taxi_bonnet_filler_cap',(0,1.172,2.71),(.07,.026,.07),chrome)
-    tube('taxi_bonnet_thermometer_stem',[(0,1.18,2.71),(0,1.215,2.71)],.006,chrome)
-    tube('taxi_bonnet_thermometer_ring',[(math.cos(a)*.034,1.25+math.sin(a)*.034,2.71) for a in [i/24*math.tau for i in range(25)]],.006,chrome)
-    dial=plain('M_taxi_thermometer_dial',(.55,.5,.38),.4)
-    disc=[(0,1.25,2.708)]+[(math.cos(a)*.031,1.25+math.sin(a)*.031,2.708) for a in [i/24*math.tau for i in range(24)]]
-    mesh('taxi_bonnet_thermometer_face',disc,[(0,k+1,(k+1)%24+1) for k in range(24)],dial)
-    tube('taxi_bonnet_thermometer_mercury',[(0,1.226,2.706),(0,1.262,2.706)],.0022,plain('M_taxi_thermometer_red',(.32,.02,.015),.3))
-    # The lamp bar and two deep nickel bowls standing above the wings.
-    tube('taxi_bonnet_lamp_bar',[(-.66,.86,2.66),(-.3,.84,2.72),(.3,.84,2.72),(.66,.86,2.66)],.014,chrome)
-    for side in [-1,1]:
-        x=side*.64
-        ellipsoid('taxi_bonnet_lamp_bowl',(x,.96,2.6),(.22,.22,.2),chrome)
-        tube('taxi_bonnet_lamp_rim',[(x+math.cos(a)*.11,.96+math.sin(a)*.11,2.7) for a in [i/28*math.tau for i in range(29)]],.008,chrome)
-        tube('taxi_bonnet_lamp_stalk',[(x,.86,2.62),(x,.9,2.6)],.016,chrome)
-        # The front wing's crown, just showing beside the bonnet.
-        wing=[(x+side*.06*math.sin(t*math.pi),.62+.3*math.sin(t*math.pi),1.55+t*1.25) for t in [i/16 for i in range(17)]]
-        tube('taxi_bonnet_wing_crown',wing,.11,lacquer)
-
-def cabin_detail(vinyl,felt,carpet,wood,rubber,chrome,black,thread,metal,glass):
-    """What makes it a working 1930s taxi rather than a box: tuck-and-roll seats, real
-    door cards, roof bows and a dome lamp, the vacuum wiper motor, a rear blind and
-    robe rail, a dash clock, the ignition key, the passenger's grab bar, handbrake and
-    gaiter, and the mud and leaves the night's fares tracked in."""
-    leather=plain('M_taxi_leather',(.05,.03,.018),.42)
-    brass=plain('M_taxi_brass',(.36,.25,.1),.34,.9)
-    paper=plain('M_taxi_paper',(.42,.39,.31),.85)
-    mud=plain('M_taxi_wet_mud',(.045,.03,.018),.25)
-    leaf=plain('M_taxi_wet_leaf',(.06,.07,.025),.35); leaf.use_backface_culling=False
-    lens=plain('M_taxi_frosted_lens',(.55,.52,.44),.5,alpha=.85)
-    # Front seats: a sprung base, tuck-and-roll cushion and back, rolled front edge and top.
-    for side in [-1,1]:
-        x=side*.41
-        rounded('taxi_seat_base',(x,.33,-.32),(.68,.11,.72),vinyl,.04)
-        upholstery(x,-.64,.0,.445,.62,vinyl,thread)
-        tube('taxi_seat_front_roll',[(x-.31,.43,.02),(x+.31,.43,.02)],.052,vinyl)
-        rounded('taxi_seatback_shell',(x,.80,-.75),(.69,.74,.12),vinyl,.05)
-        upright_upholstery(x,.5,1.1,-.672,.6,vinyl,thread)
-        tube('taxi_seatback_top_roll',[(x-.32,1.14,-.7),(x+.32,1.14,-.7)],.05,vinyl)
-        for xx in [x-.33,x+.33]: tube('taxi_seatback_bolster',[(xx,.48,-.69),(xx,1.12,-.7)],.035,vinyl)
-        tube('taxi_seat_piping',[(x-.34,.40,-.66),(x-.34,.48,-.66),(x-.34,.48,.04),(x+.34,.48,.04),(x+.34,.48,-.66),(x+.34,.40,-.66)],.0045,thread)
-        for xx in [x-.22,x+.22]: rounded('taxi_seat_rail',(xx,.22,-.32),(.04,.055,.65),chrome,.008)
-        # A robe rail across the back of each front seat, for rear passengers' rugs.
-        tube('taxi_robe_rail_cord',[(x-.28,.98,-.83),(x,.965,-.835),(x+.28,.98,-.83)],.008,leather)
-        for xx in [x-.29,x+.29]: ellipsoid('taxi_robe_rail_bracket',(xx,.98,-.825),(.03,.03,.02),chrome)
-    # Rear bench: deep buttoned back, rolled cushion and a fold-down centre armrest.
-    rounded('taxi_rear_bench_base',(0,.36,-1.43),(1.56,.12,.56),vinyl,.04)
-    upholstery(0,-1.68,-1.18,.465,1.48,vinyl,thread,rolls=12)
-    tube('taxi_rear_front_roll',[(-.75,.44,-1.15),(.75,.44,-1.15)],.05,vinyl)
-    rounded('taxi_rear_back_shell',(0,.89,-1.70),(1.56,.8,.14),vinyl,.05)
-    rounded('taxi_rear_back_pad',(0,.89,-1.63),(1.46,.66,.06),vinyl,.03)
-    for row,y in enumerate([.68,.82,.96,1.10]):
-        for k in range(9 if row%2==0 else 8):
-            xx=-.64+k*.16+(0 if row%2==0 else .08)
-            ellipsoid('taxi_rear_tuft_button',(xx,y,-1.6),(.022,.022,.012),vinyl)
-    rounded('taxi_rear_armrest',(0,.62,-1.5),(.16,.12,.36),vinyl,.04)
-    # Door cards: walnut capping on the sill, a pleated panel, chrome strip, carpet kick panel.
-    for side in [-1,1]:
-        x=side*.86; inner=x-side*.047
-        rounded(f'taxi_door_capping_{side}',(x-side*.03,.905,-.17),(.11,.028,2.1),wood,.01)
-        tube(f'taxi_window_channel_{side}',[(inner,.925,-1.18),(inner,.925,.78)],.008,black)
-        for z0,z1 in [(-.56,.7),(-1.24,-.7)]:
-            n=int((z1-z0)/.075)
-            for k in range(n):
-                zz=z0+(k+.5)*(z1-z0)/n
-                rounded(f'taxi_door_pleat_{side}',(inner-side*.006,.67,zz),(.014,.2,(z1-z0)/n*.92),vinyl,.006)
-            tube(f'taxi_door_chrome_strip_{side}',[(inner-side*.012,.79,z0),(inner-side*.012,.79,z1)],.0042,chrome)
-            tube(f'taxi_door_chrome_strip_{side}',[(inner-side*.012,.555,z0),(inner-side*.012,.555,z1)],.0042,chrome)
-            rounded(f'taxi_door_kick_panel_{side}',(inner+side*.004,.24,(z0+z1)/2),(.016,.2,z1-z0-.04),carpet,.008)
-        rounded(f'taxi_door_shut_line_{side}',(inner-side*.002,.6,-.645),(.006,.62,.012),black,.002)
-        # Leather pull strap, lock knob, crank and handle escutcheons.
-        tube(f'taxi_door_pull_strap_{side}',[(inner-side*.01,.83,.05),(inner-side*.03,.79,.12),(inner-side*.03,.79,.32),(inner-side*.01,.83,.4)],.01,leather)
-        for z in [.05,.4]: ellipsoid('taxi_strap_stud',(inner-side*.012,.83,z),(.016,.016,.016),chrome)
-        tube(f'taxi_door_lock_knob_{side}',[(x-side*.03,.91,-.5),(x-side*.03,.96,-.5)],.007,chrome)
-        ellipsoid('taxi_door_lock_cap',(x-side*.03,.965,-.5),(.016,.012,.016),chrome)
-        for z,y in [(.33,.69),(-1.0,.69)]:
-            ellipsoid('taxi_crank_rosette',(inner-side*.012,y,z),(.012,.05,.05),chrome)
-        ellipsoid('taxi_handle_escutcheon',(inner-side*.012,.849,.43),(.01,.045,.045),chrome)
-        tube(f'taxi_rear_window_crank_{side}',[(x-side*.068,.71,-1.0),(x-side*.068,.655,-.95)],.009,chrome)
-        ellipsoid('taxi_crank_grip',(x-side*.087,.652,-.94),(.033,.034,.035),black)
-        rounded(f'taxi_rear_door_handle_{side}',(x-side*.059,.849,-.92),(.021,.023,.125),chrome,.01)
-        # Leather assist straps on the rear pillars and a coat hook above each door.
-        tube(f'taxi_assist_strap_{side}',[(side*.76,1.62,-1.36),(side*.73,1.42,-1.33),(side*.72,1.36,-1.3),(side*.73,1.42,-1.27),(side*.76,1.62,-1.24)],.011,leather)
-        tube(f'taxi_coat_hook_{side}',[(side*.77,1.66,-.6),(side*.72,1.63,-.6),(side*.715,1.58,-.6),(side*.735,1.56,-.6)],.005,chrome)
-    # Roof: lining bows, seams and a frosted dome lamp in a nickel bezel.
-    for z in [.55,.05,-.45,-.95,-1.4]:
-        tube('taxi_headliner_bow',[(x,roof_y(x,z)-.006,z) for x in [-.84+i*.12 for i in range(15)]],.011,felt)
-    for x in [-.42,.42]:
-        tube('taxi_headliner_seam',[(x,roof_y(x,z)-.004,z) for z in [.7-i*.2 for i in range(12)]],.0025,thread)
-    ellipsoid('taxi_dome_lamp_lens',(0,roof_y(0,-.7)-.022,-.7),(.17,.04,.11),lens)
-    tube('taxi_dome_lamp_bezel',[(math.cos(a)*.088,roof_y(0,-.7)-.012,-.7+math.sin(a)*.058) for a in [i/32*math.tau for i in range(33)]],.0055,chrome)
-    rounded('taxi_dome_lamp_switch',(.13,roof_y(.13,-.7)-.012,-.7),(.03,.016,.02),black,.004)
-    # The vacuum wiper motor on the header rail, its little control lever, and the rail itself.
-    tube('taxi_windshield_header',[(-.72,1.735,.875),(0,1.75,.87),(.72,1.735,.875)],.026,metal)
-    rounded('taxi_wiper_motor',(.21,1.705,.885),(.17,.065,.07),black,.012)
-    tube('taxi_wiper_motor_lever',[(.3,1.7,.86),(.33,1.67,.85)],.004,chrome)
-    tube('taxi_wiper_vacuum_hose',[(.13,1.7,.9),(.05,1.66,1.0),(-.02,1.3,1.17),(-.05,1.13,1.22)],.006,rubber)
-    tube('taxi_windshield_sill_chrome',[(-.78,1.13,1.255),(0,1.145,1.265),(.78,1.13,1.255)],.006,chrome)
-    # A roller blind drawn down over the small rear window, its tassel swinging.
-    tube('taxi_rear_window_surround',[(-.31,1.12,-1.676),(-.31,1.46,-1.676),(.31,1.46,-1.676),(.31,1.12,-1.676),(-.31,1.12,-1.676)],.009,chrome)
-    rounded('taxi_rear_blind',(0,1.29,-1.672),(.6,.31,.008),felt,.004)
-    tube('taxi_rear_blind_roller',[(-.31,1.45,-1.668),(.31,1.45,-1.668)],.012,wood)
-    tube('taxi_rear_blind_cord',[(0,1.135,-1.666),(0,1.06,-1.664)],.0018,thread)
-    ellipsoid('taxi_rear_blind_tassel',(0,1.045,-1.663),(.016,.03,.016),leather)
-    # Dashboard: an eight-day clock in the glovebox lid, ignition key, grab bar and ashtray.
-    clock_face=plain('M_taxi_clock_face',(.42,.39,.3),.55)
-    ellipsoid('taxi_dash_clock_face',(.30,.94,.97),(.095,.095,.008),clock_face)
-    tube('taxi_dash_clock_bezel',[(.30+math.cos(a)*.05,.94+math.sin(a)*.05,.968) for a in [i/40*math.tau for i in range(41)]],.0055,chrome)
-    for k in range(12):
-        a=k/12*math.tau; tube('taxi_dash_clock_tick',[(.30+math.cos(a)*.04,.94+math.sin(a)*.04,.962),(.30+math.cos(a)*.045,.94+math.sin(a)*.045,.962)],.0012,black)
-    tube('taxi_dash_clock_hour',[(.30,.94,.961),(.285,.955,.961)],.0018,black)
-    tube('taxi_dash_clock_minute',[(.30,.94,.961),(.322,.97,.961)],.0013,black)
-    ellipsoid('taxi_ignition_escutcheon',(.2,.83,1.0),(.04,.04,.01),chrome)
-    rounded('taxi_ignition_key',(.2,.83,.978),(.012,.03,.03),brass,.004)
-    tube('taxi_ignition_keyring',[(.2+math.sin(a)*.016,.795-.016+math.cos(a)*.016,.972) for a in [i/20*math.tau for i in range(21)]],.0018,chrome)
-    rounded('taxi_ignition_fob',(.205,.755,.972),(.022,.03,.006),leather,.006)
-    tube('taxi_passenger_grab_bar',[(.26,.86,.95),(.27,.84,.93),(.68,.84,.93),(.69,.86,.95)],.011,chrome)
-    rounded('taxi_dash_ashtray',(-.02,.87,.968),(.12,.035,.03),chrome,.006)
-    for k,dx in enumerate([-.03,.02]):
-        tube('taxi_ashtray_butt',[(dx-.02,.892,.962),(dx+.02,.894,.955)],.004,paper)
-    # Floor: handbrake, gear-lever gaiter, an oiled-paper umbrella, mud and wet leaves.
-    tube('taxi_handbrake_lever',[(-.1,.12,.24),(-.11,.38,.16),(-.12,.52,.08)],.011,chrome)
-    rounded('taxi_handbrake_grip',(-.12,.54,.07),(.03,.08,.03),black,.012)
-    rounded('taxi_handbrake_ratchet',(-.1,.16,.24),(.02,.08,.12),metal,.006)
-    ellipsoid('taxi_gear_gaiter',(.02,.34,.365),(.11,.09,.11),leather)
-    umbrella=plain('M_taxi_oiled_umbrella',(.22,.08,.04),.32)
-    pleated_cone('taxi_umbrella_canopy',Vector((.66,.09,-.04)),Vector((.7,.42,.48)),.034,.006,umbrella)
-    tube('taxi_umbrella_tie',[(.668+math.cos(a)*.024,.2+math.sin(a)*.024*.4,.12+math.sin(a)*.024) for a in [i/12*math.tau for i in range(13)]],.003,leather)
-    tube('taxi_umbrella_handle',[(.65,.06,-.1),(.66,.1,-.03)],.009,wood)
-    tube('taxi_umbrella_tip',[(.7,.42,.48),(.705,.47,.55)],.004,metal)
-    rng=np.random.default_rng(1931)
-    for k in range(9):
-        x=.39+float(rng.normal(0,.14)); z=.35+float(rng.normal(0,.22))
-        ellipsoid('taxi_tracked_mud',(x,.083,z),(float(rng.uniform(.04,.1)),.006,float(rng.uniform(.03,.09))),mud)
-    for k in range(7):
-        x=.35+float(rng.normal(0,.18)); z=.4+float(rng.normal(0,.25)); a=float(rng.uniform(0,math.tau)); L=float(rng.uniform(.04,.07))
-        mesh('taxi_tracked_leaf',[(x,.087,z),(x+math.cos(a+.4)*L*.4,.088,z+math.sin(a+.4)*L*.4),(x+math.cos(a)*L,.087,z+math.sin(a)*L),(x+math.cos(a-.4)*L*.4,.088,z+math.sin(a-.4)*L*.4)],[(0,1,2,3)],leaf)
-    # A dog-eared fare card tucked behind the windshield sill.
-    quad('taxi_fare_card',[(.5,1.13,1.235),(.62,1.13,1.235),(.625,1.2,1.25),(.505,1.205,1.25)],paper)
-    paper.use_backface_culling=False
 
 def painted_material(name,array,rough=.8):
     """A small authored colour map (numpy RGB 0-1) saved beside the vinyl maps."""
@@ -490,7 +354,7 @@ def mirror_charms(chrome,black):
     pivot=bpy.data.objects.new('taxi_mirror_charm_pivot',None); bpy.context.collection.objects.link(pivot)
     pivot.location=w((.06,1.585,.742))
     cord=plain('M_taxi_charm_cord',(.32,.29,.22),.9)
-    jasmine=plain('M_taxi_jasmine',(.55,.53,.44),.65)
+    jasmine=plain('M_taxi_jasmine',(.2,.19,.15),.75)
     rose=plain('M_taxi_charm_red',(.3,.03,.03),.7)
     wood=plain('M_taxi_prayer_beads',(.09,.05,.025),.45)
     parts=[]
@@ -510,29 +374,38 @@ def mirror_charms(chrome,black):
     bpy.context.view_layer.update()
     for part in parts:
         world=part.matrix_world.copy(); part.parent=pivot; part.matrix_world=world
+    # Under the corner of the car's own mirror, short enough to clear most of the low glass.
+    pivot.location=w(CHARM_TOP); pivot.scale=(.62,.62,.62)
 
-def taximeter(chrome,black,ink):
-    # A mechanical taximeter on the dash top, its flag raised: the fare is still running.
-    rounded('taxi_meter_case',(.27,1.17,1.13),(.15,.11,.09),black,.012)
-    rounded('taxi_meter_window',(.27,1.185,1.083),(.09,.035,.004),chrome,.003)
-    rounded('taxi_meter_tariff_plate',(.27,1.145,1.083),(.06,.016,.003),ink,.002)
-    tube('taxi_meter_flag_arm',[(.35,1.17,1.13),(.36,1.29,1.13)],.006,chrome)
-    rounded('taxi_meter_flag',(.395,1.27,1.13),(.07,.04,.006),plain('M_taxi_meter_flag_red',(.32,.04,.03),.6),.004)
-    tube('taxi_meter_crank',[(.35,1.14,1.1),(.38,1.12,1.09)],.005,chrome)
+# Where the charm's cord is tied: under the near corner of the rear-view mirror.
+CHARM_TOP=(.055,1.068,.392)
 
-def mourners_leavings():
+def taximeter(chrome,black):
+    """A mechanical taximeter clamped to the windscreen pillar on Sora's side, its flag
+    raised: the fare is still running. Its case is the cabin's old painted steel."""
+    case=bpy.data.materials['M_taxi_painted_steel']
+    ink=plain('M_taxi_ivory_engraving',(.42,.39,.3),.8)
+    rounded('taxi_meter_case',(.5,.78,.42),(.13,.10,.085),case,.012)
+    rounded('taxi_meter_window',(.49,.795,.376),(.08,.03,.004),chrome,.003)
+    rounded('taxi_meter_tariff_plate',(.49,.757,.376),(.055,.014,.003),ink,.002)
+    tube('taxi_meter_bracket',[(.56,.78,.43),(.6,.8,.45)],.007,chrome)
+    tube('taxi_meter_flag_arm',[(.44,.79,.42),(.43,.9,.42)],.005,chrome)
+    rounded('taxi_meter_flag',(.405,.885,.42),(.06,.035,.005),plain('M_taxi_meter_flag_red',(.26,.035,.025),.65),.004)
+    tube('taxi_meter_crank',[(.56,.76,.4),(.585,.745,.39)],.0045,chrome)
+
+def mourners_leavings(rear):
     """What the morning's mourners left on the rear bench: a white lotus bud, a loose
     coil of blessing thread and a bundle of unlit incense on the floor."""
     petal=plain('M_taxi_lotus',(.62,.6,.53),.6); stem=plain('M_taxi_lotus_stem',(.07,.11,.05),.7)
-    ellipsoid('taxi_rear_lotus_bud',(.32,.565,-1.32),(.05,.05,.11),petal)
-    tube('taxi_rear_lotus_stem',[(.32,.55,-1.27),(.3,.545,-1.12),(.24,.54,-1.02)],.006,stem)
+    ellipsoid('taxi_rear_lotus_bud',(.3,rear+.03,-1.12),(.05,.05,.11),petal)
+    tube('taxi_rear_lotus_stem',[(.3,rear+.015,-1.07),(.28,rear+.012,-.95),(.22,rear+.01,-.88)],.006,stem)
     thread=plain('M_taxi_blessing_thread',(.62,.6,.55),.9)
-    tube('taxi_rear_thread_coil',[(-.22+math.cos(a)*(.05+.004*a),.535+.002*math.sin(a*3),-1.36+math.sin(a)*(.05+.004*a)) for a in [i/6 for i in range(60)]],.0016,thread)
+    tube('taxi_rear_thread_coil',[(-.2+math.cos(a)*(.05+.004*a),rear+.006+.002*math.sin(a*3),-1.14+math.sin(a)*(.05+.004*a)) for a in [i/6 for i in range(60)]],.0016,thread)
     incense=plain('M_taxi_incense_sticks',(.32,.12,.06),.8)
     for i in range(14):
         dx=(i%5)*.006-.012; dy=(i//5)*.006
-        tube('taxi_rear_incense',[(.1+dx,.075+dy,-1.0),(.12+dx,.08+dy,-.72)],.0022,incense)
-    tube('taxi_rear_incense_band',[(.096+math.cos(a)*.02,.081+math.sin(a)*.016,-.86) for a in [i/16*math.tau for i in range(17)]],.002,plain('M_taxi_incense_paper',(.45,.05,.04),.7))
+        tube('taxi_rear_incense',[(.1+dx,.012+dy,-.8),(.12+dx,.017+dy,-.54)],.0022,incense)
+    tube('taxi_rear_incense_band',[(.096+math.cos(a)*.02,.018+math.sin(a)*.016,-.67) for a in [i/16*math.tau for i in range(17)]],.002,plain('M_taxi_incense_paper',(.45,.05,.04),.7))
 
 def character_skin(name,src,photo,relief=1024,image=None,strength=.3):
     mat=plain(name,(.30,.20,.13),.7)
@@ -596,10 +469,11 @@ def passenger():
     def rotate(name,degrees):
         b=rig.pose.bones[name];q=b.bone.matrix_local.to_quaternion();b.rotation_mode='QUATERNION';b.rotation_quaternion=q.inverted()@Quaternion(Vector((1,0,0)),math.radians(degrees))@q
     for side in ['L','R']:
-        rotate('upperleg01.'+side,-78);rotate('lowerleg01.'+side,55);rotate('foot.'+side,23)
+        rotate('upperleg01.'+side,SORA_LEGS[0]);rotate('lowerleg01.'+side,SORA_LEGS[1]);rotate('foot.'+side,SORA_LEGS[2])
     bpy.context.view_layer.update()
     baked=bpy.data.meshes.new_from_object(body.evaluated_get(bpy.context.evaluated_depsgraph_get()))
-    for v in baked.vertices:v.co=w((.39+v.co.x*.106,.55+(v.co.y-hip.y)*.106,-.36+(v.co.z-hip.z)*.106))
+    sx,sy,sz=SORA_HIP
+    for v in baked.vertices:v.co=w((sx+v.co.x*.106,sy+(v.co.y-hip.y)*.106,sz+(v.co.z-hip.z)*.106))
     baked.flip_normals();baked.update();body.modifiers.clear();body.data=baked
     # Trousers and shoes cover almost all of it: a coarse relief is enough.
     skin=character_skin('M_taxi_sora_skin',src,'young_lightskinned_female_diffuse3.png',256)
@@ -620,10 +494,10 @@ def passenger():
     posed=[Vector((-v.co.x,v.co.z,-v.co.y)) for v in baked.vertices]
     vs=[];fs=[];rows=16;columns=20
     for j in range(rows+1):
-        t=j/rows;z=-.50+t*.20
-        row_top=max((v.y for v in posed if abs(v.z-z)<.04),default=.57)
+        t=j/rows;z=sz-.14+t*.20
+        row_top=max((v.y for v in posed if abs(v.z-z)<.04),default=sy+.05)
         for i in range(columns+1):
-            u=i/columns;x=.39+(u-.5)*.43
+            u=i/columns;x=sx+(u-.5)*.43
             y=row_top+.024-.028*(abs(u-.5)*2)**4+.004*math.sin(u*math.tau*4+t*1.7)
             if j==rows:y-=.012
             vs.append((x,y,z-.035*abs(u-.5)*2*t*t))
@@ -636,14 +510,14 @@ def passenger():
     for side,sign in [('L',1),('R',-1)]:
         points=[Vector((-v.co.x,v.co.z,-v.co.y)) for k,v in enumerate(baked.vertices) if verts[ids[k]].y<-7.2 and verts[ids[k]].x*sign>0]
         cx=(min(v.x for v in points)+max(v.x for v in points))/2
-        z0=min(v.z for v in points)-.01;z1=max(v.z for v in points)+.012
+        z0=min(v.z for v in points)-.015;z1=max(v.z for v in points)+.03
         width=(max(v.x for v in points)-min(v.x for v in points))*.54
-        base=max(.080,min(v.y for v in points)-.005)
+        base=max(.008,min(v.y for v in points)-.005)
         shoevs=[];shoefs=[];sections=12;sides=16
         for k in range(sections+1):
             t=k/sections;zz=z0+(z1-z0)*t
-            width_at=width*(.65+.35*math.sin(math.pi*t))*(.24 if k in [0,sections] else 1)
-            height=.045+.045*math.exp(-((t-.35)/.24)**2)
+            width_at=width*(.75+.35*math.sin(math.pi*t))*(.3 if k in [0,sections] else 1)
+            height=.055+.05*math.exp(-((t-.35)/.24)**2)
             for i in range(sides+1):
                 a=math.pi*i/sides;shoevs.append((cx+math.cos(a)*width_at,base+.015+math.sin(a)*height,zz))
         for k in range(sections):
@@ -995,7 +869,7 @@ def driver(black):
         if bone is None: return
         r=bone.bone.matrix_local.to_quaternion(); bone.rotation_mode='QUATERNION'; bone.rotation_quaternion=bone.rotation_quaternion @ (r.inverted() @ Quaternion(Vector(axis),math.radians(degrees)) @ r)
     for side,sign in [('L',-1),('R',1)]:
-        rotate('upperleg01.'+side,(1,0,0),-76); rotate('lowerleg01.'+side,(1,0,0),82)
+        rotate('upperleg01.'+side,(1,0,0),DRIVER_LEGS[0]); rotate('lowerleg01.'+side,(1,0,0),DRIVER_LEGS[1])
         rotate('upperarm01.'+side,(0,0,1),sign*49); rotate('upperarm01.'+side,(1,0,0),-44)
         rotate('lowerarm01.'+side,(1,0,0),-49)
     # His head turned past Sora toward the trees on her side, his eyes further still;
@@ -1012,7 +886,8 @@ def driver(black):
     # Hands on the rim at nine and three, halfway down the wheel: each palm sits just outside the rim, fingers
     # pointing forward through the wheel and curled back around it, thumb inside.
     hip_ref=(joint(rigdata['bones']['upperleg01.L']['head'])+joint(rigdata['bones']['upperleg01.R']['head']))/2
-    def to_mh(p): return Vector(((p[0]+.39)/.1, hip_ref.y+(p[1]-.54)/.115, (p[2]-.035)/.1))
+    hx,hy,hz=DRIVER_HIP
+    def to_mh(p): return Vector(((p[0]-hx)/.1, hip_ref.y+(p[1]-hy)/.115, (p[2]-hz)/.1))
     def dir_mh(d): return Vector((d[0]/.1,d[1]/.115,d[2]/.1)).normalized()
     centre=Vector(WHEEL_CENTRE); facing=Vector(WHEEL_FACING).normalized(); right=Vector((1,0,0)); upward=right.cross(facing).normalized()
     if upward.y<0: upward=-upward
@@ -1077,7 +952,7 @@ def driver(black):
     for side in ['L','R']: grips[side]['point_fn']=pose_hand(side)
     # MakeHuman +Y up, +Z forward; hips anchored on the seat cushion.
     hip=(joint(rigdata['bones']['upperleg01.L']['head'])+joint(rigdata['bones']['upperleg01.R']['head']))/2
-    def place(co): return w((-.39+co.x*.10,.54+(co.y-hip.y)*.115,.035+co.z*.10))
+    def place(co): return w((hx+co.x*.10,hy+(co.y-hip.y)*.115,hz+co.z*.10))
     def posed(obj):
         bpy.context.view_layer.update()
         ev=obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
@@ -1144,6 +1019,9 @@ def driver(black):
                 for point,co in zip(key.data,coords): point.co=co
                 key.value=0  # at rest; the runtime drives each shape
         return baked
+    # Where his neck meets his shoulders, for setting the head on the scanned body.
+    global DRIVER_NECK
+    DRIVER_NECK=Vector(place(rig.pose.bones['neck01'].head))
     baked=bake(body)
     skin=character_skin('M_taxi_driver_skin',src,None,image=khmer_driver_skin(verts,faces,faceuv,uvs,joint),strength=.6)
     baked.materials.append(skin)
@@ -1160,19 +1038,44 @@ def driver(black):
     waist=place(Vector((0,hip.y+1.0,0))).z
     for poly in suit_mesh.polygons:
         poly.material_index=0 if sum(suit_mesh.vertices[i].co.z for i in poly.vertices)/len(poly.vertices)>waist else 1
-    def world(v): return Vector((-.39+v.x*.10,.54+(v.y-hip.y)*.115,.035+v.z*.10))
+    def world(v): return Vector((hx+v.x*.10,hy+(v.y-hip.y)*.115,hz+v.z*.10))
     for target in ik_targets: bpy.data.objects.remove(target,do_unlink=True)
     bpy.data.objects.remove(rig,do_unlink=True)
     print('TAXI_DRIVER_HIP',hip[:], 'bounds',min(v.co.z for v in baked.vertices),max(v.co.z for v in baked.vertices))
 
 def road_x(z): return 3.8*math.sin(z*.018)+2.2*math.sin(z*.037)
 def road_heading(z): return math.atan(3.8*.018*math.cos(z*.018)+2.2*.037*math.cos(z*.037))
+# The Rosalie's floor is the cabin's height 0 and stands .375 m off the road: the whole
+# roadside sits this much lower than it was authored (taxiMotion.ts TAXI_GROUND_DROP).
+ROAD_DROP=-.27
 def road_point(x,y,z):
     a=road_heading(z)
-    return (road_x(z)+x*math.cos(a),y,z-x*math.sin(a))
+    return (road_x(z)+x*math.cos(a),y+ROAD_DROP,z-x*math.sin(a))
 
 ROAD_HALF_WIDTH=2.8
 PLANT_CLEARANCE=ROAD_HALF_WIDTH+.6
+# Out of Phnom Penh the road runs on a laterite embankment across flooded paddies; the
+# old growth closes over it from FOREST_START (taxiMotion.ts TAXI_PADDY_END/FOREST_START).
+PADDY_END=140.0
+FOREST_START=150.0
+PADDY_WATER=-.88
+PADDY_FLOOR=-.98
+# Where the Neak Ta's shrine stands at the forest's edge, on Sora's side (the roadside
+# figure waits beside it: taxiApparitions.ts TAXI_STANDER).
+SHRINE=(6.6,157.5)
+
+def open_land(z):
+    """1 across the paddies, 0 under the forest, eased between."""
+    t=min(1.,max(0.,(z-PADDY_END)/(FOREST_START-PADDY_END)))
+    return 1-t*t*(3-2*t)
+
+def embankment(x):
+    """The raised road's cross-section over the paddies: shoulders, then a slope to the fields."""
+    a=abs(x)
+    if a<3.3: return -.2
+    if a>5.6: return PADDY_FLOOR
+    t=(a-3.3)/2.3
+    return -.2+(PADDY_FLOOR+.2)*(1-math.cos(t*math.pi))/2
 
 def road_lateral(x,z):
     # Nearest centreline parameter, including the normal offset around bends.
@@ -1200,7 +1103,7 @@ def roadside():
     small=['shrub_02_a','shrub_02_b','shrub_02_c','fern_02_a.001','fern_02_b','fern_02_c','shrub_02_a.001','forest_grass_-1_-1']
     rite=['spirit_house','tingmong_0','tingmong_1','old_flag_0','old_flag_1','old_flag_2','old_flag_3','ground_offering_0','ground_offering_1','path_threads_0','path_threads_1','milestone']
     rite+=family(r'step_candle_\d+',3)+family(r'altar_incense_\d+',3)
-    names=giants+dead+mounds+understory+litter+sedge+small+rite+['bamboo_0','coco_0','palm_0']
+    names=giants+dead+mounds+understory+litter+sedge+small+rite+['bamboo_0','coco_0','coco_2','palm_0','neakta_shrine','neakta_stone_watch']
     templates={name:objects.get(name) for name in names}
     missing=[name for name,obj in templates.items() if obj is None]
     if missing: print('TAXI_MISSING_TEMPLATES',missing)
@@ -1208,9 +1111,11 @@ def roadside():
     scene=bpy.data.scenes.new('Taxi_monsson_road'); bpy.context.window.scene=scene
     rng=np.random.default_rng(2008)
     plant_vertices={}
-    def plant(name,offset,z,scale=1,yaw=None,label=None,clear=PLANT_CLEARANCE,lift=-.12,ground=False):
+    def plant(name,offset,z,scale=1,yaw=None,label=None,clear=PLANT_CLEARANCE,lift=-.12,ground=False,anywhere=False):
         src=templates.get(name)
         if not src: return None
+        # The forest's ragged edge: nothing of it grows out on the paddies.
+        if not anywhere and z<FOREST_START+3.5*math.sin(offset*.23+z*.05): return None
         bounds=[src.matrix_world @ Vector(c) for c in src.bound_box]
         foot=Vector(((min(p.x for p in bounds)+max(p.x for p in bounds))/2,(min(p.y for p in bounds)+max(p.y for p in bounds))/2,min(p.z for p in bounds) if ground else 0))
         col=bpy.data.objects.get('col_'+name.removeprefix('far_'))
@@ -1269,7 +1174,8 @@ def roadside():
             plant(kind,side*float(rng.uniform(3.6,6.5)),z,scale)
             z+=float(rng.uniform(4.5,7.5))
         # Lighter crowns for the deeper ranks, ever taller towards the back.
-        for near,far,step,lo,hi in [(14,21,(4.0,6.0),.95,1.3),(21,29,(4.0,6.0),1.0,1.4),(29,37,(4.5,6.5),1.05,1.45)]:
+        # (Past 29 m the far tree cards carry the forest on: no modelled rank there.)
+        for near,far,step,lo,hi in [(14,21,(4.0,6.0),.95,1.3),(21,29,(5.0,7.5),1.0,1.4)]:
             z=-24+float(rng.random()*5)
             while z<510:
                 plant('far_'+str(rng.choice(giants[-3:-1])),side*float(rng.uniform(near,far)),z,float(rng.uniform(lo,hi)))
@@ -1296,19 +1202,37 @@ def roadside():
             z+=float(rng.uniform(3.0,6.0))
     road_surface(mats,rng)
     telegraph_line(mats,rng)
-    # Roadside omens: rotting funeral flags, threads strung through the trees, incense
-    # left at the foot of trunks and the Ting Mong guarding the village approach.
-    for z,side,flag in [(96,-1,'old_flag_0'),(171,1,'old_flag_2'),(302,1,'old_flag_1'),(418,-1,'old_flag_3'),(461,1,'old_flag_0')]:
+    paddies(mats,rng)
+    countryside(mats,rng,plant)
+    # The Neak Ta's shrine where the trees begin, under a giant, with the village's own
+    # stone watcher, offerings and incense (all advisor review).
+    sx,sz=SHRINE
+    plant(tallest[-1],sx+5.5,sz+2.5,1.25,anywhere=True,clear=None,label='shrine_tree')
+    shrine=[plant('neakta_shrine',sx,sz,1,yaw=-math.pi/2,clear=None,label='roadside_neakta_shrine',ground=True,lift=-.22,anywhere=True),
+            plant('neakta_stone_watch',sx-1.2,sz-1.9,1,yaw=-math.pi/2+.3,clear=None,label='roadside_neakta_stone',ground=True,lift=-.22,anywhere=True)]
+    # The village's shrine and stone are sculpted for its yard; by the road they are seen
+    # for a few seconds in a candle's light: a third of their faces is plenty (applied on export).
+    for obj in shrine:
+        if obj:
+            obj.data=obj.data.copy()
+            mod=obj.modifiers.new('roadside LOD','DECIMATE'); mod.ratio=.33; mod.use_collapse_triangulate=True
+    plant('ground_offering_0',sx-1.5,sz+.6,1,yaw=0,clear=None,label='roadside_neakta_offering',ground=True,lift=-.2,anywhere=True)
+    plant(family_pick(templates,'altar_incense'),sx-1.6,sz-.4,1,yaw=0,clear=None,label='roadside_neakta_incense',ground=True,lift=-.18,anywhere=True)
+    plant('old_flag_2',sx-1.0,sz+2.4,1,yaw=.2,clear=None,label='roadside_neakta_flag',ground=True,lift=-.25,anywhere=True)
+    # Roadside omens in the forest: rotting funeral flags, threads strung through the
+    # trees, incense left at the foot of trunks and the Ting Mong guarding the village approach.
+    for z,side,flag in [(171,1,'old_flag_2'),(302,1,'old_flag_1'),(418,-1,'old_flag_3'),(461,1,'old_flag_0')]:
         plant(flag,side*3.9,z,1,yaw=float(rng.uniform(-.4,.4)),clear=3.2,label='omen_'+flag+'_'+str(z),ground=True,lift=-.25)
-    for z,side,thread in [(148,-1,'path_threads_0'),(364,1,'path_threads_1'),(489,-1,'path_threads_0')]:
+    for z,side,thread in [(176,-1,'path_threads_0'),(364,1,'path_threads_1'),(489,-1,'path_threads_0')]:
         plant(thread,side*4.6,z,1,yaw=math.pi/2,clear=None,label='omen_'+thread+'_'+str(z),lift=.2)
-    for z,side in [(61,1),(128,-1),(338,-1),(402,1)]:
+    for z,side in [(205,1),(268,-1),(338,-1),(402,1)]:
         plant(family_pick(templates,'altar_incense'),side*3.75,z,1,yaw=0,clear=None,label='omen_incense_'+str(z),lift=-.16,ground=True)
         plant(family_pick(templates,'step_candle'),side*3.85,z+.3,1,yaw=0,clear=None,label='omen_candle_'+str(z),lift=-.16,ground=True)
     for z,side,guard in [(474,-1,'tingmong_0'),(477,1,'tingmong_1')]:
         plant(guard,side*4.1,z,1,yaw=math.pi if side>0 else 0,clear=3.4,label='guardian_'+guard,ground=True,lift=-.22)
+    # French colonial kilometre stones on the shoulder.
     for z,side in [(38,-1),(238,-1),(438,-1)]:
-        plant('milestone',side*3.45,z,1,yaw=math.pi/2,clear=None,label='milestone_'+str(z),lift=-.2,ground=True)
+        plant('milestone',side*3.2,z,1,yaw=math.pi/2,clear=None,label='milestone_'+str(z),lift=-.2,ground=True,anywhere=True)
     for obj in far_templates:bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.scenes.remove(original)
     bpy.data.orphans_purge(do_recursive=True)
@@ -1331,14 +1255,18 @@ def road_surface(mats,rng):
     def ditch(x): return .17*math.exp(-((abs(x)-3.3)/.34)**2)
     vs=[];fs=[];rows=540
     for i in range(rows+1):
-        z=-28+i
+        z=-28+i; o=open_land(z)
         for x in columns:
-            y=-.22+.028*math.sin(x*.7+z*.3)+.018*math.sin(z*.8+x*2)-ditch(x)
-            vs.append(road_point(x,y,z))
+            forest=-.22+.028*math.sin(x*.7+z*.3)+.018*math.sin(z*.8+x*2)-ditch(x)
+            # Over the paddies: the embankment's slopes down to the field mud under the flood.
+            field=embankment(x)+.012*math.sin(x*1.3+z*.7)
+            vs.append(road_point(x,forest*(1-o)+field*o,z))
     n=len(columns)
     for i in range(rows):
         for j in range(n-1): a=i*n+j; fs.append((a,a+n,a+n+1,a+1))
     smooth(mesh('taxi_road_ground',vs,fs,floor))
+    # Laterite on the embankment across the paddies, forest mud under the trees.
+    laterite=library_material('red_laterite_soil_stones','M_taxi_laterite',tint=(.6,.48,.4),tile=1.8)
     vs=[];fs=[];rows=1080;steps=32;span=ROAD_HALF_WIDTH
     for i in range(rows+1):
         z=-28+i*.5
@@ -1350,9 +1278,12 @@ def road_surface(mats,rng):
             grain=.008*math.sin(z*1.8+x*3)+.005*math.sin(z*4.3-x*7.1)+.003*math.sin(z*11.7+x*5.3)
             y=-.13+.055*(1-(x/span)**2)-rut+berm-edge+grain
             vs.append(road_point(x,y,z))
-    for i in range(rows):
-        for j in range(steps): a=i*(steps+1)+j; fs.append((a,a+steps+1,a+steps+2,a+1))
-    smooth(mesh('taxi_muddy_track',vs,fs,mud))
+    split=int((FOREST_START-4+28)/.5)
+    for name,material,r0,r1 in [('taxi_laterite_track',laterite,0,split),('taxi_muddy_track',mud,split,rows)]:
+        fs=[]
+        for i in range(r0,r1):
+            for j in range(steps): a=(i-r0)*(steps+1)+j; fs.append((a,a+steps+1,a+steps+2,a+1))
+        smooth(mesh(name,vs[r0*(steps+1):(r1+1)*(steps+1)],fs,material))
     puddle=mats['M_puddle']
     def water_patch(x,z,radius,long,name='taxi_rut_water',y=-.058,limit=ROAD_HALF_WIDTH-.08):
         # Shallow standing water lies above the road crown, never buried beneath mud.
@@ -1369,7 +1300,7 @@ def road_surface(mats,rng):
         water_patch(float(rng.uniform(-.15,.15)),-22+i*11.1+float(rng.uniform(-2,2)),float(rng.uniform(2.1,2.65)),float(rng.uniform(3.5,6.2)))
     # Run-off standing in the ditches, broken where the bank has slumped.
     for side in [-1,1]:
-        z=-26.0
+        z=FOREST_START+2
         while z<510:
             length=float(rng.uniform(5,22)); r=float(rng.uniform(.18,.27))
             vs=[];fs=[]
@@ -1456,6 +1387,667 @@ def telegraph_line(mats,rng):
                 t=i/12; v=p.lerp(q,t); v.y-=sag*4*t*(1-t); points.append(tuple(v))
             tube('taxi_telegraph_wire',points,.0045,iron)
 
+SCANS=ROOT/'art-source/library/scans'
+PALM_CARD=TEX/'T_taxi_palm_card.png'
+# The palm card's frame: the scanned palm's height fills the image's height (metres).
+PALM_CARD_SIZE=(7.25,14.5)
+
+def full_gltf_group():
+    """The glTF importer reuses any "glTF Material Output" group and expects all of its
+    sockets; the village file's (and kit's) has only Occlusion. Give it the rest."""
+    from io_scene_gltf2.blender.com.material_helpers import create_settings_group, get_gltf_node_name
+    name=get_gltf_node_name(); group=bpy.data.node_groups.get(name)
+    if group is None: create_settings_group(name); return
+    full=create_settings_group('glTF full sockets')
+    have={item.name for item in group.interface.items_tree}
+    for item in full.interface.items_tree:
+        if item.item_type=='SOCKET' and item.in_out=='INPUT' and item.name not in have:
+            group.interface.new_socket(item.name,in_out='INPUT',socket_type=item.socket_type)
+    bpy.data.node_groups.remove(full)
+
+def import_scan(key):
+    """A prepared scan (taxi_scans.py) as hidden templates: upright, life size, credited."""
+    path=SCANS/f'{key}.glb'
+    if not path.exists():
+        print('TAXI_SCAN_MISSING',key); return []
+    full_gltf_group()
+    objs=import_glb(path)
+    for o in objs: o.hide_render=True
+    return objs
+
+def place_scan(objs,label,lateral,z,yaw=0.,scale=1.,y=0.):
+    """Linked copies of a scan's parts, stood at a point beside the road."""
+    at=Matrix.Translation(w(road_point(lateral,y,z)))@Matrix.Rotation(yaw-road_heading(z),4,'Z')@Matrix.Scale(scale,4)
+    out=[]
+    for o in objs:
+        c=o.copy(); c.data=o.data; bpy.context.scene.collection.objects.link(c)
+        c.matrix_world=at@o.matrix_world; c.hide_render=False; c.name='taxi_road_'+label; out.append(c)
+    return out
+
+def palm_card():
+    """The scanned palm drawn once, side on, for the far palms across the paddies."""
+    if PALM_CARD.exists(): return
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    full_gltf_group()
+    import_glb(SCANS/'taxi_fan_palm.glb')
+    sc=bpy.context.scene
+    sc.render.engine='BLENDER_EEVEE'; sc.render.film_transparent=True
+    sc.render.resolution_x,sc.render.resolution_y=512,1024
+    sc.render.image_settings.file_format='PNG'; sc.render.image_settings.color_mode='RGBA'
+    world=bpy.data.worlds.new('card'); sc.world=world; world.use_nodes=True
+    world.node_tree.nodes['Background'].inputs[0].default_value=(.3,.32,.34,1)
+    sun=bpy.data.objects.new('sun',bpy.data.lights.new('sun','SUN')); sun.data.energy=2.2
+    sun.rotation_euler=(.9,0,.4); sc.collection.objects.link(sun)
+    cam=bpy.data.objects.new('cam',bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera=cam
+    cam.data.type='ORTHO'; cam.data.ortho_scale=PALM_CARD_SIZE[1]
+    cam.location=(0,-40,PALM_CARD_SIZE[1]/2); cam.rotation_euler=(math.pi/2,0,0)
+    sc.render.filepath=str(PALM_CARD); bpy.ops.render.render(write_still=True)
+    print('TAXI_PALM_CARD',PALM_CARD)
+
+def dike(points,material,name,width=.8,top=.34,rise=.2):
+    """A low earth dike between fields: a trapezoid ribbon along (lateral, z) points."""
+    vs=[];fs=[]
+    for k,(lat,z) in enumerate(points):
+        a=points[min(k+1,len(points)-1)]; b=points[max(k-1,0)]
+        dl,dz=a[0]-b[0],a[1]-b[1]; length=math.hypot(dl,dz) or 1
+        nl,nz=-dz/length,dl/length
+        crest=PADDY_WATER+rise+.03*math.sin(z*.9+lat*.7)
+        for off,y in [(-width/2,PADDY_FLOOR),(-top/2,crest),(top/2,crest),(width/2,PADDY_FLOOR)]:
+            vs.append(road_point(lat+nl*off,y,z+nz*off))
+    for k in range(len(points)-1):
+        for j in range(3):
+            a=k*4+j; fs.append((a,a+1,a+5,a+4))
+    return mesh(name,vs,fs,material)
+
+def blades(tufts,material,name,frame=None):
+    """Grass and rice as thin blades: (lateral, base y, z, height, count, splay) per tuft,
+    beside the road, or in a piece's own frame (x across, z along) when `frame` is given."""
+    frame=frame or road_point
+    rng=np.random.default_rng(len(tufts)+17)
+    vs=[];fs=[]
+    for lat,y,z,h,count,splay in tufts:
+        for _ in range(count):
+            a=float(rng.uniform(0,math.tau)); lean=float(rng.uniform(.15,1.))*splay
+            width=float(rng.uniform(.006,.011)); hh=h*float(rng.uniform(.75,1.15))
+            ox,oz=float(rng.normal(0,.02)),float(rng.normal(0,.02))
+            root=Vector(frame(lat+ox,y,z+oz)); tip=Vector(frame(lat+ox+math.cos(a)*lean*hh,y+hh,z+oz+math.sin(a)*lean*hh))
+            across=Vector((math.cos(a+1.57)*width,0,math.sin(a+1.57)*width))
+            k=len(vs); vs+=[tuple(root-across),tuple(root+across),tuple(tip)]; fs.append((k,k+1,k+2))
+    o=mesh(name,vs,fs,material)
+    for p in o.data.polygons: p.use_smooth=True
+    return o
+
+def paddies(mats,rng):
+    """Flooded rice fields either side of the embankment: the flood's surface, the earth
+    dikes that divide it, young rice in rows in most fields and grass along the dikes."""
+    water=plain('M_taxi_paddy_water',(.028,.038,.045),.05)
+    earth=mats['M_wet_forest_floor'].copy(); earth.name='M_taxi_dike_earth'; earth.use_backface_culling=False
+    rice=mats['M_forest_grass'].copy(); rice.name='M_taxi_rice'; rice.use_backface_culling=False
+    grass=mats['M_forest_grass']
+    reach=150.; z0,z1=-30.,PADDY_END+12
+    # Six 4 m pieces of a row of young rice: a clump every 30 cm, each a few blades.
+    rows=[]
+    for v in range(6):
+        tufts=[]; zz=float(rng.uniform(0,.15)); stage=float(rng.uniform(.8,1.15))
+        while zz<4.:
+            tufts.append((float(rng.normal(0,.03)),PADDY_WATER-.03,zz,.46*stage,4,.3)); zz+=float(rng.uniform(.26,.36))
+        rows.append(blades(tufts,rice,'taxi_paddy_rice_row',frame=lambda x,y,z:(x,y,z)))
+    for side in [-1,1]:
+        z=z0
+        while z<z1:
+            vs=[];fs=[];cols=[4.4,9,18,35,65,105,reach]; n=len(cols)
+            for k in range(7):
+                zz=min(z1,z+k*5)
+                for lat in cols: vs.append(road_point(side*lat,PADDY_WATER,zz))
+            for k in range(6):
+                for j in range(n-1):
+                    a=k*n+j; fs.append((a,a+n,a+n+1,a+1) if side>0 else (a,a+1,a+n+1,a+n))
+            mesh('taxi_paddy_water',vs,fs,water)
+            z+=30
+        # The dikes: long ones parallel to the road, and cross dikes from the embankment out.
+        lanes=[5.0]; lat=float(rng.uniform(16,22))
+        while lat<reach-8: lanes.append(lat); lat+=float(rng.uniform(19,30))
+        lanes.append(reach)
+        seed=float(rng.uniform(0,6))
+        for lat in lanes[1:-1]:
+            pts=[(side*(lat+.7*math.sin(zz*.045+seed+lat)),zz) for zz in np.arange(z0,z1,3.)]
+            dike(pts,earth,'taxi_paddy_dike')
+        cross=[z0]; zz=z0+float(rng.uniform(10,20))
+        while zz<z1-6: cross.append(zz); zz+=float(rng.uniform(22,38))
+        cross.append(z1)
+        for zc in cross[1:-1]:
+            pts=[(side*l,zc+.8*math.sin(l*.09+zc)) for l in np.arange(5.0,reach,3.)]
+            dike(pts,earth,'taxi_paddy_dike')
+        # Fields between them: most near the road planted with young rice in rows, laid as
+        # copies of a few 4 m pieces of row so the download carries each blade once.
+        dike_grass=[]
+        for a,b in zip(lanes,lanes[1:]):
+            for zA,zB in zip(cross,cross[1:]):
+                if a<60:
+                    for zz in np.arange(zA+.6,zB-.4,.45 if a<30 else .9):
+                        dike_grass.append((side*(b-.05),PADDY_WATER+.18,float(zz),.22,4,.5))
+                if a>20 or rng.random()>.72: continue
+                for l in np.arange(a+.5,min(b,24.)-.4,.36):
+                    for zz in np.arange(zA+.4,zB-4.3,4.):
+                        piece=rows[int(rng.integers(len(rows)))]
+                        c=piece.copy(); c.data=piece.data; bpy.context.scene.collection.objects.link(c)
+                        c.name='taxi_paddy_rice'
+                        c.matrix_world=Matrix.Translation(w(road_point(side*float(l),0,float(zz))))@Matrix.Rotation(-road_heading(float(zz)),4,'Z')
+        blades(dike_grass,grass,'taxi_paddy_dike_grass')
+    for piece in rows: bpy.data.objects.remove(piece)
+
+def mound(lateral,z,radius,material,name,top=-.42):
+    """A raised house plot above the flood: earth sloping into the water."""
+    vs=[road_point(lateral,top,z)]; fs=[]; rings=[(radius*.7,top-.02),(radius,PADDY_WATER+.05),(radius*1.25,PADDY_FLOOR)]
+    count=24
+    for r,y in rings:
+        for j in range(count):
+            a=j/count*math.tau; wob=1+.08*math.sin(j*2.3)
+            vs.append(road_point(lateral+math.cos(a)*r*wob,y,z+math.sin(a)*r*wob))
+    for j in range(count): fs.append((0,1+j,1+(j+1)%count))
+    for ring in range(len(rings)-1):
+        for j in range(count):
+            a=1+ring*count+j; b=1+ring*count+(j+1)%count
+            fs.append((a,a+count,b+count,b))
+    return mesh(name,vs,fs,material)
+
+def countryside(mats,rng,plant):
+    """What stands out on the paddies: stilt houses on their plots with banana clumps and a
+    lamp in one window, sugar-palm silhouettes on the dikes, and the scanned mud ruts in the
+    forest road beyond."""
+    earth=bpy.data.materials.get('M_taxi_dike_earth') or mats['M_wet_forest_floor']
+    house=import_scan('taxi_stilt_house'); palm=import_scan('taxi_fan_palm')
+    banana=import_scan('taxi_banana'); ruts=import_scan('taxi_mud_puddle')
+    for lat,z,yaw,lit in [(-27,92,math.pi/2,True),(62,40,-math.pi/2+.3,False),(-78,128,math.pi/2-.2,False)]:
+        mound(lat,z,7.5,earth,'taxi_road_house_plot')
+        place_scan(house,'stilt_house',lat,z,yaw,1.,-.42)
+        if lit:
+            # An oil lamp behind the shutters: the runtime hangs a flickering light here.
+            lamp=bpy.data.objects.new('taxi_road_anchor_house_lamp',None); bpy.context.scene.collection.objects.link(lamp)
+            lamp.location=w(road_point(lat+2.2,2.55,z+.6))
+        if lit or lat<-60:
+            # The lamp's own flame and glass, seen through the open front from the road.
+            glow=plain('M_taxi_oil_lamp_flame',(.9,.6,.3),.5,emission=(1,.55,.22),strength=6 if lit else 3)
+            ellipsoid('taxi_road_house_lamp_flame',road_point(lat+2.2,2.3,z+.6),(.07,.12,.07),glow)
+        for k in range(5 if lit else 2):
+            a=k/5*math.tau+float(rng.uniform(-.3,.3)); r=float(rng.uniform(4.4,6.2))
+            place_scan(banana,'banana',lat+math.cos(a)*r,z+math.sin(a)*r,float(rng.uniform(0,math.tau)),float(rng.uniform(.8,1.12)),-.44)
+        plant('coco_2',lat+(4.5 if lat<0 else -4.5),z+4,float(rng.uniform(.85,1.05)),clear=None,lift=-.44,anywhere=True,label='house_coconut')
+    # Three palms near enough to need their own leaves; the rest stand as cards.
+    near=[(15.5,58),(-21,99),(18,121)]
+    for lat,z in near:
+        place_scan(palm,'sugar_palm',lat,z,float(rng.uniform(0,math.tau)),float(rng.uniform(.95,1.15)),PADDY_WATER+.12)
+    card=plain('M_taxi_palm_card',(1,1,1),.8)
+    if PALM_CARD.exists():
+        nodes=card.node_tree.nodes; links=card.node_tree.links; bs=nodes['Principled BSDF']
+        tex=nodes.new('ShaderNodeTexImage'); tex.image=bpy.data.images.load(str(PALM_CARD),check_existing=True)
+        links.new(tex.outputs['Color'],bs.inputs['Base Color'])
+        cut=nodes.new('ShaderNodeMath'); cut.operation='GREATER_THAN'; cut.inputs[1].default_value=.4
+        links.new(tex.outputs['Alpha'],cut.inputs[0]); links.new(cut.outputs[0],bs.inputs['Alpha'])
+    card.use_backface_culling=False
+    vs=[];fs=[];uv=[];placed=0
+    while placed<46:
+        side=-1 if rng.random()<.5 else 1; lat=float(rng.uniform(24,145)); z=float(rng.uniform(-25,PADDY_END+4))
+        if any(abs(side*lat-a)<14 and abs(z-b)<14 for a,b in near): continue
+        for _ in range(1+int(rng.random()*3)):
+            l=side*lat+float(rng.normal(0,3)); zz=z+float(rng.normal(0,3)); s=float(rng.uniform(.8,1.25))
+            cw,ch=PALM_CARD_SIZE[0]*s/2,PALM_CARD_SIZE[1]*s
+            spin=float(rng.uniform(0,math.pi))
+            for turn in [spin,spin+math.pi/2]:
+                dx,dz=math.cos(turn)*cw,math.sin(turn)*cw; k=len(vs)
+                for (ox,oz,y) in [(-dx,-dz,0),(dx,dz,0),(dx,dz,ch),(-dx,-dz,ch)]:
+                    vs.append(road_point(l+ox,PADDY_WATER+.1+y,zz+oz))
+                fs.append((k,k+1,k+2,k+3)); uv+= [(0,0),(1,0),(1,1),(0,1)]
+            placed+=1
+    cards=mesh('taxi_road_palm_cards',vs,fs,card,uv=False)
+    layer=cards.data.uv_layers.new(name='UVMap')
+    for poly in cards.data.polygons:
+        for li in poly.loop_indices:
+            # mesh() reverses each face: map back to the authored corner order.
+            corner=list(reversed(range(4)))[li-poly.loop_start]
+            layer.data[li].uv=[(0,0),(1,0),(1,1),(0,1)][corner]
+    # The scanned mud ruts, water standing in them, along the forest road.
+    z=FOREST_START+6.
+    while z<505:
+        x=(-1 if rng.random()<.5 else 1)*.74
+        crown=-.13+.055*(1-(x/ROAD_HALF_WIDTH)**2)-.07
+        place_scan(ruts,'mud_rut',x,z,math.pi/2+float(rng.normal(0,.04)),float(rng.uniform(.85,1.05)),crown-.31)
+        z+=float(rng.uniform(26,44))
+    for o in house+palm+banana+ruts: bpy.data.objects.remove(o)
+
+# ------------------------------------------------------------ real people
+# The driver's body and Sora's legs are Renderpeople photoscans (CC BY, prepared by
+# taxi_scans.py), posed here on their own skeletons into the Rosalie's seats. The driver's
+# head stays the Khmer driver built above, set into the scanned collar.
+DRIVER_NECK=None
+
+def import_rigged(key):
+    full_gltf_group()
+    before=set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=str(SCANS/f'{key}.glb'))
+    new=[o for o in bpy.data.objects if o not in before]
+    arm=next(o for o in new if o.type=='ARMATURE')
+    # The skinned scan, not the importer's joint-display spheres.
+    body=max((o for o in new if o.type=='MESH'),key=lambda o:len(o.data.polygons))
+    for o in new:
+        if o not in (arm,body) and o.type!='EMPTY': bpy.data.objects.remove(o)
+    return arm,body
+
+def joint(arm,name):
+    bpy.context.view_layer.update()
+    return arm.matrix_world@arm.pose.bones[name].head
+
+def turn_bone(arm,name,axis,angle):
+    """Turn a pose bone about its head by `angle` around a world axis."""
+    bpy.context.view_layer.update()
+    pb=arm.pose.bones[name]; inv=arm.matrix_world.inverted().to_3x3()
+    R=Matrix.Rotation(angle,4,(inv@Vector(axis)).normalized())
+    pb.matrix=Matrix.Translation(pb.head)@R@Matrix.Translation(-pb.head)@pb.matrix
+    bpy.context.view_layer.update()
+
+def aim(arm,name,child,target):
+    """Turn bone `name` so its child joint lies along the line to a world point."""
+    head=joint(arm,name); cur=joint(arm,child)-head; want=Vector(target)-head
+    if cur.length<1e-6 or want.length<1e-6: return
+    axis,angle=cur.rotation_difference(want).to_axis_angle()
+    turn_bone(arm,name,axis,angle)
+
+def reach(arm,upper,lower,hand,wrist,pole):
+    """Two-bone arm IK: the elbow bends towards `pole`, the wrist lands at `wrist`."""
+    s=joint(arm,upper); a=(joint(arm,lower)-s).length; b=(joint(arm,hand)-joint(arm,lower)).length
+    to=Vector(wrist)-s; d=min(to.length,(a+b)*.995); f=to.normalized()
+    cosA=max(-1,min(1,(a*a+d*d-b*b)/(2*a*d)))
+    p=Vector(pole)-s; perp=(p-f*p.dot(f)).normalized()
+    elbow=s+f*a*cosA+perp*a*math.sqrt(1-cosA*cosA)
+    aim(arm,upper,lower,elbow); aim(arm,lower,hand,s+f*d)
+
+def knuckles(arm,side):
+    """The hand's knuckle line (index to little finger) and its fingers' direction."""
+    k1=joint(arm,bone(arm,f'index_01_{side}')); k4=joint(arm,bone(arm,f'pinky_01_{side}'))
+    wrist=joint(arm,bone(arm,f'hand_{side}')); mid=joint(arm,bone(arm,f'middle_01_{side}'))
+    return (k1-k4).normalized(),(mid-wrist).normalized()
+
+def palm_of(arm,side):
+    """Which way the palm faces: flexion closes the fingers towards it."""
+    across,d=knuckles(arm,side)
+    return (across.cross(d) if side=='r' else d.cross(across)).normalized()
+
+def curl(arm,side,angle_main,angle_thumb):
+    """Fingers closed round a rim: each joint flexed about the hand's knuckle line,
+    towards the palm (the sense differs between the hands)."""
+    across,_=knuckles(arm,side)
+    if side=='l': across=-across
+    for finger in ['index','middle','ring','pinky']:
+        for seg in ['01','02','03']:
+            name=next(b.name for b in arm.pose.bones if b.name.startswith(f'{finger}_{seg}_{side}'))
+            turn_bone(arm,name,across,angle_main)
+    for seg in ['02','03']:
+        name=next(b.name for b in arm.pose.bones if b.name.startswith(f'thumb_{seg}_{side}'))
+        turn_bone(arm,name,across,angle_thumb)
+
+def bone(arm,prefix):
+    return next(b.name for b in arm.pose.bones if b.name.startswith(prefix))
+
+def bake_pose(arm,body):
+    """The posed scan as a plain mesh: its skeleton and skin weights go."""
+    bpy.context.view_layer.update()
+    mats=[slot.material for slot in body.material_slots]
+    ev=body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    data=bpy.data.meshes.new_from_object(ev); data.transform(body.matrix_world)
+    data.materials.clear()
+    for m in mats: data.materials.append(m)
+    body.modifiers.clear(); body.parent=None; body.matrix_world=Matrix.Identity(4); body.data=data
+    body.vertex_groups.clear()
+    bpy.data.objects.remove(arm)
+
+def scan_colour(body):
+    """Mean base colour per face, sampled from the scan's own map."""
+    mat=body.data.materials[0]; px=base_pixels(mat)
+    uvl=body.data.uv_layers.active.data; h,wd=px.shape[:2]; out=[]
+    for p in body.data.polygons:
+        uv=sum((uvl[li].uv for li in p.loop_indices),Vector((0,0)))/len(p.loop_indices)
+        out.append(Vector(px[int((uv.y%1)*(h-1)),int((uv.x%1)*(wd-1))][:3]))
+    return out
+
+def skin_like(c):
+    return c.x>.18 and c.x>c.y*1.06 and c.y>c.z*1.0 and min(c)<.72
+
+def tinted(mat,name,tint):
+    """A copy of the scan's material with its colour multiplied (kept as a glTF factor)."""
+    m=mat.copy(); m.name=name
+    bs=m.node_tree.nodes.get('Principled BSDF')
+    for link in list(m.node_tree.links):
+        if link.to_socket==bs.inputs['Base Color']:
+            mix=m.node_tree.nodes.new('ShaderNodeMix'); mix.data_type='RGBA'; mix.blend_type='MULTIPLY'
+            mix.inputs['Factor'].default_value=1; mix.inputs[7].default_value=(*tint,1)
+            source=link.from_socket
+            m.node_tree.links.new(source,mix.inputs[6]); m.node_tree.links.new(mix.outputs[2],bs.inputs['Base Color'])
+            break
+    return m
+
+def driver_photo(photo):
+    """Eric's photo map recoloured for the driver, per pixel: skin (warm, red over blue) in
+    the sun-browned curve of his face; the white shirt (bright, unsaturated) as a plain
+    washed cream that keeps only its soft large folds; everything else as photographed."""
+    wd,ht=photo.size; px=np.empty(wd*ht*4,np.float32); photo.pixels.foreach_get(px); px=px.reshape(ht,wd,4)
+    rgb=px[...,:3]
+    lo,hi=rgb.min(-1),rgb.max(-1)
+    lin=np.where(rgb<=.04045,rgb/12.92,((rgb+.055)/1.055)**2.4)
+    for ch,ys in enumerate([(0,.36,.8),(0,.25,.66),(0,.17,.52)]):
+        lin[...,ch]=np.interp(lin[...,ch],(0,.5,1),ys)
+    browned=np.where(lin<=.0031308,lin*12.92,1.055*np.power(np.maximum(lin,0),1/2.4)-.055)
+    skin=np.clip(((rgb[...,0]-rgb[...,2])-.07)/.06,0,1)*np.clip((rgb[...,0]-rgb[...,1]+.02)/.04,0,1)*np.clip((hi-.12)/.08,0,1)
+    shade=soft_shading(photo,20); mean=float(np.median(shade[(lo>.5)&(hi-lo<.08)])) if ((lo>.5)&(hi-lo<.08)).any() else .7
+    cream=np.array((.5,.46,.38),np.float32)*np.clip(shade/mean,.8,1.12)[...,None]
+    shirt=np.clip((lo-.34)/.12,0,1)*np.clip((.14-(hi-lo))/.05,0,1)
+    out=rgb*(1-skin[...,None])+browned*skin[...,None]
+    out=out*(1-shirt[...,None])+cream*shirt[...,None]
+    img=bpy.data.images.new('T_taxi_driver_clothes',wd,ht); img.pixels.foreach_set(np.concatenate([out,np.ones((ht,wd,1),np.float32)],-1).ravel()); img.pack()
+    return img
+
+def simulate_sleeves(arm,body,rest,kinds):
+    """His shirt sleeves as cotton: split from the scan, subdivided, and cloth-simulated in
+    Blender while the arms move from the scan's A-pose to the wheel, over a collider just
+    inside them. The cotton bunches at the elbow and hangs from the forearm as a real
+    sleeve does; the scan's own sleeves were stiff tubes printed with A-pose shadows."""
+    sc=bpy.context.scene
+    posed={pb.name:pb.matrix_basis.copy() for pb in arm.pose.bones}
+    def key(frame):
+        for pb in arm.pose.bones:
+            pb.keyframe_insert('location',frame=frame)
+            pb.keyframe_insert('rotation_quaternion' if pb.rotation_mode=='QUATERNION' else 'rotation_euler',frame=frame)
+    for pb in arm.pose.bones: pb.matrix_basis=Matrix.Identity(4)
+    key(1)
+    for pb in arm.pose.bones: pb.matrix_basis=posed[pb.name]
+    key(34)
+    sc.frame_start,sc.frame_end=1,58
+    sc.frame_set(1)
+    # The sleeves: shirt beyond the shoulder seam, in his rest.
+    arm_faces=[]
+    for f in body.data.polygons:
+        x=sum(abs(rest[v].x) for v in f.vertices)/len(f.vertices); z=sum(rest[v].z for v in f.vertices)/len(f.vertices)
+        if kinds[f.index]==2 and x>.215 and z>.9: arm_faces.append(f.index)
+    bpy.ops.object.select_all(action='DESELECT'); body.select_set(True); bpy.context.view_layer.objects.active=body
+    bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_mode(type='FACE'); bpy.ops.mesh.select_all(action='DESELECT')
+    bm=bmesh.from_edit_mesh(body.data); bm.faces.ensure_lookup_table()
+    for i in arm_faces: bm.faces[i].select=True
+    bmesh.update_edit_mesh(body.data); bpy.ops.mesh.separate(type='SELECTED'); bpy.ops.object.mode_set(mode='OBJECT')
+    sleeves=next(o for o in bpy.context.selected_objects if o is not body)
+    sleeves.name=sleeves.data.name='taxi_driver_sleeves_scan'
+    bpy.ops.object.select_all(action='DESELECT'); sleeves.select_set(True); bpy.context.view_layer.objects.active=sleeves
+    # Simulated coarse (about 2 cm), so cotton folds broad and heavy instead of crumpling
+    # like paper; smoothed by subdivision once it has settled.
+    sub=sleeves.modifiers.new('fine','SUBSURF'); sub.subdivision_type='SIMPLE'; sub.levels=1
+    bpy.ops.object.modifier_move_to_index(modifier='fine',index=0); bpy.ops.object.modifier_apply(modifier='fine')
+    # Pinned where the sleeve is sewn to the shoulder and where the cuff closes round the wrist.
+    bm=bmesh.new(); bm.from_mesh(sleeves.data); bm.verts.ensure_lookup_table()
+    edge=[v.co.copy() for v in bm.verts if v.is_boundary]
+    from mathutils.kdtree import KDTree
+    tree=KDTree(len(edge))
+    for i,c in enumerate(edge): tree.insert(c,i)
+    tree.balance()
+    pin=sleeves.vertex_groups.new(name='pin')
+    for v in bm.verts:
+        d=tree.find(v.co)[2]
+        if d<.03: pin.add([v.index],max(0.,1-d/.03)**2,'REPLACE')
+    bm.free()
+    # The arm inside: the sleeve itself, 1.5 cm in, moving with the skeleton.
+    body_arm=sleeves.copy(); body_arm.data=sleeves.data.copy(); body_arm.name='_sleeve_collider'
+    bpy.context.collection.objects.link(body_arm)
+    shrink=body_arm.modifiers.new('in','DISPLACE'); shrink.strength=-.01; shrink.mid_level=0
+    bpy.context.view_layer.objects.active=body_arm
+    bpy.ops.object.modifier_move_to_index(modifier='in',index=0)
+    col=body_arm.modifiers.new('collide','COLLISION'); body_arm.collision.thickness_outer=.004; body_arm.collision.cloth_friction=8
+    body_arm.hide_render=True
+    cloth=sleeves.modifiers.new('cotton','CLOTH'); cs=cloth.settings
+    cs.quality=5; cs.mass=.18; cs.air_damping=2
+    cs.tension_stiffness=cs.compression_stiffness=40; cs.shear_stiffness=10; cs.bending_stiffness=25
+    cs.vertex_group_mass='pin'; cs.pin_stiffness=1
+    # (Self-collision costs twenty minutes here and the folds are fine without it.)
+    cc=cloth.collision_settings; cc.distance_min=.003; cc.use_self_collision=False; cc.collision_quality=2
+    cloth.point_cache.frame_start=1; cloth.point_cache.frame_end=58
+    import time; t0=time.time()
+    for f in range(1,59):
+        sc.frame_set(f)
+        if f%10==0: print('TAXI_SLEEVE_FRAME',f,round(time.time()-t0,1),flush=True)
+    ev=sleeves.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    data=bpy.data.meshes.new_from_object(ev); data.transform(sleeves.matrix_world)
+    sleeves.modifiers.clear(); sleeves.parent=None; sleeves.matrix_world=Matrix.Identity(4); sleeves.data=data
+    sleeves.vertex_groups.clear()
+    # The settled cotton smoothed: two light passes, then one level of subdivision.
+    bm=bmesh.new(); bm.from_mesh(sleeves.data)
+    inner=[v for v in bm.verts if not v.is_boundary]
+    for _ in range(2): bmesh.ops.smooth_vert(bm,verts=inner,factor=.35,use_axis_x=True,use_axis_y=True,use_axis_z=True)
+    bm.to_mesh(sleeves.data); bm.free()
+    bpy.ops.object.select_all(action='DESELECT'); sleeves.select_set(True); bpy.context.view_layer.objects.active=sleeves
+    smooth=sleeves.modifiers.new('smooth','SUBSURF'); smooth.levels=1; smooth.boundary_smooth='PRESERVE_CORNERS'
+    bpy.ops.object.modifier_apply(modifier='smooth')
+    for p in sleeves.data.polygons: p.use_smooth=True
+    bpy.data.objects.remove(body_arm)
+    print('TAXI_DRIVER_SLEEVES faces',len(sleeves.data.polygons),'pinned edge verts',len(edge))
+    return sleeves
+
+def driver_on_scan():
+    """Eric's photoscanned shirt, waistcoat, tie, trousers, hands and shoes, seated and
+    driving; the Khmer driver's head (built above) set into the collar."""
+    arm,body=import_rigged('taxi_driver_scan')
+    rest=[(body.matrix_world@v.co).copy() for v in body.data.vertices]
+    hip=Vector(w(DRIVER_HIP))
+    arm.location+=hip-joint(arm,bone(arm,'hip_'))
+    # Seated: thighs forward and a little up, the right foot on the accelerator, the left by the clutch.
+    for side,x,knee,ankle,ball in [('l',.36,(.38,-.35,.47),(.37,-.58,.12),(.37,-.72,.05)),
+                                   ('r',.18,(.17,-.35,.46),(.15,-.6,.14),(.13,-.75,.08))]:
+        aim(arm,bone(arm,f'upperleg_{side}'),bone(arm,f'lowerleg_{side}'),knee)
+        aim(arm,bone(arm,f'lowerleg_{side}'),bone(arm,f'foot_{side}'),ankle)
+        aim(arm,bone(arm,f'foot_{side}'),bone(arm,f'ball_{side}'),ball)
+    # Sitting back against the seat, then hunched a little over the wheel at the shoulders.
+    s1,s2,s3,neck,head=[bone(arm,p) for p in ['spine_01','spine_02','spine_03','neck_','head_']]
+    for name,child,lean in [(s1,s2,.10),(s2,s3,.02),(s3,neck,-.12),(neck,head,-.22)]:
+        j=joint(arm,name); aim(arm,name,child,j+Vector((0,lean,1)))
+    # Hands on the rim at a little above nine and three, from outside, fingers round it.
+    C=Vector(w(WHEEL_CENTRE)); F=Vector(w(WHEEL_FACING))-Vector(w((0,0,0))); F.normalize()
+    R=Vector((1,0,0)); R=(R-F*R.dot(F)).normalized(); U=F.cross(R)
+    if U.z<0: U=-U
+    for side,sign in [('l',1),('r',-1)]:
+        grip=C+R*sign*WHEEL_RADIUS*math.cos(.2)+U*WHEEL_RADIUS*math.sin(.2)
+        wrist=grip+F*.06+R*sign*.035
+        reach(arm,bone(arm,f'upperarm_{side}'),bone(arm,f'lowerarm_{side}'),bone(arm,f'hand_{side}'),wrist,
+              joint(arm,bone(arm,f'upperarm_{side}'))+Vector((sign*.5,.3,-1)))
+        # Fingers forward through the wheel, the palm turned in against the rim's outside.
+        hand=bone(arm,f'hand_{side}'); w0=joint(arm,hand)
+        aim(arm,hand,bone(arm,f'middle_01_{side}'),w0+(-F-R*sign*.3).normalized())
+        _,d=knuckles(arm,side); want=-R*sign; want=(want-d*want.dot(d)).normalized()
+        have=palm_of(arm,side); have=(have-d*have.dot(d)).normalized()
+        roll=math.atan2(have.cross(want).dot(d),have.dot(want))
+        turn_bone(arm,hand,d,roll)
+        curl(arm,side,math.radians(62),math.radians(25))
+    global DRIVER_SCAN_NECK
+    DRIVER_SCAN_NECK=joint(arm,neck).copy()
+    # What each face is, from the photo and his A-pose rest, kept on the faces themselves
+    # (the sleeves are split off below): 0 waistcoat/trousers/shoes, 1 hands, 2 shirt, 3 his own head.
+    colour=scan_colour(body)
+    kinds=[]
+    for f in body.data.polygons:
+        z=sum(rest[v].z for v in f.vertices)/len(f.vertices); x=sum(abs(rest[v].x) for v in f.vertices)/len(f.vertices)
+        r=math.hypot(*(sum((rest[v].xy for v in f.vertices),Vector((0,0)))/len(f.vertices)))
+        c=colour[f.index]; white=min(c)>.36 and max(c)-min(c)<.12
+        # His own neck, head and hair go; the whole collar stays, to its sewn edge.
+        if (z>1.47 and skin_like(c) and r<.09) or (z>1.6 and not white): kinds.append(3)
+        # The hands beyond the cuffs (in his A-pose rest), the wrist's shaded skin included.
+        elif x>.5 and z<1.2 and not white and (skin_like(c) or x>.58): kinds.append(1)
+        elif white or (x>.215 and z>.95 and max(c)>.2 and not skin_like(c)): kinds.append(2)
+        else: kinds.append(0)
+    body.data.attributes.new('drv_kind','INT','FACE').data.foreach_set('value',kinds)
+    sleeves=simulate_sleeves(arm,body,rest,kinds)
+    bake_pose(arm,body)
+    kinds=[0]*len(body.data.polygons); body.data.attributes['drv_kind'].data.foreach_get('value',kinds)
+    base=body.data.materials[0]
+    # One recoloured photo for all of him, decided pixel by pixel (so every edge follows the
+    # photo, not the mesh): his skin in the sun-browned grade of his face, the shirt a plain
+    # washed cream under its own soft folds, the waistcoat, trousers and shoes as scanned.
+    clothes=with_colour_map(base,'M_taxi_driver_clothes_scan',driver_photo(scan_photo(base)))
+    # (The scan's A-pose folds in the relief are kept, softened, under the simulated ones.)
+    for n in clothes.node_tree.nodes:
+        if n.type=='NORMAL_MAP': n.inputs['Strength'].default_value=.6
+    body.data.materials.clear(); body.data.materials.append(clothes)
+    sleeves.data.materials.clear(); sleeves.data.materials.append(clothes)
+    bm=bmesh.new(); bm.from_mesh(body.data); bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm,geom=[f for f in bm.faces if kinds[f.index]==3],context='FACES'); bm.to_mesh(body.data); bm.free()
+    body.name=body.data.name='taxi_driver_body_scan'
+    # His head is a real photoscanned face (tools/travel/taxi_driver_head.py): the
+    # MakeHuman head, hair, brows, lashes, eyes, suit and krama all go.
+    for name in ['taxi_driver_suit','taxi_driver_krama','taxi_driver_anatomy','taxi_driver_hair',
+                 'taxi_driver_brows','taxi_driver_lashes','taxi_driver_eyes']:
+        o=bpy.data.objects.get(name)
+        if o: bpy.data.objects.remove(o)
+    scanned_head(DRIVER_SCAN_NECK)
+
+# The scanned head's own frame (metres, facing -Y like the car): the base of the neck, the
+# pivot it turns on, the eyes, the mouth line and the jaw's hinge before the ear.
+HEAD_NECK_BASE=Vector((-.004,.03,1.79))
+HEAD_PIVOT=Vector((-.004,.03,1.83))
+HEAD_EYES=[Vector((-.040,-.088,1.9695)),Vector((.034,-.088,1.970))]
+HEAD_MOUTH_Z=1.890
+HEAD_HINGE=Vector((0,-.004,1.936))
+# At rest he looks past Sora into the trees on her side; his glances turn him from there.
+HEAD_REST_YAW=-27
+
+def _smooth(e0,e1,x):
+    t=np.clip((x-e0)/(e1-e0),0,1); return t*t*(3-2*t)
+
+def scanned_head(neck):
+    """The driver's photoscanned head set on the scanned body's collar, with the shapes the
+    runtime drives: look_road, look_sora, nod, talk and blink."""
+    o=import_glb(SCANS/'taxi_driver_head.glb')[0]
+    o.name='taxi_driver_head_scan'; o.data.name='taxi_driver_head_scan'
+    for p in o.data.polygons: p.use_smooth=True
+    co=np.array([v.co[:] for v in o.data.vertices])
+    def turned(points,yaw=0.,pitch=0.,pivot=HEAD_PIVOT,weight=None):
+        R=(Matrix.Rotation(math.radians(yaw),3,'Z')@Matrix.Rotation(math.radians(pitch),3,'X'))
+        rel=points-np.array(pivot); moved=rel@np.array(R).T+np.array(pivot)
+        w=_smooth(1.78,1.93,points[:,2])[:,None] if weight is None else weight[:,None]
+        return points+(moved-points)*w
+    shapes={}
+    # Back to the road (from his rest look past Sora), round to Sora, and a small nod.
+    shapes['look_road']=turned(co,yaw=-HEAD_REST_YAW*.92)
+    shapes['look_sora']=turned(co,yaw=HEAD_REST_YAW*.75,pitch=5)
+    shapes['nod']=turned(co,pitch=9)
+    # Speech: the jaw drops on its hinge; lips stretch rather than part, as a mumble.
+    jaw=_smooth(HEAD_MOUTH_Z+.003,HEAD_MOUTH_Z-.006,co[:,2])*_smooth(.012,-.03,co[:,1])*_smooth(1.80,1.845,co[:,2])
+    jaw*=1-_smooth(.034,.06,np.abs(co[:,0]))*_smooth(HEAD_MOUTH_Z-.03,HEAD_MOUTH_Z,co[:,2])
+    shapes['talk']=turned(co,pitch=11,pivot=HEAD_HINGE,weight=jaw)
+    # Blink: each upper lid slides down over the eye, the lower lid rises to meet it.
+    blink=co.copy()
+    for e in HEAD_EYES:
+        dx=(co[:,0]-e.x)/.019; front=_smooth(-.065,-.08,co[:,1])
+        across=np.clip(1-dx*dx,0,1)
+        upper=across*front*_smooth(e.z+.016,e.z+.004,co[:,2])*_smooth(e.z-.002,e.z+.003,co[:,2])
+        lower=across*front*_smooth(e.z-.012,e.z-.004,co[:,2])*_smooth(e.z+.001,e.z-.003,co[:,2])
+        blink[:,2]-=upper*.0085; blink[:,1]-=upper*.0012
+        blink[:,2]+=lower*.0022
+    shapes['blink']=blink
+    # Into the car: neck base on the collar, turned past Sora, a little forward over the wheel.
+    T=(Matrix.Translation(neck+Vector((0,-.026,-.04)))@Matrix.Rotation(math.radians(HEAD_REST_YAW),4,'Z')
+       @Matrix.Rotation(math.radians(4),4,'X')@Matrix.Translation(-HEAD_NECK_BASE))
+    o.shape_key_add(name='Basis',from_mix=False)
+    for name,pts in shapes.items():
+        key=o.shape_key_add(name=name,from_mix=False)
+        key.data.foreach_set('co',pts.astype(np.float32).ravel()); key.value=0
+    o.data.transform(T,shape_keys=True); o.data.update()
+    print('TAXI_DRIVER_HEAD scan at',[round(v,3) for v in (T@HEAD_NECK_BASE)],'faces',len(o.data.polygons))
+
+def scan_photo(base):
+    return next(n.image for n in base.node_tree.nodes
+                if n.type=='TEX_IMAGE' and n.image and n.image.colorspace_settings.name=='sRGB')
+
+def soft_shading(image,radius=10):
+    """A scan photo's light and shade with its weave or check blurred away: the folds,
+    creases and seams of the cloth, ready to be dyed another plain colour."""
+    wd,ht=image.size; px=np.empty(wd*ht*4,np.float32); image.pixels.foreach_get(px)
+    lum=px.reshape(ht,wd,4)[...,:3]@np.array([.3,.59,.11],np.float32)
+    def box(a,r):
+        c=np.cumsum(np.pad(a,((r+1,r),(0,0)),mode='edge'),0); a=(c[2*r+1:]-c[:-2*r-1])/(2*r+1)
+        c=np.cumsum(np.pad(a,((0,0),(r+1,r)),mode='edge'),1); return (c[:,2*r+1:]-c[:,:-2*r-1])/(2*r+1)
+    return box(box(lum,radius),radius)
+
+def shade_at(body,shade,faces):
+    """The mean of a soft shading map at these faces' UV centres."""
+    uvl=body.data.uv_layers.active.data; ht,wd=shade.shape; vals=[]
+    for p in body.data.polygons:
+        if p.index in faces:
+            uv=sum((uvl[li].uv for li in p.loop_indices),Vector((0,0)))/len(p.loop_indices)
+            vals.append(shade[int((uv.y%1)*(ht-1)),int((uv.x%1)*(wd-1))])
+    return float(np.mean(vals)) if vals else .5
+
+def with_colour_map(base,name,image):
+    """A copy of the scan's material reading its colour from `image`."""
+    m=base.copy(); m.name=name
+    for n in m.node_tree.nodes:
+        if n.type=='TEX_IMAGE' and n.image and n.image.colorspace_settings.name=='sRGB': n.image=image
+    return m
+
+def redyed(base,name,image_name,colour,shade,mean):
+    """A copy of the scan's material whose colour map is `colour` (sRGB) under its own folds."""
+    k=np.clip(shade/max(mean,1e-3),.62,1.25)[...,None]; ht,wd=shade.shape
+    out=np.concatenate([np.array(colour,np.float32)*k,np.ones((ht,wd,1),np.float32)],-1)
+    img=bpy.data.images.new(image_name,wd,ht); img.pixels.foreach_set(out.ravel()); img.pack()
+    m=base.copy(); m.name=name
+    for n in m.node_tree.nodes:
+        if n.type=='TEX_IMAGE' and n.image and n.image.colorspace_settings.name=='sRGB': n.image=img
+    return m
+
+def passenger_on_scan():
+    """Sora's seated lower body from Carla's photoscan: plain dark cotton travel trousers
+    with the scan's own folds, bare ankles, black leather pumps on the passenger mat, and
+    a cream cotton blouse tucked in at her waist."""
+    for o in [o for o in bpy.data.objects if o.name.startswith('taxi_sora')]: bpy.data.objects.remove(o)
+    arm,body=import_rigged('taxi_sora_scan')
+    rest=[(body.matrix_world@v.co).copy() for v in body.data.vertices]
+    hip=Vector(w(SORA_HIP))
+    arm.location+=hip-joint(arm,bone(arm,'hip_'))
+    for side,knee,ankle,ball in [('l',(-.19,-.31,.44),(-.18,-.53,.12),(-.18,-.67,.03)),
+                                 ('r',(-.35,-.31,.44),(-.37,-.53,.12),(-.38,-.67,.03))]:
+        # Her heels and the balls of her feet on the Rosalie's own floorboards, not through them.
+        fa=ray_down(ankle[0],ankle[1],.4); fb=ray_down(ball[0],ball[1],.4)
+        if fa is not None: ankle=(ankle[0],ankle[1],max(ankle[2],fa+.105))
+        if fb is not None: ball=(ball[0],ball[1],max(ball[2],fb+.045))
+        aim(arm,bone(arm,f'upperleg_{side}'),bone(arm,f'lowerleg_{side}'),knee)
+        aim(arm,bone(arm,f'lowerleg_{side}'),bone(arm,f'foot_{side}'),ankle)
+        aim(arm,bone(arm,f'foot_{side}'),bone(arm,f'ball_{side}'),ball)
+    bake_pose(arm,body)
+    colour=scan_colour(body)
+    base=body.data.materials[0]
+    kinds=[]
+    for f in body.data.polygons:
+        z=sum(rest[v].z for v in f.vertices)/len(f.vertices)
+        x=sum(abs(rest[v].x) for v in f.vertices)/len(f.vertices); c=colour[f.index]
+        if z>1.06 or (x>.24 and z>.6): kinds.append(-1)      # above her waist, and her arms
+        elif z<.16 and max(c)<.2: kinds.append(2)            # her black pumps
+        elif skin_like(c) and z<.3: kinds.append(1)          # bare ankles
+        elif z>.96 and max(c)<.25: kinds.append(3)           # her top, tucked in: a blouse now
+        else: kinds.append(0)                                # trousers
+    shade=soft_shading(scan_photo(base),16)
+    def mean(k): return shade_at(body,shade,{i for i,kk in enumerate(kinds) if kk==k})
+    trousers=redyed(base,'M_taxi_sora_trousers_scan','T_taxi_sora_trousers',(.115,.102,.088),shade,mean(0))
+    blouse=redyed(base,'M_taxi_sora_blouse_scan','T_taxi_sora_blouse',(.66,.62,.53),shade,mean(3))
+    skin=tinted(base,'M_taxi_sora_skin_scan',(.66,.48,.36))
+    body.data.materials.clear()
+    for m in (trousers,skin,base,blouse): body.data.materials.append(m)
+    base.name='M_taxi_sora_shoes_scan'
+    bm=bmesh.new(); bm.from_mesh(body.data); bm.faces.ensure_lookup_table()
+    for f in bm.faces:
+        if kinds[f.index]>=0: f.material_index=kinds[f.index]
+    bmesh.ops.delete(bm,geom=[f for f in bm.faces if kinds[f.index]<0],context='FACES')
+    # The cut at her waist closed with blouse, seen from her own eyes as the cloth over her stomach.
+    top=[e for e in bm.edges if e.is_boundary and min(v.co.z for v in e.verts)>hip.z+.05]
+    filled=bmesh.ops.holes_fill(bm,edges=top,sides=0)['faces']
+    for f in filled: f.material_index=3
+    bmesh.ops.triangulate(bm,faces=filled)
+    bm.to_mesh(body.data); bm.free()
+    for p in body.data.polygons: p.use_smooth=True
+    body.name=body.data.name='taxi_sora_legs_scan'
+    print('TAXI_SORA_SCAN faces',len(body.data.polygons),'kinds',[kinds.count(k) for k in (-1,0,1,2,3)])
+
 mode=sys.argv[sys.argv.index('--')+1] if '--' in sys.argv else 'all'
-if mode in ['all','roadside']: roadside()
+if mode in ['all','roadside']: palm_card(); roadside()
 if mode in ['all','cabin']: cabin()

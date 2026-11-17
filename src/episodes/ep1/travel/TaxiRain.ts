@@ -4,10 +4,21 @@ import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
+import type { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "@/audio/synth";
 
-const WIDTH = 1024,
-  HEIGHT = 512;
+const WIDTH = 1024;
+
+/**
+ * The windscreen's glass as the cabin marks it: its lower and upper corners (the glass
+ * leans back from bottom to top), and the top-hung vacuum wipers' pivots and blade reach.
+ */
+export interface WindscreenFrame {
+  min: Vector3;
+  max: Vector3;
+  wipers: Vector3[];
+  blade: number;
+}
 interface Drop {
   x: number;
   y: number;
@@ -15,7 +26,7 @@ interface Drop {
   speed: number;
 }
 
-/** A curved, raked windshield. The same wiper angle drives the blades and water removal. */
+/** The flat, upright 1930s windscreen. The same wiper angle drives the blades and water removal. */
 export class TaxiRain {
   readonly glass: Mesh;
   readonly sideTexture: DynamicTexture;
@@ -27,7 +38,16 @@ export class TaxiRain {
   private readonly drops: Drop[] = [];
   private sinceDraw = 0;
   private previous = 0;
-  constructor(scene: Scene) {
+  /** Canvas height: square pixels on the glass. */
+  private readonly height: number;
+  constructor(
+    scene: Scene,
+    private readonly frame: WindscreenFrame,
+  ) {
+    const width = frame.max.x - frame.min.x,
+      tall = frame.max.y - frame.min.y;
+    this.height = Math.max(128, Math.round((WIDTH * tall) / width / 32) * 32);
+    const HEIGHT = this.height;
     this.texture = new DynamicTexture(
       "taxi_windshield_water",
       { width: WIDTH, height: HEIGHT },
@@ -76,16 +96,20 @@ export class TaxiRain {
       uvs: number[] = [],
       indices: number[] = [],
       normals: number[] = [];
-    for (let j = 0; j <= 8; j++)
-      for (let i = 0; i <= 32; i++) {
-        const u = i / 32,
-          v = j / 8,
-          x = (u * 2 - 1) * (0.82 - 0.13 * v);
-        positions.push(x, 1.04 + 0.72 * v, 1.28 - 0.42 * v + 0.035 * (1 - (u * 2 - 1) ** 2));
+    // Flat glass, a hair inside the frame's rubber, leaning back from its foot to its head.
+    for (let j = 0; j <= 4; j++)
+      for (let i = 0; i <= 8; i++) {
+        const u = i / 8,
+          v = j / 4;
+        positions.push(
+          frame.min.x + (frame.max.x - frame.min.x) * u,
+          frame.min.y + (frame.max.y - frame.min.y) * v,
+          frame.min.z + (frame.max.z - frame.min.z) * v,
+        );
         uvs.push(u, v);
-        if (i < 32 && j < 8) {
-          const a = j * 33 + i;
-          indices.push(a, a + 33, a + 1, a + 1, a + 33, a + 34);
+        if (i < 8 && j < 4) {
+          const a = j * 9 + i;
+          indices.push(a, a + 9, a + 1, a + 1, a + 9, a + 10);
         }
       }
     VertexData.ComputeNormals(positions, indices, normals);
@@ -100,6 +124,7 @@ export class TaxiRain {
     this.paint(0);
   }
   private drop(anywhere = false): Drop {
+    const HEIGHT = this.height;
     const r = 0.9 + this.random() ** 2 * 3.1;
     return {
       x: this.random() * WIDTH,
@@ -109,6 +134,10 @@ export class TaxiRain {
     };
   }
   update(dt: number, angle: number, flash: number): void {
+    const HEIGHT = this.height,
+      { min, max, wipers, blade } = this.frame,
+      width = max.x - min.x,
+      tall = max.y - min.y;
     for (const d of this.drops) {
       d.y += d.speed * dt;
       d.x += (d.speed * 0.075 + Math.sin(d.y * 0.024) * 2) * dt;
@@ -120,12 +149,13 @@ export class TaxiRain {
     mask.fillRect(0, 0, WIDTH, HEIGHT);
     mask.globalCompositeOperation = "destination-out";
     mask.fillStyle = "black";
-    for (const x of [-0.43, 0.43]) {
-      const cx = (x / 1.64 + 0.5) * WIDTH,
-        cy = HEIGHT * 0.975;
+    // Each blade hangs from its pivot at the head of the glass and sweeps the arc below it.
+    for (const pivot of wipers) {
+      const cx = ((pivot.x - min.x) / width) * WIDTH,
+        cy = (1 - (pivot.y - min.y) / tall) * HEIGHT;
       const end = (a: number) => [
-        cx - ((Math.sin(a) * 0.65) / 1.64) * WIDTH,
-        cy - ((Math.cos(a) * 0.65 * 0.889) / 0.72) * HEIGHT,
+        cx + ((Math.sin(a) * blade) / width) * WIDTH,
+        cy + ((Math.cos(a) * blade) / tall) * HEIGHT,
       ];
       const a = end(this.previous),
         b = end(angle);
@@ -151,6 +181,7 @@ export class TaxiRain {
     }
   }
   private paint(flash: number): void {
+    const HEIGHT = this.height;
     const c = this.texture.getContext() as CanvasRenderingContext2D;
     c.clearRect(0, 0, WIDTH, HEIGHT);
     c.drawImage(this.mist, 0, 0);

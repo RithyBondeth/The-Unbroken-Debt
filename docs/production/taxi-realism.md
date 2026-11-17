@@ -168,3 +168,29 @@ Advisor review: the mirror rider and the window prints extend the black Neak Ta'
 - **Window (60.18–61.02 s):** with the lamps dead, the lightning shows its face at the glass, looking down at her; a faint cold fill stands for lightning through the windscreen.
 
 The back-seat rider in the mirror still uses the shrine effigy (`ShadowFigure`).
+
+## Redesign, 17 Nov 2026: a real 1933 taxi, paddies, and real people
+
+**The taxi.** The cabin is a photoscanned 1933 Citroën Rosalie (RolloT, CC BY 4.0), prepared by `tools/travel/taxi_scans.py` and relined by region in `build-taxi.py` with Poly Haven photo textures. The runtime finds lamps, glass, wipers, mirror, dials and seats from `taxi_anchor_*` empties. The wipers hang from the top, the cluster has five dials, and the mirror shows the paddies.
+
+**The road.** The first 140 m run between flooded paddies: dikes, instanced rows of rice, a palm far card, three scanned stilt houses with a lit lamp, and a laterite embankment. The forest starts at 150 m, with a shrine and candle at 157.5 m and scanned mud ruts in the track.
+
+**The driver is a photoscan.**
+- **Face and head:** a real 8K photoscan of a man ("A-Pose - Male Full Body 3D Scan", OverseerThuror, CC BY 4.0), prepared by `tools/travel/taxi_driver_head.py`. From the 2.6-million-face scan it keeps the head and the bare neck. The hoodie comes off, and a fitted neck tube runs down into the collar. The baseball cap becomes a 1930s cloth cap: its brim is cut back to a short peak and its embroidered letters are smoothed away. Logos, eyelets and the strap are re-dyed as worn dark cotton twill, sweat-darkened at the band.
+- **Skin:** browned to a sun-dark Sino-Khmer tone with an RGB curve. The photo's pores, stubble and creases stay.
+- **Bake:** a 46,000-triangle game mesh is baked in Cycles from the full scan: 4096 px colour, 2048 relief, 1024 roughness. The roughness has wet eyes, lips, an oily nose and brow, matte hair and cotton. Ears, eyes, nose and lips are protected from decimation, so the thin ear bakes clean. UV islands are weighted so the face gets about five times the texture of the cap. Missed texels and island borders are filled from their neighbours, so no seam darkens in the mips.
+- **Shapes:** `build-taxi.py` (`scanned_head`) sets the head on the scanned body's collar and bakes his shapes: `look_road`, `look_sora` and `nod` (neck-weighted turns), `talk` (the jaw on its hinge) and `blink` (the lids). Sources and credits are in the asset tracker (V1-193 to V1-201).
+- **Body:** Renderpeople's "Eric" (CC BY 4.0), posed seated with two-bone IK, his hands curled round the rim. One recoloured copy of the scan's photo dresses all of him (`driver_photo`), decided pixel by pixel so every edge follows the photo rather than the mesh. His skin takes the same sun-browned curve as his face. The white shirt becomes a plain, washed, old cream that keeps only its soft large folds: the studio shadows of the scan's A-pose are gone. The waistcoat, trousers and shoes stay as photographed. The whole collar stays, up to its sewn edge; only his own neck, head and hair are cut away.
+- **Sleeves (`simulate_sleeves`):** split off, then cloth-simulated as cotton while the arms move from the A-pose to the wheel, over a collider 1 cm inside them. The cloth is simulated coarse (about 2 cm) with stiff bending, so it falls in broad, heavy folds: at the elbow, and hanging from the forearm. After it settles it is lightly smoothed and subdivided. A fine, soft simulation had crumpled like paper, and self-collision cost twenty minutes for no visible gain. The simulation adds about a minute to `build-taxi.py -- cabin`.
+- **No tangents in the GLB:** they push the instanced trim past WebGPU's eight vertex buffers and break the face's blend shapes. The face's relief reads well with the renderer's own tangents.
+
+**Sora's legs.** Renderpeople's "Carla" (CC BY 4.0), posed into the footwell, her heels and the balls of her feet set on the Rosalie's floorboards by a ray to the floor. The glen-check trousers are re-dyed plain dark cotton and keep the scan's folds. Her top becomes a cream blouse tucked in at the waist, and the cut above it is closed with blouse, so the old flat cloth over her lap is gone. Her black leather pumps rest on the mat.
+
+**The Neak Ta's skin is real.** The roadside figure keeps its photoscanned body (LaPresse3D, CC BY 4.0) and gets its own baked skin (`soot_skin` in `build-neakta-roadside.py`):
+- **Colour:** the scan's photo graded to deep soot-brown, so its pores, veins and old faded markings still show. Ash is dusted on in patches, and mud has dried in runs down the shins and feet.
+- **Roughness:** rain runs wet in streaks; the ash is dry.
+- **Relief:** baked in the body's own space. A relief taken from the photo creased along each of its hundreds of UV islands.
+
+The rebuilt right side's copied split normals are cleared. (Smoothing the arms' scan noise was tried: it shrank them to spikes.) The runtime no longer multiplies the skin by near-black (0.009), which had left only a chrome-like sheen. It dims the baked colour to about a quarter, so under the lightning it reads as a soot-dark man with skin, not black plastic. The sash is soaked nearly black. The hair is finer and sparser, with wet strands gathered into clumps that pinch together at the tips.
+
+**Budgets and tests.** The people keep 2K maps, with the face in UASTC, and the cabin GLB is now about 22 MB (budget 26 MiB). The roadside is 15.9 MB (budget 17 MiB) and the Neak Ta 6.3 MB. `taxiAssets.test.ts` now checks the Rosalie (its own linings, its roof height, a floor sealed below Sora's eyes, the walnut fascia and dials) and the scanned people (shapes and maps on the face, shoes visible from Sora's eyes, no lap cloth). `optimise-taxi.mjs` caps everything else at 1024 px through the gltf-transform API, because the CLI's `--pattern` cannot exclude names.
