@@ -119,11 +119,14 @@ def _one_time_fixes(Matrix):
         bpy.data.objects.remove(o, do_unlink=True)
 
 
+
 def _settle_small_things():
+    # Wasp nests from the old back eave are indoors now, in the corridor: they go.
+    _verts_in("house_decay_wasp_nests", (-9, 21.9, 3.5), (9, 23.5, 6.0), (0, 0, -60.0))
     # Small things set down onto the ground or the floor beneath them (twice: a part
     # moved in the first pass can uncover another).
     import ground_audit
-    ground_audit.REGION = (-10, 7, 10, 27)
+    ground_audit.REGION = (-10, 7, 10, 33)
     drop = re.compile(r"^(house_decay_tile_shards|bath_ash_pot|sok_notes|puddle_\d+|house_dread_kitchen_23)$")
     for _pass in range(2):
         failures, ctx = ground_audit.audit()
@@ -146,7 +149,7 @@ def _settle_small_things():
             _verts_in(name, lo, hi, (0, 0, -(gap + 0.002)))
     # Strays sent below the world are deleted outright.
     for o in bpy.data.objects:
-        if o.type == "MESH" and drop.match(o.name):
+        if o.type == "MESH" and (drop.match(o.name) or o.name == "house_decay_wasp_nests"):
             import bmesh
             bm = bmesh.new()
             bm.from_mesh(o.data)
@@ -159,6 +162,136 @@ def _settle_small_things():
     print(f"[house] floating parts left in the house area: {len(after)}")
     for f in after:
         print(f"[house]   {f['object']} gap {f['gap']} at {f['min']}")
+
+
+KITCHEN_JUNK = re.compile(
+    r"^(house_dread_kitchen_\d+|house_dread_prop_\d+_\d+|hearth_(charcoal|firewood|firewood_end|stone)_\d+"
+    r"|kitchen_hearth_(ash_\d+|earth|plank_[nesw]|scorch_[nesw])|kitchen_table(_leg_.*)?|kitchen_shelf"
+    r"|col_kitchen_(hearth|table)|prop_ceramic_pot|prop_wicker_basket_02\.003|prop_wooden_bucket_01)(\.\d+)?$")
+
+
+def clear_kitchen():
+    """The kitchen is tidied: the rot, hair, stains, scattered junk and the old
+    box-built furniture go. The game's four kitchen items (matches drawer, oil,
+    betel leaves, areca nut) stay where they are; house_rooms.py refurnishes it."""
+    doomed = [o.name for o in bpy.data.objects if KITCHEN_JUNK.match(o.name)]
+    _delete(doomed)
+    print(f"[house] kitchen: removed {len(doomed)} objects")
+
+
+# The bigger house's footprint (back block, porch, rear stairs, galleries): nothing grows in it.
+FOOTPRINT = [(-8.7, 21.8, 8.7, 30.0), (-8.7, 13.8, -5.9, 22.0), (5.9, 13.8, 8.7, 22.0), (1.8, 28.0, 5.6, 29.7)]
+PLANTS = re.compile(r"^(forest_grass_|house_forest_(house_sedge|forest_understory)_|yard_edge_grass_)")
+
+
+def _in_footprint(x, y):
+    return any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1 in FOOTPRINT)
+
+
+def _delete(names):
+    for name in names:
+        o = bpy.data.objects.get(name)
+        if o is None:
+            continue
+        kids = [c.name for c in o.children_recursive]
+        bpy.data.objects.remove(o, do_unlink=True)
+        for kid in kids:
+            c = bpy.data.objects.get(kid)
+            if c is not None:
+                bpy.data.objects.remove(c, do_unlink=True)
+
+
+def _shift(names, delta):
+    for name in names:
+        o = bpy.data.objects.get(name)
+        if o is not None and o.parent is None:
+            o.matrix_world.translation += Vector(delta)
+
+
+def site_work():
+    """One-time changes round the bigger house (the file remembers them)."""
+    import bmesh
+    from mathutils import Matrix
+    scene = bpy.context.scene
+    if scene.get("colonial_house_site_done"):
+        return
+    area = bpy.data.collections["ep1_area_village"]
+    # Plants: bananas, shrubs, ferns and grass patches where the house now stands.
+    gone = []
+    for o in list(bpy.data.objects):
+        if o.parent is not None:
+            continue
+        if o.type == "EMPTY" and re.match(r"^prop_(fern_02|pachira_aquatica_01|shrub_0\d)", o.name):
+            if _in_footprint(o.location.x, o.location.y):
+                gone.append(o.name)
+        elif o.type == "MESH" and re.match(r"^banana_\d+$", o.name):
+            c = sum((o.matrix_world @ Vector(v) for v in o.bound_box), Vector()) / 8
+            if _in_footprint(c.x, c.y):
+                gone.append(o.name)
+    _delete(gone)
+    patches = 0
+    for o in [o for o in bpy.data.objects if o.type == "MESH" and PLANTS.match(o.name)]:
+        if o.data.users > 1:
+            o.data = o.data.copy()
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        mw = o.matrix_world
+        # Loose parts (one plant each) whose middle lies in the footprint.
+        seen, doomed = set(), []
+        for v in bm.verts:
+            if v in seen:
+                continue
+            part, stack = [], [v]
+            seen.add(v)
+            while stack:
+                cur = stack.pop()
+                part.append(cur)
+                for e in cur.link_edges:
+                    w = e.other_vert(cur)
+                    if w not in seen:
+                        seen.add(w)
+                        stack.append(w)
+            c = sum((mw @ p.co for p in part), Vector()) / len(part)
+            if _in_footprint(c.x, c.y):
+                doomed += part
+        if doomed:
+            bmesh.ops.delete(bm, geom=doomed, context="VERTS")
+            bm.to_mesh(o.data)
+            patches += 1
+        bm.free()
+    # The big tree that stood where the dining room is now grows beyond the back fence.
+    _shift([n for n in ("tree_316", "col_tree_316")], (0.0, 34.5 - 25.18, 0.0))
+    # The back fence moves out behind the porch stairs; the side fences run on to meet it.
+    _shift([o.name for o in bpy.data.objects if re.match(r"^(col_)?fence_n_", o.name)], (0.0, 5.0, 0.0))
+    from khmer import bamboo_fence
+    fm = {"bamboo": bpy.data.materials["M_bamboo"]}
+    bamboo_fence(area, fm, "fence_w_back", (-13.0, 27.0), (-13.0, 32.0))
+    bamboo_fence(area, fm, "fence_e_back", (13.0, 27.0), (13.0, 32.0))
+    # Rain jars stand under the new back eave; the drip markers follow the eave.
+    for name, x in (("rain_jar_0", -6.7), ("rain_jar_1", 6.7)):
+        for nm in (name, f"col_{name}"):
+            o = bpy.data.objects.get(nm)
+            if o:
+                c = sum((o.matrix_world @ Vector(v) for v in o.bound_box), Vector()) / 8
+                o.matrix_world.translation += Vector((x - c.x, 29.35 - c.y, 0))
+    for name, x in (("marker_eave_3_a", -8.9), ("marker_eave_3_b", 8.9)):
+        o = bpy.data.objects.get(name)
+        if o:
+            o.location = (x, 28.9, 4.35)
+    # The rear stairs now climb along the back wall to the porch's east end.
+    bpy.context.view_layer.update()
+    stairs = bpy.data.objects.get("stairs_rear_detailed")
+    col = bpy.data.objects.get("col_stairs_rear")
+    if stairs:
+        pts = [stairs.matrix_world @ v.co for v in stairs.data.vertices]
+        top = Vector(((min(p.x for p in pts) + max(p.x for p in pts)) / 2, min(p.y for p in pts), 0))
+        target = Vector((2.0, 28.75, 0))
+        turn = Matrix.Translation(target) @ Matrix.Rotation(-math.pi / 2, 4, "Z") @ Matrix.Translation(-top)
+        for o in (stairs, col):
+            if o:
+                o.matrix_world = turn @ o.matrix_world
+    scene["colonial_house_site_done"] = True
+    print(f"[house] site: removed {len(gone)} plants, thinned {patches} patches, moved tree, fence, jars, stairs")
 
 
 def main():
@@ -184,6 +317,8 @@ def main():
             if child.name in bpy.data.objects:
                 bpy.data.objects.remove(child, do_unlink=True)
         bpy.data.objects.remove(o, do_unlink=True)
+    clear_kitchen()
+    site_work()
     m = colonial_materials()
     weathering.OUT = OUT
     # Old lime plaster at the foot of a house in the wet: grey, mud-splashed, green with algae.
@@ -195,7 +330,19 @@ def main():
     m["brass"] = bpy.data.materials["M_brass"]
     m["termite"] = bpy.data.materials["M_house_detail_termite_mud"]
     m["rag"] = bpy.data.materials["M_wet_rag"]
+    m["floor"] = bpy.data.materials["M_floor_boards"]
+    for key, name in (("earth", "M_wet_termite_earth"), ("ash", "M_ash"), ("logs", "M_wet_bark"), ("rope", "M_rope"),
+                      ("mat", "M_reed_mat"), ("cushion", "M_cushion"), ("krama", "M_krama"), ("cotton", "M_tent_cotton"),
+                      ("cloth_red", "M_wet_cloth_red"), ("sandal", "M_sandal")):
+        m[key] = bpy.data.materials[name]
+    m["clay"] = bpy.data.materials["M_clay"]
+    m["cotton_dirty"] = bpy.data.materials["M_cotton_dirty"]
+    # Cushions in a dark woven silk-cotton, not the gingham picnic cloth.
+    m["cushion"] = bpy.data.materials.get("M_ep1_house_cushion") or library_material(
+        "quatrefoil_jacquard_fabric", "M_ep1_house_cushion", tint=(0.42, 0.16, 0.1))
     colonial_house.build(house, m, props)
+    import house_rooms
+    house_rooms.furnish(house, m)
     # The yantra cloths still hang over the front door and Sok's door, now in front of the fanlights.
     for name, axis, value in (("yantra_front", 1, 11.44 - 0.037), ("yantra_sok", 0, 2.94 - 0.037)):
         o = bpy.data.objects.get(name)

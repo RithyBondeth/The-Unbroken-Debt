@@ -25,7 +25,8 @@ export const ROAD_Z = 63.5;
 const PADDIES = { minZ: 60.5, maxZ: 86.5 };
 /** Raised bunds close the fields east and west, inside the walls' thicket. */
 const BUND_X = 33.5;
-export const YARD: Rect = { minX: -13, maxX: 13, minZ: -27, maxZ: 3 };
+/** The compound inside its fence; the back fence stands behind the porch stairs (colonial_house.py). */
+export const YARD: Rect = { minX: -13, maxX: 13, minZ: -32, maxZ: 3 };
 export const PATH: readonly (readonly [number, number])[] = [
   [-1.5, 60],
   [-2.5, 50],

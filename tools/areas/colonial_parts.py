@@ -251,6 +251,9 @@ def valance(name, coll, along_x, fixed, a0, a1, z_top, mat, drop=0.22, scallop=0
         a, b = i * 4, (i + 1) * 4
         faces += [(a, b, b + 1, a + 1), (a + 2, a + 3, b + 3, b + 2), (a, a + 2, b + 2, b), (a + 1, b + 1, b + 3, a + 3)]
     faces += [(0, 1, 3, 2), ((m - 1) * 4, (m - 1) * 4 + 2, (m - 1) * 4 + 3, (m - 1) * 4 + 1)]
+    if not along_x:
+        # Swapping the axes mirrors the board: turn its faces back outwards.
+        faces = [tuple(reversed(f)) for f in faces]
     obj = mesh_object(name, coll, verts, faces, mat)
     _uv_box(obj, mat, 0.8, 0 if along_x else 1, 2)
     return obj
@@ -264,8 +267,28 @@ def plinth_post(name, coll, x, y, z_top, post_mat, plinth_mat, size=0.24, plinth
               y + plinth / 2 + 0.03, plinth_h, plinth_h + 0.05, plinth_mat, edge=0.012)
     post = box(name, coll, x - size / 2, x + size / 2, y - size / 2, y + size / 2, plinth_h + 0.05, z_top, post_mat,
                edge=0.025)
-    _uv_box(post, post_mat, 1.0, 2, 0)
+    _grain_up(post, 1.0)
     return post, pl, cap
+
+
+def _grain_up(obj, tile):
+    """UVs with the grain (texture u) running up every side face of a post, and across
+    its end grain at top and bottom."""
+    mesh = obj.data
+    if not mesh.uv_layers:
+        mesh.uv_layers.new(name="UVMap")
+    uv = mesh.uv_layers[0]
+    mw = obj.matrix_world
+    for poly in mesh.polygons:
+        n = poly.normal
+        for li in poly.loop_indices:
+            c = mw @ mesh.vertices[mesh.loops[li].vertex_index].co
+            if abs(n.z) > 0.7:
+                uv.data[li].uv = (c.x / tile, c.y / tile)
+            elif abs(n.x) >= abs(n.y):
+                uv.data[li].uv = (c.z / tile, c.y / tile)
+            else:
+                uv.data[li].uv = (c.z / tile, c.x / tile)
 
 
 def _marseille_mesh(underside=True):
