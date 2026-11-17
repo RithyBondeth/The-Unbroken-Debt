@@ -57,7 +57,6 @@ import { ChestInvestigation } from "../act3/ChestInvestigation";
 import { EarlyStealth } from "./EarlyStealth";
 import { SavePoint } from "@/systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
-import { ShrineEffigy } from "./ShrineEffigy";
 import { KrasueEncounter } from "../entities/KrasueEncounter";
 import { KrasueModel } from "@/shared/entities/KrasueModel";
 import {
@@ -175,7 +174,7 @@ export class ActOne {
     game.fallGuard.bounds = PLAY;
     await Promise.all([
       ShadowFigure.prepare(game.scene),
-      ShrineEffigy.prepare(game.scene),
+      PhraPhum.prepare(game.scene),
       KrasueModel.prepare(game.scene),
     ]);
     const offeringModels = new OfferingModels(game.scene);
