@@ -6,16 +6,22 @@ import { seededRandom } from "@/audio/synth";
 
 /** How each cabin surface has aged: tiling, how far grime darkens it, and how it dulls or polishes. */
 const WEAR: Record<string, { tile: number; grime: number; rough: number; dim: number }> = {
-  M_taxi_worn_vinyl: { tile: 3, grime: 0.9, rough: 0.8, dim: 0.72 },
-  M_taxi_leather: { tile: 3, grime: 0.85, rough: 0.8, dim: 0.75 },
+  // The Rosalie's own seats, wheel and small trim, its doors and body, in their maps.
+  M_internal: { tile: 3, grime: 0.85, rough: 0.8, dim: 0.62 },
+  M_door: { tile: 2.5, grime: 0.9, rough: 0.9, dim: 0.72 },
+  M_external: { tile: 2.5, grime: 0.9, rough: 0.9, dim: 0.72 },
+  M_taxi_body_lacquer_door: { tile: 2, grime: 0.8, rough: 0.5, dim: 0.8 },
+  M_taxi_body_lacquer_external: { tile: 2, grime: 0.8, rough: 0.5, dim: 0.8 },
+  M_taxi_body_lacquer_gardeboue: { tile: 2, grime: 0.8, rough: 0.5, dim: 0.8 },
+  // The photo-textured linings laid over its flat paint.
   M_taxi_headliner: { tile: 2, grime: 1, rough: 0.4, dim: 0.62 },
+  M_taxi_trim_cloth: { tile: 2, grime: 1, rough: 0.4, dim: 0.7 },
   M_taxi_carpet: { tile: 4, grime: 1, rough: 0.3, dim: 0.6 },
   M_taxi_painted_steel: { tile: 2.5, grime: 0.9, rough: 0.9, dim: 0.78 },
   M_taxi_dashboard_walnut: { tile: 2, grime: 0.55, rough: 0.7, dim: 0.85 },
   M_taxi_bakelite: { tile: 4, grime: 0.6, rough: 0.9, dim: 0.85 },
   M_taxi_aged_nickel: { tile: 5, grime: 0.8, rough: 1, dim: 0.8 },
   M_taxi_rubber: { tile: 4, grime: 0.7, rough: 0.6, dim: 0.85 },
-  M_taxi_brass: { tile: 5, grime: 0.8, rough: 1, dim: 0.8 },
 };
 
 /**

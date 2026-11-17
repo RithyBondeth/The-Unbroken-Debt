@@ -1,4 +1,4 @@
-import { taxiDistance, taxiRoadHeading, taxiRoadPoint } from "./taxiMotion";
+import { TAXI_GROUND_DROP, taxiDistance, taxiRoadHeading, taxiRoadPoint } from "./taxiMotion";
 
 export type TaxiPassKind = "crossing" | "overtake";
 
@@ -80,14 +80,14 @@ export const TAXI_STANDER = {
  * After the slap, when Sora is still looking at her window: the lamps fail, and the
  * next lightning shows it stooped at the glass, face to face, keeping pace with the car.
  */
-export const TAXI_WINDOW = { start: 60.18, beat: 60.6, end: 61.02, lateral: 1.5 } as const;
+export const TAXI_WINDOW = { start: 60.18, beat: 60.6, end: 61.02, lateral: 1.26 } as const;
 
 /** The overtake's flickers: ride seconds, and where it stands (lateral, metres ahead of Sora). */
 const GLIMPSES = [
   { at: 57.3, lateral: 7.2, ahead: 9.5, clipTime: 0.4 },
   { at: 57.52, lateral: 4.9, ahead: 4.6, clipTime: 1.9 },
   { at: 57.72, lateral: 3.2, ahead: 1.7, clipTime: 3.1 },
-  { at: 57.93, lateral: 1.5, ahead: 0.15, clipTime: 1.25 },
+  { at: 57.93, lateral: 1.26, ahead: 0.15, clipTime: 1.25 },
 ] as const;
 /** Half the width of one flicker of the stroke, in seconds. */
 const FLICKER = 0.07;
@@ -123,7 +123,7 @@ export function taxiSpiritAt(t: number): SpiritPose | null {
       kind: "stander",
       x: at.x,
       z: at.z,
-      y: -0.1,
+      y: -0.1 + TAXI_GROUND_DROP,
       heading: taxiRoadHeading(along) + Math.PI + 0.75,
       clip: "stand",
       clipTime: t - TAXI_STANDER.from,
@@ -140,7 +140,7 @@ export function taxiSpiritAt(t: number): SpiritPose | null {
       kind: "crossing",
       x: at.x,
       z: at.z,
-      y: -0.06,
+      y: -0.06 + TAXI_GROUND_DROP,
       heading: taxiRoadHeading(along) + Math.PI / 2,
       clip: "walk",
       clipTime: walked + 0.6,
@@ -162,7 +162,7 @@ export function taxiSpiritAt(t: number): SpiritPose | null {
       kind: "overtake",
       x: at.x,
       z: at.z,
-      y: last ? -0.12 : -0.08,
+      y: (last ? -0.12 : -0.08) + TAXI_GROUND_DROP,
       // Facing the car across the verge; at the glass, square on to it.
       heading: taxiRoadHeading(along) - Math.PI / 2 + (last ? 0 : 0.35),
       clip: last ? "reach" : "stand",
@@ -181,7 +181,8 @@ export function taxiSpiritAt(t: number): SpiritPose | null {
       kind: "window",
       x: at.x,
       z: at.z,
-      y: -0.6,
+      // Cabin-relative: its face level with Sora's eyes in the Rosalie's low seat.
+      y: -0.845,
       heading: taxiRoadHeading(along) - Math.PI / 2,
       clip: "stand",
       clipTime: 2.2 + (t - TAXI_WINDOW.start),
@@ -271,18 +272,19 @@ export function taxiMirrorRiderAt(t: number): MirrorRiderPose | null {
   const { seated, lean } = TAXI_MIRROR;
   if (t >= seated.from && t <= seated.to) {
     const presence = clamp01(Math.min((t - seated.from) / 0.9, (seated.to - t) / 0.35));
-    // Behind Sora on the rear bench, sitting far too tall: its head is bowed under the roof.
-    return { kind: "seated", x: 0.3, y: -0.48, z: -1.25, lean: 0.04, presence, attention: 0.15 };
+    // Behind Sora on the rear bench, sitting far too tall: its head is bowed under the
+    // roof, the rest of it down in the seat and the dark of the footwell.
+    return { kind: "seated", x: 0.27, y: -0.92, z: -1.22, lean: 0.06, presence, attention: 0.15 };
   }
   if (t >= lean.from && t <= lean.to) {
     const p = clamp01((t - lean.from) / (lean.beat - lean.from));
     // Up between the front seat backs, bent towards her, its face just behind her shoulder.
     return {
       kind: "lean",
-      x: 0.3 - 0.16 * p,
-      y: -0.48 - 0.04 * p,
-      z: -1.25 + 0.57 * p,
-      lean: 0.04 + 0.08 * p,
+      x: 0.27 - 0.17 * p,
+      y: -0.92 - 0.04 * p,
+      z: -1.22 + 0.55 * p,
+      lean: 0.06 + 0.2 * p,
       presence: 1,
       attention: 0.6,
     };

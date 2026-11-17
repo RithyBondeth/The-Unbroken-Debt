@@ -5,7 +5,7 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { MistPocket } from "@/render/mist";
 import { seededRandom } from "@/audio/synth";
-import { taxiRoadPoint } from "./taxiMotion";
+import { TAXI_FOREST_START, taxiRoadPoint } from "./taxiMotion";
 import { taxiMistLevel } from "./taxiApparitions";
 
 /**
@@ -113,8 +113,11 @@ export class TaxiMist {
   /** `beams` is the headlamps' electrical power, 0–1; `flash` the lightning. */
   update(dt: number, t: number, distance: number, beams: number, flash: number): void {
     const g = this.game,
-      level = taxiMistLevel(t),
       fog = g.pipeline.fog;
+    // Out over the paddies the air is open: half the haze, so the palms stand against the
+    // storm sky and a lamp in a far window carries; it thickens as the trees close in.
+    const open = Math.min(1, Math.max(0, (TAXI_FOREST_START - 8 - distance) / 22)),
+      level = taxiMistLevel(t) * (1 - 0.55 * open * open * (3 - 2 * open));
     // Lightning is scattered by every droplet at once: the mist becomes the light.
     const lit = flash * 0.05 * level;
     const [r, gr, b] = HAZE.ambient;
