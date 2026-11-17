@@ -90,10 +90,13 @@ describe.skipIf(isLfsPointer(PATH))("ruralPropsAsset (needs the real Git LFS ass
       expect(getBounds(stairs).min[1]).toBeLessThanOrEqual(0);
       expect(nodes.has(`col_stairs_${flight}`)).toBe(true);
     }
-    const footing = nodes.get("footing_-3_10")!;
-    const stone = footing.getMesh()!.listPrimitives()[0].getMaterial()!;
-    expect(stone.getBaseColorTexture()).toBeTruthy();
-    expect(stone.getNormalTexture()).toBeTruthy();
-    expect(getBounds(footing).max[1]).toBeCloseTo(0.1, 3);
+    // Each house post stands on a lime-plastered brick plinth (colonial_house.py).
+    const plinth = nodes.get("pillar_-3_10_plinth")!;
+    const plaster = plinth.getMesh()!.listPrimitives()[0].getMaterial()!;
+    expect(plaster.getBaseColorTexture()).toBeTruthy();
+    expect(plaster.getNormalTexture()).toBeTruthy();
+    expect(getBounds(plinth).max[1]).toBeCloseTo(0.42, 2);
+    expect(getBounds(plinth).min[1]).toBeLessThan(0);
+    expect(nodes.has("col_pillar_-3_10")).toBe(true);
   });
 });

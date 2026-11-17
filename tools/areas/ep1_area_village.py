@@ -33,7 +33,7 @@ from house_detail import board_panel, gathered_hammock
 from interior_props import kitchen_hearth, palm_leaf_manuscripts
 from forest import *  # noqa: E402,F403  (the forest, the road and what the dead left)
 
-BLEND = os.path.join(ROOT, "art-source", "blender", "ep1", "ep1_area_village.blend")
+BLEND = os.environ.get("VILLAGE_BLEND") or os.path.join(ROOT, "art-source", "blender", "ep1", "ep1_area_village.blend")
 rng = np.random.default_rng(1910)
 
 FLOOR = 2.5  # upper floor height (stilts)
