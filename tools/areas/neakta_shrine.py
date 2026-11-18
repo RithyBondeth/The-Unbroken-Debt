@@ -3,11 +3,11 @@
 An old village shrine of soft brick and lime on a laterite-footed platform, a
 Marseille-tile roof on teak rafters, open to the east. The banyan has grown
 over it: its aerial roots come down over the back wall and grip the bricks.
-Inside, on a smoke-black altar of two steps, the Neak Ta sits as a painted
-wooden guardian on his throne, black-faced, bearded, a sword in his hand: the
-Maritime Asia Heritage Survey's scan "Seated Shrine Figure with Sword,
-Thailand" (CC BY-NC-ND 4.0, art-source/library/scans/seated_shrine.glb),
-decimated only. Beside him, bare split field stones with old wax on them. On
+Inside, on a smoke-black altar of two steps, the Neak Ta sits cross-legged as
+a painted cement guardian with three faces and a mace, his paint faded and
+flaking, black with soot toward the heads: the user's own model
+(art-source/library/scans/neakta_guardian.glb, prepared and aged by
+tools/areas/import-neakta-statue.py). Beside him, bare split field stones with old wax on them. On
 the platform's lip, beeswax candles burnt down into their own wax, joss sticks
 in a pot of stubs, leaf cups of rice and betel, bananas going black, a coconut.
 
@@ -37,7 +37,7 @@ WALL_TOP = 1.62
 EAVE_X, EAVE_Z, RIDGE_Z = 1.2, 1.72, 2.3
 ROOF_Y = .98
 
-FIGURE = os.path.join(LIB, "scans", "seated_shrine.glb")
+FIGURE = os.path.join(LIB, "scans", "neakta_guardian.glb")
 
 _mats = {}
 
@@ -101,9 +101,8 @@ def boulder(b, mat, centre, size, rng, tile=.4):
 
 
 def seated_figure(coll, path, height):
-    """A scanned shrine figure (a painted wooden guardian on his throne):
-    joined, decimated keeping its UVs and photographed paint, feet at the origin,
-    facing -y."""
+    """A shrine figure from the library: joined, decimated (if over budget)
+    keeping its UVs and paint, feet at the origin, facing -y."""
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     new = [o for o in bpy.data.objects if o not in before]
@@ -122,9 +121,10 @@ def seated_figure(coll, path, height):
     for c in list(obj.users_collection):
         c.objects.unlink(obj)
     coll.objects.link(obj)
-    mod = obj.modifiers.new("decimate", "DECIMATE")
-    mod.ratio = 40000 / max(1, len(obj.data.polygons))
-    _apply(obj, mod)
+    if len(obj.data.polygons) > 40000:
+        mod = obj.modifiers.new("decimate", "DECIMATE")
+        mod.ratio = 40000 / len(obj.data.polygons)
+        _apply(obj, mod)
     co = np.array([v.co[:] for v in obj.data.vertices])
     lo, hi = co.min(axis=0), co.max(axis=0)
     obj.data.transform(Matrix.Scale(height / (hi[2] - lo[2]), 4)
@@ -134,7 +134,7 @@ def seated_figure(coll, path, height):
     return obj
 
 
-def watcher(coll, m, foot, facing, rng, height=.68, figure=None):
+def watcher(coll, m, foot, facing, rng, height=.66, figure=None):
     """The Neak Ta figure as one object, pivot at its feet (Apparitions.ts)."""
     obj = seated_figure(coll, figure or FIGURE, height)
     # Bake the placement: the mesh faces its shrine's front, the object sits at the foot.
