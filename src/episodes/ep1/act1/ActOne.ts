@@ -30,6 +30,7 @@ import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
+import { PondSpirit } from "./PondSpirit";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
@@ -86,6 +87,7 @@ export class ActOne {
   vigil!: Vigil;
   night!: NightLife;
   apparitions!: Apparitions;
+  pondSpirit!: PondSpirit;
   betel!: BetelOffering;
   beats!: ActOneBeats;
   investigation!: SokInvestigation;
@@ -123,6 +125,7 @@ export class ActOne {
       keep: [
         /^tingmong_\d+$/,
         "neakta_stone_watch",
+        "pond_spirit",
         "door_sok_padlock",
         "shed_padlock",
         TENT_FLAME_MESH,
@@ -258,6 +261,7 @@ export class ActOne {
     );
     this.forest = new ForestAtmosphere(game);
     this.apparitions = new Apparitions(game, this.area, this.lights);
+    this.pondSpirit = new PondSpirit(game, this.area, this.lights);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
       game,
@@ -419,6 +423,7 @@ export class ActOne {
     this.early.update(dt);
     if (!this.early.active) {
       this.apparitions.update(dt);
+      this.pondSpirit.update(dt);
       this.betel.update(dt);
       this.beats.update(dt);
       this.investigation.update(dt);
@@ -448,6 +453,7 @@ export class ActOne {
         ? 0
         : Math.max(
             this.apparitions.dread * 0.55,
+            this.pondSpirit.dread * 0.5,
             this.night.threatSilence * 0.4,
             (this.forest?.silence ?? 0) * 0.35,
             (this.saveShrine?.silence ?? 0) * 0.4,
@@ -581,12 +587,14 @@ export class ActOne {
       stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
     this.apparitions.score = this.score;
+    this.pondSpirit.score = this.score;
     this.saveShrine.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
     await this.forest.makeSounds();
     await this.windAudio.makeSounds();
     await this.apparitions.makeSounds();
+    await this.pondSpirit.makeSounds();
     await this.guests.makeSounds(audio);
     await this.betel.makeSounds();
     await this.beats.makeSounds();

@@ -1,5 +1,5 @@
 import { ROAD_Z, TERRAIN, YARD, outside, pathDistance } from "./forestBorder";
-import { laneDistance } from "./villageAreas";
+import { POND_WATER, ellipseValue, laneDistance } from "./villageAreas";
 
 /**
  * Where the village's ground is trodden mud and where it is leaf litter, as a
@@ -75,12 +75,17 @@ export function groundMix(x: number, z: number): GroundMix {
   const sideLane =
     (1 - smoothstep(laneEdge - 0.35, laneEdge + 0.3, laneDistance(x, z))) * (1 - drift * 0.5);
 
-  const mud = Math.max(path, yard, road, sideLane * 0.9);
+  // The pond's trodden, wet bank: a ragged ring of mud at the shore.
+  const shore = Math.sqrt(ellipseValue(POND_WATER, x, z));
+  const bankEdge = 1.14 + 0.12 * (wobble - 0.5) + 0.06 * (grain - 0.5);
+  const bank = 1 - smoothstep(bankEdge - 0.05, bankEdge + 0.07, shore);
+
+  const mud = Math.max(path, yard, road, sideLane * 0.9, bank);
   // Two churned lines down the path where people walk single file, and the road's ruts.
   const lane = Math.abs(d - 0.32) < 0.22 ? 1 - Math.abs(d - 0.32) / 0.22 : 0;
   const rut = Math.max(0, 1 - Math.abs(Math.abs(z - ROAD_Z) - 0.8) / 0.35) * road;
   const wet = Math.min(1, (lane * 0.6 + rut + 0.35 * smoothstep(0.55, 0.85, grain)) * mud);
-  return { mud, wet };
+  return { mud, wet: Math.max(wet, bank * 0.8) };
 }
 
 /** The mask over the authored terrain, as RGBA bytes (R mud, G wet), rows along +z. */

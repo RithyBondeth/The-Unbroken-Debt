@@ -57,7 +57,7 @@ NEAKTA_GROVE = {
 AREAS = {"west": WEST_YARD, "east": EAST_POND, "north": NORTH_GARDEN, "grove": NEAKTA_GROVE}
 # Areas built into the village so far (each is added once the user has approved
 # its renders); the others stay forest. Previews add to it in memory.
-BUILT = {"west"}
+BUILT = {"west", "east"}
 
 # ------------------------------------------------------------------ lanes
 # Narrow trodden lanes (about 1.1 m), west yard -> grove -> path makes a loop.
@@ -115,10 +115,52 @@ def _seg_distance(x, y, a, b):
     return math.hypot(x - ax - t * dx, y - ay - t * dy)
 
 
+def lane_curve(pts, step=0.5):
+    """A lane as it is walked: a smooth curve through its control points
+    (Catmull-Rom) that wanders a little from side to side, never a ruled line.
+    The wander fades out at both ends, where lanes meet gaps and clearings.
+    Mirrored exactly in src/episodes/ep1/data/villageAreas.ts (laneCurve)."""
+    ext = [pts[0]] + list(pts) + [pts[-1]]
+    dense = []
+    for i in range(1, len(ext) - 2):
+        p0, p1, p2, p3 = ext[i - 1], ext[i], ext[i + 1], ext[i + 2]
+        for k in range(8):
+            t = k / 8
+            t2, t3 = t * t, t * t * t
+            dense.append(tuple(0.5 * ((2 * p1[j]) + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2
+                                      + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3) for j in range(2)))
+    dense.append(tuple(pts[-1]))
+    s = [0.0]
+    for a, b in zip(dense, dense[1:]):
+        s.append(s[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
+    total = s[-1]
+    seed = pts[0][0] * 0.37 + pts[0][1] * 0.21
+    out = []
+    for i, (x, y) in enumerate(dense):
+        a, b = dense[max(i - 1, 0)], dense[min(i + 1, len(dense) - 1)]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        n = math.hypot(dx, dy) or 1.0
+        taper = min(1.0, s[i] / 3.0, (total - s[i]) / 3.0)
+        off = taper * (0.55 * math.sin(s[i] * 0.42 + seed) + 0.25 * math.sin(s[i] * 1.13 + 2 * seed))
+        out.append((x - dy / n * off, y + dx / n * off))
+    return out
+
+
+_CURVES = {}
+
+
+def lane_points(name):
+    key = (name, tuple(ALL_LANES[name]))
+    if key not in _CURVES:
+        _CURVES[key] = lane_curve(ALL_LANES[name])
+    return _CURVES[key]
+
+
 def lane_distance(x, y):
-    """Distance to the nearest side lane's centre line."""
+    """Distance to the nearest built side lane's (curved) centre line."""
     best = math.inf
-    for pts in LANES.values():
+    for name in LANES.keys():
+        pts = lane_points(name)
         for a, b in zip(pts, pts[1:]):
             best = min(best, _seg_distance(x, y, a, b))
     return best

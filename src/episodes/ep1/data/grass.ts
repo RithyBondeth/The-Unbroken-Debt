@@ -11,7 +11,7 @@ import {
   outside,
   pathDistance,
 } from "./forestBorder";
-import { CLEARINGS, ellipseValue, laneDistance } from "./villageAreas";
+import { CLEARINGS, ellipseValue, inPond, laneDistance } from "./villageAreas";
 
 /**
  * Tall grass (smau) round the village: thick on the road bank, along the
@@ -64,6 +64,8 @@ export function grassChance(x: number, z: number): number {
   const road = Math.abs(z - ROAD_Z);
   const lane = laneDistance(x, z);
   if (path < 0.9 || road < 2.4 || lane < 0.6) return 0;
+  // The pond and its wet bank: reeds there are authored (east_pond.py).
+  if (inPond(x, z, 2.6)) return 0;
   let chance = 0;
   // Under the old-growth canopy little grass grows: a thin fringe along the trodden path.
   if (z > 2 && z < 61) chance = Math.max(chance, 0.45 * verge(path, 0.9, 3.4));

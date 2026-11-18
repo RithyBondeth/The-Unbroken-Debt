@@ -5,6 +5,7 @@ Only assets in use (status other than Not started) by someone other than the pro
 
 | Author | Licence | Assets |
 |---|---|---|
+| adhamasalah | CC BY 4.0 | [Horror Ghost Character - Blood Stained Spirit (the pond spirit, pond_spirit; adapted: joined, decimated to 30k triangles, scaled to 1.58 m)](https://sketchfab.com/3d-models/horror-ghost-character-blood-stained-spirit-ed1a90be19404450935720f7abaae471) (V1-204) |
 | Alexander Shulha | CC0 1.0 | [Bananas](https://polyhaven.com/a/bananas) (V1-090) |
 | Amal Kumar | CC0 1.0 | [Dark Wooden Planks](https://polyhaven.com/a/dark_wooden_planks) (V1-083), [Bamboo Wall](https://polyhaven.com/a/bamboo_wall) (V1-104), [Clay Roof Tiles 02](https://polyhaven.com/a/clay_roof_tiles_02) (V1-105), [Muddy Tracks](https://polyhaven.com/a/muddy_tracks) (V1-107), [Clay Plaster](https://polyhaven.com/a/clay_plaster) (V1-139) |
 | Anya_Media | CC0 1.0 | [Wind: distant crowns roaring in gusts](https://freesound.org/people/Anya_Media/sounds/523389/) (S2-006) |

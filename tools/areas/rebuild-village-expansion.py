@@ -27,11 +27,11 @@ import house_rooms  # noqa: E402
 from kit import collider  # noqa: E402
 
 # Ground kept free of forest round each area's buildings: (layout key, radius).
-KEEP_OUT = {"west": [("house", 5.5), ("granary", 3.0), ("byre", 4.5)]}
+KEEP_OUT = {"west": [("house", 5.5), ("granary", 3.0), ("byre", 4.5)], "east": [("sala", 3.6)]}
 # Where each side lane passes the compound fence: (fence prefix, axis, from, to).
-GAPS = {"west": ("fence_w_0", "y", 9.75, 12.65)}
-BUILDERS = {"west": "west_yard"}
-SEEDS = {"west": 1900}
+GAPS = {"west": ("fence_w_0", "y", 9.75, 12.65), "east": ("fence_e_0", "y", 6.6, 9.55)}
+BUILDERS = {"west": "west_yard", "east": "east_pond"}
+SEEDS = {"west": 1900, "east": 1931}
 
 village = bpy.data.collections["ep1_area_village"]
 
@@ -47,42 +47,6 @@ def area_collection(key):
     return coll
 
 
-def open_fence(prefix, axis, lo, hi):
-    """Cuts the fence's rails and collider at a lane and takes the post there out."""
-    i = "xyz".index(axis)
-    for o in list(bpy.data.objects):
-        if not (o.name.startswith(prefix) or o.name == f"col_{prefix}") or o.get("gap_cut") or o.type != "MESH":
-            continue
-        mw = o.matrix_world
-        pts = [mw @ v.co for v in o.data.vertices]
-        a, b = min(p[i] for p in pts), max(p[i] for p in pts)
-        if b < lo or a > hi:
-            continue
-        if b - a < 0.5:
-            # A post in the gap: gone (pulled out for firewood).
-            bpy.data.objects.remove(o, do_unlink=True)
-            continue
-        twin = o.copy()
-        twin.data = o.data.copy()
-        twin.name = o.name + "_n"
-        for c in o.users_collection:
-            c.objects.link(twin)
-        inv = mw.inverted()
-        for obj, keep_low in ((o, True), (twin, False)):
-            if obj.data.users > 1:
-                obj.data = obj.data.copy()
-            for v in obj.data.vertices:
-                w = mw @ v.co
-                if keep_low and w[i] > lo:
-                    w[i] = lo
-                elif not keep_low and w[i] < hi:
-                    w[i] = hi
-                v.co = inv @ w
-            obj.data.update()
-            obj["gap_cut"] = True
-    print(f"Opened {prefix} at {axis} {lo}..{hi}", flush=True)
-
-
 house_rooms._complete_gltf_group()
 house_rooms._protos_from_file()
 print("Built areas:", sorted(L.BUILT), flush=True)
@@ -95,7 +59,7 @@ for key in L.BUILT:
 removed = VE.clear_open_ground(keep_out=keep_out)
 for key in sorted(L.BUILT):
     if key in GAPS:
-        open_fence(*GAPS[key])
+        VE.open_fence(*GAPS[key])
 ground = VE.Ground()
 for key in sorted(L.BUILT):
     module = __import__(BUILDERS[key])

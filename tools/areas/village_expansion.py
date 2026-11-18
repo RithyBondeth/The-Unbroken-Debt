@@ -63,8 +63,13 @@ def pond_depth(x, y, z=0.0):
     if r > 1.35:
         return None
     if r >= 1.0:
-        # The bank shelves down to just under the waterline over the last metre or so.
-        return -0.27 + (z + 0.27) * _smooth(1.0, 1.35, r)
+        # The bank shelves down to just under the waterline over the last metre or so,
+        # except where feet have trodden a landing to the jetty's first boards.
+        h = -0.27 + (z + 0.27) * _smooth(1.0, 1.35, r)
+        jx, jy, _ = L.EAST_POND["jetty"]
+        if abs(y - jy) < 1.4 and x < jx + 0.4:
+            h = max(h, min(z, 0.0) - 0.04)
+        return h
     return -0.27 - 0.95 * _smooth(1.0, 0.55, r)
 
 
@@ -136,8 +141,9 @@ def extend_ground():
                 k = old_mat[key]
             else:
                 k = 0 if cy < -60.5 else 1
-            if L.lane_distance(cx, cy) < L.LANE_WIDTH / 2 + 0.25 or pond_depth(cx, cy) is not None:
-                k = 0
+            # Lanes and the pond's bank are not painted here: in the game the ground
+            # mask (pathGround.ts) mixes mud and litter softly; previews use
+            # preview_ground() for the same look.
             mats.append(k)
     new = bpy.data.meshes.new("ground")
     new.from_pydata(verts, [], faces)
@@ -304,6 +310,42 @@ def _trim_islands(obj, keep_out, grass=False):
     return n
 
 
+def open_fence(prefix, axis, lo, hi):
+    """Cuts the fence's rails and collider at a lane and takes the post there out."""
+    i = "xyz".index(axis)
+    for o in list(bpy.data.objects):
+        if not (o.name.startswith(prefix) or o.name == f"col_{prefix}") or o.get("gap_cut") or o.type != "MESH":
+            continue
+        mw = o.matrix_world
+        pts = [mw @ v.co for v in o.data.vertices]
+        a, b = min(p[i] for p in pts), max(p[i] for p in pts)
+        if b < lo or a > hi:
+            continue
+        if b - a < 0.5:
+            # A post in the gap: gone (pulled out for firewood).
+            bpy.data.objects.remove(o, do_unlink=True)
+            continue
+        twin = o.copy()
+        twin.data = o.data.copy()
+        twin.name = o.name + "_n"
+        for c in o.users_collection:
+            c.objects.link(twin)
+        inv = mw.inverted()
+        for obj, keep_low in ((o, True), (twin, False)):
+            if obj.data.users > 1:
+                obj.data = obj.data.copy()
+            for v in obj.data.vertices:
+                w = mw @ v.co
+                if keep_low and w[i] > lo:
+                    w[i] = lo
+                elif not keep_low and w[i] < hi:
+                    w[i] = hi
+                v.co = inv @ w
+            obj.data.update()
+            obj["gap_cut"] = True
+    print(f"Opened {prefix} at {axis} {lo}..{hi}", flush=True)
+
+
 # ------------------------------------------------------------ ground sampling
 
 class Ground:
@@ -406,3 +448,76 @@ def preview_grass(coll, rng, centre, radius, keep_out=(), density=.8):
                 continue
             spots.append((x, y, ground(x, y)))
     return grass_geometry("preview_grass", coll, spots, rng, size=(.45, 1.1))
+
+
+# ------------------------------------------------------------ preview ground
+
+def preview_ground(cuts=2):
+    """For Cycles previews only (never saved): the ground as the game draws it.
+    A subdivided copy of `ground` carries the game's mud/litter mask (ground_mask.py)
+    as a colour attribute, mixing the two ground materials softly."""
+    import ground_mask
+    g = bpy.data.objects["ground"]
+    me = g.data.copy()
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=cuts, use_grid_fill=True)
+    bm.to_mesh(me)
+    bm.free()
+    attr = me.color_attributes.new("mud", "FLOAT_COLOR", "POINT")
+    vals = np.zeros(len(me.vertices) * 4, dtype=np.float32)
+    for i, v in enumerate(me.vertices):
+        mud, wet = ground_mask.ground_mix(-v.co.x, -v.co.y)
+        vals[i * 4:i * 4 + 4] = (mud, wet, 0, 1)
+    attr.data.foreach_set("color", vals)
+    mud_m, litter_m = bpy.data.materials["M_wet_mud"], bpy.data.materials["M_wet_forest_floor"]
+    mat = mud_m.copy()
+    mat.name = "M_preview_ground_blend"
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    src = {n.name: n for n in litter_m.node_tree.nodes}
+    att = nt.nodes.new("ShaderNodeAttribute")
+    att.attribute_name = "mud"
+    sep = nt.nodes.new("ShaderNodeSeparateColor")
+    nt.links.new(att.outputs["Color"], sep.inputs["Color"])
+    uv = nt.nodes.new("ShaderNodeUVMap")
+    scale = nt.nodes.new("ShaderNodeVectorMath")
+    scale.operation = "SCALE"
+    scale.inputs["Scale"].default_value = mud_m.get("tile", 2.25) / litter_m.get("tile", 2.0)
+    nt.links.new(uv.outputs["UV"], scale.inputs[0])
+    lit = {}
+    for key in ("Image Texture", "Image Texture.001", "Image Texture.002"):
+        n = nt.nodes.new("ShaderNodeTexImage")
+        n.image = src[key].image
+        nt.links.new(scale.outputs["Vector"], n.inputs["Vector"])
+        lit[key] = n
+    tint = nt.nodes.new("ShaderNodeMix")
+    tint.data_type = "RGBA"
+    tint.blend_type = src["Mix"].blend_type
+    tint.inputs[0].default_value = src["Mix"].inputs[0].default_value
+    tint.inputs[7].default_value = src["Mix"].inputs[7].default_value
+    nt.links.new(lit["Image Texture"].outputs["Color"], tint.inputs[6])
+
+    def blend(socket_from_mud, socket_from_litter, to_socket, kind="RGBA"):
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.data_type = kind
+        nt.links.new(sep.outputs["Red"], mix.inputs[0])
+        a, b = (6, 7) if kind == "RGBA" else (2, 3)
+        nt.links.new(socket_from_litter, mix.inputs[a])
+        nt.links.new(socket_from_mud, mix.inputs[b])
+        nt.links.new(mix.outputs[2 if kind == "RGBA" else 0], to_socket)
+
+    base_mud = nt.nodes["Mix"].outputs[2]
+    blend(base_mud, tint.outputs[2], bsdf.inputs["Base Color"])
+    nmap = nt.nodes["Normal Map"]
+    blend(nt.nodes["Image Texture.001"].outputs["Color"], lit["Image Texture.001"].outputs["Color"], nmap.inputs["Color"])
+    orm_sep = nt.nodes["Separate Color"]
+    lsep = nt.nodes.new("ShaderNodeSeparateColor")
+    nt.links.new(lit["Image Texture.002"].outputs["Color"], lsep.inputs["Color"])
+    blend(orm_sep.outputs["Green"], lsep.outputs["Green"], bsdf.inputs["Roughness"], kind="FLOAT")
+    me.materials.clear()
+    me.materials.append(mat)
+    obj = bpy.data.objects.new("preview_ground", me)
+    bpy.context.scene.collection.objects.link(obj)
+    g.hide_render = True
+    return obj
