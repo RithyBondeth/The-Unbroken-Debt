@@ -196,7 +196,9 @@ export class EarlyStealthBrain {
       this.direction.scale(
         Math.min(
           distance,
-          dt * (this.state === "chase" ? 2.55 : this.state === "investigate" ? 1.2 : 0.85),
+          // The Preay's pace: an unhurried patrol, a quicker step to look, her stumbling
+          // hurry when she has seen Sora (never faster than she can really step).
+          dt * (this.state === "chase" ? 1.7 : this.state === "investigate" ? 1.2 : 0.85),
         ),
       ),
     );

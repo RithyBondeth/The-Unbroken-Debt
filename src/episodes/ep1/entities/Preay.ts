@@ -195,6 +195,16 @@ export class Preay {
     this.step(dt);
   }
 
+  /**
+   * 0–1: how much of her shows, as she comes out of the dark and goes back into it.
+   * She is switched off when nothing shows.
+   */
+  setPresence(value: number): void {
+    const v = Math.max(0, Math.min(1, value));
+    for (const mesh of this.figure.meshes) mesh.visibility = v;
+    this.figure.setEnabled(v > 0.01);
+  }
+
   setEnabled(on: boolean): void {
     this.figure.setEnabled(on);
   }

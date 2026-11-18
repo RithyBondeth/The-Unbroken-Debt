@@ -298,7 +298,7 @@ export class ActOne {
       () => this.dawn(),
     );
     this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
-    this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress());
+    this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress(), preay);
     this.krasue = new KrasueEncounter(game, this.vigil, () => this.beats.captureProgress());
     this.saveShrine = new PhraPhum(game, SAVE_SHRINE_POSITION);
     new SavePoint(
