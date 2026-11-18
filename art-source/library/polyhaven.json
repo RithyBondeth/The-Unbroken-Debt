@@ -338,6 +338,18 @@
   "oil_tin": {
    "resolution": "1k",
    "format": "gltf"
+  },
+  "calathea_orbifolia_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "weed_plant_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "nettle_plant": {
+   "resolution": "1k",
+   "format": "gltf"
   }
  },
  "materials": {
@@ -614,6 +626,22 @@
    }
   },
   "red_brick": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "red_laterite_soil_stones": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "dirty_carpet": {
    "resolution": "2k",
    "maps": {
     "BC": "Diffuse",

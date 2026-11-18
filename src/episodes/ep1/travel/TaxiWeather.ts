@@ -15,10 +15,11 @@ export class TaxiWeather {
     near.minEmitPower = near.maxEmitPower = 1;
     near.minLifeTime = 0.6;
     near.maxLifeTime = 0.72;
-    near.minSize = 0.015;
-    near.maxSize = 0.023;
-    near.minScaleY = 13;
-    near.maxScaleY = 21;
+    // Thin, fast streaks: lit where the lamps reach, nearly invisible past them.
+    near.minSize = 0.006;
+    near.maxSize = 0.01;
+    near.minScaleY = 24;
+    near.maxScaleY = 38;
     this.far = new RainStreaks(scene, low ? 1800 : 3200, low ? 2200 : 4000);
     const far = this.far.system;
     far.emitter = new Vector3(0, 9, 0);
@@ -27,6 +28,10 @@ export class TaxiWeather {
     far.minEmitPower = far.maxEmitPower = 1;
     far.minLifeTime = 0.7;
     far.maxLifeTime = 0.85;
+    far.minSize = 0.005;
+    far.maxSize = 0.008;
+    far.minScaleY = 22;
+    far.maxScaleY = 34;
     this.update(0, 6.8, 0);
   }
   update(t: number, speed: number, flash: number): void {
@@ -35,7 +40,7 @@ export class TaxiWeather {
       field.system.direction1.set(-gust, -10.5, -speed - 0.35);
       field.system.direction2.set(-gust * 0.6, -9.2, -speed + 0.35);
     }
-    this.near.light(flash, 0.24, 0.72);
-    this.far.light(flash, 0, 0.25);
+    this.near.light(flash, 0.2, 0.5);
+    this.far.light(flash, 0, 0.12);
   }
 }

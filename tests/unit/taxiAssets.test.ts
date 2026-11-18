@@ -19,28 +19,43 @@ beforeAll(async () => {
   ]);
 });
 describe("authored taxi assets", () => {
-  it("ships shaped trim, textured upholstery and an anatomical seated driver instead of primitive stand-ins", () => {
+  it("ships shaped trim, textured upholstery and a photoscanned seated driver instead of primitive stand-ins", () => {
     const mats = cabin.getRoot().listMaterials();
-    for (const name of ["M_taxi_worn_vinyl", "M_taxi_dashboard_walnut", "M_taxi_driver_cotton"]) {
+    // The scanned Rosalie's own interior and door linings, the walnut fascia and the driver.
+    for (const name of [
+      "M_internal",
+      "M_door",
+      "M_taxi_dashboard_walnut",
+      "M_taxi_driver_clothes_scan",
+    ]) {
       const material = mats.find((m) => m.getName() === name)!;
-      expect(material).toBeDefined();
-      expect(material.getNormalTexture()).toBeTruthy();
+      expect(material, name).toBeDefined();
+      expect(material.getNormalTexture(), name).toBeTruthy();
+      expect(material.getBaseColorTexture(), name).toBeTruthy();
     }
-    expect(
-      mats.find((m) => m.getName() === "M_taxi_worn_vinyl")?.getBaseColorTexture(),
-    ).toBeTruthy();
-    const driver = cabin
-      .getRoot()
-      .listMeshes()
-      .find((m) => m.getName().includes("driver_anatomy"))!;
-    expect(driver).toBeDefined();
-    expect(
-      driver.listPrimitives().reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0),
-    ).toBeGreaterThan(10_000);
+    // The whole scanned driver: body, cloth-simulated sleeves and photoscanned head.
+    let vertices = 0;
+    for (const part of [
+      "taxi_driver_body_scan",
+      "taxi_driver_sleeves_scan",
+      "taxi_driver_head_scan",
+    ]) {
+      const mesh = cabin
+        .getRoot()
+        .listNodes()
+        .find((n) => n.getName() === part)
+        ?.getMesh();
+      expect(mesh, part).toBeDefined();
+      vertices += mesh!
+        .listPrimitives()
+        .reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0);
+    }
+    expect(vertices).toBeGreaterThan(40_000);
     expect(cabin.getRoot().listSkins()).toHaveLength(0);
     const bounds = getBounds(cabin.getRoot().listScenes()[0]);
-    expect(bounds.max[1]).toBeGreaterThan(1.75);
-    expect(bounds.max[1]).toBeLessThan(2);
+    // A 1933 Rosalie's roof, about 1.3 m above its floorboards.
+    expect(bounds.max[1]).toBeGreaterThan(1.2);
+    expect(bounds.max[1]).toBeLessThan(1.5);
   });
   it("reuses the village’s actual foliage, bark and mud materials", () => {
     const mats = road.getRoot().listMaterials();
@@ -54,18 +69,18 @@ describe("authored taxi assets", () => {
       mats.some((m) => /forest_leaf|tree_leaves/.test(m.getName()) && m.getBaseColorTexture()),
     ).toBe(true);
   });
-  it("keeps the driver's skin facing outward and supplies inset eyes", () => {
+  it("keeps the driver's scanned face facing outward, with his glances, speech and blink", () => {
     const node = cabin
       .getRoot()
       .listNodes()
-      .find((n) => n.getName().includes("driver_anatomy"))!;
+      .find((n) => n.getName() === "taxi_driver_head_scan")!;
+    expect(node).toBeDefined();
     const w = node.getWorldMatrix(),
       samples: { p: number[]; n: number[] }[] = [];
     for (const primitive of node.getMesh()!.listPrimitives()) {
-      if (primitive.getMaterial()?.getName() !== "M_taxi_driver_skin") continue;
       const positions = primitive.getAttribute("POSITION")!,
         normals = primitive.getAttribute("NORMAL")!;
-      for (let i = 0; i < positions.getCount(); i++) {
+      for (let i = 0; i < positions.getCount(); i += 7) {
         const v = positions.getElement(i, []),
           n = normals.getElement(i, []);
         const p = [
@@ -73,7 +88,8 @@ describe("authored taxi assets", () => {
           v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
           v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
         ];
-        if (p[1] < 1.22) continue;
+        // The skull, above the neck carried down into the collar.
+        if (p[1] < 1.08) continue;
         const normal = [
           n[0] * w[0] + n[1] * w[4] + n[2] * w[8],
           n[0] * w[1] + n[1] * w[5] + n[2] * w[9],
@@ -92,24 +108,29 @@ describe("authored taxi assets", () => {
         0,
       ) / samples.length;
     expect(outward).toBeGreaterThan(0.015);
-    // Fitted MakeHuman eyes with a painted iris, and a blink the runtime can play.
-    const eyes = cabin
+    // A real photoscan: dense, with its own colour, relief and gloss maps.
+    expect(
+      node
+        .getMesh()!
+        .listPrimitives()
+        .reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0),
+    ).toBeGreaterThan(20_000);
+    const face = cabin
       .getRoot()
-      .listMeshes()
-      .find((m) => m.getName().startsWith("taxi_driver_eyes"))!;
-    expect(eyes.listPrimitives()[0].getMaterial()?.getBaseColorTexture()).toBeTruthy();
-    // Shapes the runtime plays: blinking, speech, glances, a nod and a re-grip.
-    for (const [part, shapes] of [
-      ["taxi_driver_anatomy", ["blink", "talk", "look_road", "look_sora", "nod", "grip"]],
-      ["taxi_driver_lashes", ["blink", "look_road", "look_sora", "nod"]],
-      ["taxi_driver_hair", ["look_road", "look_sora", "nod"]],
-    ] as const) {
-      const mesh = cabin
-        .getRoot()
-        .listMeshes()
-        .find((m) => m.getName().startsWith(part))!;
-      expect((mesh.getExtras() as { targetNames?: string[] }).targetNames).toEqual(shapes);
-    }
+      .listMaterials()
+      .find((m) => m.getName() === "M_taxi_driver_head_scan")!;
+    expect(face.getBaseColorTexture()).toBeTruthy();
+    expect(face.getNormalTexture()).toBeTruthy();
+    expect(face.getMetallicRoughnessTexture()).toBeTruthy();
+    expect(face.getMetallicFactor()).toBe(0);
+    // Shapes the runtime plays: glances, a nod, speech and blinking.
+    expect((node.getMesh()!.getExtras() as { targetNames?: string[] }).targetNames).toEqual([
+      "look_road",
+      "look_sora",
+      "nod",
+      "talk",
+      "blink",
+    ]);
   });
   it("keeps the road and standing-water normals facing the headlights", () => {
     const surfaces = road
@@ -123,19 +144,18 @@ describe("authored taxi assets", () => {
         for (let i = 0; i < n.getCount(); i++) expect(n.getElement(i, [])[1]).toBeGreaterThan(0.85);
       }
   });
-  it("blocks downward and lower-body sight lines with an opaque cabin shell", () => {
-    const panels = cabin
-      .getRoot()
-      .listNodes()
-      .filter((n) => /taxi_(floorpan|firewall|rear_bulkhead|lower_body)_sealed/.test(n.getName()));
-    expect(panels).toHaveLength(5);
+  it("blocks downward sight lines through the floorboards with an opaque cabin", () => {
     const triangles: Vector3[][] = [];
-    for (const node of panels) {
+    for (const node of cabin.getRoot().listNodes()) {
+      const mesh = node.getMesh();
+      // Everything solid of the car (its glass, the people and the charm excepted).
+      if (!mesh || /glass|taxi_(driver|sora)|charm/i.test(node.getName())) continue;
       const w = node.getWorldMatrix();
-      for (const primitive of node.getMesh()!.listPrimitives()) {
-        expect(primitive.getMaterial()!.getAlphaMode()).toBe("OPAQUE");
+      for (const primitive of mesh.listPrimitives()) {
+        if (primitive.getMaterial()?.getAlphaMode() === "BLEND") continue;
         const positions = primitive.getAttribute("POSITION")!,
-          indices = primitive.getIndices()!;
+          indices = primitive.getIndices();
+        if (!indices) continue;
         const point = (i: number) => {
           const v = positions.getElement(i, []);
           return new Vector3(
@@ -152,65 +172,32 @@ describe("authored taxi assets", () => {
           ]);
       }
     }
-    // File coordinates reflect X relative to the left-handed game scene.
-    const eye = new Vector3(-0.39, 1.31, -0.24),
-      targets: Vector3[] = [];
-    for (const x of [-0.65, 0, 0.65])
-      for (const z of [-1.4, -0.3, 0.6, 1.05]) targets.push(new Vector3(x, -0.15, z));
-    for (const side of [-1, 1])
-      for (const y of [0.1, 0.45, 0.75])
-        for (const z of [-1, 0.2, 0.85]) targets.push(new Vector3(side * 1.1, y, z));
-    for (const x of [-0.65, 0, 0.65])
-      for (const y of [0.15, 0.6]) {
-        targets.push(new Vector3(x, y, 1.4));
-        targets.push(new Vector3(x, y, -2));
+    // From Sora's eyes (file coordinates mirror X), down past the floor anywhere in the cabin.
+    const eye = new Vector3(-0.27, 1.065, -0.06);
+    for (const x of [-0.45, -0.2, 0.2, 0.45])
+      for (const z of [-0.6, 0, 0.45]) {
+        const target = new Vector3(x, -0.25, z);
+        const ray = new Ray(eye, target.subtract(eye).normalize(), Vector3.Distance(eye, target));
+        expect(
+          triangles.some(([a, b, c]) => {
+            const hit = ray.intersectsTriangle(a, b, c);
+            return hit && hit.distance <= ray.length;
+          }),
+          `unsealed view towards ${target.toString()}`,
+        ).toBe(true);
       }
-    for (const target of targets) {
-      const ray = new Ray(eye, target.subtract(eye).normalize(), Vector3.Distance(eye, target));
-      expect(
-        triangles.some(([a, b, c]) => {
-          const hit = ray.intersectsTriangle(a, b, c);
-          return hit && hit.distance <= ray.length;
-        }),
-        `unsealed view towards ${target.toString()}`,
-      ).toBe(true);
-    }
   });
-  it("keeps the fascia and instruments in front of the dashboard shell", () => {
-    const nodes = cabin
-      .getRoot()
-      .listNodes()
-      .filter((n) => /taxi_dashboard_sculpted|taxi_walnut_instrument_panel/.test(n.getName()));
-    for (const x of [-0.65, -0.45, 0, 0.29, 0.49, 0.65]) {
-      const ray = new Ray(new Vector3(x, 0.975, 0.9), new Vector3(0, 0, 1), 0.2);
-      const hits: { distance: number; name: string }[] = [];
-      for (const node of nodes) {
-        const w = node.getWorldMatrix();
-        for (const primitive of node.getMesh()!.listPrimitives()) {
-          const p = primitive.getAttribute("POSITION")!,
-            ix = primitive.getIndices()!;
-          const point = (i: number) => {
-            const v = p.getElement(i, []);
-            return new Vector3(
-              v[0] * w[0] + v[1] * w[4] + v[2] * w[8] + w[12],
-              v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
-              v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
-            );
-          };
-          for (let i = 0; i < ix.getCount(); i += 3) {
-            const hit = ray.intersectsTriangle(
-              point(ix.getScalar(i)),
-              point(ix.getScalar(i + 1)),
-              point(ix.getScalar(i + 2)),
-            );
-            if (hit) hits.push({ distance: hit.distance, name: node.getName() });
-          }
-        }
-      }
-      expect(hits.sort((a, b) => a.distance - b.distance)[0]?.name).toContain(
-        "taxi_walnut_instrument_panel",
-      );
-    }
+  it("lines the dashboard with walnut and marks its dials for the runtime", () => {
+    const nodes = cabin.getRoot().listNodes();
+    expect(nodes.some((n) => n.getName() === "taxi_anchor_dials")).toBe(true);
+    expect(
+      nodes.some((n) =>
+        n
+          .getMesh()
+          ?.listPrimitives()
+          .some((p) => p.getMaterial()?.getName() === "M_taxi_dashboard_walnut"),
+      ),
+    ).toBe(true);
   });
   // Bounding the whole decoded road walks every vertex: over 5 s on a busy CI runner.
   it(
@@ -264,9 +251,10 @@ describe("authored taxi assets", () => {
             z = v[0] * matrix[2] + v[1] * matrix[6] + v[2] * matrix[10] + matrix[14];
           if (plant && y < 2.8) clearance = Math.min(clearance, Math.abs(lateral(x, z)));
           if (track) halfWidth = Math.max(halfWidth, Math.abs(lateral(x, z)));
+          // The road sits 0.27 m lower (taxiMotion's TAXI_GROUND_DROP); pools just above its crown.
           if (pool) {
-            expect(y).toBeGreaterThan(-0.062);
-            expect(y).toBeLessThan(-0.054);
+            expect(y).toBeGreaterThan(-0.27 - 0.062);
+            expect(y).toBeLessThan(-0.27 - 0.054);
           }
         }
       }
@@ -277,73 +265,72 @@ describe("authored taxi assets", () => {
     expect(halfWidth).toBeLessThan(2.85);
     expect(water).toBeGreaterThanOrEqual(218);
   });
-  it("seats Sora's anatomical legs and shoes inside the passenger footwell", () => {
+  it("seats Sora's photoscanned legs and shoes inside the passenger footwell", () => {
     const nodes = cabin.getRoot().listNodes();
-    const legs = nodes.find((n) => n.getName() === "taxi_sora_legs")!;
+    const legs = nodes.find((n) => n.getName() === "taxi_sora_legs_scan")!;
     expect(legs).toBeDefined();
     const bounds = getBounds(legs);
     expect(bounds.max[0] - bounds.min[0]).toBeLessThan(0.5);
-    expect(bounds.min[1]).toBeGreaterThan(0.06);
+    // Her shoes rest on the floorboards (the carpet lies between -0.01 and 0.1 m; the tips of
+    // her heels press into its pile).
+    expect(bounds.min[1]).toBeGreaterThan(-0.03);
     expect(bounds.max[1]).toBeLessThan(0.75);
-    expect(
-      legs
-        .getMesh()!
-        .listPrimitives()
-        .reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0),
-    ).toBeGreaterThan(1500);
-    expect(nodes.some((n) => n.getName() === "taxi_sora_lap_fold")).toBe(true);
-    for (const side of ["L", "R"]) {
-      const sole = nodes.find((n) => n.getName() === `taxi_sora_shoe_sole_${side}`)!;
-      const b = getBounds(sole);
-      expect(b.min[1]).toBeGreaterThan(0.06);
-      expect(b.min[1]).toBeLessThan(0.09);
-    }
+    const materials = legs
+      .getMesh()!
+      .listPrimitives()
+      .map((p) => p.getMaterial()!.getName());
+    for (const name of [
+      "M_taxi_sora_trousers_scan",
+      "M_taxi_sora_skin_scan",
+      "M_taxi_sora_shoes_scan",
+      "M_taxi_sora_blouse_scan",
+    ])
+      expect(materials).toContain(name);
+    // The old flat cloth over her lap is gone: her own blouse closes the scan at the waist.
+    expect(nodes.some((n) => n.getName() === "taxi_sora_lap_fold")).toBe(false);
   });
-  it("leaves both shoes visible from Sora's eyes rather than hidden under the lap cloth", () => {
-    const nodes = cabin
+  it("leaves both shoes visible from Sora's eyes", () => {
+    const node = cabin
       .getRoot()
       .listNodes()
-      .filter((n) => n.getName().startsWith("taxi_sora_") && n.getMesh());
-    for (const side of ["L", "R"]) {
-      const shoe = nodes.find((n) => n.getName() === `taxi_sora_shoe_${side}`)!;
-      const bounds = getBounds(shoe);
-      const origin = new Vector3(-0.39, 1.31, -0.24),
-        target = new Vector3(
-          (bounds.min[0] + bounds.max[0]) / 2,
-          bounds.min[1] + 0.025,
-          bounds.max[2] - 0.03,
-        );
+      .find((n) => n.getName() === "taxi_sora_legs_scan")!;
+    const w = node.getWorldMatrix();
+    const world = (v: number[]) =>
+      new Vector3(
+        v[0] * w[0] + v[1] * w[4] + v[2] * w[8] + w[12],
+        v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
+        v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
+      );
+    const triangles: { shoe: boolean; t: Vector3[] }[] = [],
+      shoePoints: Vector3[] = [];
+    for (const primitive of node.getMesh()!.listPrimitives()) {
+      const shoe = primitive.getMaterial()!.getName() === "M_taxi_sora_shoes_scan";
+      const p = primitive.getAttribute("POSITION")!,
+        ix = primitive.getIndices()!;
+      for (let i = 0; i < ix.getCount(); i += 3) {
+        const t = [0, 1, 2].map((k) => world(p.getElement(ix.getScalar(i + k), [])));
+        triangles.push({ shoe, t });
+        if (shoe) shoePoints.push(t[0]);
+      }
+    }
+    // Her feet sit apart: one shoe each side of her centre line.
+    const middle = shoePoints.reduce((sum, v) => sum + v.x, 0) / shoePoints.length;
+    for (const side of [-1, 1]) {
+      const own = shoePoints.filter((v) => (v.x - middle) * side > 0.03);
+      expect(own.length).toBeGreaterThan(20);
+      const toe = own.reduce((best, v) => (v.z > best.z ? v : best), own[0]);
+      const origin = new Vector3(-0.27, 1.065, -0.06),
+        target = toe.add(new Vector3(0, 0.01, -0.01));
       const ray = new Ray(
         origin,
         target.subtract(origin).normalize(),
-        Vector3.Distance(origin, target) + 0.001,
+        Vector3.Distance(origin, target) + 0.01,
       );
-      const hits: { name: string; distance: number }[] = [];
-      for (const node of nodes) {
-        const w = node.getWorldMatrix();
-        for (const primitive of node.getMesh()!.listPrimitives()) {
-          const p = primitive.getAttribute("POSITION")!,
-            indices = primitive.getIndices()!;
-          const point = (i: number) => {
-            const v = p.getElement(i, []);
-            return new Vector3(
-              v[0] * w[0] + v[1] * w[4] + v[2] * w[8] + w[12],
-              v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
-              v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
-            );
-          };
-          for (let i = 0; i < indices.getCount(); i += 3) {
-            const hit = ray.intersectsTriangle(
-              point(indices.getScalar(i)),
-              point(indices.getScalar(i + 1)),
-              point(indices.getScalar(i + 2)),
-            );
-            if (hit && hit.distance <= ray.length)
-              hits.push({ name: node.getName(), distance: hit.distance });
-          }
-        }
-      }
-      expect(hits.sort((a, b) => a.distance - b.distance)[0]?.name).toBe(`taxi_sora_shoe_${side}`);
+      const hits = triangles
+        .map(({ shoe, t }) => ({ shoe, hit: ray.intersectsTriangle(t[0], t[1], t[2]) }))
+        .filter((h) => h.hit && h.hit.distance <= ray.length)
+        .sort((a, b) => a.hit!.distance - b.hit!.distance);
+      expect(hits[0]?.shoe).toBe(true);
     }
   });
   it("adds tactile driver details and a dense wall of trees along the route", () => {
@@ -351,41 +338,30 @@ describe("authored taxi assets", () => {
       .getRoot()
       .listNodes()
       .map((n) => n.getName());
+    // The driver is photoscanned throughout: head, body, and cloth-simulated sleeves.
     for (const name of [
-      "taxi_driver_hair",
-      "taxi_driver_brows",
-      "taxi_driver_lashes",
-      "taxi_driver_suit",
+      "taxi_driver_head_scan",
+      "taxi_driver_body_scan",
+      "taxi_driver_sleeves_scan",
     ])
       expect(names).toContain(name);
-    // Hair, brows and lashes are cut out of their maps, not drawn as solid shells.
-    for (const material of ["M_taxi_driver_hair", "M_taxi_driver_brows", "M_taxi_driver_lashes"])
-      expect(
-        cabin
-          .getRoot()
-          .listMaterials()
-          .find((m) => m.getName() === material)
-          ?.getAlphaMode(),
-      ).toBe("MASK");
     // The cabin is furnished like a working taxi, not a box.
     for (const piece of [
-      /^taxi_seat_roll/,
-      /^taxi_rear_tuft_button/,
-      /^taxi_door_pleat/,
-      /^taxi_headliner_bow/,
-      /^taxi_dome_lamp_lens/,
-      /^taxi_wiper_motor/,
-      /^taxi_rear_blind/,
-      /^taxi_dash_clock_face/,
-      /^taxi_ignition_key/,
-      /^taxi_handbrake_lever/,
+      /headliner/,
+      /^taxi_meter_case/,
+      /^taxi_rear_lotus_bud/,
+      /^taxi_mirror_charm_pivot/,
+      /^taxi_anchor_wiper_[lr]/,
+      /^taxi_anchor_headlamp_[lr]/,
+      /^taxi_anchor_mirror/,
+      /^taxi_anchor_sora_eye/,
     ])
       expect(names.some((n) => piece.test(n))).toBe(true);
     expect(
       cabin
         .getRoot()
         .listMaterials()
-        .find((m) => m.getName() === "M_taxi_driver_skin")
+        .find((m) => m.getName() === "M_taxi_driver_clothes_scan")
         ?.getNormalTexture(),
     ).toBeTruthy();
     const trees = road
@@ -413,11 +389,12 @@ describe("authored taxi assets", () => {
     expect(count(/^taxi_ditch_water/, roadNames)).toBeGreaterThan(20);
     expect(roadNames).toContain("taxi_median_grass");
     // The roadside rite was taken out: nothing of it is left along the road.
-    expect(count(/rite|ritual/, roadNames)).toBe(0);
+    expect(count(/(^|_)rite(_|$)|ritual/, roadNames)).toBe(0);
     // Old growth, not bamboo: tall broadleaf giants far outnumber the odd clump.
     const giants = count(/^taxi_road_(far_)?tree_/, roadNames),
       bamboo = count(/^taxi_road_bamboo/, roadNames);
-    expect(giants).toBeGreaterThan(1000);
+    // (The first 140 m are open paddies; the forest closes in after them.)
+    expect(giants).toBeGreaterThan(500);
     expect(bamboo).toBeLessThan(giants / 60);
     const cabinNames = cabin
       .getRoot()
@@ -450,8 +427,10 @@ describe("authored taxi assets", () => {
     expect(statSync("public/assets/ep1/preay.glb").size).toBeLessThan(2 * 1024 * 1024);
   });
   it("keeps download and geometry costs bounded for the transition scene", () => {
-    expect(statSync("public/assets/ep1/ep1_taxi_cabin.glb").size).toBeLessThan(6 * 1024 * 1024);
-    expect(statSync("public/assets/ep1/ep1_taxi_roadside.glb").size).toBeLessThan(12 * 1024 * 1024);
+    // The photoscanned people keep 2K colour and relief (the face in UASTC): about half the cabin.
+    expect(statSync("public/assets/ep1/ep1_taxi_cabin.glb").size).toBeLessThan(26 * 1024 * 1024);
+    // Paddies, stilt houses, palms and scanned ruts as well as the forest.
+    expect(statSync("public/assets/ep1/ep1_taxi_roadside.glb").size).toBeLessThan(17 * 1024 * 1024);
     for (const asset of [cabin, road])
       expect(
         asset

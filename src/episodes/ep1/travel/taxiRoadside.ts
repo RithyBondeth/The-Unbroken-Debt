@@ -18,6 +18,11 @@ export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
     cellSize: 18,
     group: (mesh) => (mesh.name.includes("far_tree_") ? "distant" : "near"),
   });
+  // Batching leaves the parents of merged glTF primitives behind as empty, still-painted
+  // nodes (thousands: every rice row, pebble and tree); each would be culled every frame.
+  for (const mesh of scene.meshes.slice())
+    if (mesh.material && mesh.getTotalVertices() === 0 && mesh.getChildren().length === 0)
+      mesh.dispose();
   const root = new TransformNode("taxi_continuous_route", scene);
   for (const mesh of landscape) {
     mesh.unfreezeWorldMatrix();

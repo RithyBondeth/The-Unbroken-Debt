@@ -1,3 +1,14 @@
+/**
+ * The Rosalie's floor is the cabin's height 0 and stands 0.375 m off the road, so the
+ * roadside lies this much lower than its old authored heights (build-taxi.py ROAD_DROP).
+ */
+export const TAXI_GROUND_DROP = -0.27;
+/** Open paddies either side of the embankment until here; the old growth closes from FOREST_START. */
+export const TAXI_PADDY_END = 140;
+export const TAXI_FOREST_START = 150;
+/** The flood over the paddies, in the route frame (build-taxi.py PADDY_WATER + ROAD_DROP). */
+export const TAXI_PADDY_WATER = -0.88 + TAXI_GROUND_DROP;
+
 /** Distance is an integral of speed, so scenery resumes at exactly the same position. */
 export function taxiDistance(seconds: number): number {
   const t = Math.max(0, Math.min(72, seconds)),
@@ -26,9 +37,17 @@ export function taxiRoadPose(distance: number) {
   return { x: -x * c + distance * s, z: -x * s - distance * c, yaw: -yaw };
 }
 
-/** Keep both look directions beyond the 60 m far plane; disable only invisible route chunks. */
-export function taxiRouteChunkVisible(minZ: number, maxZ: number, distance: number): boolean {
-  return maxZ >= distance - 80 && minZ <= distance + 80;
+/**
+ * Keep both look directions beyond the 60 m far plane; disable only invisible route chunks.
+ * Across the open paddies the view runs on to the haze, so chunks there stay on further ahead.
+ */
+export function taxiRouteChunkVisible(
+  minZ: number,
+  maxZ: number,
+  distance: number,
+  ahead = 80,
+): boolean {
+  return maxZ >= distance - 80 && minZ <= distance + ahead;
 }
 
 /** A point `lateral` metres right of the centreline at `along` metres, as build-taxi.py's road_point. */
