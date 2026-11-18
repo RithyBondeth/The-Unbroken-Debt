@@ -6,16 +6,22 @@ under a balustraded offering tray, a panelled house with an open doorway (one
 leaf thrown back, the other hanging off a broken hinge), and two stacked gables
 with naga bargeboards, flame teeth and horn finials. The red lacquer has
 faded and flaked to silver-grey wood; the gilt has rubbed through to its red
-bole. Inside it is black with soot and empty but for one burning candle. A termite tunnel climbs the post; a mud
+bole. Inside, black with soot, a small lacquered figure of a kneeling lady
+beckoning with her raised hand kneels at the back on her lotus pedestal,
+her colours gone dark (art-source/library/scans/phra_phum_lady.glb, the
+user's own model, prepared by tools/areas/import-phra-phum-statue.py), and one
+candle burns on the floor in front of her. A termite tunnel climbs the post; a mud
 wasp has built under the eave; cobweb veils hang in the porch corners.
 
 Blender axes: x east, y north, z up; the doorway faces -y (glTF +Z, the game's
 +Z). Game contract (src/episodes/ep1/act1/PhraPhum.ts):
   tray top 1.125 m; chamber floor 1.29 m; candle wicks at (+-0.44, -0.35,
-  ~1.28) and one candle inside the empty chamber at (0, 0.06, ~1.39).
+  ~1.28) and one candle inside the chamber at (0, 0.06, ~1.39), in front of
+  the figure (phra_phum_lady, pedestal foot at (0, LADY_Y, FLOOR)).
 Cultural details are advisor-review items (Cultural Guide).
 """
 import math
+import os
 
 import bpy
 import numpy as np
@@ -28,6 +34,7 @@ from shrine_craft import Batch, frame, kbach_relief, moulding, place, relief_pan
 TRAY_TOP = 1.125
 FLOOR = 1.29
 EFFIGY = (0.0, 0.10, FLOOR)
+LADY_Y = .26             # the figure kneels at the back of the chamber, facing the doorway
 WICKS = ((-0.44, -0.35), (0.44, -0.35))
 WICK_Z = 1.278
 
@@ -620,6 +627,30 @@ def _offerings(b, m, rng, coll):
     return wicks, None
 
 
+def _lady(coll):
+    """The library figure, joined, its pedestal foot on the chamber floor."""
+    from kit import LIB
+    from khmer import join
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.join(LIB, "scans", "phra_phum_lady.glb"))
+    new = [o for o in bpy.data.objects if o not in before]
+    meshes = [o for o in new if o.type == "MESH"]
+    bpy.context.view_layer.update()
+    for o in meshes:
+        o.data.transform(o.matrix_world)
+        o.matrix_world = Matrix.Identity(4)
+        o.parent = None
+    for o in new:
+        if o.type != "MESH":
+            bpy.data.objects.remove(o, do_unlink=True)
+    obj = join(meshes, "phra_phum_lady")
+    for c in list(obj.users_collection):
+        c.objects.unlink(obj)
+    coll.objects.link(obj)
+    obj.data.transform(Matrix.Translation((0, LADY_Y, FLOOR)))
+    return obj
+
+
 def build(coll, rng=None, effigy=False):
     """Build the spirit house into `coll` at the origin. Returns its objects."""
     rng = rng or np.random.default_rng(1932)
@@ -642,6 +673,7 @@ def build(coll, rng=None, effigy=False):
     wicks, banana = _offerings(b, m, rng, coll)
     inner = wicks.pop()
     objs = list(b.build(coll).values())
+    objs.append(_lady(coll))
     # Cobweb veils: porch corners and the black corners of the chamber.
     from cobwebs import corner_cobweb, web_materials
     sheet, thread = web_materials()
