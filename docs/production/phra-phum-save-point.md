@@ -1,85 +1,87 @@
 # Spirit house outside the compound
 
-28 October 2026. The Phra Phum stands beyond the compound's front-right fence
-corner, at `(-15.2, 0, 10.5)`. Both its footprint and approach are outside the
-fence (x = -13, z = 3). Reach it through the main gate, following the outside
-of the front fence to the right. The former courtyard desk and shrine are gone.
+17 November 2026 redesign. The Preah Phum (ព្រះភូមិ) stands beyond the
+compound's front-right fence corner, at `(-15.2, 0, 10.5)`
+(`src/episodes/ep1/data/saveShrine.ts`). Both its footprint and approach are
+outside the fence. Reach it through the main gate, following the outside of
+the front fence to the right. This replaces the October "modest household"
+direction (reclaimed boards and a plain roof, built at runtime from boxes) and
+the carved wooden effigy that sat inside it.
 
-The current direction is a modest early-1900s family spirit house, built from
-reclaimed timber. One plain pitched plank roof covers a rectangular doorway;
-three simple gable boards close its front. A single hewn post, two braces and
-a reused stone support a plank offering tray. Small replacement boards and
-repair cleats suggest the household maintains it with available materials.
-The ornate roof tiers, wings, spire, floral carving, ochre trim, balustrades
-and hanging flower chains have been removed.
+## The house
 
-The wood retains photographed grain, worn surfaces, seasoning cracks, sparse
-joint lichen and one corner cobweb. A small clay bowl holds three incense
-sticks; two candles stand in plain clay dishes. Soot-stained individual back
-boards keep the chamber recessed. Static pieces still merge by material.
+A well-off 1930s family's carved teak spirit house, sixty years of rain and
+candle smoke on it:
 
-`ShrineEffigy.ts` loads an original wooden statue, replacing the miniature human
-ancestor. Its broad mask-like face, hollow eye sockets, incised mouth, fingers,
-folded robes and seated body are carved timber. A single rough wood material
-carries continuous upright grain, baked normal detail and real splits in the
-forehead, cheek and chest. There are no skin, separate clothing or eyeball
-materials. The head turns as a rigid wooden piece on a neck joint; the body
-remains still. The preserved parent joint survives mesh quantization.
+- A single turned teak post, ringed and capped with an inverted lotus of gilt
+  petals, on two hand-cut laterite blocks sunk in the earth. A termite tunnel
+  of mud climbs the post; a strip of red cloth is tied round it.
+- Four scroll brackets carry a balustraded offering tray (top at 1.125 m):
+  silver-grey teak planks, one split; red fascia with gilt beads and a cut
+  fringe of teeth; turned balusters, one missing.
+- A panelled house on a stepped base with a band of gilt lotus petals. Side
+  walls have small windows of turned balusters. The doorway faces the path;
+  one door leaf is thrown back, the other hangs off a broken hinge.
+- Two stacked gables: a narrower porch on two turned columns in front, the main
+  roof behind and above. Teak shingles with pointed tips, some missing; carved
+  kbach reliefs in the pediments; bargeboards with flame teeth; the gilt naga
+  ends are the Cleveland Museum of Art's CC0 bronze naga finial scan; horn
+  finials at each apex.
+- The red lacquer has faded and flaked along the grain to silver-grey wood; the
+  gilt has rubbed through to its red bole. Inside it is black with soot.
+- On the porch: two beeswax candles burnt down in clay dishes, their wax run
+  down over the fascia; joss sticks old and new in a bowl of ash-grey sand;
+  lotus buds in two brass vases; banana-leaf cups of marigolds and betel; cups
+  of water; a dead jasmine and marigold garland on the porch beam; cobweb
+  veils in the porch corners. Beside the house: a young coconut, a hand of
+  bananas on a clay plate, an old leaf cup of rice, spilled rice, dead flowers.
+- The chamber is empty but for one candle burning on a dish crusted with the
+  wax of every candle before it.
 
-Editable source, maps, rebuild instructions and attribution are under
-`art-source/props/phra-phum/`. The original geometry builder is
-`tools/characters/build-shrine-effigy.py`; the 1K, meshopt-compressed runtime
-asset is `public/assets/ep1/phra_phum_effigy.glb`, about 2.5 MB. The existing
-forest ancestors are unchanged.
+Builders: `tools/areas/phra_phum.py` (with `shrine_craft.py`, `shrine_surfaces.py`
+and `offerings_kit.py`); `tools/areas/build-phra-phum.py` writes the editable
+`art-source/props/phra-phum/phra-phum.blend` and `art-export/ep1/phra_phum.glb`;
+`npm run assets -- ep1/phra_phum.glb` compresses it to
+`public/assets/ep1/phra_phum.glb` (≈9.6 MB, 113K triangles, 18 meshes, KTX2
+textures, meshopt). Small plain-coloured offerings share one palette material.
 
-`ShrineAgeing.ts` maps the wood grain along each separate timber's longest
-axis before static merging. Three shared 1K maps provide colour, tangent-space
-normals, occlusion and roughness (about 0.9 MB total). Sources and attribution
-are recorded in the prop README; the effigy's independent baked atlas stays
-unchanged.
+## In the game
 
-Two candle lights sit at the actual wicks and flicker out of phase. The left
-candle casts a shrine-only shadow cube on medium and higher presets, capped
-at 512px and cached while idle. The map refreshes as the rigid head turns.
-Low retains both candle lights without a shadow map. Both dim and recover
-with the existing response; neither changes the player's lamp or the global
-night lighting. The visual interaction hint stays on the clay offering vessels
-while the whole shrine remains selectable, preventing the wooden shelter
-from turning into a bright outline at close range.
+`PhraPhum.ts` loads the asset (`PhraPhum.prepare` during the act's loading)
+and finds the wick markers `phra_phum_wick_left`, `_right` and `_inner`:
 
-The maintained clearing keeps plants out of the shrine and its approach.
-Generated plants respect the clearing; authored low plants whose crowns
-intersect it are hidden before batching. Large trees and story props remain.
+- `phra_phum_votive_light` (left porch candle) casts a shrine-only shadow cube
+  on medium and higher presets, capped at 512 px and rendered once.
+- `phra_phum_right_candle` (right porch candle) has no shadows.
+- `phra_phum_inner_candle` lights the inside of the chamber.
+
+Flames are small unlit spheres at the wicks. One invisible box (1.34 × 1.2 ×
+1.05 m) is the collider; the clay vessels carry the close-range interaction
+hint; cobweb veils never stop the interaction ray.
 
 Press E within reach to pay respects and save. The write commits immediately;
-then a 6.2-second response dims the candles, gives three spatial wooden knocks,
-turns the carved mask towards the player, releases a cavity breath, and leaves
-a low brass tail. Wildlife recedes temporarily. The hollow sockets remain
-empty. Player movement, lamp and inventory do not change. Repeated input cannot
-stack the response. Failed storage writes preserve the previous save and do
-not perform a success response. Threats and cutscenes cancel the effect.
+then a 6.2-second response (`ShrineResponse.ts`) dims the porch candles, gives
+three spatial wooden knocks from inside, and the chamber's candle leans out of
+the doorway toward Sora and drowns to an ember before it rights itself; a
+cavity breath and a low brass tail follow. Wildlife recedes. Player movement,
+lamp and inventory do not change. Repeated input cannot stack the response.
+Failed storage writes preserve the previous save and do not perform a success
+response. Threats and cutscenes cancel the effect.
 
-The isolated browser fixture `tests/browser/save-shrine.html?start=act1` offers
-full views, an elevated roof inspection, doorway inspection, a real-controller
-walk from the gate, actual interaction-ray saving, danger blocking, rejected-write
-recovery and checkpoint reload. Roof inspection raises only the review camera;
-walking, interaction and saves use the normal player height. The fixture uses
-`boon-sop-phra-phum-review`, never player save storage. Add `&listen` for sound.
+## Checks
 
-Validation covers roof geometry, finite normals and draw-call budgets, the
-statue's physical size and pivot, complete wood maps, save concurrency, threat
-blocking and storage-failure recovery. `npm run check` runs type checking,
-ESLint, unit tests and the production build. Browser verification and captures
-use the actual game renderer and its night lighting.
+- `tests/unit/phraPhumAsset.test.ts`: bounds, the three wicks where the lights
+  go, the clay and gilt materials and their maps, draw-call and triangle budgets.
+- `tests/unit/shrineDetail.test.ts`: the clearing and route outside the fence,
+  the response's cues and its cancelling.
+- `tests/unit/savePoint.test.ts`: save concurrency, threat blocking, storage failure.
+- Browser fixture `tests/browser/save-shrine.html?start=act1`: views, the
+  real-controller walk from the gate, interaction-ray saving, the three candle
+  lights sinking and recovering, danger blocking, rejected-write recovery,
+  checkpoint reload. It uses `boon-sop-phra-phum-review`, never player saves.
+  Add `&listen` for sound.
+- `tools/areas/ground_audit.py` on `phra-phum.blend` over a ground plane: no
+  floating parts.
 
-The October 29 browser fixture also checks that all timber maps load, shadow
-casters are restricted to the shrine, the focused hint leaves wood visible,
-and both candle lights dim and recover during a successful save. Full and
-close-up captures use the production renderer, not the generated reference.
-
-The household version passes the production build, type checking and all 398
-unit tests (`npx vitest run --maxWorkers=2`). Shrine files pass ESLint; full
-project lint currently reports `require-await` at `tests/browser/text-system.ts:175`.
-The browser route, interaction ray, save writes, both candles dimming/restoring,
-danger blocking and failed-write recovery all pass without console errors.
-The current full view is `debug-shots/phra-phum-household.png`.
+Cultural details (offerings, the empty chamber, the response) are advisor-review
+items in the Cultural Guide.

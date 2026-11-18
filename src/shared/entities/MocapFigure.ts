@@ -49,7 +49,12 @@ export class MocapFigure {
   readonly root: TransformNode;
   readonly meshes: AbstractMesh[] = [];
   private readonly clips = new Map<string, AnimationGroup>();
-  private current: AnimationGroup | null = null;
+  /** Everything the clips move, and room to hold one clip's pose while another is read. */
+  private readonly channels: {
+    target: TransformNode;
+    property: "rotationQuaternion" | "position" | "scaling";
+  }[] = [];
+  private readonly held: (Quaternion | Vector3)[] = [];
   private readonly neck: TransformNode | null;
   private readonly head: TransformNode | null;
   private faceAxis: Vector3 | null = null;
@@ -72,9 +77,23 @@ export class MocapFigure {
       doNotInstantiate: true,
     });
     for (const node of copy.rootNodes) node.parent = this.root;
+    const seen = new Set<string>();
     for (const group of copy.animationGroups) {
-      group.stop();
+      // Every clip is started and held paused; `pose` shows whichever frame it is asked for.
+      group.start(true, 1, group.from, group.to, false);
+      group.pause();
       this.clips.set(group.name.replace(`${name}_`, ""), group);
+      for (const { target, animation } of group.targetedAnimations) {
+        const property = animation.targetProperty;
+        if (!(target instanceof TransformNode)) continue;
+        if (property !== "rotationQuaternion" && property !== "position" && property !== "scaling")
+          continue;
+        const key = `${target.uniqueId}:${property}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        this.channels.push({ target, property });
+        this.held.push(property === "rotationQuaternion" ? new Quaternion() : new Vector3());
+      }
     }
     for (const mesh of this.root.getChildMeshes(false)) {
       mesh.isPickable = false;
@@ -122,17 +141,50 @@ export class MocapFigure {
   pose(clip: string, seconds: number, loop = true): void {
     const group = this.clips.get(clip);
     if (!group) return;
-    if (this.current !== group) {
-      this.current?.stop();
-      group.start(loop, 1, group.from, group.to, false);
-      group.pause();
-      this.current = group;
-    }
     const fps = group.targetedAnimations[0]?.animation.framePerSecond ?? 60;
     const span = group.to - group.from;
     let frame = seconds * fps;
     frame = loop ? ((frame % span) + span) % span : Math.max(0, Math.min(span, frame));
     group.goToFrame(group.from + frame);
+  }
+
+  /** Length of a clip in seconds (0 if there is none). */
+  seconds(clip: string): number {
+    const group = this.clips.get(clip);
+    if (!group) return 0;
+    const fps = group.targetedAnimations[0]?.animation.framePerSecond ?? 60;
+    return (group.to - group.from) / fps;
+  }
+
+  /**
+   * Shows a mix of two clips: `a` at `ta` seconds and `b` at `tb`, `weight` of the way to
+   * `b`. Each moving part is turned and moved between the two poses, so a figure eases
+   * from standing into its walk without a snap.
+   */
+  blend(
+    a: string,
+    ta: number,
+    b: string,
+    tb: number,
+    weight: number,
+    loopA = true,
+    loopB = true,
+  ): void {
+    if (weight <= 0.002) return this.pose(a, ta, loopA);
+    if (weight >= 0.998) return this.pose(b, tb, loopB);
+    this.pose(a, ta, loopA);
+    for (const [i, { target, property }] of this.channels.entries()) {
+      const value = target[property];
+      if (value) (this.held[i] as Quaternion & Vector3).copyFrom(value as Quaternion & Vector3);
+    }
+    this.pose(b, tb, loopB);
+    for (const [i, { target, property }] of this.channels.entries()) {
+      const value = target[property];
+      if (!value) continue;
+      if (value instanceof Quaternion)
+        Quaternion.SlerpToRef(this.held[i] as Quaternion, value, weight, value);
+      else Vector3.LerpToRef(this.held[i] as Vector3, value, weight, value);
+    }
   }
 
   /**

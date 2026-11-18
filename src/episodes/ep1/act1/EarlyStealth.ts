@@ -4,7 +4,8 @@ import type { Vigil } from "./Vigil";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Ray } from "@babylonjs/core/Culling/ray";
-import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
+import { Preay, PREAY_EYE_HEIGHT } from "../entities/Preay";
 import { StalkerVoice } from "../audio/StalkerVoice";
 import { EarlyStealthBrain } from "./EarlyStealthBrain";
 import {
@@ -18,19 +19,18 @@ import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSo
 import { seededRandom } from "@/audio/synth";
 import { dreadBed, spiritRattle } from "../audio/presenceSounds";
 
-/** A1-11b: keep the vigil in darkness while a listening figure crosses the gate.
- * The historic class/flags are retained so existing checkpoints still restore.
+/** A1-11b: keep the vigil in darkness while the Preay comes in at the gate and searches
+ * the yard, listening. The historic class/flags are retained so existing checkpoints
+ * still restore.
  */
 export class EarlyStealth {
   readonly brain = new EarlyStealthBrain();
-  readonly figure: ShadowFigure;
+  readonly figure: Preay;
   private running = false;
   private finishing = false;
   private recovering = false;
   private starting = false;
   private time = 0;
-  private travel = 0;
-  private yaw = Math.PI;
   private walked = 0;
   private readonly presence = new SpiritPresence(1.8, 1.4);
   private tension: StaticSound | null = null;
@@ -44,10 +44,11 @@ export class EarlyStealth {
     private readonly game: Game,
     private readonly vigil: Vigil,
     private readonly capture: () => SaveData,
+    asset: AssetContainer,
   ) {
     this.brain.direction.set(0, 0, -1);
-    this.figure = new ShadowFigure(game.scene, "road_watcher", 2.5);
-    this.figure.root.setEnabled(false);
+    this.figure = new Preay(asset, "road_watcher", 3.1);
+    this.figure.setEnabled(false);
     this.hud.className = "road-stealth-status";
     this.hud.hidden = true;
     this.hud.setAttribute("role", "status");
@@ -112,10 +113,8 @@ export class EarlyStealth {
     this.starting = false;
     this.running = true;
     this.hud.hidden = false;
-    this.figure.root.position.copyFrom(this.brain.position);
-    this.figure.root.rotation.y = this.yaw;
+    this.figure.place(this.brain.position, Math.PI);
     this.figure.setPresence(0);
-    this.figure.root.setEnabled(true);
     this.presence.show();
     this.tension?.play();
     this.voice.step(this.brain.position);
@@ -142,7 +141,6 @@ export class EarlyStealth {
     if (!this.running || this.recovering || this.finishing || g.cutscene) return;
     this.time += dt;
     this.presence.update(dt);
-    this.figure.setPresence(this.presence.value);
     const before = this.brain.position.clone();
     if (this.time > PASSAGE_WARNING_SECONDS) {
       // It searches for light and movement. Stillness and an extinguished lamp
@@ -154,15 +152,12 @@ export class EarlyStealth {
       this.brain.update(dt, feet, lit, crouched, visible);
     }
     const distance = Vector3.Distance(before, this.brain.position);
-    const speed = dt > 0 ? distance / dt : 0;
-    this.travel += (Math.min(1, speed / 0.85) - this.travel) * (1 - Math.exp(-dt * 8));
-    this.figure.root.position.copyFrom(this.brain.position);
-    const want = Math.atan2(this.brain.direction.x, this.brain.direction.z);
-    const error = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
-    this.yaw += error * (1 - Math.exp(-dt * 2.3));
-    this.figure.root.rotation.y = this.yaw;
+    // She walks where the brain goes, turning as a person turns; searching, her head
+    // comes round to where she last heard Sora.
+    this.figure.follow(dt, this.brain.position, this.brain.direction);
+    this.figure.watch(this.brain.state === "chase" ? g.camera.globalPosition : null);
+    this.figure.setPresence(this.presence.value);
     this.walked += distance;
-    this.figure.animate(this.time, this.travel, Math.max(-1, Math.min(1, error)));
     const urgency = this.brain.state === "chase" ? 1 : this.brain.suspicion;
     this.voice.breathe(this.brain.position, urgency, this.presence.value);
     // No footsteps while it listens or turns in place.
@@ -215,11 +210,15 @@ export class EarlyStealth {
   }
   canSeeSora(): boolean {
     const g = this.game,
-      from = this.brain.position.add(new Vector3(0, 1.7, 0)),
+      from = this.brain.position.add(new Vector3(0, PREAY_EYE_HEIGHT, 0)),
       to = g.camera.globalPosition.subtract(from),
       length = to.length();
     if (length < 0.01) return true;
-    const own = new Set([...this.figure.meshes, ...this.vigil.heldMeshes, ...g.hands.meshes]);
+    const own = new Set([
+      ...this.figure.figure.meshes,
+      ...this.vigil.heldMeshes,
+      ...g.hands.meshes,
+    ]);
     const hit = g.scene.pickWithRay(
       new Ray(from, to.scale(1 / length), length),
       (m) =>
@@ -240,7 +239,7 @@ export class EarlyStealth {
     this.voice.stop();
     this.tension?.stop();
     this.rattle?.stop();
-    this.figure.root.setEnabled(false);
+    this.figure.setEnabled(false);
     this.hud.hidden = true;
     g.flags.set("ep1.early.complete", true);
     const save = this.capture();

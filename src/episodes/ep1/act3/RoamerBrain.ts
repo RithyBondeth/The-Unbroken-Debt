@@ -1,5 +1,11 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { ROAMER_ROUTE, huntHearing, inHunt } from "../data/hunt";
+import {
+  ROAMER_CHASE_SPEED,
+  ROAMER_PATROL_SPEED,
+  ROAMER_ROUTE,
+  huntHearing,
+  inHunt,
+} from "../data/hunt";
 import { HuntNavigation } from "./HuntNavigation";
 
 export type RoamerState = "idle" | "patrol" | "investigating" | "chasing" | "caught";
@@ -99,7 +105,7 @@ export class RoamerBrain {
       } else {
         const to = this.points[0].subtract(this.position),
           length = to.length();
-        const travel = step * (this.state === "chasing" ? 2.4 : 1.3);
+        const travel = step * (this.state === "chasing" ? ROAMER_CHASE_SPEED : ROAMER_PATROL_SPEED);
         if (length > 0.001) {
           this.direction.copyFrom(to).normalize();
           const next = this.position.add(to.scale(Math.min(1, travel / length)));

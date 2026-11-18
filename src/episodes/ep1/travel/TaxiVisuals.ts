@@ -33,6 +33,7 @@ import { addStaticBox } from "@/core/physics";
 import { buildTaxiRoadside } from "./taxiRoadside";
 import { StormSky } from "@/render/weather/StormSky";
 import { MocapFigure } from "@/shared/entities/MocapFigure";
+import { Preay } from "../entities/Preay";
 import { NIGHT_LOOK } from "@/render/nightLook";
 import { applyRainWetness } from "@/render/surfaceDetail";
 import { TaxiWeather } from "./TaxiWeather";
@@ -63,25 +64,6 @@ import { buildTaxiFarForest, thickenTaxiUnderstorey } from "./taxiForestDepth";
 import { ageTaxiCabin } from "./taxiCabinWear";
 import { TaxiGlassMarks } from "./TaxiGlassMarks";
 
-/**
- * The roadside Neak Ta's paint, as the shrine effigy's (ShadowFigure): its mineral skin
- * darkened to soot-black with a dull sheen the lamps can find, dark faded cotton, and
- * chalk eyes dimmed so they catch light without glowing.
- */
-const SPIRIT_TINTS: Record<string, [albedo: Color3, roughness: number, specular: number]> = {
-  // A real photoscanned body, its own skin baked soot-dark with ash and dried mud
-  // (build-neakta-roadside.py soot_skin): the colour map carries the darkness and every
-  // pore and vein, so it is only dimmed a little here, and the baked gloss map (roughness
-  // 1 = as baked) keeps the rain running wet in streaks.
-  M_neakta_worn_skin: [new Color3(0.26, 0.25, 0.24), 1, 0.22],
-  // Its cotton: dark and sodden, the weave still there in the lamps.
-  M_ancestor_earth_cotton: [new Color3(0.3, 0.28, 0.25), 0.94, 0.15],
-  // The sash soaked nearly black: a dull rust only where the light rakes across it.
-  M_ancestor_saffron_cotton: [new Color3(0.04, 0.034, 0.03), 0.95, 0.12],
-  M_ancestor_chalk_eye: [new Color3(0.16, 0.15, 0.11), 0.32, 1],
-  // Long matted hair, soaked: black, with the wet shine of the lightning on it.
-  M_neakta_matted_hair: [new Color3(0.35, 0.33, 0.3), 0.5, 0.45],
-};
 /** A layer the player's camera never draws (its mask is the default 0x0FFFFFFF). */
 const MIRROR_ONLY = 0x10000000;
 /** Leaf materials the headlamps reach, and how much deeper and greener they are graded here. */
@@ -544,14 +526,8 @@ export class TaxiVisuals {
     const face = cabinMeshes.find((m) => m.name.includes("taxi_mirror_surface"));
     if (face) face.material = mirrorMaterial;
     this.rain = new TaxiWeather(scene, game.preset.name === "low");
-    for (const material of spiritAsset.materials) {
-      const tint = SPIRIT_TINTS[material.name];
-      if (!tint || !(material instanceof PBRMaterial)) continue;
-      material.albedoColor = tint[0].clone();
-      material.roughness = tint[1];
-      material.specularIntensity = tint[2];
-    }
-    this.spirit = new MocapFigure(spiritAsset, "taxi_neakta");
+    // The Preay (build-preay.py), as she is: her white dress is what the lamps find.
+    this.spirit = new MocapFigure(spiritAsset, "taxi_preay");
     this.spirit.root.parent = route;
     this.spiritFill = new PointLight("taxi_spirit_flash_fill", new Vector3(0.5, 1.05, 0.2), scene);
     this.spiritFill.diffuse.set(0.68, 0.76, 0.95);
@@ -635,7 +611,7 @@ export class TaxiVisuals {
     const [cabin, roadside, spiritAsset] = await Promise.all([
       LoadAssetContainerAsync(`${base}ep1_taxi_cabin.glb`, scene),
       LoadAssetContainerAsync(`${base}ep1_taxi_roadside.glb`, scene),
-      MocapFigure.load(scene, `${base}neakta_roadside.glb`),
+      Preay.load(scene),
     ]);
     cabin.addAllToScene();
     for (const material of cabin.materials) {

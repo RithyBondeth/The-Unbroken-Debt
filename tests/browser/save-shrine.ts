@@ -203,11 +203,13 @@ async function review(): Promise<void> {
     await save();
     const companion = game.scene.getLightByName("phra_phum_right_candle") as PointLight;
     await wait(() => act.saveShrine.light.intensity < 0.025 && companion.intensity < 0.012, 8000);
-    report("PASS both candles dim during the wooden effigy's response");
+    const inner = game.scene.getLightByName("phra_phum_inner_candle") as PointLight;
+    await wait(() => inner.intensity < 0.01, 8000);
+    report("PASS the porch candles sink and the chamber's candle drowns during the response");
     await wait(() => !act.saveShrine.interacting, 8000);
     assert(
-      act.saveShrine.light.intensity > 0.2 && companion.intensity > 0.09,
-      "both candle lights restore after paying respects",
+      act.saveShrine.light.intensity > 0.2 && companion.intensity > 0.09 && inner.intensity > 0.05,
+      "all three candle lights restore after paying respects",
     );
     const initial = attempts;
     game.threatActive = true;
@@ -231,13 +233,13 @@ async function review(): Promise<void> {
     report(`Saved debug-shots/phra-phum-${view}.png`);
   });
   const meshes = act.saveShrine.root.getChildMeshes();
-  const timber = game.scene.getMaterialByName("M_phra_phum_weathered_teak");
-  assert(timber instanceof PBRMaterial, "weathered timber replaces house planks");
-  if (timber instanceof PBRMaterial) {
-    await wait(() => timber.getActiveTextures().every((texture) => texture.isReady()));
+  const gilt = game.scene.getMaterialByName("M_phra_phum_gilt_carving");
+  assert(gilt instanceof PBRMaterial, "the carved spirit house asset is loaded");
+  if (gilt instanceof PBRMaterial) {
+    await wait(() => gilt.getActiveTextures().every((texture) => texture.isReady()));
     assert(
-      timber.albedoTexture && timber.bumpTexture && timber.metallicTexture,
-      "photographed wood colour, normal and packed roughness maps loaded",
+      gilt.albedoTexture && gilt.bumpTexture && gilt.metallicTexture,
+      "gilt colour, normal and packed roughness-metal maps loaded",
     );
   }
   const casters = act.saveShrine.light.getShadowGenerator()?.getShadowMap()?.renderList;

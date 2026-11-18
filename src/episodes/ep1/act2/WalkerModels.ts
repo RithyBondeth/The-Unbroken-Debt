@@ -12,7 +12,8 @@ import { PhysicsShapeBox } from "@babylonjs/core/Physics/v2/physicsShape";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { seededRandom } from "@/audio/synth";
 import { WARDROBES } from "../data/walker";
-import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
+import { Preay, PREAY_EYE_HEIGHT } from "../entities/Preay";
 
 export interface HidingWardrobe {
   id: string;
@@ -23,7 +24,7 @@ export interface HidingWardrobe {
   open: number;
 }
 
-/** Physical louvred wardrobes and the shrine's ancestral effigy in the hallway. */
+/** Physical louvred wardrobes, and the Preay who walks the hallway. */
 export class WalkerModels {
   readonly wardrobes: HidingWardrobe[] = [];
   readonly walker: TransformNode;
@@ -31,11 +32,15 @@ export class WalkerModels {
   private readonly wood: PBRMaterial;
   private readonly edge: PBRMaterial;
   private readonly brass: PBRMaterial;
-  private form!: ShadowFigure;
+  private form!: Preay;
+  private lastTime = 0;
+  /** Her heel strikes, for the walker's footsteps. */
+  onStep: ((at: Vector3) => void) | null = null;
 
   constructor(
     private readonly scene: Scene,
     area: Area,
+    private readonly preay: AssetContainer,
   ) {
     this.wood = this.material("wardrobe_teak", "#ffffff", 0.84);
     this.edge = this.material("wardrobe_trim", "#3d291e", 0.74);
@@ -78,10 +83,24 @@ export class WalkerModels {
     }
   }
 
+  /** Where the brain has her, at its clock: she walks there at her own pace, turning as a person turns. */
   pose(at: Vector3, direction: Vector3, time: number): void {
+    const dt = Math.max(0, Math.min(0.1, time - this.lastTime));
+    this.lastTime = time;
     this.walker.position.copyFrom(at);
-    this.walker.rotation.y = Math.atan2(direction.x, direction.z);
-    this.form.animate(time, 1);
+    this.walker.rotation.y = 0;
+    this.form.follow(dt, at, direction, false);
+  }
+
+  /** Face to face with Sora (caught): her eyes level with hers, `forward` from Sora's eyes. */
+  confront(eye: Vector3, forward: Vector3, distance: number): void {
+    const flat = new Vector3(forward.x, 0, forward.z).normalize();
+    this.walker.position.copyFrom(eye.add(flat.scale(distance)));
+    this.walker.position.y = eye.y - PREAY_EYE_HEIGHT;
+    this.walker.rotation.y = 0;
+    this.form.place(Vector3.Zero(), Math.atan2(-flat.x, -flat.z));
+    this.form.watch(eye);
+    this.form.standStill(0);
   }
 
   private material(name: string, hex: string, roughness: number, metallic = 0): PBRMaterial {
@@ -184,8 +203,9 @@ export class WalkerModels {
   }
 
   private makeWalker(): void {
-    this.form = new ShadowFigure(this.scene, "walker", 2.3);
+    this.form = new Preay(this.preay, "walker", 1.3);
     this.form.root.parent = this.walker;
-    this.meshes.push(...this.form.meshes);
+    this.form.onStep = (at) => this.onStep?.(at);
+    this.meshes.push(...(this.form.figure.meshes as Mesh[]));
   }
 }

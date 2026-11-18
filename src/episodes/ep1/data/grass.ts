@@ -1,12 +1,25 @@
 import { seededRandom } from "@/audio/synth";
 import { inSaveShrineClearing } from "./saveShrine";
-import { PLAY, ROAD_Z, YARD, inBelt, inBund, inside, outside, pathDistance } from "./forestBorder";
+import {
+  PLAY,
+  ROAD_Z,
+  YARD,
+  inBelt,
+  inBund,
+  inWild,
+  inside,
+  outside,
+  pathDistance,
+} from "./forestBorder";
+import { CLEARINGS, ellipseValue, inPond, laneDistance } from "./villageAreas";
 
 /**
  * Tall grass (smau) round the village: thick on the road bank, along the
  * paddies' bunds and at the edge of the swept yard, where light reaches the
- * ground; only a thin fringe along the forest path under the old canopy. The trodden path, the road, the yard, the shrine
- * clearing, the pond and the wells stay bare. Babylon space, metres.
+ * ground; only a thin fringe along the forest path under the old canopy. The
+ * expansion's abandoned clearings have grown over with it, all but their lanes.
+ * The trodden path, the road, the yard, the shrine clearing, the pond and the
+ * wells stay bare. Babylon space, metres.
  */
 
 export interface GrassClump {
@@ -49,11 +62,21 @@ export function grassChance(x: number, z: number): number {
   if (WELLS.some(([wx, wz]) => Math.hypot(x - wx, z - wz) < 1.8)) return 0;
   const path = pathDistance(x, z);
   const road = Math.abs(z - ROAD_Z);
-  if (path < 0.9 || road < 2.4) return 0;
+  const lane = laneDistance(x, z);
+  if (path < 0.9 || road < 2.4 || lane < 0.6) return 0;
+  // The pond and its wet bank: reeds there are authored (east_pond.py).
+  if (inPond(x, z, 2.6)) return 0;
   let chance = 0;
   // Under the old-growth canopy little grass grows: a thin fringe along the trodden path.
   if (z > 2 && z < 61) chance = Math.max(chance, 0.45 * verge(path, 0.9, 3.4));
-  if (Math.abs(x) < 34) chance = Math.max(chance, 0.85 * verge(road, 2.4, 3.2));
+  if (Math.abs(x) < 54) chance = Math.max(chance, 0.85 * verge(road, 2.4, 3.2));
+  // The overgrown clearings: thick in the open, thinning under the trees at their edge.
+  for (const e of CLEARINGS) {
+    const k = ellipseValue(e, x, z);
+    if (k < 1.3) chance = Math.max(chance, 0.6 * (1 - Math.max(0, k - 0.7) / 0.6));
+  }
+  if (lane < 3) chance = Math.max(chance, 0.4 * verge(lane, 0.6, 2.4));
+  if (inWild(x, z)) chance = Math.max(chance, 0.08);
   if (inBund(x, z)) chance = Math.max(chance, 0.6);
   const yard = outside(YARD, x, z);
   if (yard > 0 && yard < 3) chance = Math.max(chance, 0.45 * (1 - yard / 3));

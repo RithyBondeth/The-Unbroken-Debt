@@ -30,7 +30,9 @@ import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
+import { PondSpirit } from "./PondSpirit";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import { Preay } from "../entities/Preay";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
@@ -57,7 +59,6 @@ import { ChestInvestigation } from "../act3/ChestInvestigation";
 import { EarlyStealth } from "./EarlyStealth";
 import { SavePoint } from "@/systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
-import { ShrineEffigy } from "./ShrineEffigy";
 import { KrasueEncounter } from "../entities/KrasueEncounter";
 import { KrasueModel } from "@/shared/entities/KrasueModel";
 import {
@@ -87,6 +88,7 @@ export class ActOne {
   vigil!: Vigil;
   night!: NightLife;
   apparitions!: Apparitions;
+  pondSpirit!: PondSpirit;
   betel!: BetelOffering;
   beats!: ActOneBeats;
   investigation!: SokInvestigation;
@@ -124,6 +126,7 @@ export class ActOne {
       keep: [
         /^tingmong_\d+$/,
         "neakta_stone_watch",
+        "pond_spirit",
         "door_sok_padlock",
         "shed_padlock",
         TENT_FLAME_MESH,
@@ -173,17 +176,18 @@ export class ActOne {
     this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
     this.omens.build(this.plantSites);
     game.fallGuard.bounds = PLAY;
-    await Promise.all([
+    const [, , , preay] = await Promise.all([
       ShadowFigure.prepare(game.scene),
-      ShrineEffigy.prepare(game.scene),
+      PhraPhum.prepare(game.scene),
       KrasueModel.prepare(game.scene),
+      Preay.load(game.scene),
     ]);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
-    const walkerModels = new WalkerModels(game.scene, this.area);
+    const walkerModels = new WalkerModels(game.scene, this.area, preay);
     const deskModels = new DeskModels(game.scene, this.area);
-    const huntModels = new HuntModels(game.scene, this.area);
+    const huntModels = new HuntModels(game.scene, this.area, preay);
     const chestModels = new ChestModels(game.scene, this.area);
     const corpseModels = await CorpseModels.load(game.scene, this.area);
     const arrivalModels = new ArrivalModels(game.scene);
@@ -258,7 +262,8 @@ export class ActOne {
       Math.max(this.night.threatSilence, this.forest?.silence ?? 0),
     );
     this.forest = new ForestAtmosphere(game);
-    this.apparitions = new Apparitions(game, this.area, this.lights);
+    this.apparitions = new Apparitions(game, this.area, this.lights, preay);
+    this.pondSpirit = new PondSpirit(game, this.area, this.lights, preay);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
       game,
@@ -293,7 +298,7 @@ export class ActOne {
       () => this.dawn(),
     );
     this.ritual = new FinalRitual(game, this.area, this.lights, () => this.beats.saveProgress());
-    this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress());
+    this.early = new EarlyStealth(game, this.vigil, () => this.beats.captureProgress(), preay);
     this.krasue = new KrasueEncounter(game, this.vigil, () => this.beats.captureProgress());
     this.saveShrine = new PhraPhum(game, SAVE_SHRINE_POSITION);
     new SavePoint(
@@ -420,6 +425,7 @@ export class ActOne {
     this.early.update(dt);
     if (!this.early.active) {
       this.apparitions.update(dt);
+      this.pondSpirit.update(dt);
       this.betel.update(dt);
       this.beats.update(dt);
       this.investigation.update(dt);
@@ -449,6 +455,7 @@ export class ActOne {
         ? 0
         : Math.max(
             this.apparitions.dread * 0.55,
+            this.pondSpirit.dread * 0.5,
             this.night.threatSilence * 0.4,
             (this.forest?.silence ?? 0) * 0.35,
             (this.saveShrine?.silence ?? 0) * 0.4,
@@ -582,12 +589,14 @@ export class ActOne {
       stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
     this.apparitions.score = this.score;
+    this.pondSpirit.score = this.score;
     this.saveShrine.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
     await this.forest.makeSounds();
     await this.windAudio.makeSounds();
     await this.apparitions.makeSounds();
+    await this.pondSpirit.makeSounds();
     await this.guests.makeSounds(audio);
     await this.betel.makeSounds();
     await this.beats.makeSounds();

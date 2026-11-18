@@ -15,7 +15,8 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "@/audio/synth";
 import { JARS } from "../data/hunt";
-import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
+import { Preay, PREAY_EYE_HEIGHT } from "../entities/Preay";
 
 export interface SearchJar {
   id: string;
@@ -25,12 +26,15 @@ export interface SearchJar {
   opening: number;
 }
 
-/** Hollow glazed jars, removable wooden lids, cut brass pieces and the low, dragging shadow. */
+/** Hollow glazed jars, removable wooden lids, cut brass pieces, and the Preay who hunts down there. */
 export class HuntModels {
   readonly jars: SearchJar[] = [];
   readonly roamer: TransformNode;
   readonly meshes: Mesh[] = [];
-  private form!: ShadowFigure;
+  private form!: Preay;
+  private lastSeconds = 0;
+  /** Her heel strikes, for her steps in the dirt. */
+  onStep: ((at: Vector3) => void) | null = null;
   private readonly brass: PBRMaterial;
   private readonly dark: PBRMaterial;
   private readonly wood: PBRMaterial;
@@ -42,6 +46,7 @@ export class HuntModels {
   constructor(
     private readonly scene: Scene,
     area: Area,
+    private readonly preay: AssetContainer,
   ) {
     this.brass = this.agedBrass();
     this.dark = this.mat("charcoal", "#111512", 0.96);
@@ -177,12 +182,26 @@ export class HuntModels {
       jar.lid.rotation.z = -jar.opening * 0.85;
     }
   }
+  /** Where the brain has her, at its clock: she walks, or hurries, there as a person would. */
   pose(at: Vector3, direction: Vector3, seconds: number, visibility: number): void {
+    const dt = Math.max(0, Math.min(0.1, seconds - this.lastSeconds));
+    this.lastSeconds = seconds;
     this.roamer.position.copyFrom(at);
-    this.roamer.rotation.y = Math.atan2(direction.x, direction.z);
-    this.form.animate(seconds, 0.65);
+    this.roamer.rotation.y = 0;
     this.roamer.setEnabled(visibility > 0);
-    this.form.setPresence(visibility);
+    this.form.follow(dt, at, direction, false);
+  }
+
+  /** Face to face with Sora (caught): her eyes level with hers, `forward` from Sora's eyes. */
+  confront(eye: Vector3, forward: Vector3, distance: number): void {
+    const flat = new Vector3(forward.x, 0, forward.z).normalize();
+    this.roamer.position.copyFrom(eye.add(flat.scale(distance)));
+    this.roamer.position.y = eye.y - PREAY_EYE_HEIGHT;
+    this.roamer.rotation.y = 0;
+    this.roamer.setEnabled(true);
+    this.form.place(Vector3.Zero(), Math.atan2(-flat.x, -flat.z));
+    this.form.watch(eye);
+    this.form.standStill(0);
   }
 
   createPreview(camera: Camera): void {
@@ -295,9 +314,10 @@ export class HuntModels {
     shaft.rotation.z = Math.PI / 2;
   }
   private buildRoamer(): void {
-    this.form = new ShadowFigure(this.scene, "roamer", 1.87);
+    this.form = new Preay(this.preay, "roamer", 2.6);
     this.form.root.parent = this.roamer;
-    this.meshes.push(...this.form.meshes);
+    this.form.onStep = (at) => this.onStep?.(at);
+    this.meshes.push(...(this.form.figure.meshes as Mesh[]));
   }
   private root(name: string, at: Vector3, parent?: TransformNode): TransformNode {
     const root = new TransformNode(name, this.scene);

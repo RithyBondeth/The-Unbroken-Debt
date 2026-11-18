@@ -1,5 +1,6 @@
 import { seededRandom } from "@/audio/synth";
 import { inSaveShrineClearing } from "./saveShrine";
+import { LANE_WIDTH, inClearing, inNewGround, laneDistance } from "./villageAreas";
 
 /**
  * The forest round the village's authored ground, and where Sora's walk ends.
@@ -8,7 +9,9 @@ import { inSaveShrineClearing } from "./saveShrine";
  * The Blender terrain stops at TERRAIN. Sora is held inside PLAY by walls set
  * in the thicket a few metres short of it; past them the ground and the forest
  * carry on into the fog until the storm sky takes over, so there is no edge to
- * see or reach. The compound's own belt of forest is filled out at the same time.
+ * see or reach. The compound's own belt of forest is filled out at the same time,
+ * and the ground the village expansion added (data/villageAreas) is grown over
+ * with forest round its clearings.
  */
 export interface Rect {
   minX: number;
@@ -17,15 +20,16 @@ export interface Rect {
   maxZ: number;
 }
 
-export const TERRAIN: Rect = { minX: -40, maxX: 40, minZ: -40, maxZ: 92 };
-export const PLAY: Rect = { minX: -35, maxX: 35, minZ: -35.5, maxZ: 88 };
+export const TERRAIN: Rect = { minX: -65, maxX: 65, minZ: -62, maxZ: 92 };
+export const PLAY: Rect = { minX: -60, maxX: 60, minZ: -57, maxZ: 88 };
 /** Centre of the road along the paddies (A1-01). */
 export const ROAD_Z = 63.5;
 /** The flooded rice fields between the road bank and the far bank. */
 const PADDIES = { minZ: 60.5, maxZ: 86.5 };
 /** Raised bunds close the fields east and west, inside the walls' thicket. */
-const BUND_X = 33.5;
-export const YARD: Rect = { minX: -13, maxX: 13, minZ: -27, maxZ: 3 };
+const BUND_X = 53.5;
+/** The compound inside its fence; the back fence stands behind the porch stairs (colonial_house.py). */
+export const YARD: Rect = { minX: -13, maxX: 13, minZ: -32, maxZ: 3 };
 export const PATH: readonly (readonly [number, number])[] = [
   [-1.5, 60],
   [-2.5, 50],
@@ -154,6 +158,8 @@ export interface Plant {
   scale: number;
   /** 0–1, picks a template variant. */
   pick: number;
+  /** Its trunk blocks Sora (the forest on the expansion's new ground). */
+  solid?: boolean;
 }
 
 /** A far tree drawn as crossed painted cards (impostor), beyond the modelled ring. */
@@ -367,15 +373,65 @@ function inRing(x: number, z: number, nearDepth: number): boolean {
 
 /** The forest belt round the house and compound, short of the walls' thicket. */
 export function inBelt(x: number, z: number): boolean {
-  if (!inside(PLAY, x, z, 2.5)) return false;
+  if (!inside(PLAY, x, z, 2.5) || inNewGround(x, z)) return false;
   const sides = Math.abs(x) >= 14.5 && z > -33 && z < 6;
   const rear = z <= -28.5;
   return (sides || rear) && !inside(YARD, x, z, -1.8) && pathDistance(x, z) > 3;
 }
 
+/**
+ * The ground the village expansion added (data/villageAreas), short of the walls'
+ * thicket and the road: grown over as old forest round the built areas' clearings.
+ */
+const WILD: LayerSpec[] = [
+  {
+    layer: "canopy",
+    spacing: 7,
+    keep: 0.85,
+    radius: 3,
+    mix: [
+      ["broadleaf", 0.7],
+      ["bamboo", 0.08],
+      ["dead", 0.07],
+      ["pachira", 0.08],
+      ["sugarPalm", 0.07],
+    ],
+  },
+  {
+    layer: "mid",
+    spacing: 3.8,
+    keep: 0.8,
+    radius: 1.3,
+    mix: [
+      ["young", 0.3],
+      ["pachira", 0.3],
+      ["shrub", 0.3],
+      ["bamboo", 0.1],
+    ],
+  },
+  {
+    layer: "under",
+    spacing: 2.4,
+    keep: 0.8,
+    radius: 0.6,
+    mix: [
+      ["fern", 0.6],
+      ["shrub", 0.4],
+    ],
+  },
+];
+
+/** The expansion's new ground inside the walls' thicket, north of the road bank. */
+export function inWild(x: number, z: number): boolean {
+  return inNewGround(x, z) && inside(PLAY, x, z, 2.5) && z < ROAD_Z - 4.5;
+}
+
 /** Fixed clearances every layout respects: the yard, path, pond and wells. */
 export function openGround(x: number, z: number, radius: number): boolean {
   if (inSaveShrineClearing(x, z, radius)) return false;
+  // The expansion's clearings and the lanes that lead to them.
+  if (inClearing(x, z, radius + 0.5)) return false;
+  if (laneDistance(x, z) < LANE_WIDTH / 2 + 1.1 + radius) return false;
   if (inside(YARD, x, z, -(1.2 + radius))) return false;
   if (pathDistance(x, z) < 2.2 + radius) return false;
   if (
@@ -405,6 +461,7 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
     [RING, (x, z) => inRing(x, z, options.nearDepth)],
     [BELT, inBelt],
     [WALK, inWalk],
+    [WILD, inWild],
   ];
   for (const [specs, within] of zones) {
     for (const spec of specs) {
@@ -433,7 +490,17 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
           if (!inTerrain && !openGround(x, z, 0)) continue;
           if (trunks.some((t) => Math.hypot(x - t.x, z - t.z) < t.r + spec.radius * 0.6)) continue;
           const [lo, hi] = SCALE[species];
-          plants.push({ species, layer: spec.layer, x, z, yaw, scale: lo + (hi - lo) * k, pick });
+          const plant: Plant = {
+            species,
+            layer: spec.layer,
+            x,
+            z,
+            yaw,
+            scale: lo + (hi - lo) * k,
+            pick,
+          };
+          if (specs === WILD) plant.solid = true;
+          plants.push(plant);
           if (spec.layer !== "under") trunks.push({ x, z, r: spec.layer === "canopy" ? 2.2 : 1 });
         }
       }

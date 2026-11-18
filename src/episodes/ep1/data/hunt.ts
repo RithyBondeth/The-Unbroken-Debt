@@ -11,6 +11,14 @@ export const JARS = [
   { id: "J6", at: new Vector3(-4.6, 0, -11.2), contents: "key", piece: 2 },
 ] as const;
 export const FRAGMENT_IDS = ["brass_key_bow", "brass_key_shaft", "brass_key_bit"] as const;
+/**
+ * The Preay's pace under the house (m/s): an unhurried walk on patrol, and her stumbling
+ * hurry when she has Sora, never faster than a person (build-preay.py: walk 0.81 and hurry
+ * 1.08 m/s at 1x, played at most 1.6x).
+ */
+export const ROAMER_PATROL_SPEED = 1.0;
+export const ROAMER_CHASE_SPEED = 1.7;
+
 export const ROAMER_ROUTE = [
   new Vector3(-3.6, 0, -16.6),
   new Vector3(-4.1, 0, -12.3),
