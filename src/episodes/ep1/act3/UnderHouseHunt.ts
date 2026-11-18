@@ -23,7 +23,7 @@ export class UnderHouseHunt {
   private checkpoint: SaveData | null = null;
   private recovering = false;
   private intro = 0;
-  private stepIn = 0;
+  private stepCount = 0;
   private assembly = -1;
   private actionState = "";
   private readonly entries: string[] = [];
@@ -43,6 +43,16 @@ export class UnderHouseHunt {
     this.progress = new HuntProgress(game.flags, game.inventory);
     if (game.resumedSave?.checkpoint === "CP5") this.checkpoint = structuredClone(game.resumedSave);
     models.createPreview(game.camera);
+    // Her bare feet in the mud under the house, with her heels.
+    models.onStep = (at) => {
+      if (!this.brain.active) return;
+      const step = this.steps[this.stepCount++ % Math.max(1, this.steps.length)];
+      if (step) {
+        step.spatial.position = at.clone();
+        step.play();
+      }
+      this.voice.step(this.brain.position);
+    };
     this.restoreModels();
     for (const jar of models.jars) {
       game.interaction.add(`interact_jar_${jar.id}`, jar.root);
@@ -90,7 +100,7 @@ export class UnderHouseHunt {
         this.brain.position,
         { minDistance: 2.5, volume: 0.6 },
       );
-      sound.playbackRate = 0.58 + i * 0.04;
+      sound.playbackRate = 0.8 + i * 0.04;
       this.steps.push(sound);
     }
     this.lidSound = await audio.spatialSound(
@@ -125,7 +135,7 @@ export class UnderHouseHunt {
       g.sketchbook?.close();
       this.brain.start();
       this.intro = 2.5;
-      this.stepIn = 0;
+      this.stepCount = 0;
       g.hints.show("hint.underHouse", 12);
       void g.subtitles.say(
         "Sora",
@@ -149,17 +159,6 @@ export class UnderHouseHunt {
         this.brain.elapsed,
         Math.min(1, Math.max(0, 1 - this.intro)),
       );
-      this.stepIn -= dt;
-      if (this.stepIn <= 0) {
-        const step =
-          this.steps[Math.floor(this.brain.elapsed * 1.2) % Math.max(1, this.steps.length)];
-        if (step) {
-          step.spatial.position = this.brain.position.add(new Vector3(0, 0.1, 0));
-          step.play();
-        }
-        this.voice.step(this.brain.position);
-        this.stepIn = this.brain.state === "chasing" ? 0.55 : 0.95;
-      }
       const state = this.brain.state;
       // Wet breath on its patrol, ragged when it hunts; it stops to scent where it lost her.
       this.voice.breathe(
@@ -359,12 +358,7 @@ export class UnderHouseHunt {
     g.satchel.close();
     g.hints.hide();
     const forward = g.camera.getForwardRay().direction;
-    this.models.pose(
-      g.camera.globalPosition.add(forward.scale(0.65)).subtract(new Vector3(0, 1.55, 0)),
-      forward.negate(),
-      0,
-      1,
-    );
+    this.models.confront(g.camera.globalPosition, forward, 0.6);
     await after(0.65);
     this.caught.hidden = false;
     await after(0.65);

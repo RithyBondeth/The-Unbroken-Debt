@@ -32,6 +32,7 @@ import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
 import { PondSpirit } from "./PondSpirit";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
+import { Preay } from "../entities/Preay";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
@@ -175,17 +176,18 @@ export class ActOne {
     this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
     this.omens.build(this.plantSites);
     game.fallGuard.bounds = PLAY;
-    await Promise.all([
+    const [, , , preay] = await Promise.all([
       ShadowFigure.prepare(game.scene),
       PhraPhum.prepare(game.scene),
       KrasueModel.prepare(game.scene),
+      Preay.load(game.scene),
     ]);
     const offeringModels = new OfferingModels(game.scene);
     offeringModels.replacePickups(this.area);
     const sokModels = new SokRoomModels(game.scene, this.area);
-    const walkerModels = new WalkerModels(game.scene, this.area);
+    const walkerModels = new WalkerModels(game.scene, this.area, preay);
     const deskModels = new DeskModels(game.scene, this.area);
-    const huntModels = new HuntModels(game.scene, this.area);
+    const huntModels = new HuntModels(game.scene, this.area, preay);
     const chestModels = new ChestModels(game.scene, this.area);
     const corpseModels = await CorpseModels.load(game.scene, this.area);
     const arrivalModels = new ArrivalModels(game.scene);
@@ -260,8 +262,8 @@ export class ActOne {
       Math.max(this.night.threatSilence, this.forest?.silence ?? 0),
     );
     this.forest = new ForestAtmosphere(game);
-    this.apparitions = new Apparitions(game, this.area, this.lights);
-    this.pondSpirit = new PondSpirit(game, this.area, this.lights);
+    this.apparitions = new Apparitions(game, this.area, this.lights, preay);
+    this.pondSpirit = new PondSpirit(game, this.area, this.lights, preay);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
       game,

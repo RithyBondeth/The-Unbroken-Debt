@@ -1,7 +1,7 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
+import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { Game } from "@/core/Game";
 import type { Area } from "@/core/areaLoader";
@@ -9,19 +9,24 @@ import { seededRandom } from "@/audio/synth";
 import type { DreadScore } from "@/audio/DreadScore";
 import { pondSplash } from "../audio/pondSounds";
 import type { VillageLights } from "./VillageLights";
+import { Preay } from "../entities/Preay";
 
 /** Where she shows herself from, and when she goes (m, s). */
 const SHOW_WITHIN = 34;
 const NEAR = 7.5;
 const SEEN_FOR = 1.2;
 const LOOK_AWAY = 0.9;
+/** Watched this long, her head starts to come round towards Sora. */
+const TURNS_AFTER = 0.7;
 
 type State = "waiting" | "standing" | "gone";
 
 /**
- * The pond's spirit (village expansion, east pond): a drowned woman in a
- * bloodied white dress standing at the end of the bathing jetty, her back to
- * the shore, looking out over the black water (`pond_spirit`, east_pond.py).
+ * The pond's spirit (village expansion, east pond): the Preay, a woman's ghost in a
+ * bloodied white dress, standing at the end of the bathing jetty, her back to the
+ * shore, looking out over the black water. She stands where east_pond.py put the
+ * static `pond_spirit` (hidden now), breathing; watched long enough, her head comes
+ * slowly round towards Sora.
  *
  * She is put there only while Sora is on her way and not looking. Once Sora
  * has seen her she stays as long as she is watched; she is gone the moment
@@ -32,7 +37,7 @@ export class PondSpirit {
   score: DreadScore | null = null;
   private state: State = "waiting";
   private readonly node: TransformNode | null;
-  private readonly meshes: AbstractMesh[] = [];
+  private readonly preay: Preay | null = null;
   private readonly spot = new Vector3();
   private splash: StaticSound | null = null;
   private seen = 0;
@@ -45,6 +50,7 @@ export class PondSpirit {
     private readonly game: Game,
     area: Area,
     private readonly lights: VillageLights,
+    asset: AssetContainer,
   ) {
     const nodes = [...area.container.transformNodes, ...area.container.meshes];
     this.node = nodes.find((n): n is TransformNode => n.name === "pond_spirit") ?? null;
@@ -53,11 +59,13 @@ export class PondSpirit {
       return;
     }
     this.node.computeWorldMatrix(true);
-    for (const m of this.node.getChildMeshes(false)) {
-      m.isPickable = false;
-      this.meshes.push(m);
-    }
     this.spot.copyFrom(this.node.getAbsolutePosition());
+    // The scan faces its own +X (Blender), whatever mirrors the glTF root carries.
+    const facing = Vector3.TransformNormal(new Vector3(1, 0, 0), this.node.getWorldMatrix());
+    this.node.setEnabled(false);
+    this.preay = new Preay(asset, "pond_preay", 1.9);
+    this.preay.place(this.spot, Math.atan2(facing.x, facing.z));
+    this.preay.standStill(0);
     this.show(false);
   }
 
@@ -97,7 +105,7 @@ export class PondSpirit {
       new Vector3(this.eye.x, 0, this.eye.z),
       new Vector3(this.spot.x, 0, this.spot.z),
     );
-    const inView = this.meshes.some((m) => camera.isInFrustum(m));
+    const inView = !!this.preay?.figure.meshes.some((m) => camera.isInFrustum(m));
 
     if (this.state === "waiting") {
       // Put there unseen, while Sora is coming down the lane or round the bank.
@@ -114,6 +122,9 @@ export class PondSpirit {
     } else if (this.seen > 0) {
       this.away += dt;
     }
+    // She breathes; watched, her head comes slowly round to Sora, and stays on her.
+    this.preay?.watch(this.seen > TURNS_AFTER ? this.eye : null);
+    this.preay?.standStill(dt);
     if (distance < NEAR) {
       // Too close: the lightning takes her, and something goes into the water.
       this.lights.storm.strike();
@@ -138,6 +149,6 @@ export class PondSpirit {
   }
 
   private show(on: boolean): void {
-    this.node?.setEnabled(on);
+    this.preay?.setEnabled(on);
   }
 }

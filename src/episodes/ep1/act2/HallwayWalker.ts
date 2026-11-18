@@ -24,7 +24,7 @@ export class HallwayWalker {
   private checkpoint: SaveData | null = null;
   private preparing = false;
   private recovering = false;
-  private stepIn = 0;
+  private stepCount = 0;
   private hissIn = 0;
   private hinted = false;
   private readonly steps: StaticSound[] = [];
@@ -45,6 +45,8 @@ export class HallwayWalker {
     private readonly saveProgress: () => Promise<SaveData>,
   ) {
     this.hiding = new WardrobeHiding(game, models, vigil.lamp);
+    // Her bare steps on the boards land with her heels, not on a clock.
+    models.onStep = (at) => this.footfall(at);
     if (game.resumedSave?.checkpoint === "CP3") this.checkpoint = copySave(game.resumedSave);
     const previousAllow = game.interaction.allow;
     game.interaction.allow = (id) =>
@@ -87,7 +89,8 @@ export class HallwayWalker {
         this.brain.position,
         { minDistance: 2, volume: 0.65 },
       );
-      sound.playbackRate = 0.66 + k * 0.035;
+      // Bare feet, unhurried: lighter than a man's tread, still low and close.
+      sound.playbackRate = 0.84 + k * 0.035;
       this.steps.push(sound);
     }
     this.creak = await audio.spatialSound(
@@ -169,21 +172,6 @@ export class HallwayWalker {
       this.complete();
       return;
     }
-    this.stepIn -= dt;
-    if (this.stepIn <= 0 && !this.brain.waiting) {
-      const index = Math.floor(this.brain.elapsed / 0.85) % Math.max(1, this.steps.length);
-      const step = this.steps[index];
-      if (step) {
-        step.spatial.position = this.brain.position.add(new Vector3(0, 0.05, 0));
-        step.play();
-      }
-      this.voice.step(this.brain.position);
-      if (index === 0 && this.creak) {
-        this.creak.spatial.position = this.brain.position.clone();
-        this.creak.play();
-      }
-      this.stepIn = 0.85;
-    }
     // Its breath goes with it, heavier while it stands listening at a door.
     this.voice.breathe(this.brain.position, this.brain.waiting ? 0.2 : 0);
     if (!this.hinted && this.brain.elapsed > 4 && !game.hiding) {
@@ -197,6 +185,22 @@ export class HallwayWalker {
     if (!game.hiding && this.heartbeatOn) {
       this.heartbeat?.stop();
       this.heartbeatOn = false;
+    }
+  }
+
+  /** One of her steps on the boards; every third one, a board gives under it. */
+  private footfall(at: Vector3): void {
+    if (!this.brain.active) return;
+    const index = this.stepCount++ % Math.max(1, this.steps.length);
+    const step = this.steps[index];
+    if (step) {
+      step.spatial.position = at.clone();
+      step.play();
+    }
+    this.voice.step(this.brain.position);
+    if (index === 0 && this.creak) {
+      this.creak.spatial.position = at.clone();
+      this.creak.play();
     }
   }
 
@@ -219,7 +223,7 @@ export class HallwayWalker {
     this.brain.start();
     this.models.walker.setEnabled(true);
     this.hinted = false;
-    this.stepIn = 0;
+    this.stepCount = 0;
     this.game.bus.emit("sequence:start", { id: "A2-06" });
     this.game.hints.show("note.walkerApproach", 4);
   }
@@ -266,10 +270,7 @@ export class HallwayWalker {
     this.breath?.play();
     const eye = game.camera.globalPosition;
     const forward = game.camera.getForwardRay().direction;
-    this.models.walker.position.copyFrom(
-      eye.add(forward.scale(0.8)).subtract(new Vector3(0, 2.05, 0)),
-    );
-    this.models.walker.rotation.y = Math.atan2(-forward.x, -forward.z);
+    this.models.confront(eye, forward, 0.62);
     await after(0.8);
     this.caught.hidden = false;
     await after(0.7);

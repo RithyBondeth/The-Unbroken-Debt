@@ -1,4 +1,5 @@
 import { taxiDistance, taxiRoadHeading, taxiRoadPoint } from "./taxiMotion";
+import { PREAY_CLIPS } from "../data/preayClips";
 
 export type TaxiPassKind = "crossing" | "overtake";
 
@@ -12,16 +13,16 @@ export interface TaxiPass {
 }
 
 /**
- * Twice the black Neak Ta comes to the car. It never runs; it is never seen to move
- * faster than a person can, and mostly it is not seen moving at all.
- * - `crossing`: as the lamps stutter it is already in the road ahead, a tall figure
- *   dragging one leg across towards Sora's side, its arms hanging dead; the lightning
- *   at 37.8 s shows it nine metres
- *   off the bonnet, just after Sora asks who he is looking for. He brakes and swerves,
- *   the lamps blink, and when they come back the road is empty.
- * - `overtake`: a flickering stroke of lightning catches it standing in the trees on her
- *   side four times, each time nearer, level with the car however fast it goes; the last
- *   flicker is its hands on her window.
+ * Twice the Preay (a woman's ghost in a bloodied white dress) comes to the car. She never
+ * runs; she is never seen to move faster than a person can, and mostly she is not seen
+ * moving at all.
+ * - `crossing`: as the lamps stutter she is already in the road ahead, walking across
+ *   towards Sora's side at her own unhurried pace; the lightning at 37.8 s shows her nine
+ *   metres off the bonnet, just after Sora asks who he is looking for. He brakes and
+ *   swerves, the lamps blink, and when they come back the road is empty.
+ * - `overtake`: a flickering stroke of lightning catches her standing in the trees on
+ *   Sora's side four times, each time nearer, level with the car however fast it goes;
+ *   the last flicker is her hands on Sora's window.
  */
 export const TAXI_PASSES: readonly TaxiPass[] = [
   { kind: "crossing", start: 36.8, seconds: 1.35, beat: 1 / 1.35 },
@@ -38,11 +39,11 @@ export function taxiPassBeat(pass: TaxiPass): number {
   return pass.start + pass.seconds * pass.beat;
 }
 
-/** The figure's clips (tools/characters/build-neakta-roadside.py, CMU motion capture). */
+/** The Preay's clips (tools/characters/build-preay.py, CMU motion capture). */
 export type SpiritClip = "stand" | "walk" | "reach";
 
 /** The performer's own ground speed in the walk, in metres a second at the figure's size. */
-export const SPIRIT_WALK_SPEED = 0.64;
+export const SPIRIT_WALK_SPEED = PREAY_CLIPS.walk.speed;
 
 export interface SpiritPose {
   kind: "stander" | "crossing" | "overtake" | "window";
@@ -113,7 +114,7 @@ export function taxiLightning(t: number): number {
   );
 }
 
-/** Where the Neak Ta is at ride time `t`, and what it is doing; null when it is nowhere near. */
+/** Where the Preay is at ride time `t`, and what it is doing; null when it is nowhere near. */
 export function taxiSpiritAt(t: number): SpiritPose | null {
   if (t >= TAXI_STANDER.from && t <= TAXI_STANDER.until) {
     const along = taxiDistance(TAXI_STANDER.level),
@@ -181,7 +182,8 @@ export function taxiSpiritAt(t: number): SpiritPose | null {
       kind: "window",
       x: at.x,
       z: at.z,
-      y: -0.6,
+      // (Her eyes are 1.47 m up: sunk a little, they are level with Sora's at the glass.)
+      y: -0.17,
       heading: taxiRoadHeading(along) - Math.PI / 2,
       clip: "stand",
       clipTime: 2.2 + (t - TAXI_WINDOW.start),

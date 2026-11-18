@@ -15,7 +15,7 @@ beforeAll(async () => {
   [cabin, road, spirit] = await Promise.all([
     io.read("public/assets/ep1/ep1_taxi_cabin.glb"),
     io.read("public/assets/ep1/ep1_taxi_roadside.glb"),
-    io.read("public/assets/ep1/neakta_roadside.glb"),
+    io.read("public/assets/ep1/preay.glb"),
   ]);
 });
 describe("authored taxi assets", () => {
@@ -432,7 +432,7 @@ describe("authored taxi assets", () => {
     for (const name of ["taxi_meter_case", "taxi_rear_lotus_bud"])
       expect(cabinNames).toContain(name);
   });
-  it("ships the roadside Neak Ta rigged, with its three motion-captured clips", () => {
+  it("ships the Preay rigged, with her motion-captured clips", () => {
     const root = spirit.getRoot();
     expect(root.listSkins().length).toBeGreaterThan(0);
     expect(
@@ -440,14 +440,14 @@ describe("authored taxi assets", () => {
         .listAnimations()
         .map((a) => a.getName())
         .sort(),
-    ).toEqual(["reach", "stand", "walk"]);
+    ).toEqual(["hurry", "reach", "stand", "walk"]);
     const joints = root
       .listSkins()[0]
       .listJoints()
       .map((j) => j.getName());
     for (const bone of ["root", "head", "neck03", "upperleg01.L", "foot.R", "upperarm01.L"])
       expect(joints).toContain(bone);
-    expect(statSync("public/assets/ep1/neakta_roadside.glb").size).toBeLessThan(8 * 1024 * 1024);
+    expect(statSync("public/assets/ep1/preay.glb").size).toBeLessThan(2 * 1024 * 1024);
   });
   it("keeps download and geometry costs bounded for the transition scene", () => {
     expect(statSync("public/assets/ep1/ep1_taxi_cabin.glb").size).toBeLessThan(6 * 1024 * 1024);
