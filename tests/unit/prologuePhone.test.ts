@@ -3,6 +3,7 @@ import { Prologue } from "@/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "@/audio/DreadScore";
 import { PhoneBell } from "@/episodes/ep1/audio/PhoneBell";
 import { Flags } from "@/core/Flags";
+import { POWER_CUT } from "@/episodes/ep1/data/powerCut";
 
 it.each([
   ["satchel", "hint.packSatchel"],
@@ -25,7 +26,7 @@ it.each([
   expect(state.game.flags.get("ep1.phone.answered", false)).toBe(false);
 });
 
-it("rings the phone the moment the kit is packed, without opening the notebook", async () => {
+it("rings the phone once the dancer has gone and the lights are back, without opening the notebook", async () => {
   let bookOpen = false;
   let satchelOpen = true;
   const order: string[] = [];
@@ -68,6 +69,14 @@ it("rings the phone the moment the kit is packed, without opening the notebook",
     ringing: false,
     objectives: { show: vi.fn(), hide: vi.fn() },
     packingList: () => [],
+    showObjectives: Reflect.get(Prologue.prototype, "showObjectives") as () => void,
+    // The headless dancer in the back room is what sets the telephone ringing.
+    dancer: {
+      seen: vi.fn(() => {
+        order.push("dancer");
+        return Promise.resolve();
+      }),
+    },
     makeSounds: vi.fn(),
     idleHints: vi.fn(),
     play: vi.fn(),
@@ -85,8 +94,9 @@ it("rings the phone the moment the kit is packed, without opening the notebook",
         expect(sting).not.toHaveBeenCalled();
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
-        // No pause between the last item and the ring.
-        expect(state.wait).not.toHaveBeenCalled();
+        // The lights come back from the power cut, a breath, then the bell.
+        expect(state.wait).toHaveBeenNthCalledWith(1, POWER_CUT.length + 0.25);
+        expect(state.wait).toHaveBeenNthCalledWith(2, 1.1);
         expect(state.game.hints.show).toHaveBeenCalledWith("hint.phone", 12);
         order.push("phone");
       }
@@ -98,7 +108,7 @@ it("rings the phone the moment the kit is packed, without opening the notebook",
   try {
     const run = Reflect.get(Prologue.prototype, "run") as (this: typeof state) => Promise<void>;
     await run.call(state);
-    expect(order).toEqual(["restore", "close", "phone"]);
+    expect(order).toEqual(["dancer", "restore", "close", "phone"]);
     expect(state.game.sketchbook.written.has("SB-01")).toBe(true);
     expect(state.phoneCall).toHaveBeenCalledOnce();
     expect(state.leave).toHaveBeenCalledOnce();

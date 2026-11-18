@@ -35,6 +35,31 @@
         "A36112": { "rect": [608, 1010, 600, 800], "kind": "mounted", "seed": 36112 },
         "A36107": { "rect": [1216, 1010, 600, 800], "kind": "mounted", "seed": 36107 }
       }
+    },
+    "nineties_p": {
+      "_about": "The user's posters (90s Posters/, November 2026), portrait. Every cell is the same size, so the game can hand any of them to any portrait slot (src/episodes/ep1/prologue/posterShuffle.ts). Sources: art-source/library/posters/.",
+      "file": "T_studio_print_nineties_p_BC",
+      "size": [2048, 2048],
+      "folder": "posters",
+      "items": {
+        "POSTER90_1": { "rect": [0, 0, 672, 960], "kind": "poster", "seed": 9001 },
+        "POSTER90_2": { "rect": [688, 0, 672, 960], "kind": "poster", "seed": 9002 },
+        "POSTER90_3": { "rect": [1376, 0, 672, 960], "kind": "poster", "seed": 9003 },
+        "POSTER90_6": { "rect": [0, 976, 672, 960], "kind": "photo", "seed": 9006 },
+        "POSTER90_7": { "rect": [688, 976, 672, 960], "kind": "poster", "seed": 9007 },
+        "POSTER90_9": { "rect": [1376, 976, 672, 960], "kind": "board", "seed": 9009 }
+      }
+    },
+    "nineties_l": {
+      "_about": "The user's posters, landscape, for the framed slots; cells the same size (posterShuffle.ts).",
+      "file": "T_studio_print_nineties_l_BC",
+      "size": [2048, 2048],
+      "folder": "posters",
+      "items": {
+        "POSTER90_4": { "rect": [0, 0, 1008, 741], "kind": "photo", "seed": 9004 },
+        "POSTER90_5": { "rect": [1032, 0, 1008, 741], "kind": "photo", "seed": 9005 },
+        "POSTER90_8": { "rect": [0, 760, 1008, 741], "kind": "board", "seed": 9008 }
+      }
     }
   }
 }

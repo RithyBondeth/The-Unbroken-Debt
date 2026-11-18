@@ -9,6 +9,7 @@ import { ellipse, Sheet } from "./pen.mjs";
 import { villageTextures } from "./village.mjs";
 import { funeralTributeTextures } from "./funeral.mjs";
 import { studioPrintTextures } from "./studio.mjs";
+import { crackTextures } from "./cracks.mjs";
 
 /** Every Khmer string on the studio's paper, with its meaning. Review: pending. */
 export const KHMER = {
@@ -2669,6 +2670,7 @@ export const drawings = [
   },
   { name: "study_boats", file: "T_studio_study_boats_BC", size: [1024, 1024], draw: boatStudy },
   ...studioPrintTextures,
+  ...crackTextures,
   ...villageTextures,
   ...funeralTributeTextures(KHMER),
 ];

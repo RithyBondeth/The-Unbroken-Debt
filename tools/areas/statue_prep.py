@@ -287,9 +287,11 @@ def _credit(src, out, extras):
     print("Wrote", out, f"{len(res) / 1e6:.1f} MB", extras, flush=True)
 
 
-def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=None, blotch=None):
+def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=None, blotch=None, shader=None):
     """Writes art-source/library/scans/<name>.glb. `cut(centres, colours)` returns
-    a mask of the faces to drop (source coordinates); the largest piece left is kept."""
+    a mask of the faces to drop (source coordinates); the largest piece left is kept.
+    `shader` replaces `aged` (same arguments and result) for figures that are not
+    shrine statues."""
     look = dict(LOOK, **(look or {}))
     scene = bpy.context.scene
     high = _load(src, name)
@@ -353,7 +355,7 @@ def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=
     low.data.materials.append(lm)
     t = lm.node_tree.nodes.new("ShaderNodeTexImage")
     t.name = "bake_target"
-    out, emit, bsdf = aged(mat.node_tree, base_tex, normal_tex, look, blotch)
+    out, emit, bsdf = (shader or aged)(mat.node_tree, base_tex, normal_tex, look, blotch)
     scene.cycles.samples = 48
     bake("EMIT", high, low, out, emit, col_img)
     scene.cycles.samples = 8

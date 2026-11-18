@@ -20,6 +20,7 @@ import { createShadowedPointLight, FLAME_COLOR } from "@/render/renderSetup";
 import type { Area } from "@/core/areaLoader";
 import { Lightning } from "@/render/weather/Lightning";
 import { useSoftFalloff } from "@/render/softLampFalloff";
+import { powerAt } from "../data/powerCut";
 
 /**
  * The lightmap stores light x this, RGBD-encoded (LIGHTMAP_GAIN in
@@ -89,6 +90,16 @@ export class StudioLights {
   private readonly candleFlame: Mesh;
   private readonly glass: PBRMaterial[] = [];
   private candleLit = true;
+  /** Seconds since every light in the house went out (POWER_CUT), or null. */
+  private cutAt: number | null = null;
+  /** How much of the house's light is on (0–1): the power cut's level now. */
+  power = 1;
+  private readonly lightmap: Texture | null;
+  private readonly lightmapLevel: number = 0;
+  /** The electric lamps' runtime parts at full power: [light, intensity]. */
+  private readonly lamps: [Light, number][] = [];
+  /** Whatever glows in the house (bulbs, shades, flames): [material, colour at full]. */
+  private readonly glows: [PBRMaterial, Color3][] = [];
   private readonly storm = new Lightning();
   private time = 0;
   private readonly flashShadows: ShadowGenerator;
@@ -119,9 +130,11 @@ export class StudioLights {
       this.baked.push(mesh);
       bakedMaterials.add(mat);
     }
+    this.lightmap = lightmap;
     if (lightmap) {
       lightmap.coordinatesIndex = 1;
       lightmap.level = BAKED_EXPOSURE / STUDIO_LIGHTMAP_GAIN;
+      this.lightmapLevel = lightmap.level;
       // fromRGBD() linearises the colour itself, so the texture is not marked gamma.
       lightmap.gammaSpace = false;
       lightmap.isRGBD = true;
@@ -281,6 +294,16 @@ export class StudioLights {
       flashMap.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
     }
     for (const mesh of scene.meshes) if (receivesShadow(mesh)) mesh.receiveShadows = true;
+    for (const light of [this.deskLamp, highlight, this.writingLight, this.airwellBulb])
+      this.lamps.push([light, light.intensity]);
+    // What glows inside (not the neighbours' windows or the lightning on the glass).
+    for (const material of scene.materials)
+      if (
+        material instanceof PBRMaterial &&
+        material.emissiveColor.toLuminance() > 0.001 &&
+        !/neighbour|glass_window|window_glass/i.test(material.name)
+      )
+        this.glows.push([material, material.emissiveColor.clone()]);
     for (const mesh of scene.meshes)
       if (/^window_glass/.test(mesh.name) && mesh.material instanceof PBRMaterial)
         this.glass.push(mesh.material);
@@ -299,6 +322,15 @@ export class StudioLights {
   refreshShadows(): void {
     this.candleShadows?.getShadowMap()?.resetRefreshCounter();
     this.flashShadows.getShadowMap()?.resetRefreshCounter();
+  }
+
+  /**
+   * Every light on the floor dies at once and comes back stuttering (POWER_CUT): the
+   * baked light, the electric lamps, the oil flames, the candle. Outside, the street and
+   * the storm go on.
+   */
+  powerCut(): void {
+    this.cutAt = 0;
   }
 
   /** P05: the shelf candle goes out. */
@@ -340,6 +372,19 @@ export class StudioLights {
     for (const { light, base, phase } of this.flames)
       light.intensity =
         base * (0.75 + 0.18 * Math.sin(t * 6.3 + phase) + 0.07 * Math.sin(t * 14.1 + phase * 3));
+    // The power cut, over everything above.
+    if (this.cutAt !== null) {
+      this.cutAt += dt;
+      this.power = powerAt(this.cutAt);
+      if (this.power === 1 && this.cutAt > 2) this.cutAt = null;
+      for (const [light, full] of this.lamps) light.intensity = full * this.power;
+      for (const { light } of this.flames) light.intensity *= this.power;
+      if (this.candleLit) this.candle.intensity *= this.power;
+      this.candleFlame.isVisible = this.power > 0.5;
+      if (this.lightmap) this.lightmap.level = this.lightmapLevel * this.power;
+      for (const [material, full] of this.glows)
+        material.emissiveColor.copyFrom(full).scaleInPlace(this.power);
+    }
     const level = this.storm.update(dt);
     this.lightning.intensity = level * 60;
     // Things are picked up and drawers opened between flashes: redraw while lit.
@@ -365,6 +410,8 @@ function castsShadow(m: AbstractMesh): boolean {
     m.getTotalVertices() > 0 &&
     !!material &&
     material.alpha >= 1 &&
+    // Blended decals (the plaster cracks) would throw their whole quad as a shadow.
+    !material.needAlphaBlending() &&
     !m.name.startsWith("desk_lamp") &&
     !/glass|flame|rain|ink_line|ink_blot|pickup_volume|ceiling|roof/.test(m.name)
   );

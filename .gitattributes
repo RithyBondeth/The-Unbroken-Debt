@@ -13,6 +13,7 @@ art-source/**/*.wav   filter=lfs diff=lfs merge=lfs -text
 art-source/**/*.mp3   filter=lfs diff=lfs merge=lfs -text
 art-source/**/*.ogg   filter=lfs diff=lfs merge=lfs -text
 art-source/**/*.bvh   filter=lfs diff=lfs merge=lfs -text
+art-source/library/posters/*.jpg filter=lfs diff=lfs merge=lfs -text
 public/assets/**/*.glb  filter=lfs diff=lfs merge=lfs -text
 public/assets/**/*.ktx2 filter=lfs diff=lfs merge=lfs -text
 public/assets/**/*.ogg  filter=lfs diff=lfs merge=lfs -text

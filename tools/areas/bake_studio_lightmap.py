@@ -85,10 +85,25 @@ def setup_lights():
     bg.inputs["Strength"].default_value = 1.0
 
 
+# What Sora picks up or lifts: kept out of the bake altogether, so taking it leaves no
+# baked shadow behind on the desk or the shelf (the game gives each a contact shadow of
+# its own that goes with it, StudioDetails.ts).
+TAKEN = ("interact_satchel", "interact_sketchbook", "interact_lamp", "matchbox", "letters_string", "telephone_earpiece")
+
+
+def taken(o):
+    while o:
+        if o.name in TAKEN or o.name.startswith("letter_"):
+            return True
+        o = o.parent
+    return False
+
+
 def hide_helpers():
-    """Colliders and interaction volumes are invisible in the game: hide them from Cycles."""
+    """Colliders and interaction volumes are invisible in the game: hide them from Cycles.
+    So are the things Sora takes, and the crack decals (blended over walls in the game)."""
     for o in bpy.data.objects:
-        if o.name.startswith("col_") or "pickup_volume" in o.name:
+        if o.name.startswith("col_") or "pickup_volume" in o.name or "crack" in o.name or taken(o):
             o.hide_render = True
         # Bulbs and flames are opaque meshes round their point lights: in the bake they
         # would swallow the light (the shades and chimneys around them stay).
@@ -140,6 +155,9 @@ def preview(outdir):
         "09_kitchen": ((1.25, 8.6, 1.45), (0.0, 7.3, 0.8)),
         "10_hall_north": ((2.3, 6.35, 1.6), (2.0, 9.12, 0.8)),
         "11_hall_west": ((3.25, 8.5, 1.55), (0.0, 7.3, 0.95)),
+        "12_sleeping_mat": ((3.0, 7.3, 1.7), (4.6, 6.7, 1.6)),
+        "13_drafting_table": ((3.0, 1.75, 1.55), (3.0, 0.6, 0.85)),
+        "14_back_room_door": ((0.6, 9.5, 1.6), (2.2, 13.5, 1.1)),
     }
     only = argv[2:] if len(argv) > 2 else None
     for name, (eye, target) in views.items():
