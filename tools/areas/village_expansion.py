@@ -397,13 +397,13 @@ def preview_forest(coll, rng, centre, radius, spacing=(8.0, 4.0, 2.2)):
                 x, y = gx + step * rng.uniform(.15, .85), gy + step * rng.uniform(.15, .85)
                 if math.hypot(x - cx, y - cy) > radius or not L.in_new_ground(x, y):
                     continue
-                if not (L.TERRAIN["x0"] < x < L.TERRAIN["x1"] and L.TERRAIN["y0"] < y < L.TERRAIN["y1"]) or y < -58:
+                if y < -58:
                     continue
                 if L.open_ground(x, y, 1.5 if layer == "canopy" else 0.4):
                     continue
                 if layer != "under" and any(math.hypot(x - a, y - b) < r for a, b, r in trunks):
                     continue
-                if rng.random() > (0.8 if layer == "canopy" else 0.8):
+                if rng.random() > (0.55 if layer == "canopy" else 0.8):
                     continue
                 src = sources[layer][int(rng.integers(len(sources[layer])))]
                 fx, fy = feet[src.name]

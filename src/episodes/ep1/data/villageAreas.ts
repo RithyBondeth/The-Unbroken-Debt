@@ -27,8 +27,11 @@ export const EAST_POND: Ellipse = {
 };
 export const POND_WATER: Ellipse = { x: -38.5, z: -12, rx: 9.5, rz: 6, turn: (4 * Math.PI) / 180 };
 
+/** The back garden behind the house: the family's stupas, the well, termite mounds. */
+export const NORTH_GARDEN: Ellipse = { x: 1, z: -47.5, rx: 15.5, rz: 8, turn: 0 };
+
 /** Open ground in the built areas: no forest grows here. */
-export const CLEARINGS: readonly Ellipse[] = [WEST_YARD, EAST_POND];
+export const CLEARINGS: readonly Ellipse[] = [WEST_YARD, EAST_POND, NORTH_GARDEN];
 
 /** Trodden lanes from the compound to the areas. */
 export const LANES: readonly (readonly (readonly [number, number])[])[] = [
@@ -43,6 +46,14 @@ export const LANES: readonly (readonly (readonly [number, number])[])[] = [
     [-18, -9],
     [-22.5, -12.3],
     [-27.2, -11.6],
+  ],
+  [
+    [-4.05, -32],
+    [-4.6, -35.5],
+    [-5.2, -38.6],
+    [-3.6, -42.2],
+    [1, -45],
+    [5, -47.6],
   ],
 ];
 export const LANE_WIDTH = 1.1;

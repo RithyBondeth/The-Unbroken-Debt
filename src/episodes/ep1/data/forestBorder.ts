@@ -20,8 +20,8 @@ export interface Rect {
   maxZ: number;
 }
 
-export const TERRAIN: Rect = { minX: -65, maxX: 65, minZ: -57, maxZ: 92 };
-export const PLAY: Rect = { minX: -60, maxX: 60, minZ: -52, maxZ: 88 };
+export const TERRAIN: Rect = { minX: -65, maxX: 65, minZ: -62, maxZ: 92 };
+export const PLAY: Rect = { minX: -60, maxX: 60, minZ: -57, maxZ: 88 };
 /** Centre of the road along the paddies (A1-01). */
 export const ROAD_Z = 63.5;
 /** The flooded rice fields between the road bank and the far bank. */

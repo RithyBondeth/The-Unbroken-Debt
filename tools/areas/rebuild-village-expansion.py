@@ -27,11 +27,13 @@ import house_rooms  # noqa: E402
 from kit import collider  # noqa: E402
 
 # Ground kept free of forest round each area's buildings: (layout key, radius).
-KEEP_OUT = {"west": [("house", 5.5), ("granary", 3.0), ("byre", 4.5)], "east": [("sala", 3.6)]}
+KEEP_OUT = {"west": [("house", 5.5), ("granary", 3.0), ("byre", 4.5)], "east": [("sala", 3.6)],
+            "north": [("stupa", 4.8), ("well", 1.9), ("beds", 3.2)]}
 # Where each side lane passes the compound fence: (fence prefix, axis, from, to).
-GAPS = {"west": ("fence_w_0", "y", 9.75, 12.65), "east": ("fence_e_0", "y", 6.6, 9.55)}
-BUILDERS = {"west": "west_yard", "east": "east_pond"}
-SEEDS = {"west": 1900, "east": 1931}
+GAPS = {"west": ("fence_w_0", "y", 9.75, 12.65), "east": ("fence_e_0", "y", 6.6, 9.55),
+        "north": ("fence_n_0", "x", 3.3, 4.8)}
+BUILDERS = {"west": "west_yard", "east": "east_pond", "north": "north_garden"}
+SEEDS = {"west": 1900, "east": 1931, "north": 1925}
 
 village = bpy.data.collections["ep1_area_village"]
 

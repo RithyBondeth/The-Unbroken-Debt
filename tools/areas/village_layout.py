@@ -15,8 +15,8 @@ shrine. Play area about 120 x 140 m; still no neighbours.
 import math
 
 # The authored ground (1 m grid) and where Sora is held (walls in the thicket).
-TERRAIN = {"x0": -65.0, "x1": 65.0, "y0": -92.0, "y1": 57.0}
-PLAY = {"x0": -60.0, "x1": 60.0, "y0": -88.0, "y1": 52.0}
+TERRAIN = {"x0": -65.0, "x1": 65.0, "y0": -92.0, "y1": 62.0}
+PLAY = {"x0": -60.0, "x1": 60.0, "y0": -88.0, "y1": 57.0}
 # The ground before the expansion: its heights are kept exactly.
 OLD_TERRAIN = {"x0": -40.0, "x1": 40.0, "y0": -92.0, "y1": 40.0}
 
@@ -41,11 +41,13 @@ EAST_POND = {
 }
 
 NORTH_GARDEN = {
-    "clearing": (-1.0, 42.5, 15.0, 9.0, 0.0),
-    "stupa": (-6.0, 45.5, 0.0),
-    "well": (8.0, 41.0),
-    "termites": [(12.5, 47.0, 2.6), (-13.0, 37.5, 2.1), (3.5, 49.5, 1.7)],
-    "gate": (3.6, 32.0),                          # gap in the back fence by the rear stairs
+    # Past the belt of giants behind the back fence; the old tree (tree_305) stays in it.
+    "clearing": (-1.0, 47.5, 15.5, 8.0, 0.0),
+    "stupa": (-7.5, 50.0, 0.0),                   # the family's ashes: a main chedei and two small ones
+    "well": (8.5, 45.2),
+    "beds": (2.0, 47.6),
+    "termites": [(13.0, 51.0, 2.6), (-14.5, 43.5, 2.0), (3.0, 53.2, 1.8)],
+    "gate": (4.05, 32.0),                         # gap in the back fence by the rear stairs
 }
 
 NEAKTA_GROVE = {
@@ -57,7 +59,7 @@ NEAKTA_GROVE = {
 AREAS = {"west": WEST_YARD, "east": EAST_POND, "north": NORTH_GARDEN, "grove": NEAKTA_GROVE}
 # Areas built into the village so far (each is added once the user has approved
 # its renders); the others stay forest. Previews add to it in memory.
-BUILT = {"west", "east"}
+BUILT = {"west", "east", "north"}
 
 # ------------------------------------------------------------------ lanes
 # Narrow trodden lanes (about 1.1 m), west yard -> grove -> path makes a loop.
@@ -65,7 +67,7 @@ BUILT = {"west", "east"}
 ALL_LANES = {
     "west": [(-13.0, 11.0), (-18.0, 11.2), (-23.0, 12.6), (-29.0, 14.0)],
     "east": [(13.0, 8.0), (18.0, 9.0), (22.5, 12.3), (27.2, 11.6)],
-    "north": [(3.6, 32.0), (3.2, 36.0), (0.5, 40.0), (-3.5, 43.5)],
+    "north": [(4.05, 32.0), (4.6, 35.5), (5.2, 38.6), (3.6, 42.2), (-1.0, 45.0), (-5.0, 47.6)],
     "grove": [(-1.6, -33.0), (-9.5, -36.8), (-17.5, -35.2), (-24.0, -30.5)],
     "loop": [(-24.0, -30.5), (-27.0, -20.0), (-29.0, -8.0), (-30.5, 4.5)],
 }
