@@ -6,12 +6,19 @@ import {
   YARD,
   borderHeight,
   inBelt,
+  inWild,
   inside,
   layoutBorder,
   outside,
   pathDistance,
   roadBank,
 } from "@/episodes/ep1/data/forestBorder";
+import {
+  WEST_YARD,
+  ellipseValue,
+  inClearing,
+  laneDistance,
+} from "@/episodes/ep1/data/villageAreas";
 
 const flat = () => 0;
 const options = { nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true };
@@ -19,29 +26,29 @@ const options = { nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true 
 describe("forest border ground", () => {
   it("measures signed distance from a rectangle", () => {
     expect(outside(TERRAIN, 0, 0)).toBeLessThan(0);
-    expect(outside(TERRAIN, 45, 0)).toBeCloseTo(5);
-    expect(outside(TERRAIN, 43, 96)).toBeCloseTo(5);
+    expect(outside(TERRAIN, TERRAIN.maxX + 5, 0)).toBeCloseTo(5);
+    expect(outside(TERRAIN, TERRAIN.maxX + 3, TERRAIN.maxZ + 4)).toBeCloseTo(5);
   });
 
   it("meets the authored terrain exactly at its edge", () => {
     const terrain = (x: number, z: number) => 0.1 * Math.sin(x) + 0.05 * Math.cos(z);
     for (const [x, z] of [
-      [40, 10],
-      [-40, -12],
-      [5, -40],
-      [-7, 92],
-      [40, ROAD_Z + 0.4],
+      [TERRAIN.maxX, 10],
+      [TERRAIN.minX, -12],
+      [5, TERRAIN.minZ],
+      [-7, TERRAIN.maxZ],
+      [TERRAIN.maxX, ROAD_Z + 0.4],
     ])
       expect(borderHeight(x, z, terrain)).toBeCloseTo(terrain(x, z), 6);
   });
 
   it("tucks under the terrain inside it, except on the raised bunds", () => {
     expect(borderHeight(0, 0, flat)).toBeLessThan(0);
-    expect(borderHeight(37, 75, () => -0.32)).toBeGreaterThan(0);
+    expect(borderHeight(57, 75, () => -0.32)).toBeGreaterThan(0);
   });
 
   it("carries the road bank on past the terrain", () => {
-    expect(borderHeight(60, ROAD_Z, flat)).toBeCloseTo(roadBank(0));
+    expect(borderHeight(TERRAIN.maxX + 20, ROAD_Z, flat)).toBeCloseTo(roadBank(0));
   });
 });
 
@@ -78,6 +85,22 @@ describe("forest border layout", () => {
     const low = layoutBorder({ ...options, nearDepth: 8, farDepth: 24, density: 0.55 });
     expect(low.plants.length).toBeLessThan(layout.plants.length * 0.75);
     expect(low.cards.length).toBeLessThan(layout.cards.length * 0.6);
+  });
+
+  it("grows old forest with solid trunks on the expansion's new ground", () => {
+    const wild = layout.plants.filter((p) => inWild(p.x, p.z));
+    expect(wild.filter((p) => p.layer === "canopy").length).toBeGreaterThan(40);
+    for (const p of wild) if (p.layer !== "under") expect(p.solid).toBe(true);
+  });
+
+  it("keeps the expansion's clearings and lanes open", () => {
+    for (const p of layout.plants) {
+      expect(inClearing(p.x, p.z)).toBe(false);
+      expect(laneDistance(p.x, p.z)).toBeGreaterThan(1);
+    }
+    // The old family yard is inside the walls, with forest round it.
+    expect(inside(PLAY, WEST_YARD.x - WEST_YARD.rx, WEST_YARD.z, 2)).toBe(true);
+    expect(layout.plants.some((p) => ellipseValue(WEST_YARD, p.x, p.z) < 2)).toBe(true);
   });
 
   it("respects the area's own obstacles inside the terrain", () => {

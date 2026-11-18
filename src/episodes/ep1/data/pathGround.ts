@@ -1,4 +1,5 @@
 import { ROAD_Z, TERRAIN, YARD, outside, pathDistance } from "./forestBorder";
+import { laneDistance } from "./villageAreas";
 
 /**
  * Where the village's ground is trodden mud and where it is leaf litter, as a
@@ -69,7 +70,12 @@ export function groundMix(x: number, z: number): GroundMix {
   // South of the grove the road's bank and the flooded fields are all mud.
   const road = smoothstep(59.6, 61.2, z + 1.6 * (wobble - 0.5));
 
-  const mud = Math.max(path, yard, road);
+  // The expansion's side lanes: narrower and fainter than the path, single file.
+  const laneEdge = 0.55 + 0.45 * wobble + 0.2 * (grain - 0.5);
+  const sideLane =
+    (1 - smoothstep(laneEdge - 0.35, laneEdge + 0.3, laneDistance(x, z))) * (1 - drift * 0.5);
+
+  const mud = Math.max(path, yard, road, sideLane * 0.9);
   // Two churned lines down the path where people walk single file, and the road's ruts.
   const lane = Math.abs(d - 0.32) < 0.22 ? 1 - Math.abs(d - 0.32) / 0.22 : 0;
   const rut = Math.max(0, 1 - Math.abs(Math.abs(z - ROAD_Z) - 0.8) / 0.35) * road;

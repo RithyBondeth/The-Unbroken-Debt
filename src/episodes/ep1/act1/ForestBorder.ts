@@ -464,7 +464,7 @@ export class ForestBorder {
         voice,
       });
     const half = TRUNK[plant.species];
-    if (half && plant.layer !== "under" && outside(PLAY, plant.x, plant.z) < 1.5) {
+    if (half && plant.layer !== "under" && (plant.solid || outside(PLAY, plant.x, plant.z) < 1.5)) {
       const fixed =
         plant.species === "sugarPalm" || plant.species === "coconut" || plant.species === "dead";
       const w = half * (fixed ? 1 : plant.scale);
