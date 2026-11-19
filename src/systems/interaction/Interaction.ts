@@ -51,6 +51,12 @@ export class Interaction {
   allow: (id: string) => boolean = () => true;
   /** How far the nearest solid thing straight ahead is (m), or Infinity beyond reach. */
   distance = Infinity;
+  /**
+   * When E is pressed with nothing in focus, use the nearest usable thing within this
+   * many degrees of the centre of the view instead (0: off). Areas where every press
+   * should count (the studio's packing) turn it on.
+   */
+  pressAssistDegrees = 0;
 
   private readonly targets = new Map<string, Target>();
   private readonly byMesh = new Map<number, Target>();
@@ -127,11 +133,11 @@ export class Interaction {
    * in reach, not behind whatever the ray hit (`blocked` metres away) and not hidden
    * behind anything else.
    */
-  private nearMiss(blocked: number): Target | null {
+  private nearMiss(blocked: number, cone = AIM_ASSIST): Target | null {
     const eye = this.ray.origin,
       forward = this.ray.direction;
     let best: Target | null = null,
-      bestCos = AIM_ASSIST;
+      bestCos = cone;
     for (const target of this.targets.values()) {
       if (!this.allow(target.id)) continue;
       for (const mesh of target.meshes) {
@@ -161,8 +167,14 @@ export class Interaction {
 
   /** E: uses the focused object. Returns its id, or null if nothing is in focus. */
   use(): string | null {
-    if (!this.active || !this.focused) return null;
-    const id = this.focused.id;
+    if (!this.active) return null;
+    const target =
+      this.focused ??
+      (this.pressAssistDegrees > 0
+        ? this.nearMiss(this.distance, Math.cos((this.pressAssistDegrees * Math.PI) / 180))
+        : null);
+    if (!target) return null;
+    const id = target.id;
     this.bus.emit("interact:use", { id });
     return id;
   }

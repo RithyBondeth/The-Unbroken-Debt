@@ -76,6 +76,8 @@ def setup_lights():
     point("bake_stair_glow", obj("marker_stair_glow").location, 90.0, (1.0, 0.7, 0.4), 0.05)
     point("bake_airwell_bulb", obj("marker_airwell_bulb").location, 55.0, (1.0, 0.78, 0.5), 0.02)
     point("bake_tea_lamp", obj("marker_tea_lamp").location, 9.0, (1.0, 0.58, 0.26), 0.012)
+    # The candle by Sora's diary on the writing desk (the save point; flickered live, Studio.ts).
+    point("bake_desk_candle", obj("light_flame_desk_candle").location, 1.2, (1.0, 0.6, 0.26), 0.006)
 
     world = scene.world or bpy.data.worlds.new("night")
     scene.world = world
@@ -85,10 +87,25 @@ def setup_lights():
     bg.inputs["Strength"].default_value = 1.0
 
 
+# What Sora picks up or lifts: kept out of the bake altogether, so taking it leaves no
+# baked shadow behind on the desk or the shelf (the game gives each a contact shadow of
+# its own that goes with it, StudioDetails.ts).
+TAKEN = ("interact_satchel", "interact_sketchbook", "interact_lamp", "matchbox", "letters_string", "telephone_earpiece")
+
+
+def taken(o):
+    while o:
+        if o.name in TAKEN or o.name.startswith("letter_"):
+            return True
+        o = o.parent
+    return False
+
+
 def hide_helpers():
-    """Colliders and interaction volumes are invisible in the game: hide them from Cycles."""
+    """Colliders and interaction volumes are invisible in the game: hide them from Cycles.
+    So are the things Sora takes, and the crack decals (blended over walls in the game)."""
     for o in bpy.data.objects:
-        if o.name.startswith("col_") or "pickup_volume" in o.name:
+        if o.name.startswith("col_") or "pickup_volume" in o.name or "crack" in o.name or taken(o):
             o.hide_render = True
         # Bulbs and flames are opaque meshes round their point lights: in the bake they
         # would swallow the light (the shades and chimneys around them stay).
@@ -140,6 +157,9 @@ def preview(outdir):
         "09_kitchen": ((1.25, 8.6, 1.45), (0.0, 7.3, 0.8)),
         "10_hall_north": ((2.3, 6.35, 1.6), (2.0, 9.12, 0.8)),
         "11_hall_west": ((3.25, 8.5, 1.55), (0.0, 7.3, 0.95)),
+        "12_sleeping_mat": ((3.0, 7.3, 1.7), (4.6, 6.7, 1.6)),
+        "13_drafting_table": ((3.0, 1.75, 1.55), (3.0, 0.6, 0.85)),
+        "14_back_room_door": ((0.6, 9.5, 1.6), (2.2, 13.5, 1.1)),
     }
     only = argv[2:] if len(argv) > 2 else None
     for name, (eye, target) in views.items():
@@ -158,7 +178,7 @@ def preview(outdir):
 # Never lightmapped: what moves or is picked up, see-through or glowing surfaces, thin
 # strands, and paper props too small to carry a lightmap.
 SKIP_NAMES = ("glass", "net", "water", "flame", "bulb", "shade", "cord", "wire", "string", "line", "fringe", "pin_", "_pin",
-              "letter", "envelope", "matchbox", "drawer", "satchel", "sketchbook", "illustration", "incense", "cleat", "hook",
+              "letter", "envelope", "matchbox", "pencil", "ribbon", "wick", "candle_drip", "wax_pool", "drawer", "satchel", "sketchbook", "illustration", "incense", "cleat", "hook",
               "chain", "pull", "rain", "puddle", "telephone", "earpiece", "krama", "sampot", "towel", "peg",
               "laundry", "fern", "moss", "banana", "branch", "firewood", "lantern_", "birdcage", "chilli", "garlic", "ladle",
               "bowl", "jar_lid", "dipper", "kettle", "shrine_orange", "shrine_incense", "blind", "cobweb", "crack",

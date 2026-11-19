@@ -20,8 +20,14 @@ import { InkMarks } from "./InkMarks";
 import { t, type StringKey } from "@/data/strings";
 import { Objectives, type Objective } from "@/ui/html/StoryUi";
 import { StudioDetails } from "./StudioDetails";
+import { DancerGhost } from "./DancerGhost";
+import { shufflePosters } from "./posterShuffle";
+import { creak, knock, powerDown, powerUp, whisper } from "../audio/dancerSounds";
+import { POWER_RETURN_LENGTH } from "../data/powerCut";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { SavePoint } from "@/systems/saves/SavePoint";
+import { warmSceneViews } from "@/render/warmSceneViews";
 
 const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
@@ -75,6 +81,9 @@ export class Prologue {
   private readonly taking = new Set<string>();
   private readonly objectives = new Objectives();
   details!: StudioDetails;
+  dancer!: DancerGhost;
+  /** When the house next makes a sound of its own (play time, s). */
+  private nextScare = 24;
 
   constructor(private readonly game: Game) {}
 
@@ -99,9 +108,52 @@ export class Prologue {
         /^sconce_/,
         /^airwell_bulb/,
         /^back_room_pendant/,
+        // The posters' slots keep their own UVs (posterShuffle.ts).
+        /^poster90_[pl]_\d+$/,
+        // Sora's diary is the save point: it stays itself to be picked and hinted.
+        /^save_journal/,
       ],
     });
     this.details = new StudioDetails(game.scene, this.area);
+    // Contact shadows and generous targets for what Sora takes (nothing is baked under them).
+    this.details.groundPickups();
+    shufflePosters(game.scene);
+    // The plaster cracks are decals 1.5 mm off the walls: drawn over them, never into them.
+    for (const material of game.scene.materials)
+      if (material instanceof PBRMaterial && material.name.startsWith("M_studio_cracks")) {
+        material.zOffset = -2;
+        material.disableDepthWrite = true;
+        material.backFaceCulling = true;
+      }
+    // The dancer ghost in the back room, against the far wall, facing the doorway.
+    this.dancer = new DancerGhost(
+      game,
+      this.area.level.markers.get("dancer_ghost")?.position.clone() ?? new Vector3(-3.0, 0, -13.4),
+      new Vector3(-0.6, 0, -9.27),
+    );
+    await this.dancer.load();
+    if (
+      game.flags.get("ep1.studio.dancerSeen", false) ||
+      game.flags.get("ep1.phone.answered", false)
+    )
+      this.dancer.skip();
+    // She comes with the dark: every lamp in the house dies as Sora steps into the
+    // doorway, she can only stand and look, and the lights stutter back when she is gone.
+    this.dancer.onBlackout = () => {
+      this.lights.lightsOut();
+      this.play("powerDown", game.camera.globalPosition);
+      game.cutscene = true;
+      game.player.inputEnabled = false;
+      game.satchel.close();
+    };
+    this.dancer.onAppear = () => this.score.pressure(1);
+    this.dancer.onVanish = () => {
+      this.lights.lightsBack();
+      this.play("powerUp", game.camera.globalPosition);
+    };
+    // Every press of E counts here: with nothing quite under the eye, the nearest thing
+    // within 14 degrees is taken.
+    game.interaction.pressAssistDegrees = 14;
     const lightmap = await loadStudioLightmap(game.scene, game.preset);
     this.lights = new StudioLights(game.scene, this.area, game.preset, lightmap);
     // Rain runs down the glass of both balcony doors.
@@ -147,13 +199,30 @@ export class Prologue {
     // The illustration is no longer something to use (the opening drawing beat was
     // cut in November 2026): it is simply there, half inked, until the ink spills.
     for (const { name, node } of this.area.level.interactables)
-      if (node.isEnabled() && name !== ILLUSTRATION) game.interaction.add(name, node);
+      if (node.isEnabled() && name !== ILLUSTRATION && !(name === DRAWER && this.drawerOpen))
+        game.interaction.add(name, node);
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
     const savePoint =
       this.area.level.markers.get("save_studio")?.position.clone() ??
       new Vector3(-0.18, 0.8, -3.12);
-    new SavePoint(game, "interact_save_studio", savePoint, "STUDIO", () =>
-      game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
+    // Sora's diary open on the writing desk is the safe place (tools/areas/ep1_area_studio.py,
+    // open_journal); the stock folio and votive stand in if it is missing.
+    const journal = game.scene.getTransformNodeByName("save_journal");
+    new SavePoint(
+      game,
+      "interact_save_studio",
+      savePoint,
+      "STUDIO",
+      () => game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
+      undefined,
+      journal
+        ? {
+            root: journal,
+            hint: "hint.savePoint",
+            saving: () => undefined,
+            settled: () => undefined,
+          }
+        : undefined,
     );
     game.bus.on("interact:focus", ({ id }) => {
       if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
@@ -165,9 +234,44 @@ export class Prologue {
     });
   }
 
+  /**
+   * Draws every room of the floor once behind the black opening screen, the dancer in
+   * her corner among them: built the first time they came into view, the airwell's and
+   * the back room's shaders and pipelines stalled the frame for most of a second, the
+   * second of them just as the dancer was revealed (November 2026). Runtime coordinates
+   * (x = -Blender x, z = -Blender y).
+   */
+  async warmup(): Promise<void> {
+    const game = this.game;
+    const view = (eye: [number, number], target: [number, number, number]) => ({
+      eye: new Vector3(eye[0], 1.58, eye[1]),
+      target: new Vector3(...target),
+    });
+    const hide = this.dancer.prepareWarm();
+    try {
+      await warmSceneViews(game.scene, game.camera, [
+        view([-2.3, -0.6], [-2.3, 1.3, -5.5]),
+        view([-2.5, -3.0], [-0.3, 1.0, -2.7]),
+        view([-2.3, -5.0], [-2.3, 1.4, 0.5]),
+        view([-1.2, -6.6], [-2.5, 1.0, -8.5]),
+        view([-2.3, -6.8], [-1.0, 1.2, -9.4]),
+        view([-3.5, -8.5], [-0.5, 1.0, -7.5]),
+        view([-0.9, -10.3], [-1.9, 1.0, -13.5]),
+        view([-2.5, -11.5], [-3.5, 1.0, -9.8]),
+        view([-2.0, -13.0], [-0.6, 1.3, -9.3]),
+      ]);
+    } finally {
+      hide();
+    }
+  }
+
   /** Starts the prologue once the game's post-processing exists. */
   async begin(): Promise<void> {
     const game = this.game;
+    // No TAA in the studio: standing still, its jitter never settled in this dark,
+    // flickering room, and the whole picture crawled and shook (November 2026). FXAA
+    // smooths the edges on its own and the image holds still.
+    if (game.pipeline.taa) game.pipeline.taa.isEnabled = false;
     game.atmosphere.baseExposure = 1.25;
     game.atmosphere.maxExposure = 3.1;
     game.atmosphere.nightSightIntensity = 1.8;
@@ -186,7 +290,16 @@ export class Prologue {
     this.ink.update(dt);
     this.score.update(dt);
     this.bell.update(dt);
+    this.dancer.update(dt);
+    // In the power cut the dark is total: no eyes adjusting, no night sight.
+    const power = this.lights.power;
+    // Held down for the dancer, the dark is not total: Sora's eyes stay open to the glow
+    // that is left, and the room reads round her (the user found it too dark).
+    const eyes = this.lights.dimmed ? 0.8 : power;
+    game.atmosphere.baseExposure = 1.25 * (0.3 + 0.7 * eyes);
+    game.atmosphere.nightSightIntensity = 1.8 * eyes;
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
+    this.houseSounds();
     // Thunder follows each flash after a few seconds (sound travels about 1 km in 3 s).
     const flashing = this.lights.flashing;
     if (flashing && !this.wasFlashing)
@@ -218,42 +331,53 @@ export class Prologue {
     if (!game.flags.has("game.run")) game.flags.set("game.run", crypto.randomUUID());
     if (!game.resumedSave) await this.saveProgress("Studio · Drafting table");
 
-    // P03–P04: the drawer, the letters and the kit, in any order (see onUse).
-    this.objectives.show(this.packingList());
-    await this.until(() => KIT.every((item) => game.inventory.has(item)));
-    game.flags.set("ep1.kit.collected", true);
-
-    // P05–P06: the moment the last thing is packed, lightning, the candle dies,
-    // the ink spills across the drawing, and the telephone rings.
-    game.satchel.close();
-    if (!game.flags.has("ep1.clock.stopped")) {
-      this.lights.strike();
-      void this.ink.spill(2.4);
-      game.flags.set("ep1.clock.stopped", "20:12");
-      // Written into the book quietly: it must not open over the ringing phone.
-      const book = game.sketchbook;
-      if (book && !book.written.has(INK_BLOT_ENTRY))
-        book.restore([...book.written, INK_BLOT_ENTRY]);
-      void this.saveProgress("Studio · The telephone call");
-    } else void this.ink.spill(0.01);
-    this.lights.snuffCandle();
-
-    // P06: the telephone rings until Sora answers.
+    // P03–P04: the drawer, the letters and the kit, in any order (see onUse). The
+    // satchel is on the bed in the back room, and the back room is where the dancer
+    // waits: the moment Sora sees her, the storm breaks and the telephone rings, packed
+    // or not; whatever is still unpacked is packed after the call.
+    this.showObjectives();
     if (!game.flags.get("ep1.phone.answered", false)) {
+      if (!game.flags.get("ep1.studio.dancerSeen", false)) {
+        await this.dancer.seen();
+        // The lights come back first; then she can move again.
+        await this.wait(POWER_RETURN_LENGTH + 0.25);
+        game.cutscene = false;
+        game.player.inputEnabled = true;
+      }
+      // P05: lightning, the candle dies, the ink spills across the drawing, the clock stops.
+      game.satchel.close();
+      if (!game.flags.has("ep1.clock.stopped")) {
+        this.lights.strike();
+        void this.ink.spill(2.4);
+        game.flags.set("ep1.clock.stopped", "20:12");
+        // Written into the book quietly: it must not open over the ringing phone.
+        const book = game.sketchbook;
+        if (book && !book.written.has(INK_BLOT_ENTRY))
+          book.restore([...book.written, INK_BLOT_ENTRY]);
+        void this.saveProgress("Studio · The telephone call");
+      } else void this.ink.spill(0.01);
+      this.lights.snuffCandle();
+      // P06: a breath of silence, then the telephone, ringing until Sora answers.
+      await this.wait(1.1);
       game.sketchbook?.close();
       this.ringing = true;
       this.room?.play();
       this.score.pressure(0.6);
       this.bell.start();
-      this.objectives.show([{ text: t("objective.phone") }]);
+      this.showObjectives();
       game.hints.show("hint.phone", 12);
       await this.used(PHONE);
       await this.phoneCall();
       await this.saveProgress("Studio · After the phone call");
-    }
+    } else void this.ink.spill(0.01);
+    if (game.flags.has("ep1.clock.stopped")) this.lights.snuffCandle();
+    this.showObjectives();
+    await this.until(() => KIT.every((item) => game.inventory.has(item)));
+    game.flags.set("ep1.kit.collected", true);
+    game.satchel.close();
 
     // P07: out of the door, into the night.
-    this.objectives.show([{ text: t("objective.leave") }]);
+    this.showObjectives();
     await this.used(DOOR);
     this.objectives.hide();
     await this.leave();
@@ -262,6 +386,7 @@ export class Prologue {
   private async phoneCall(): Promise<void> {
     const game = this.game;
     this.ringing = false;
+    this.dancer.heartbeat(false);
     game.hints.performed("hint.phone");
     this.bell.stop();
     game.cutscene = true;
@@ -352,13 +477,11 @@ export class Prologue {
       setTimeout(() => this.lights.refreshShadows(), 600);
       return this.openDrawer();
     }
-    if (
-      (id === PHONE || id === DOOR) &&
-      !this.ringing &&
-      !game.flags.get("ep1.phone.answered", false)
-    ) {
+    if ((id === PHONE || id === DOOR) && !this.ringing) {
       const missing = KIT.find((item) => !game.inventory.has(item));
-      game.hints.show(missing ? KIT_HINTS[missing] : "hint.phoneQuiet", 8);
+      if (!game.flags.get("ep1.phone.answered", false))
+        game.hints.show(missing ? KIT_HINTS[missing] : "hint.phoneQuiet", 8);
+      else if (id === DOOR && missing) game.hints.show(KIT_HINTS[missing], 8);
     }
   }
 
@@ -366,6 +489,8 @@ export class Prologue {
   private openDrawer(restoring = false): void {
     this.drawerOpen = true;
     this.game.flags.set("ep1.studio.drawerOpen", true);
+    // Open, it is nothing to use: it must not take E from the matches and letters in it.
+    this.game.interaction.remove(DRAWER);
     this.play("drawer");
     const parts = [DRAWER, "drawer_knob", "letters_string", "matchbox"].map((n) => this.node(n));
     for (let i = 0; i < 5; i++) parts.push(this.node(`letter_${i}`));
@@ -425,8 +550,45 @@ export class Prologue {
     if (item === "matches") game.hints.performed("hint.takeMatches");
     // Where things go, without opening the satchel over the room (that took E away).
     if (item === "satchel") game.hints.show("hint.satchel", 6);
-    if (!game.flags.get("ep1.kit.collected", false)) this.objectives.show(this.packingList());
+    if (!game.flags.get("ep1.kit.collected", false)) this.showObjectives();
+    // The dread rises with each thing packed, before anything has happened.
+    if (!this.ringing && !game.flags.get("ep1.phone.answered", false))
+      this.score.pressure(0.12 + 0.07 * KIT.filter((k) => game.inventory.has(k)).length);
     await this.saveProgress();
+  }
+
+  /** The checklist: the telephone while it rings, what is left to pack, then the stairs. */
+  private showObjectives(): void {
+    const game = this.game;
+    const list: Objective[] = [];
+    if (this.ringing) list.push({ text: t("objective.phone") });
+    if (!KIT.every((item) => game.inventory.has(item))) list.push(...this.packingList());
+    else if (game.flags.get("ep1.phone.answered", false)) list.push({ text: t("objective.leave") });
+    if (list.length) this.objectives.show(list);
+    else this.objectives.hide();
+  }
+
+  /**
+   * The house between the scares, while Sora packs and until she leaves: a board
+   * taking a weight overhead, three slow knocks in the back room (until the dancer has
+   * been seen), and once she has, something breathing words just behind Sora.
+   */
+  private houseSounds(): void {
+    const game = this.game;
+    if (this.playTime < this.nextScare || game.cutscene || !this.sfx.has("creak")) return;
+    const eye = game.camera.globalPosition;
+    const forward = game.camera.getDirection(Vector3.Forward());
+    const seen = game.flags.get("ep1.studio.dancerSeen", false);
+    const roll = Math.random();
+    if (!seen && roll < 0.4) this.play("knock", new Vector3(-2.6, 1.0, -13.7));
+    else if (seen && roll < 0.45 && !this.ringing)
+      this.play("whisper", eye.subtract(forward.scale(0.7)).add(new Vector3(0, 0.05, 0)));
+    else
+      this.play(
+        "creak",
+        eye.add(new Vector3((Math.random() - 0.5) * 3, 1.7, (Math.random() - 0.5) * 3)),
+      );
+    this.nextScare = this.playTime + (seen ? 20 : 14) + Math.random() * 14;
   }
 
   /** P04: what Sora still has to pack, and where each thing is, ticked off as she takes it. */
@@ -559,6 +721,11 @@ export class Prologue {
       ["pickup", sounds.pickUp, "sfx", desk, { volume: 0.6 }],
       ["drawer", sounds.drawerOpen, "sfx", at(DRAWER, desk), { volume: 0.8 }],
       ["train", sounds.trainPassing, "ambience", desk, { minDistance: 20 }],
+      ["knock", knock, "sfx", desk, { minDistance: 2, volume: 0.7 }],
+      ["creak", creak, "sfx", desk, { minDistance: 2, volume: 0.8 }],
+      ["whisper", whisper, "threat", desk, { minDistance: 0.6, volume: 0.45 }],
+      ["powerDown", powerDown, "threat", desk, { minDistance: 3, volume: 1 }],
+      ["powerUp", powerUp, "threat", desk, { minDistance: 3, volume: 0.9 }],
     ];
     // A small plastered room: Sora's own steps and the telephone ring in it.
     audio.setSpace("studio", 0);
@@ -575,6 +742,7 @@ export class Prologue {
     this.loops.push(room);
     this.score = new DreadScore(audio);
     await this.score.load();
+    await this.dancer.makeSounds();
     const made = await Promise.all(
       list.map(([name, make, bus, position, options], i) =>
         audio.spatialSound(

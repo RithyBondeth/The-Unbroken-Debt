@@ -9,6 +9,8 @@ import { ellipse, Sheet } from "./pen.mjs";
 import { villageTextures } from "./village.mjs";
 import { funeralTributeTextures } from "./funeral.mjs";
 import { studioPrintTextures } from "./studio.mjs";
+import { crackTextures } from "./cracks.mjs";
+import { journalTextures } from "./journal.mjs";
 
 /** Every Khmer string on the studio's paper, with its meaning. Review: pending. */
 export const KHMER = {
@@ -61,6 +63,33 @@ export const KHMER = {
   primaryCertificate: [
     "សញ្ញាបត្របឋមសិក្សា",
     "primary-school certificate, on Sok's 1907 certificate (village.mjs, house_papers); check the term of the time",
+  ],
+  // Sora's diary on her writing desk, the studio's save point (journal.mjs). One string per
+  // paragraph, in her voice; the last breaks off mid-sentence when the telephone rings.
+  diaryHeading: ["ភ្នំពេញ ឆ្នាំ ១៩៣២", "Phnom Penh, 1932 (the head of the page)"],
+  diaryLeft: [
+    [
+      "យប់នេះ ភ្លៀងធ្លាក់មិនឈប់សោះ។ ខ្ញុំគូររូបវត្តភ្នំមិនទាន់រួចទេ ហើយទឹកខ្មៅក៏ជិតអស់ដែរ។",
+      "ម្ចាស់រោងពុម្ពចង់បានគំនូរទាំងប្រាំមួយ នៅថ្ងៃច័ន្ទក្រោយ។ ខ្ញុំនៅត្រូវគូរទន្លេសាប និងដើមត្នោតទៀត។",
+      "សំបុត្ររបស់យាយម៉ី នៅក្នុងថតតុដដែល។ ខ្ញុំមិនទាន់ហ៊ានបើកមើលទេ។ យាយប្រហែលជាខឹងនឹងខ្ញុំណាស់ ព្រោះខ្ញុំមិនបានទៅបុណ្យម្ដាយទៀតហើយ។",
+      "ផ្ទះនេះស្ងាត់ពេក។ ពេលយប់ ខ្ញុំឮដូចជាមានគេដើរនៅបន្ទប់ខាងក្រោយ ប៉ុន្តែពេលខ្ញុំទៅមើល គ្មាននរណាម្នាក់សោះ។",
+      "យប់មិញ ខ្ញុំសុបិនឃើញស្ត្រីរាំរបាំម្នាក់ ឈរនៅជ្រុងបន្ទប់ខាងក្រោយ។ នាងស្លៀកពាក់ពណ៌ក្រហម មុខលាបម្សៅសស្លេក។ កនាងមានស្នាមកាត់ ឈាមហូរ ហើយក្រចកដៃនាងវែងដូចក្រញាំ។ នាងរាំយឺតៗ តាមសំឡេងភ្លេងពិណពាទ្យពីឆ្ងាយ។",
+    ],
+    "Tonight the rain hasn't stopped at all. I haven't finished the drawing of Wat Phnom, and the ink is nearly gone too. / " +
+      "The printing-house owner wants all six drawings by next Monday. I still have to draw the Tonle Sap and the sugar palms. / " +
+      "Yay Mey's letters are still in the desk drawer. I haven't dared to open them yet. Grandmother must be very angry with me, because I missed Mother's memorial again. / " +
+      "This house is too quiet. At night it sounds as if someone is walking in the back room, but when I go and look there is nobody at all. / " +
+      "Last night I dreamed of a dancer standing in the corner of the back room. She was dressed in red, her face powdered pale white. Her throat was cut and bleeding, and her fingernails were long like claws. She danced slowly to pinpeat music far away.",
+  ],
+  diaryRight: [
+    [
+      "ខ្ញុំភ្ញាក់ឡើងអុជចង្កៀង តែនាងបាត់ទៅវិញ។ ខ្ញុំគូររូបនាងទុក កុំឲ្យភ្លេច។",
+      "យាយធ្លាប់និយាយថា បំណុលចាស់ មិនដែលរលុបទេ។ ខ្ញុំមិនជឿរឿងទាំងនេះទេ។",
+      "ប៉ុន្តែយប់នេះ ខ្ញុំឮសំឡេងភ្លេងនោះម្ដងទៀត ពីបន្ទប់ខាងក្រោយ។ ម៉ោងប្រាំបីហើយ ខ្ញុំគួរតែ",
+    ],
+    "I woke and lit the lamp, but she was gone. I drew her so as not to forget. / " +
+      "Grandmother used to say an old debt is never wiped out. I don't believe these things. / " +
+      "But tonight I can hear that music again, from the back room. It's eight o'clock already, I should (breaks off)",
   ],
 };
 
@@ -2669,6 +2698,12 @@ export const drawings = [
   },
   { name: "study_boats", file: "T_studio_study_boats_BC", size: [1024, 1024], draw: boatStudy },
   ...studioPrintTextures,
+  ...crackTextures,
+  ...journalTextures({
+    heading: KHMER.diaryHeading[0],
+    left: KHMER.diaryLeft[0],
+    right: KHMER.diaryRight[0],
+  }),
   ...villageTextures,
   ...funeralTributeTextures(KHMER),
 ];

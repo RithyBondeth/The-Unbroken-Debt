@@ -4,6 +4,9 @@
 // Phnom Penh wall for years. Clean, not ruined: toned, foxed a little, folded
 // where posters were posted folded, pin holes with rust where they are tacked.
 // Layout (shared with tools/areas/ep1_area_studio.py): tools/areas/studio_prints.json.
+// The user's own posters (November 2026, art-source/library/posters/) are aged the same
+// way: printed posters as posters, photographs as photographic prints, the hand-painted
+// shop signs as painted boards.
 
 /* global rng, clamp, lerp, smooth, rgb, noise, document, Image */
 
@@ -19,7 +22,9 @@ const LAYOUT = JSON.parse(readFileSync(join("tools", "areas", "studio_prints.jso
  * poster — a colour lithograph posted folded in four, full bleed;
  * magazine — a newsprint colour supplement, yellowed more, folded down the middle;
  * mounted — a photographic reproduction on a grey-brown card mount;
- * postcard — a collotype card with a narrow cream border, pinned at the top.
+ * postcard — a collotype card with a narrow cream border, pinned at the top;
+ * photo — a colour photographic print with a white border, pinned at the top corners;
+ * board — a hand-painted signboard, its paint chipped and grimy, nailed at the corners.
  */
 function paintPrints(ctx, W, H, data) {
   const imgs = data.items.map((item) => {
@@ -50,24 +55,37 @@ function paintPrints(ctx, W, H, data) {
       magazine: [226, 210, 172],
       mounted: [196, 184, 156],
       postcard: [222, 210, 182],
+      photo: [236, 232, 220],
+      board: [92, 76, 58],
     }[kind];
     ctx.fillStyle = rgb(paper);
     ctx.fillRect(x, y, w, h);
 
     // Where the image goes on the paper.
-    const margin = { poster: 0.0, magazine: 0.0, mounted: 0.085, postcard: 0.035 }[kind];
+    const margin = {
+      poster: 0.0,
+      magazine: 0.0,
+      mounted: 0.085,
+      postcard: 0.035,
+      photo: 0.04,
+      board: 0.0,
+    }[kind];
     const mx = Math.round(w * margin),
       my = Math.round(kind === "mounted" ? h * margin * 0.9 : h * margin);
     const ix = x + mx,
       iy = y + my,
       iw = w - 2 * mx,
       ih = h - 2 * my - (kind === "mounted" ? Math.round(h * 0.05) : 0);
-    // Cover-fit the source into the image area.
-    const s = Math.max(iw / img.width, ih / img.height);
+    // Cover-fit the source into the image area; `crop` ([left, top, right, bottom], fractions)
+    // first trims what is not the picture (the archive's caption band).
+    const [c0, c1, c2, c3] = item.crop ?? [0, 0, 0, 0];
+    const cw = img.width * (1 - c0 - c2),
+      ch = img.height * (1 - c1 - c3);
+    const s = Math.max(iw / cw, ih / ch);
     const sw = iw / s,
       sh = ih / s;
-    const sx = (img.width - sw) / 2,
-      sy = (img.height - sh) / 2;
+    const sx = img.width * c0 + (cw - sw) / 2,
+      sy = img.height * c1 + (ch - sh) / 2;
     ctx.save();
     ctx.imageSmoothingQuality = "high";
     // Low-resolution sources (the 1906 poster is 429 px wide) are enlarged softly;
@@ -91,8 +109,22 @@ function paintPrints(ctx, W, H, data) {
       p = img2.data;
     const grain = noise(w, h, 1.4, item.seed, 2);
     const blotch = noise(w, h, Math.max(w, h) / 6, item.seed + 7, 4);
-    const fade = { poster: 0.16, magazine: 0.22, mounted: 0.12, postcard: 0.1 }[kind];
-    const yellow = { poster: 0.18, magazine: 0.3, mounted: 0.12, postcard: 0.16 }[kind];
+    const fade = {
+      poster: 0.16,
+      magazine: 0.22,
+      mounted: 0.12,
+      postcard: 0.1,
+      photo: 0.14,
+      board: 0.2,
+    }[kind];
+    const yellow = {
+      poster: 0.18,
+      magazine: 0.3,
+      mounted: 0.12,
+      postcard: 0.16,
+      photo: 0.15,
+      board: 0.24,
+    }[kind];
     const tone = [214, 190, 140];
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
@@ -118,7 +150,9 @@ function paintPrints(ctx, W, H, data) {
     ctx.putImageData(img2, x, y);
 
     // Foxing: small rust-brown spots, a few with a darker core.
-    const spots = { poster: 70, magazine: 55, mounted: 40, postcard: 25 }[kind];
+    const spots = { poster: 70, magazine: 55, mounted: 40, postcard: 25, photo: 18, board: 0 }[
+      kind
+    ];
     for (let n = 0; n < spots; n++) {
       const fx = x + r(0.02, 0.98) * w,
         fy = y + r(0.02, 0.98) * h;
@@ -162,6 +196,8 @@ function paintPrints(ctx, W, H, data) {
     if (kind === "magazine") fold(x + w / 2 + r(-2, 2), y, x + w / 2 + r(-2, 2), y + h, 1.2);
     if (kind === "postcard" && r() < 0.6)
       fold(x + w * r(0.75, 0.9), y, x + w, y + h * r(0.1, 0.25), 0.7);
+    // A photographic print bent once at a corner where it was handled.
+    if (kind === "photo") fold(x + w * r(0.78, 0.9), y + h, x + w, y + h * r(0.8, 0.9), 0.6);
 
     // Tack holes with a rust halo: four corners for posters, one at the top for cards.
     const hole = (hx, hy) => {
@@ -185,6 +221,9 @@ function paintPrints(ctx, W, H, data) {
       ])
         hole(hx + r(-3, 3), hy + r(-3, 3));
     if (kind === "postcard") hole(x + w / 2 + r(-8, 8), y + 16);
+    if (kind === "photo")
+      for (const hx of [x + 14, x + w - 14]) hole(hx + r(-3, 3), y + 14 + r(-3, 3));
+    if (kind === "board") paintedBoard(ctx, x, y, w, h, r);
 
     // A water tide-mark low on the larger sheets: rain once came under the doors.
     if (kind === "poster" || kind === "magazine") {
@@ -211,20 +250,88 @@ function paintPrints(ctx, W, H, data) {
   }
 }
 
+/**
+ * A signboard's wear: paint chipped off in flakes down to the dark wood (more at the
+ * edges and the bottom, where it was knocked), grime run down from the top, and the
+ * nails at the corners bleeding rust.
+ */
+function paintedBoard(ctx, x, y, w, h, r) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  for (let n = 0; n < 70; n++) {
+    const edge = r() < 0.6;
+    const cx = edge
+      ? r() < 0.5
+        ? x + r(0, 0.08) * w * (r() < 0.5 ? 1 : -1) + (r() < 0.5 ? 0 : w)
+        : x + r(0, 1) * w
+      : x + r(0.05, 0.95) * w;
+    const cy = edge && r() < 0.6 ? y + h - r(0, 0.1) * h : y + r(0.03, 0.97) * h;
+    // Knocks chip the edges; the painted face keeps only small flakes.
+    const size = edge ? r(1.5, 9) * (r() < 0.12 ? 2.5 : 1) : r(1, 3.5);
+    ctx.fillStyle = `rgba(${Math.round(r(38, 62))},${Math.round(r(28, 44))},${Math.round(r(18, 30))},${r(0.75, 0.95)})`;
+    ctx.beginPath();
+    const k = 7 + Math.floor(r(0, 5));
+    for (let i = 0; i < k; i++) {
+      const a = (i / k) * Math.PI * 2;
+      const rr = size * r(0.45, 1.25);
+      ctx.lineTo(cx + Math.cos(a) * rr * 1.4, cy + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Grime run down from the top edge in thin streaks.
+  for (let n = 0; n < 26; n++) {
+    const sx = x + r(0, 1) * w;
+    const len = h * r(0.08, 0.45);
+    const grad = ctx.createLinearGradient(0, y, 0, y + len);
+    grad.addColorStop(0, `rgba(48,36,22,${r(0.12, 0.28)})`);
+    grad.addColorStop(1, "rgba(48,36,22,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx, y, r(2, 9), len);
+  }
+  // Rust from the nails, run down below each.
+  for (const [nx, ny] of [
+    [x + 16, y + 16],
+    [x + w - 16, y + 16],
+    [x + 16, y + h - 16],
+    [x + w - 16, y + h - 16],
+  ]) {
+    const grad = ctx.createLinearGradient(0, ny, 0, ny + r(30, 70));
+    grad.addColorStop(0, "rgba(110,52,20,0.55)");
+    grad.addColorStop(1, "rgba(110,52,20,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(nx - 3, ny, 6, 70);
+    ctx.fillStyle = "rgba(30,22,16,0.95)";
+    ctx.beginPath();
+    ctx.arc(nx, ny, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function atlas(key) {
   const spec = LAYOUT.atlases[key];
   const items = Object.entries(spec.items).map(([id, item]) => ({
     ...item,
     id,
-    src: `data:image/jpeg;base64,${readFileSync(join(ARCHIVE, `${id}.jpg`)).toString("base64")}`,
+    // An item may name its own file (`path`, under art-source/library/) instead of the atlas's folder.
+    src: `data:image/jpeg;base64,${readFileSync(item.path ? join("art-source", "library", item.path) : join(spec.folder ? join("art-source", "library", spec.folder) : ARCHIVE, `${id}.jpg`)).toString("base64")}`,
   }));
   const [w, h] = spec.size;
   return {
     name: `studio_${key}`,
     file: spec.file,
     size: spec.size,
-    draw: () => canvasPage(w, h, paintPrints, { items }),
+    draw: () => canvasPage(w, h, paintPrints, { items }, [paintedBoard]),
   };
 }
 
-export const studioPrintTextures = [atlas("posters"), atlas("cards"), atlas("colour")];
+export const studioPrintTextures = [
+  atlas("posters"),
+  atlas("cards"),
+  atlas("colour"),
+  atlas("nineties_p"),
+  atlas("nineties_l"),
+];

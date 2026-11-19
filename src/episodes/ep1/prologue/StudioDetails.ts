@@ -315,6 +315,89 @@ export class StudioDetails {
     hit.setParent(anchor);
   }
 
+  /**
+   * What Sora takes is kept out of the bake (bake_studio_lightmap.py, TAKEN), so taking
+   * it leaves no dark print behind. Each instead gets a soft contact shadow of its own,
+   * parented to it so it goes when the thing does, and an invisible box a few
+   * centimetres bigger than it all round, so one press of E takes it from any angle.
+   */
+  groundPickups(): void {
+    const groups: [TransformNode | null, TransformNode[], number][] = [
+      [this.node("interact_satchel"), [], 0.06],
+      [this.node("interact_sketchbook"), [], 0.07],
+      [this.node("matchbox"), [], 0],
+      [
+        this.node("letters_string"),
+        [0, 1, 2, 3, 4].flatMap((i) => this.node(`letter_${i}`) ?? []),
+        // No bigger box: the bundle is large, and one would cover the matchbox beside it.
+        0,
+      ],
+    ];
+    for (const [owner, others, margin] of groups) {
+      if (!owner) continue;
+      const parts = [owner, ...others];
+      const { min, max } = visibleBounds(parts);
+      if (!Number.isFinite(min.x)) continue;
+      const size = max.subtract(min);
+      const centre = Vector3.Center(min, max);
+      const shadow = CreatePlane(
+        `${owner.name}_contact_shadow`,
+        { width: size.x * 1.45 + 0.03, height: size.z * 1.45 + 0.03 },
+        this.scene,
+      );
+      shadow.rotation.x = Math.PI / 2;
+      shadow.position.set(centre.x, min.y + 0.0015, centre.z);
+      shadow.material = this.contactShadow();
+      shadow.isPickable = false;
+      shadow.receiveShadows = false;
+      shadow.setParent(owner);
+      if (margin > 0) {
+        const hit = CreateBox(
+          `${owner.name}_pickup_volume`,
+          {
+            width: size.x + margin * 2,
+            height: size.y + margin * 1.5,
+            depth: size.z + margin * 2,
+          },
+          this.scene,
+        );
+        hit.position.set(centre.x, centre.y + margin * 0.25, centre.z);
+        hit.visibility = 0;
+        hit.setParent(owner);
+      }
+    }
+  }
+
+  private shadowMaterial: PBRMaterial | null = null;
+
+  /** A soft dark pool, darkest under the middle: unlit, so it reads the same in any light. */
+  private contactShadow(): PBRMaterial {
+    if (this.shadowMaterial) return this.shadowMaterial;
+    const tex = new DynamicTexture("T_studio_contact_shadow", 128, this.scene, true);
+    const c = tex.getContext() as unknown as CanvasRenderingContext2D;
+    const grad = c.createRadialGradient(64, 64, 4, 64, 64, 62);
+    grad.addColorStop(0, "rgba(0,0,0,0.85)");
+    grad.addColorStop(0.45, "rgba(0,0,0,0.55)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = grad;
+    c.fillRect(0, 0, 128, 128);
+    tex.hasAlpha = true;
+    tex.update();
+    const mat = new PBRMaterial("M_studio_contact_shadow", this.scene);
+    mat.albedoColor = Color3.Black();
+    mat.disableLighting = true;
+    mat.opacityTexture = tex;
+    mat.alpha = 0.75;
+    mat.disableDepthWrite = true;
+    mat.zOffset = -2;
+    this.shadowMaterial = mat;
+    return mat;
+  }
+
+  private node(name: string): TransformNode | null {
+    return this.scene.getMeshByName(name) ?? this.scene.getTransformNodeByName(name);
+  }
+
   updateTelephoneCord(heldEnd: Vector3 | null = null): void {
     this.cord.update(heldEnd);
   }
@@ -557,4 +640,25 @@ export class StudioDetails {
       cotton,
     );
   }
+}
+
+/** World bounds of what can be seen of `nodes` (invisible pickup volumes left out). */
+function visibleBounds(nodes: TransformNode[]): { min: Vector3; max: Vector3 } {
+  const min = new Vector3(Infinity, Infinity, Infinity);
+  const max = new Vector3(-Infinity, -Infinity, -Infinity);
+  for (const node of nodes) {
+    node.computeWorldMatrix(true);
+    const meshes = [
+      ...("getTotalVertices" in node ? [node as Mesh] : []),
+      ...node.getChildMeshes(false),
+    ];
+    for (const mesh of meshes) {
+      if (mesh.visibility <= 0 || !mesh.isVisible || mesh.getTotalVertices() === 0) continue;
+      mesh.computeWorldMatrix(true);
+      const box = mesh.getBoundingInfo().boundingBox;
+      min.minimizeInPlace(box.minimumWorld);
+      max.maximizeInPlace(box.maximumWorld);
+    }
+  }
+  return { min, max };
 }
