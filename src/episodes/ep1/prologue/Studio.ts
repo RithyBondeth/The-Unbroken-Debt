@@ -20,7 +20,7 @@ import { createShadowedPointLight, FLAME_COLOR } from "@/render/renderSetup";
 import type { Area } from "@/core/areaLoader";
 import { Lightning } from "@/render/weather/Lightning";
 import { useSoftFalloff } from "@/render/softLampFalloff";
-import { powerAt } from "../data/powerCut";
+import { powerAt, POWER_RETURN } from "../data/powerCut";
 
 /**
  * The lightmap stores light x this, RGBD-encoded (LIGHTMAP_GAIN in
@@ -75,6 +75,9 @@ export async function loadStudioLightmap(
  * and the lightning through the balcony doors, both with shadow maps drawn only
  * when something has changed.
  */
+/** How much light is left while the lights are held down (lightsOut). */
+const HELD_LIGHT = 0.3;
+
 export class StudioLights {
   private readonly candlePower = 2.6;
   readonly deskLamp: PointLight;
@@ -88,10 +91,14 @@ export class StudioLights {
   /** Paraffin flames baked steady (the altar lamp, the tea-table lamp), flickered live. */
   private readonly flames: { light: PointLight; base: number; phase: number }[] = [];
   private readonly candleFlame: Mesh;
+  /** Live flames other than the shelf candle's (the desk candle by the diary). */
+  private readonly flameMeshes: Mesh[] = [];
   private readonly glass: PBRMaterial[] = [];
   private candleLit = true;
   /** Seconds since every light in the house went out (POWER_CUT), or null. */
   private cutAt: number | null = null;
+  /** The lights are held out (lightsOut) until lightsBack. */
+  private held = false;
   /** How much of the house's light is on (0–1): the power cut's level now. */
   power = 1;
   private readonly lightmap: Texture | null;
@@ -264,6 +271,29 @@ export class StudioLights {
     flameMat.disableLighting = true;
     this.candleFlame.material = flameMat;
 
+    // The candle by Sora's diary on the writing desk (the save point): baked steady like
+    // the oil lamps and flickered live; it dies with everything else in the power cut.
+    const deskCandle = flames.get("desk_candle");
+    if (deskCandle) {
+      const p = deskCandle.position.clone();
+      const light = new PointLight("desk_candle", p, scene);
+      light.diffuse = FLAME_COLOR.clone();
+      light.range = Number(deskCandle.extras.radius) || 1.6;
+      light.intensity = 0.3;
+      light.shadowEnabled = false;
+      exclude(light, p, light.range, true);
+      this.flames.push({ light, base: 0.3, phase: 4.2 });
+      const flame = CreateSphere(
+        "desk_candle_flame",
+        { diameterX: 0.009, diameterY: 0.024, diameterZ: 0.009, segments: 10 },
+        scene,
+      );
+      flame.position.copyFrom(p);
+      flame.material = flameMat;
+      flame.isPickable = false;
+      this.flameMeshes.push(flame);
+    }
+
     // Lightning through the two balcony doors: the bars, the drafting table and
     // everything in the front room thrown across the floor and up the walls.
     const outside = at("lightning", new Vector3(-2.6, 3.8, 4.0));
@@ -330,7 +360,28 @@ export class StudioLights {
    * the storm go on.
    */
   powerCut(): void {
+    this.held = false;
     this.cutAt = 0;
+  }
+
+  /**
+   * Every light on the floor drops at once to a glow (HELD_LIGHT: enough to make out the
+   * room, the user found it too dark at nothing) and stays there until lightsBack().
+   */
+  lightsOut(): void {
+    this.held = true;
+    this.cutAt = 0;
+  }
+
+  /** The lights stutter back on after lightsOut() (the end of POWER_CUT). */
+  lightsBack(): void {
+    this.held = false;
+    this.cutAt = POWER_RETURN;
+  }
+
+  /** The lights are held down for the dancer (lightsOut), not out in the stutter. */
+  get dimmed(): boolean {
+    return this.held;
   }
 
   /** P05: the shelf candle goes out. */
@@ -372,15 +423,17 @@ export class StudioLights {
     for (const { light, base, phase } of this.flames)
       light.intensity =
         base * (0.75 + 0.18 * Math.sin(t * 6.3 + phase) + 0.07 * Math.sin(t * 14.1 + phase * 3));
+    for (const flame of this.flameMeshes) flame.scaling.y = 1 + 0.1 * Math.sin(t * 11.7 + 2.3);
     // The power cut, over everything above.
     if (this.cutAt !== null) {
       this.cutAt += dt;
-      this.power = powerAt(this.cutAt);
+      this.power = this.held ? HELD_LIGHT : powerAt(this.cutAt);
       if (this.power === 1 && this.cutAt > 2) this.cutAt = null;
       for (const [light, full] of this.lamps) light.intensity = full * this.power;
       for (const { light } of this.flames) light.intensity *= this.power;
       if (this.candleLit) this.candle.intensity *= this.power;
       this.candleFlame.isVisible = this.power > 0.5;
+      for (const flame of this.flameMeshes) flame.isVisible = this.power > 0.5;
       if (this.lightmap) this.lightmap.level = this.lightmapLevel * this.power;
       for (const [material, full] of this.glows)
         material.emissiveColor.copyFrom(full).scaleInPlace(this.power);

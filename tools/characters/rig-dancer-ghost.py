@@ -1,27 +1,27 @@
-"""Rigs the headless dancer (art-source/library/scans/dancer_ghost.glb, made by
+"""Rigs the red dancer ghost (art-source/library/scans/dancer_ghost.glb, made by
 tools/characters/import-dancer-ghost.py) and gives her a slow robam to move to, for the
 Episode 1 studio (src/episodes/ep1/prologue/DancerGhost.ts).
 
     blender -b --factory-startup --python-exit-code 1 -P tools/characters/rig-dancer-ghost.py
     npm run assets -- ep1/dancer_ghost
 
-The figure is one static mesh standing in the dance's pose. A skeleton is built inside
-her from where her joints are on the mesh, and skinned with weights computed on a
-watertight copy of her (a generated mesh is not clean enough for bone heat) and
-carried over. Then both hands are taken off at the wrist (the user's call, November
-2026), along the line where the hand bones' weights give way to the forearms': each
-stump closed and sunk into a raw wound, the sleeve's end round it soaked dark, and
-blood run in streaks down the raised forearm toward the elbow, dried along the low one
-(vertex colour, multiplied over her texture).
+The figure is one static mesh standing in the dance's pose: her head lolling to her
+right under the crown, her left arm out with the clawed hand turned up, her right hand
+at her waist. A skeleton is built inside her from where her joints are on the mesh
+(measured on the user's model, November 19), and skinned with bone-heat weights
+computed on a watertight copy of her (a generated mesh is not clean enough for bone
+heat) and carried over; the crown goes with the head.
 
-Her rest pose is the dance pose, so every key below is a small turn away from it,
-which is what keeps her moving like a person rather than a puppet:
+Her rest pose is the dance pose, so every key below is a small turn away from it, each
+given about her own axes (lean to the side, bend forward, twist) rather than a bone's:
 
-- "robam", 3.2 s, looping: her weight passes from one foot to the other and back, the
-  hips swaying out and the chest leaning the other way, the knees sinking on each pass
-  (her feet held to the floor by IK, baked out); the raised forearm sweeps outward and
-  back and the low arm lifts, the stumps of the wrists turning as hands would; the stump
-  of her neck turns a little toward whoever is watching. Every key eases in and out.
+- "robam", 4.8 s, looping (longer than the 4 s she is seen, so the loop never shows):
+  her weight passes from one foot to the other and back, the hips sliding out and
+  dropping as the knees give, the chest leaning the other way and turning toward the
+  standing side (her feet held to the floor by IK, baked out); the lifted arm floats up
+  and sweeps back, the hand bending back at the wrist as a dancer's does, a beat behind
+  the body; the low hand curls and opens at her waist; her head rolls slowly further over
+  and back, out of step with the rest. Every key eases in and out.
 
 Writes art-export/ep1/dancer_ghost.glb.
 """
@@ -30,13 +30,15 @@ from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Euler, Vector
+from mathutils import Quaternion, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "art-source/library/scans/dancer_ghost.glb"
 OUT = ROOT / "art-export/ep1/dancer_ghost.glb"
 FPS = 30
-LOOP = 3.2
+LOOP = 4.8
+# The scan is the source scaled from 0.98 to 1.85 m: joints are measured in source units.
+K = 1.85 / 0.98
 
 
 def load():
@@ -63,43 +65,47 @@ def load():
 
 
 def joints(body):
-    """Joint positions from the mesh itself (she faces -Y; her left is +X)."""
-    co = np.array([v.co[:] for v in body.data.vertices])
+    """Joint positions (metres) from the mesh itself; she faces -Y, her left is +X."""
+    co = np.array([v.co[:] for v in body.data.vertices]) / K
+    x, y, z = co[:, 0], co[:, 1], co[:, 2]
 
     def centre(mask):
         pts = co[mask]
         if not len(pts):
             raise RuntimeError("no vertices for a joint")
-        return Vector(pts.mean(0))
+        return pts.mean(0)
 
-    x, y, z = co[:, 0], co[:, 1], co[:, 2]
-    def trunk_y(z0, z1):
-        # Midway between front and back (an average leans toward the sash and folds).
-        ys = co[(z > z0) & (z < z1) & (np.abs(x) < 0.12)][:, 1]
-        return float(np.percentile(ys, 5) + np.percentile(ys, 95)) / 2
-    j = {}
-    j["root"] = Vector((0, trunk_y(0.72, 0.8), 0.78))
-    j["spine"] = Vector((0, trunk_y(0.95, 1.05), 1.0))
-    j["chest"] = Vector((0, trunk_y(1.15, 1.22), 1.18))
-    j["neck"] = Vector((0, trunk_y(1.32, 1.38), 1.33))
-    j["neck_top"] = Vector(co[z.argmax()])
+    def V(p):
+        return Vector(np.array(p) * K)
+
+    j = {
+        "root": V((-0.07, 0.035, 0.45)),
+        "spine": V((-0.075, 0.025, 0.535)),
+        "chest": V((-0.085, 0.02, 0.6)),
+        "neck": V((-0.095, 0.025, 0.69)),
+        "head": V((-0.125, 0.035, 0.735)),
+        "head_top": V((-0.175, 0.06, 0.84)),
+        "shoulder.R": V((-0.15, 0.025, 0.655)),
+        "shoulder.L": V((-0.02, 0.015, 0.66)),
+        "hip.R": V((-0.11, 0.04, 0.43)),
+        "hip.L": V((-0.03, 0.04, 0.43)),
+        "knee.R": V((-0.11, 0.025, 0.23)),
+        "knee.L": V((-0.035, 0.025, 0.23)),
+    }
+    # The arms, from where they are on the mesh.
+    j["elbow.L"] = V(centre((x > 0.1) & (x < 0.13) & (z > 0.55) & (z < 0.63)))
+    j["wrist.L"] = V(centre((x > 0.225) & (x < 0.25) & (z > 0.62) & (z < 0.69)))
+    j["hand.L"] = V(co[x.argmax()])
+    j["elbow.R"] = V(centre((x < -0.19) & (z > 0.46) & (z < 0.53)))
+    low_hand = (z > 0.4) & (z < 0.53) & (y < -0.06) & (x > -0.18)
+    j["wrist.R"] = V(centre(low_hand & (x < -0.12)))
+    j["hand.R"] = V(co[np.where(low_hand)[0][y[low_hand].argmin()]])
+    # The feet: either side of her middle, under the hem.
     for side, s in (("R", -1), ("L", 1)):
-        j[f"shoulder.{side}"] = Vector((s * 0.15, trunk_y(1.24, 1.3), 1.27))
-        foot = (s * x > 0.0) & (z < 0.14) & (s * x < 0.16)
-        j[f"ankle.{side}"] = centre(foot & (z > 0.06))
-        toe = co[foot & (z < 0.04)]
-        j[f"toe.{side}"] = Vector(toe[toe[:, 1].argmin()])
-        j[f"hip.{side}"] = Vector((s * 0.085, j["root"].y, 0.74))
-        j[f"knee.{side}"] = Vector((s * 0.08, j["root"].y - 0.02, 0.42))
-    # The low right arm: elbow and wrist from where it leaves the trunk, the fingertips.
-    j["elbow.R"] = centre((x < -0.22) & (z > 1.08) & (z < 1.13))
-    j["wrist.R"] = centre((x > -0.37) & (x < -0.3) & (z > 0.92) & (z < 0.98))
-    j["hand.R"] = Vector(co[x.argmin()])
-    # The raised left arm: the elbow hangs below the shoulder, the hand points up.
-    j["elbow.L"] = centre((x > 0.25) & (x < 0.34) & (z > 1.12) & (z < 1.16))
-    j["wrist.L"] = centre((x > 0.33) & (x < 0.4) & (z > 1.26) & (z < 1.3))
-    raised = co[(x > 0.42)]
-    j["hand.L"] = Vector(raised[raised[:, 2].argmax()])
+        foot = (s * (x + 0.07) > 0) & (z < 0.07) & (np.abs(x + 0.07) < 0.1)
+        j[f"ankle.{side}"] = V(centre(foot & (z > 0.03)))
+        toe = co[foot & (z < 0.025)]
+        j[f"toe.{side}"] = V(toe[toe[:, 1].argmin()])
     for k, v in j.items():
         print(f"JOINT {k:12s} {v.x:+.3f} {v.y:+.3f} {v.z:+.3f}", flush=True)
     return j
@@ -127,7 +133,8 @@ def skeleton(j):
     bone("root", j["root"], j["spine"])
     bone("spine", j["spine"], j["chest"], "root", connect=True)
     bone("chest", j["chest"], j["neck"], "spine", connect=True)
-    bone("neck", j["neck"], j["neck_top"], "chest", connect=True)
+    bone("neck", j["neck"], j["head"], "chest", connect=True)
+    bone("head", j["head"], j["head_top"], "neck", connect=True)
     for s in ("L", "R"):
         bone(f"upperarm.{s}", j[f"shoulder.{s}"], j[f"elbow.{s}"], "chest")
         bone(f"forearm.{s}", j[f"elbow.{s}"], j[f"wrist.{s}"], f"upperarm.{s}", connect=True)
@@ -148,7 +155,7 @@ def skin(body, rig):
     bpy.context.scene.collection.objects.link(proxy)
     remesh = proxy.modifiers.new("watertight", "REMESH")
     remesh.mode = "VOXEL"
-    remesh.voxel_size = 0.012
+    remesh.voxel_size = 0.01
     bpy.context.view_layer.objects.active = proxy
     bpy.ops.object.modifier_apply(modifier=remesh.name)
     bpy.ops.object.select_all(action="DESELECT")
@@ -169,144 +176,11 @@ def skin(body, rig):
     transfer.layers_vgroup_select_dst = "NAME"
     bpy.ops.object.modifier_apply(modifier=transfer.name)
     bpy.data.objects.remove(proxy)
-    # The sampot hangs from the hips: below the knee its weight stays with the shins,
-    # above it with the thighs and hips, never with the arms.
     for g in [g for g in body.vertex_groups if g.name.startswith("ik.")]:
         body.vertex_groups.remove(g)
     deform = body.modifiers.new("Armature", "ARMATURE")
     deform.object = rig
     body.parent = rig
-
-
-ARMS = ("hand.",)
-
-
-def amputate(body, rig, j):
-    """Both hands off at the wrist, the stumps capped as recessed wounds, blood round
-    them and run down the forearms."""
-    import bmesh
-    from mathutils.kdtree import KDTree
-    rng = np.random.default_rng(1932)
-    arm_groups = {g.index for g in body.vertex_groups if g.name.startswith(ARMS)}
-    bm = bmesh.new()
-    bm.from_mesh(body.data)
-    deform = bm.verts.layers.deform.active
-    doomed = [v for v in bm.verts if sum(w for gi, w in v[deform].items() if gi in arm_groups) > 0.5]
-    # The generated mesh has small gaps of its own; only the new edges are the wrists.
-    gaps = {e for e in bm.edges if e.is_boundary}
-    bmesh.ops.delete(bm, geom=doomed, context="VERTS")
-    # Close each stump: fill the hole, put a point in its middle and sink it in.
-    rim = [e for e in bm.edges if e.is_boundary and e not in gaps]
-    rim_pts = [v.co.copy() for v in {v for e in rim for v in e.verts}]
-    # Each wrist's rim as its own loop (a wrist that shares a vertex with an old gap is
-    # not a clean hole for holes_fill): triangulated across, then gathered to one face.
-    loops, left = [], set(rim)
-    while left:
-        stack, loop = [left.pop()], set()
-        while stack:
-            e = stack.pop()
-            loop.add(e)
-            for v in e.verts:
-                for n in v.link_edges:
-                    if n in left:
-                        left.discard(n)
-                        stack.append(n)
-        loops.append(loop)
-    print("rim loops", sorted(len(loop) for loop in loops), flush=True)
-    caps = []
-    for loop in loops:
-        if len(loop) < 8:
-            continue
-        made = bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=list(loop))["geom"]
-        tris = [f for f in made if isinstance(f, bmesh.types.BMFace)]
-        if tris:
-            merged = bmesh.ops.dissolve_faces(bm, faces=tris)["region"]
-            caps += [f for f in merged if isinstance(f, bmesh.types.BMFace)] or tris
-    wound = len(body.data.materials)
-    body.data.materials.append(wound_material())
-    centres = []
-    for face in caps:
-        face.material_index = wound
-        centre = face.calc_center_median()
-        normal = face.normal.copy()
-        poked = bmesh.ops.poke(bm, faces=[face])
-        for f in poked["faces"]:
-            f.material_index = wound
-            f.smooth = True
-        for v in poked["verts"]:
-            # Sunk into the body, ragged.
-            v.co = v.co - normal * 0.01 + Vector(rng.normal(0, 0.002, 3))
-        centres.append(centre)
-    bm.normal_update()
-    bm.to_mesh(body.data)
-    bm.free()
-    body.data.update()
-    # Blood: the sleeve soaked round each stump, and runs from the rim along the forearm
-    # toward the elbow, fresh down the raised one, dried and shorter on the low one.
-    co = np.array([v.co[:] for v in body.data.vertices])
-    tree = KDTree(len(rim_pts))
-    for i, p in enumerate(rim_pts):
-        tree.insert(p, i)
-    tree.balance()
-    blood = np.zeros(len(co))
-    for i, c in enumerate(co):
-        _, _, d = tree.find(c)
-        blood[i] = np.clip((0.045 - d) / 0.033, 0, 1)
-    streaks = 0
-    for side, longest, strength in (("L", 0.2, 0.9), ("R", 0.09, 0.6)):
-        down = (j[f"elbow.{side}"] - j[f"wrist.{side}"]).normalized()
-        sign = 1 if side == "L" else -1
-        mine = [p for p in rim_pts if sign * p.x > 0]
-        for p in mine[:: max(1, len(mine) // 9)]:
-            if rng.random() > 0.75:
-                continue
-            length, width = rng.uniform(0.03, longest), rng.uniform(0.004, 0.011)
-            rel = co - np.array(p[:])
-            along = rel @ np.array(down[:])
-            across = np.linalg.norm(rel - np.outer(along, np.array(down[:])), axis=1)
-            t = np.clip(along / length, 0, 1)
-            # Hugging the arm: only points close to the surface line from the rim point.
-            hit = (along > -0.004) & (along < length) & (across < width * np.sqrt(1 - t) + 0.006)
-            blood = np.maximum(blood, np.where(hit, strength * (1 - 0.45 * t), 0))
-            streaks += 1
-    colour = np.ones((len(co), 4), np.float32)
-    dark = np.array((0.3, 0.03, 0.022))
-    colour[:, :3] = 1 - blood[:, None] * (1 - dark)
-    attr = body.data.color_attributes.new(name="blood", type="FLOAT_COLOR", domain="POINT")
-    attr.data.foreach_set("color", colour.ravel())
-    body.data.color_attributes.active_color = attr
-    # The texture is multiplied by it in the material, so the exporter keeps it as COLOR_0.
-    mat = body.data.materials[0]
-    nodes, links = mat.node_tree.nodes, mat.node_tree.links
-    bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
-    src = bsdf.inputs["Base Color"].links[0].from_socket
-    tint = nodes.new("ShaderNodeVertexColor")
-    tint.layer_name = "blood"
-    mult = nodes.new("ShaderNodeMix")
-    mult.data_type = "RGBA"
-    mult.blend_type = "MULTIPLY"
-    mult.inputs["Factor"].default_value = 1.0
-    links.new(src, mult.inputs[6])
-    links.new(tint.outputs["Color"], mult.inputs[7])
-    links.new(mult.outputs[2], bsdf.inputs["Base Color"])
-    # The arms' bones and weights go with them.
-    for g in [g for g in body.vertex_groups if g.name.startswith(ARMS)]:
-        body.vertex_groups.remove(g)
-    bpy.context.view_layer.objects.active = rig
-    bpy.ops.object.mode_set(mode="EDIT")
-    for b in [b for b in rig.data.edit_bones if b.name.startswith(ARMS)]:
-        rig.data.edit_bones.remove(b)
-    bpy.ops.object.mode_set(mode="OBJECT")
-    print("amputated", len(doomed), "verts;", len(caps), "stumps;", streaks, "streaks;",
-          int((blood > 0.3).sum()), "bloodied verts", flush=True)
-
-
-def wound_material():
-    m = bpy.data.materials.new("M_dancer_ghost_wound")
-    p = m.node_tree.nodes["Principled BSDF"]
-    p.inputs["Base Color"].default_value = (0.11, 0.008, 0.006, 1)
-    p.inputs["Roughness"].default_value = 0.28
-    return m
 
 
 def channels(action):
@@ -325,14 +199,20 @@ def ease_all(action):
         fc.modifiers.new("CYCLES")
 
 
+# Her own axes, in the armature's space: +X her left, -Y her front, +Z up.
+SIDE = Vector((0, 1, 0))     # about the front-back axis: + leans the top toward her left
+BEND = Vector((1, 0, 0))     # about the left-right axis: + bends the top forward
+TWIST = Vector((0, 0, 1))    # about the vertical: + turns her front toward her left
+
+
 def animate(rig):
-    """The robam: keys in seconds, rotations in degrees about each bone's own axes
-    (Blender's bone space: Y runs along the bone)."""
+    """The robam: keys in seconds; each turn is given about her own axes (degrees) and
+    turned into the bone's own space."""
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.mode_set(mode="POSE")
     pb = rig.pose.bones
     for b in pb:
-        b.rotation_mode = "XYZ"
+        b.rotation_mode = "QUATERNION"
     for s in ("L", "R"):
         ik = pb[f"shin.{s}"].constraints.new("IK")
         ik.target = rig
@@ -344,34 +224,45 @@ def animate(rig):
     action = bpy.data.actions.new("robam")
     rig.animation_data.action = action
 
-    def key(t, name, rot=(0, 0, 0), loc=None):
+    def key(t, name, turns=(), slide=None):
         b = pb[name]
-        b.rotation_euler = Euler([math.radians(a) for a in rot])
-        b.keyframe_insert("rotation_euler", frame=1 + t * FPS)
-        if loc is not None:
-            b.location = loc
+        rest = b.bone.matrix_local.to_3x3()
+        q = Quaternion()
+        for axis, deg in turns:
+            q = Quaternion(axis, math.radians(deg)) @ q
+        # A turn about her axes, as the bone's own rotation from its rest.
+        local = rest.inverted() @ q.to_matrix() @ rest
+        b.rotation_quaternion = local.to_quaternion()
+        b.keyframe_insert("rotation_quaternion", frame=1 + t * FPS)
+        if slide is not None:
+            b.location = rest.inverted() @ Vector(slide)
             b.keyframe_insert("location", frame=1 + t * FPS)
 
-    # Times: 0 rest, then a pass to her left, back through the middle, a pass to her right.
-    T = (0.0, 0.8, 1.6, 2.4, LOOP)
-    sway = (0, 1, 0, -1, 0)          # weight over the left foot (+1) or the right (-1)
-    sink = (0, 1, 0.35, 1, 0)        # how far the knees give
+    # The body: a pass to her left, back through the middle, a pass to her right.
+    T = (0.0, 1.2, 2.4, 3.6, LOOP)
+    sway = (0, 1, 0, -1, 0)
+    sink = (0.35, 1, 0.35, 1, 0.35)
     for t, w, d in zip(T, sway, sink):
-        # Root (bone space: Y up the spine, X to her left, Z backward): the hips slide
-        # over the standing foot and drop as the knees bend.
-        key(t, "root", (2 * d, 0, -4 * w), loc=(0.028 * w, -0.035 * d, 0.0))
-        key(t, "spine", (-1.5 * d, 2 * w, 3 * w))
-        key(t, "chest", (-1 - 1.5 * d, 3 * w, 4 * w))
-        key(t, "neck", (6 + 4 * d, -8 * w, -5 * w))
-    # The arms on a phrase of their own, a quarter-beat behind the hips.
-    A = (0.0, 0.6, 1.25, 2.0, 2.7, LOOP)
-    for t, a in zip(A, (0, 1, 0.4, -0.4, -1, 0)):
-        key(t, "upperarm.L", (6 * a, 0, -10 * a))
-        key(t, "forearm.L", (-12 * a, 22 * a, 0))
-        key(t, "upperarm.R", (-8 + 8 * a, 0, -14 - 12 * a))
-        key(t, "forearm.R", (6 * a, -16 * a, -10))
+        key(t, "root", ((SIDE, -3 * w), (BEND, 1.5 * d)), slide=(0.032 * w, 0, -0.03 * d))
+        key(t, "spine", ((SIDE, 2.5 * w), (BEND, 1.5 * d), (TWIST, 2 * w)))
+        key(t, "chest", ((SIDE, 3 * w), (TWIST, 4 * w), (BEND, -1 + 1.5 * d)))
+        key(t, "neck", ((SIDE, -2 * w),))
+    # Her head, slower and out of step: rolling further over to her right and back.
+    for t, h in zip((0.0, 1.6, 3.0, 4.0, LOOP), (0, 0.8, 1, 0.4, 0)):
+        key(t, "head", ((SIDE, -7 * h), (BEND, -5 * h), (TWIST, 3 * h)))
+    # The lifted arm, a beat behind the body: it floats up and sweeps back, the hand
+    # bending back at the wrist.
+    for t, a in zip((0.0, 1.5, 2.7, 3.9, LOOP), (0, 1, 0.35, -0.7, 0)):
+        key(t, "upperarm.L", ((SIDE, -9 * a), (TWIST, 7 * a)))
+        key(t, "forearm.L", ((SIDE, -9 * a), (BEND, 4 * a)))
+        key(t, "hand.L", ((SIDE, -16 * a), (TWIST, -6 * a)))
+    # The low hand curls and opens at her waist.
+    for t, b_ in zip((0.0, 1.1, 2.3, 3.5, LOOP), (0, -0.6, 1, 0.2, 0)):
+        key(t, "upperarm.R", ((BEND, 3 * b_), (SIDE, 2 * b_)))
+        key(t, "forearm.R", ((TWIST, 6 * b_),))
+        key(t, "hand.R", ((TWIST, 12 * b_), (SIDE, -6 * b_)))
     for s in ("L", "R"):
-        key(0, f"ik.{s}")
+        pb[f"ik.{s}"].keyframe_insert("location", frame=1)
     ease_all(action)
     bpy.context.scene.frame_start = 1
     bpy.context.scene.frame_end = int(LOOP * FPS)
@@ -394,8 +285,7 @@ def export(body, rig):
     OUT.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(OUT), export_format="GLB", use_selection=True, export_yup=True,
                               export_apply=False, export_animations=True, export_skins=True,
-                              export_def_bones=True, export_vertex_color="ACTIVE",
-                              export_image_format="JPEG", export_image_quality=90,
+                              export_def_bones=True, export_image_format="AUTO",
                               export_cameras=False, export_lights=False)
     print("Wrote", OUT, f"{OUT.stat().st_size / 1e6:.1f} MB", flush=True)
 
@@ -404,6 +294,5 @@ body = load()
 j = joints(body)
 rig = skeleton(j)
 skin(body, rig)
-amputate(body, rig, j)
 animate(rig)
 export(body, rig)

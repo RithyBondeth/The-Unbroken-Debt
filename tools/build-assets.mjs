@@ -30,11 +30,19 @@ const KIT_STONE =
   "@(T_ep2_stupa_*_BC|T_ep2_image_whole_BC|T_ep2_image_worn_BC|T_ep2_image_headless_BC|T_ep2_guardian_*_BC)";
 
 const LINE_ART =
-  "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";
+  "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_journal_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";
+
+/**
+ * Characters seen close and for themselves keep every bit of their textures: 4K, normal
+ * maps not halved, colour in UASTC (the user, November 19: the dancer ghost "in a high
+ * quality").
+ */
+const SHOWCASE = new Set(["ep1/dancer_ghost.glb"]);
+const SHOWCASE_COLOUR = "@(T_dancer_ghost_BC)";
 
 // Hero assets and player items get 4K textures; everything else 2K (Art Bible, section 6).
 function maxTextureSize(file) {
-  return /(^|\/)(shared_|hero_)/.test(file) ? 4096 : 2048;
+  return /(^|\/)(shared_|hero_)/.test(file) || SHOWCASE.has(file) ? 4096 : 2048;
 }
 
 /** Areas with a baked lightmap: their second UV set (TEXCOORD_1) is used by no glTF texture and must survive prune. */
@@ -137,13 +145,15 @@ for (const input of files) {
   gltf("resize", output, output, "--width", size, "--height", size);
   // Normal and packed occlusion-roughness-metal maps at 1K: detail the eye barely sees at
   // furniture scale, and the biggest share of download size (Phase 2 studio: 122 MB → see TDD 8).
-  gltf("resize", output, output, "--width", "1024", "--height", "1024", "--pattern", DETAIL_MAPS);
+  if (!SHOWCASE.has(relative(SRC, input)))
+    gltf("resize", output, output, "--width", "1024", "--height", "1024", "--pattern", DETAIL_MAPS);
   // Slot globs use @(a|b): the CLI's argument parser splits {a,b} into separate arguments.
   // UASTC for line art first (ETC1S blocks smear thin pen lines and small Khmer letters),
   // then ETC1S (small) for the remaining colour and ORM; UASTC (no block artefacts in
   // lighting) for normals. Each step skips textures that are already KTX2.
   gltf("uastc", output, output, "--pattern", LINE_ART, "--slots", "baseColorTexture");
   gltf("uastc", output, output, "--pattern", KIT_STONE, "--slots", "baseColorTexture");
+  gltf("uastc", output, output, "--pattern", SHOWCASE_COLOUR, "--slots", "baseColorTexture");
   gltf(
     "etc1s",
     output,

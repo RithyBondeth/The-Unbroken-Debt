@@ -37,7 +37,7 @@
       }
     },
     "nineties_p": {
-      "_about": "The user's posters (90s Posters/, November 2026), portrait. Every cell is the same size, so the game can hand any of them to any portrait slot (src/episodes/ep1/prologue/posterShuffle.ts). Sources: art-source/library/posters/.",
+      "_about": "The user's posters (90s Posters/, November 2026), portrait, and one 1921 Busy autochrome (A36155, in place of the barbershop sign the user took down). Every cell is the same size, so the game can hand any of them to any portrait slot (src/episodes/ep1/prologue/posterShuffle.ts). Sources: art-source/library/posters/.",
       "file": "T_studio_print_nineties_p_BC",
       "size": [2048, 2048],
       "folder": "posters",
@@ -47,7 +47,13 @@
         "POSTER90_3": { "rect": [1376, 0, 672, 960], "kind": "poster", "seed": 9003 },
         "POSTER90_6": { "rect": [0, 976, 672, 960], "kind": "photo", "seed": 9006 },
         "POSTER90_7": { "rect": [688, 976, 672, 960], "kind": "poster", "seed": 9007 },
-        "POSTER90_9": { "rect": [1376, 976, 672, 960], "kind": "board", "seed": 9009 }
+        "A36155": {
+          "rect": [1376, 976, 672, 960],
+          "kind": "mounted",
+          "seed": 36155,
+          "path": "archive/A36155.jpg",
+          "crop": [0, 0.045, 0, 0]
+        }
       }
     },
     "nineties_l": {

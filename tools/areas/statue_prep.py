@@ -62,9 +62,11 @@ def face_colours(me, img):
     return px[yi, xi, :3]
 
 
-def largest_island(bm):
+def largest_island(bm, min_faces=None):
+    """Keeps only the largest connected piece; with `min_faces`, every piece at least that
+    big (a figure whose crown or nails are pieces of their own)."""
     bm.faces.ensure_lookup_table()
-    seen, best = set(), []
+    seen, best, kept = set(), [], set()
     for f in bm.faces:
         if f.index in seen:
             continue
@@ -80,7 +82,9 @@ def largest_island(bm):
                         stack.append(h)
         if len(comp) > len(best):
             best = comp
-    keep = set(best)
+        if min_faces and len(comp) >= min_faces:
+            kept.update(comp)
+    keep = kept if min_faces else set(best)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f not in keep], context="FACES")
 
 
@@ -287,11 +291,13 @@ def _credit(src, out, extras):
     print("Wrote", out, f"{len(res) / 1e6:.1f} MB", extras, flush=True)
 
 
-def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=None, blotch=None, shader=None):
+def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=None, blotch=None, shader=None,
+            min_piece=None, image_format="JPEG"):
     """Writes art-source/library/scans/<name>.glb. `cut(centres, colours)` returns
     a mask of the faces to drop (source coordinates); the largest piece left is kept.
     `shader` replaces `aged` (same arguments and result) for figures that are not
-    shrine statues."""
+    shrine statues. `min_piece` keeps every connected piece of at least that many faces
+    instead of only the largest. `image_format` "AUTO" keeps the baked maps lossless (PNG)."""
     look = dict(LOOK, **(look or {}))
     scene = bpy.context.scene
     high = _load(src, name)
@@ -311,7 +317,7 @@ def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=
         drop = cut(cen, cols)
         bmesh.ops.delete(bm, geom=[f for f, d in zip(bm.faces, drop) if d], context="FACES")
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
-    largest_island(bm)
+    largest_island(bm, min_piece)
     # Close the small holes (the generator's and the cut's); a big opening such
     # as a cut-off underside stays open.
     fill = bm.faces.layers.float.new("fill")
@@ -390,7 +396,7 @@ def prepare(src, name, height, extras, cut=None, tris=36000, bake_px=2048, look=
     low.select_set(True)
     bpy.ops.export_scene.gltf(filepath=out_path, export_format="GLB", export_yup=True, export_apply=True,
                               use_selection=True, export_cameras=False, export_lights=False,
-                              export_image_format="JPEG", export_image_quality=90)
+                              export_image_format=image_format, export_image_quality=90)
     extras = dict(extras)
     extras["adapted"] = extras["adapted"].format(tris=len(low.data.polygons), px=bake_px, height=height)
     _credit(src, out_path, extras)

@@ -76,6 +76,8 @@ def setup_lights():
     point("bake_stair_glow", obj("marker_stair_glow").location, 90.0, (1.0, 0.7, 0.4), 0.05)
     point("bake_airwell_bulb", obj("marker_airwell_bulb").location, 55.0, (1.0, 0.78, 0.5), 0.02)
     point("bake_tea_lamp", obj("marker_tea_lamp").location, 9.0, (1.0, 0.58, 0.26), 0.012)
+    # The candle by Sora's diary on the writing desk (the save point; flickered live, Studio.ts).
+    point("bake_desk_candle", obj("light_flame_desk_candle").location, 1.2, (1.0, 0.6, 0.26), 0.006)
 
     world = scene.world or bpy.data.worlds.new("night")
     scene.world = world
@@ -176,7 +178,7 @@ def preview(outdir):
 # Never lightmapped: what moves or is picked up, see-through or glowing surfaces, thin
 # strands, and paper props too small to carry a lightmap.
 SKIP_NAMES = ("glass", "net", "water", "flame", "bulb", "shade", "cord", "wire", "string", "line", "fringe", "pin_", "_pin",
-              "letter", "envelope", "matchbox", "drawer", "satchel", "sketchbook", "illustration", "incense", "cleat", "hook",
+              "letter", "envelope", "matchbox", "pencil", "ribbon", "wick", "candle_drip", "wax_pool", "drawer", "satchel", "sketchbook", "illustration", "incense", "cleat", "hook",
               "chain", "pull", "rain", "puddle", "telephone", "earpiece", "krama", "sampot", "towel", "peg",
               "laundry", "fern", "moss", "banana", "branch", "firewood", "lantern_", "birdcage", "chilli", "garlic", "ladle",
               "bowl", "jar_lid", "dipper", "kettle", "shrine_orange", "shrine_incense", "blind", "cobweb", "crack",

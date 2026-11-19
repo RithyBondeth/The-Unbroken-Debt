@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// The music of Episode 1's headless dancer (November 2026), cut and warped from the
+// The music of Episode 1's dancer ghost (November 2026), cut and warped from the
 // Apsara dance recording the user supplied (art-source/audio/ep1/apsara_dance_source.mp3,
 // 14 min 19 s; rights to be confirmed before release).
 //
-// - mus_ep1_apsara_ghost: 3.6 s from a full passage (02:36), played close and as
+// - mus_ep1_apsara_ghost: 4 s from a full passage (02:36), played close and as
 //   recorded while she dances in the back room; only its last moment runs down to a stop
 //   as the house's lights go out (DancerGhost.ts).
 // - mus_ep1_apsara_lure: a 24 s loop (12:00), as if through the back room's wall,
@@ -77,7 +77,7 @@ const ROOM = "aecho=0.8:0.6:37|71|113|167:0.4|0.32|0.24|0.16";
 // ---- The dance, as she is seen: the recording as it is, close, with a short echo; only
 // the last moment runs down to a stop, as the lights go.
 {
-  const length = 3.6;
+  const length = 4.0;
   const stop = 0.6;
   const src = decode(156, 5);
   const out = vary(src, length, (t) => {

@@ -3,7 +3,7 @@ import { Prologue } from "@/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "@/audio/DreadScore";
 import { PhoneBell } from "@/episodes/ep1/audio/PhoneBell";
 import { Flags } from "@/core/Flags";
-import { POWER_CUT } from "@/episodes/ep1/data/powerCut";
+import { POWER_RETURN_LENGTH } from "@/episodes/ep1/data/powerCut";
 
 it.each([
   ["satchel", "hint.packSatchel"],
@@ -34,6 +34,7 @@ it("rings the phone once the dancer has gone and the lights are back, without op
     game: {
       cutscene: false,
       input: { lockPointer: vi.fn() },
+      player: { inputEnabled: false },
       audio: null,
       fade: { to: vi.fn(), waitForEnter: vi.fn() },
       interaction: { allow: () => true },
@@ -95,7 +96,9 @@ it("rings the phone once the dancer has gone and the lights are back, without op
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
         // The lights come back from the power cut, a breath, then the bell.
-        expect(state.wait).toHaveBeenNthCalledWith(1, POWER_CUT.length + 0.25);
+        expect(state.wait).toHaveBeenNthCalledWith(1, POWER_RETURN_LENGTH + 0.25);
+        // Held still through the dark, Sora can move again once the lights are back.
+        expect(state.game.player.inputEnabled).toBe(true);
         expect(state.wait).toHaveBeenNthCalledWith(2, 1.1);
         expect(state.game.hints.show).toHaveBeenCalledWith("hint.phone", 12);
         order.push("phone");

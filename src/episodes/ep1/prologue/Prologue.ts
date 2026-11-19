@@ -22,11 +22,12 @@ import { Objectives, type Objective } from "@/ui/html/StoryUi";
 import { StudioDetails } from "./StudioDetails";
 import { DancerGhost } from "./DancerGhost";
 import { shufflePosters } from "./posterShuffle";
-import { blackout, creak, knock, whisper } from "../audio/dancerSounds";
-import { POWER_CUT } from "../data/powerCut";
+import { creak, knock, powerDown, powerUp, whisper } from "../audio/dancerSounds";
+import { POWER_RETURN_LENGTH } from "../data/powerCut";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { SavePoint } from "@/systems/saves/SavePoint";
+import { warmSceneViews } from "@/render/warmSceneViews";
 
 const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
@@ -109,6 +110,8 @@ export class Prologue {
         /^back_room_pendant/,
         // The posters' slots keep their own UVs (posterShuffle.ts).
         /^poster90_[pl]_\d+$/,
+        // Sora's diary is the save point: it stays itself to be picked and hinted.
+        /^save_journal/,
       ],
     });
     this.details = new StudioDetails(game.scene, this.area);
@@ -122,10 +125,10 @@ export class Prologue {
         material.disableDepthWrite = true;
         material.backFaceCulling = true;
       }
-    // The headless dancer in the back room, by the altar, facing the doorway.
+    // The dancer ghost in the back room, against the far wall, facing the doorway.
     this.dancer = new DancerGhost(
       game,
-      this.area.level.markers.get("dancer_ghost")?.position.clone() ?? new Vector3(-1.9, 0, -13.5),
+      this.area.level.markers.get("dancer_ghost")?.position.clone() ?? new Vector3(-3.0, 0, -13.4),
       new Vector3(-0.6, 0, -9.27),
     );
     await this.dancer.load();
@@ -134,11 +137,19 @@ export class Prologue {
       game.flags.get("ep1.phone.answered", false)
     )
       this.dancer.skip();
-    // She goes with the light: every lamp in the house dies and stutters back.
-    this.dancer.onAppear = () => this.score.pressure(0.9);
+    // She comes with the dark: every lamp in the house dies as Sora steps into the
+    // doorway, she can only stand and look, and the lights stutter back when she is gone.
+    this.dancer.onBlackout = () => {
+      this.lights.lightsOut();
+      this.play("powerDown", game.camera.globalPosition);
+      game.cutscene = true;
+      game.player.inputEnabled = false;
+      game.satchel.close();
+    };
+    this.dancer.onAppear = () => this.score.pressure(1);
     this.dancer.onVanish = () => {
-      this.lights.powerCut();
-      this.play("blackout", game.camera.globalPosition);
+      this.lights.lightsBack();
+      this.play("powerUp", game.camera.globalPosition);
     };
     // Every press of E counts here: with nothing quite under the eye, the nearest thing
     // within 14 degrees is taken.
@@ -194,8 +205,24 @@ export class Prologue {
     const savePoint =
       this.area.level.markers.get("save_studio")?.position.clone() ??
       new Vector3(-0.18, 0.8, -3.12);
-    new SavePoint(game, "interact_save_studio", savePoint, "STUDIO", () =>
-      game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
+    // Sora's diary open on the writing desk is the safe place (tools/areas/ep1_area_studio.py,
+    // open_journal); the stock folio and votive stand in if it is missing.
+    const journal = game.scene.getTransformNodeByName("save_journal");
+    new SavePoint(
+      game,
+      "interact_save_studio",
+      savePoint,
+      "STUDIO",
+      () => game.checkpoints.mark(this.captureProgress(), "Studio · Writing desk"),
+      undefined,
+      journal
+        ? {
+            root: journal,
+            hint: "hint.savePoint",
+            saving: () => undefined,
+            settled: () => undefined,
+          }
+        : undefined,
     );
     game.bus.on("interact:focus", ({ id }) => {
       if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
@@ -207,6 +234,37 @@ export class Prologue {
     });
   }
 
+  /**
+   * Draws every room of the floor once behind the black opening screen, the dancer in
+   * her corner among them: built the first time they came into view, the airwell's and
+   * the back room's shaders and pipelines stalled the frame for most of a second, the
+   * second of them just as the dancer was revealed (November 2026). Runtime coordinates
+   * (x = -Blender x, z = -Blender y).
+   */
+  async warmup(): Promise<void> {
+    const game = this.game;
+    const view = (eye: [number, number], target: [number, number, number]) => ({
+      eye: new Vector3(eye[0], 1.58, eye[1]),
+      target: new Vector3(...target),
+    });
+    const hide = this.dancer.prepareWarm();
+    try {
+      await warmSceneViews(game.scene, game.camera, [
+        view([-2.3, -0.6], [-2.3, 1.3, -5.5]),
+        view([-2.5, -3.0], [-0.3, 1.0, -2.7]),
+        view([-2.3, -5.0], [-2.3, 1.4, 0.5]),
+        view([-1.2, -6.6], [-2.5, 1.0, -8.5]),
+        view([-2.3, -6.8], [-1.0, 1.2, -9.4]),
+        view([-3.5, -8.5], [-0.5, 1.0, -7.5]),
+        view([-0.9, -10.3], [-1.9, 1.0, -13.5]),
+        view([-2.5, -11.5], [-3.5, 1.0, -9.8]),
+        view([-2.0, -13.0], [-0.6, 1.3, -9.3]),
+      ]);
+    } finally {
+      hide();
+    }
+  }
+
   /** Starts the prologue once the game's post-processing exists. */
   async begin(): Promise<void> {
     const game = this.game;
@@ -214,8 +272,6 @@ export class Prologue {
     // flickering room, and the whole picture crawled and shook (November 2026). FXAA
     // smooths the edges on its own and the image holds still.
     if (game.pipeline.taa) game.pipeline.taa.isEnabled = false;
-    // The dancer drawn once behind the black opening screen: no hitch when she appears.
-    void this.dancer.warm();
     game.atmosphere.baseExposure = 1.25;
     game.atmosphere.maxExposure = 3.1;
     game.atmosphere.nightSightIntensity = 1.8;
@@ -237,8 +293,11 @@ export class Prologue {
     this.dancer.update(dt);
     // In the power cut the dark is total: no eyes adjusting, no night sight.
     const power = this.lights.power;
-    game.atmosphere.baseExposure = 1.25 * (0.3 + 0.7 * power);
-    game.atmosphere.nightSightIntensity = 1.8 * power;
+    // Held down for the dancer, the dark is not total: Sora's eyes stay open to the glow
+    // that is left, and the room reads round her (the user found it too dark).
+    const eyes = this.lights.dimmed ? 0.8 : power;
+    game.atmosphere.baseExposure = 1.25 * (0.3 + 0.7 * eyes);
+    game.atmosphere.nightSightIntensity = 1.8 * eyes;
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
     this.houseSounds();
     // Thunder follows each flash after a few seconds (sound travels about 1 km in 3 s).
@@ -280,8 +339,10 @@ export class Prologue {
     if (!game.flags.get("ep1.phone.answered", false)) {
       if (!game.flags.get("ep1.studio.dancerSeen", false)) {
         await this.dancer.seen();
-        // The lights come back first.
-        await this.wait(POWER_CUT.length + 0.25);
+        // The lights come back first; then she can move again.
+        await this.wait(POWER_RETURN_LENGTH + 0.25);
+        game.cutscene = false;
+        game.player.inputEnabled = true;
       }
       // P05: lightning, the candle dies, the ink spills across the drawing, the clock stops.
       game.satchel.close();
@@ -663,7 +724,8 @@ export class Prologue {
       ["knock", knock, "sfx", desk, { minDistance: 2, volume: 0.7 }],
       ["creak", creak, "sfx", desk, { minDistance: 2, volume: 0.8 }],
       ["whisper", whisper, "threat", desk, { minDistance: 0.6, volume: 0.45 }],
-      ["blackout", blackout, "threat", desk, { minDistance: 3, volume: 1 }],
+      ["powerDown", powerDown, "threat", desk, { minDistance: 3, volume: 1 }],
+      ["powerUp", powerUp, "threat", desk, { minDistance: 3, volume: 0.9 }],
     ];
     // A small plastered room: Sora's own steps and the telephone ring in it.
     audio.setSpace("studio", 0);

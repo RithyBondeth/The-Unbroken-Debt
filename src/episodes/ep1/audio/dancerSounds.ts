@@ -10,9 +10,10 @@ import {
   sweep,
   wrapLoop,
 } from "@/audio/synth";
+import { POWER_RETURN } from "../data/powerCut";
 
 /**
- * The studio's ghost in sound (November 2026): the headless dancer in Sora's back
+ * The studio's ghost in sound (November 2026): the dancer ghost in Sora's back
  * room (DancerGhost.ts). Synthesised, mono, pure functions like the rest of the
  * prologue's stand-ins.
  *
@@ -248,15 +249,12 @@ export function creak(rate: number, rand: () => number): Float32Array {
 }
 
 /**
- * About 2.4 s, timed to POWER_CUT: the relays drop with a clunk and a blow in the floor,
- * the air of the house sucked out; in the dark something breathes right at Sora's ear
- * and the boards groan under a weight; a swell rising out of nothing, cut off as the
- * lights snap back on, stutter and hold, each catch an electric crack.
+ * Every light in the house dies at once (Sora has stepped into the back room): a relay's
+ * metal clunk and a sub blow, the air sucked out of the rooms, then in the dark breath at
+ * the ear and the boards groaning slow and low.
  */
-export function blackout(rate: number, rand: () => number): Float32Array {
-  const length = n(2.4, rate);
-  const out = new Float32Array(length);
-  // The cut: a relay's metal clunk and a sub blow.
+export function powerDown(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(n(2.2, rate));
   const impulse = new Float32Array(n(0.4, rate));
   impulse[0] = 1;
   mix(
@@ -280,7 +278,6 @@ export function blackout(rate: number, rand: () => number): Float32Array {
     sub[i] = Math.sin(ph);
   }
   mix(out, sub, rate, 0, 1.2, decay(0.5));
-  // The air sucked out of the rooms.
   const air = sweep(
     noise(n(0.7, rate), rand),
     rate,
@@ -289,25 +286,62 @@ export function blackout(rate: number, rand: () => number): Float32Array {
     0.9,
   );
   mix(out, air, rate, 0.01, 0.5, decay(0.25));
-  // In the dark: breath at the ear, the boards groaning slow and low.
-  mix(out, whisper(rate, rand), rate, 0.28, 0.55, () => 1);
+  mix(out, whisper(rate, rand), rate, 0.35, 0.5, () => 1);
   const groan = creak(rate, rand);
   const slow = new Float32Array(groan.length * 2);
   for (let i = 0; i < slow.length; i++) slow[i] = groan[Math.floor(i / 2)];
-  mix(out, biquad(slow, rate, "lowpass", 900, 0.7), rate, 0.5, 0.7, () => 1);
-  // A swell rising out of nothing, cut off as the light catches.
-  const swell = biquad(noise(n(0.55, rate), rand), rate, "bandpass", 3800, 0.6);
-  mix(out, swell, rate, 0.73, 0.5, (t) => (t / 0.55) ** 3);
-  // Each time the lights catch: an electric crack and a burst of mains buzz.
+  mix(out, biquad(slow, rate, "lowpass", 900, 0.7), rate, 0.9, 0.7, () => 1);
+  return normalise(out, 0.92);
+}
+
+/**
+ * The lights catching again after the dancer (StudioLights.lightsBack): a hiss rising out
+ * of nothing, then an electric crack and a burst of mains buzz each time they catch, timed
+ * to the end of POWER_CUT.
+ */
+export function powerUp(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(n(0.9, rate));
+  const swell = biquad(noise(n(0.08, rate), rand), rate, "bandpass", 3800, 0.6);
+  mix(out, swell, rate, 0, 0.4, (t) => (t / 0.08) ** 3);
   for (const at of [1.28, 1.47, 1.72]) {
+    const when = at - POWER_RETURN;
     const snap = biquad(noise(n(0.05, rate), rand), rate, "highpass", 2200, 0.7);
-    mix(out, snap, rate, at, 0.8, decay(0.012));
+    mix(out, snap, rate, when, 0.8, decay(0.012));
     const buzz = new Float32Array(n(0.08, rate));
     for (let i = 0; i < buzz.length; i++) {
       const t = i / rate;
       buzz[i] = ((t * 100) % 1) * 2 - 1;
     }
-    mix(out, biquad(buzz, rate, "lowpass", 1800, 0.7), rate, at, 0.35, decay(0.03));
+    mix(out, biquad(buzz, rate, "lowpass", 1800, 0.7), rate, when, 0.35, decay(0.03));
   }
-  return normalise(out, 0.92);
+  return normalise(out, 0.85);
+}
+
+/**
+ * Under her music while she is there (4 s): a sub cluster beating slow and rising, a thin
+ * high whine fighting it, whispers at the ear from all sides, all swelling to the end and
+ * cut off dead as the lights come back. No hit when she appears (the user disliked one).
+ */
+export function hauntDrone(rate: number, rand: () => number): Float32Array {
+  const seconds = 4;
+  const out = new Float32Array(n(seconds, rate));
+  const swell = (t: number) => Math.min(1, t / 0.6) * (0.35 + 0.65 * (t / seconds) ** 1.5);
+  let a = 0,
+    b = 0,
+    c = 0;
+  for (let i = 0; i < out.length; i++) {
+    const t = i / rate;
+    a += (2 * Math.PI * 41) / rate;
+    b += (2 * Math.PI * 43.7) / rate;
+    c += (2 * Math.PI * (55 - 3 * (t / seconds))) / rate;
+    out[i] = (0.5 * Math.sin(a) + 0.45 * Math.sin(b) + 0.3 * Math.sin(c)) * swell(t);
+  }
+  const whine = biquad(noise(n(seconds, rate), rand), rate, "bandpass", 2900, 18);
+  mix(out, whine, rate, 0, 0.5, (t) => swell(t) * (0.6 + 0.4 * Math.sin(t * 5.3)));
+  for (const at of [0.3, 1.2, 1.9, 2.6, 3.2])
+    mix(out, whisper(rate, rand), rate, at, 0.55, () => 1);
+  // Cut off dead at the end, no tail.
+  const fade = n(0.02, rate);
+  for (let i = 0; i < fade; i++) out[out.length - 1 - i] *= i / fade;
+  return normalise(out, 0.9);
 }

@@ -7,39 +7,54 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
-import { Ray } from "@babylonjs/core/Culling/ray";
 import type { Game } from "@/core/Game";
 import { seededRandom } from "@/audio/synth";
-import { heartbeat, pinpeatLure, robamSong } from "../audio/dancerSounds";
+import { hauntDrone, heartbeat, pinpeatLure, robamSong } from "../audio/dancerSounds";
 
+/** How long she is there, in seconds (the user, November 19: four seconds). */
+export const DANCER_SHOWN = 4;
+/** The house is black this long, a breath at Sora's ear, before she is there. */
+const DARK = 1.1;
+/** The light on her comes up this long, sputtering. */
+const REVEAL = 0.5;
 /**
- * How long she dances once seen, in seconds (the user asked for three or four): the
- * length of her music (tools/audio/make-ep1-apsara.mjs), which runs down to nothing
- * just as every light in the house goes out and takes her with it.
+ * The light that falls on her alone, cold and blue-white, a failing bulb over her: it
+ * carries across the room with the house's lights down to a glow.
  */
-export const DANCER_SHOWN = 3.6;
-/** She comes out of the dark over this long, the light on her stuttering on. */
-const FADE_IN = 0.35;
-/** The light that falls on her alone: pale and cold, leaving her colours dull. */
-const FILL = 1.3;
-/** She appears once she is within this angle of the centre of Sora's view. */
-const SEEN_COS = Math.cos((30 * Math.PI) / 180);
-/** Sora is in the back room once her eye is past the doorway (runtime z; Blender y 9.45). */
-const BACK_ROOM_Z = -9.45;
+const FILL = 20;
+/**
+ * Her music, muffled through the wall, begins only when Sora comes near the back room
+ * (within this many metres of her: the airwell's far half) and fades away again if she
+ * goes back (beyond LURE_OFF); it rises and falls over LURE_FADE seconds.
+ */
+const LURE_ON = 7;
+const LURE_OFF = 8.5;
+const LURE_FADE = 1.5;
+/** For the last of it she stops dead, mid-gesture, while the music dies. */
+const STILL = 1.1;
+/** Sora's eyes are turned to her over this long, from the moment the lights die. */
+const TURN = 0.9;
+/**
+ * The lights die as Sora's eye passes the back room's doorway (runtime z; the doorway's
+ * jamb is at Blender y 9.45): she stops there, as far from the dancer as the room allows.
+ */
+const DOORWAY_Z = -9.3;
 
 /**
- * The headless dancer in Sora's back room (Episode 1 prologue, November 2026): a
- * royal-ballet dancer with no head (art-source/library/scans/dancer_ghost.glb,
- * prepared by tools/characters/import-dancer-ghost.py), standing in the dark between
- * the family altar and the shutters, her hands cut off at the wrists. An Apsara
- * dance plays faintly behind the wall until Sora steps into the room (the user's
- * recording, muffled); the moment she looks that way the dancer is there,
- * dancing to it (tools/characters/rig-dancer-ghost.py: a slow robam, her weight
- * passing from foot to foot), with her music suddenly close, for
- * `DANCER_SHOWN` seconds, coming out of the dark as the light on her stutters on; the music runs down like a dying record, every light in the
- * house goes out (StudioLights.powerCut), and when they stutter back she is gone and
- * Sora's heart is pounding, until she answers the telephone. Player control is never
- * taken away.
+ * The dancer ghost in Sora's back room (Episode 1 prologue, November 2026): a royal-ballet
+ * dancer in red, her face painted white under a gold crown, her throat cut and her hands
+ * clawed and bloody (the user's model, art-source/library/scans/dancer_ghost.glb, prepared
+ * by tools/characters/import-dancer-ghost.py), standing against the far wall. As Sora
+ * comes near the back room an Apsara dance begins faintly behind the wall (the user's
+ * recording, muffled). As the user asked (November 19): the moment Sora steps into the
+ * doorway the house's lights die to a glow (StudioLights.lightsOut) and she can do nothing
+ * but wait, kept at the doorway, as far from the dancer as the room allows; her eyes are
+ * drawn to the far wall; after a breath of dark, under a cold light that sputters like a
+ * failing bulb, the dancer is there, dancing to her music close by, a drone and whispers
+ * rising under it and Sora's heart pounding (tools/characters/rig-dancer-ghost.py: a slow
+ * robam, her head rolling over); for the last second she stops dead, mid-gesture, as the
+ * music dies; after `DANCER_SHOWN` seconds she is gone, the lights stutter back
+ * (lightsBack) and Sora can move again. Opaque throughout: revealed by light alone.
  */
 export class DancerGhost {
   private root: TransformNode | null = null;
@@ -48,15 +63,26 @@ export class DancerGhost {
   private lure: StaticSound | null = null;
   private heart: StaticSound | null = null;
   private song: StaticSound | null = null;
+  private drone: StaticSound | null = null;
+  /** Seconds since the lights died. */
+  private since = 0;
+  /** Where Sora was looking when the lights died, and where her eyes are drawn. */
+  private readonly look = { yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 };
   private dance: AnimationGroup | null = null;
-  private phase: "waiting" | "shown" | "gone" = "waiting";
-  private shownFor = 0;
+  private phase: "waiting" | "dark" | "shown" | "gone" = "waiting";
+  private lureOn = false;
+  /** The lure's level now (0–1 of its full volume) and its full volume. */
+  private lureLevel = 0;
+  private lureFull = 0.55;
+  /** Runs her light's slow swell; starts somewhere different each time. */
+  private clock = Math.random() * 10;
   private done: (() => void) | null = null;
-  private readonly ray = new Ray(Vector3.Zero(), Vector3.Forward(), 1);
   private readonly chest: Vector3;
-  /** Called the moment she is seen. */
+  /** Called as Sora steps into the doorway: every light dies, and she is held still. */
+  onBlackout: (() => void) | null = null;
+  /** Called when she is there. */
   onAppear: (() => void) | null = null;
-  /** Called when she vanishes: every light in the house goes out (Studio.ts). */
+  /** Called when she is gone: the lights come back (Studio.ts). */
   onVanish: (() => void) | null = null;
 
   constructor(
@@ -64,7 +90,8 @@ export class DancerGhost {
     private readonly at: Vector3,
     private readonly doorway: Vector3,
   ) {
-    this.chest = at.add(new Vector3(0, 1.05, 0));
+    // Where Sora's eyes go: her chest, below the painted face.
+    this.chest = at.add(new Vector3(0, 1.25, 0));
   }
 
   /** Loads the figure, hidden, facing the doorway. A missing file leaves only the sounds. */
@@ -76,7 +103,7 @@ export class DancerGhost {
         scene,
       );
       asset.addAllToScene();
-      // The loader starts the first clip; she waits, still, until she is seen.
+      // The loader starts the first clip; she waits, still and hidden, until the lights die.
       for (const group of asset.animationGroups) group.stop();
       this.dance = asset.animationGroups[0] ?? null;
       const root = (this.root = new TransformNode("dancer_ghost", scene));
@@ -99,19 +126,20 @@ export class DancerGhost {
       // switching a light on re-checks every material's shader, a hitch at the worst moment.
       const fill = (this.fill = new PointLight(
         "dancer_ghost_fill",
-        this.at.add(face.normalize().scale(0.7)).add(new Vector3(0, 1.9, 0)),
+        // Over her head and a little in front: a cold pool falling on her from above.
+        this.at.add(face.normalize().scale(0.5)).add(new Vector3(0, 2.4, 0)),
         scene,
       ));
-      fill.diffuse = new Color3(0.84, 0.84, 0.78);
+      fill.diffuse = new Color3(0.72, 0.8, 1);
       fill.intensity = 0;
-      fill.range = 3;
+      fill.range = 4;
       fill.includedOnlyMeshes = [...this.meshes];
     } catch (error) {
       console.warn("[DancerGhost] figure did not load", error);
     }
   }
 
-  /** The lure, her music and the heartbeat; the lure starts at once unless she has been seen. */
+  /** The lure, her music and the heartbeat (the lure waits until Sora comes near: update). */
   async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
@@ -126,7 +154,7 @@ export class DancerGhost {
       recording("mus_ep1_apsara_lure"),
       recording("mus_ep1_apsara_ghost"),
     ]);
-    const [lure, heart, song] = await Promise.all([
+    const [lure, heart, song, drone] = await Promise.all([
       audio.spatialSound(
         "dancer_lure",
         lureFile ?? audio.buffer(pinpeatLure(rate, seededRandom(1907)), rate),
@@ -142,42 +170,38 @@ export class DancerGhost {
         this.chest,
         { minDistance: 4, volume: 1 },
       ),
+      audio.sound(
+        "dancer_drone",
+        audio.buffer(hauntDrone(rate, seededRandom(1913)), rate),
+        "threat",
+        0.9,
+      ),
     ]);
+    this.drone = drone;
     this.song = song;
     this.lure = lure;
     this.heart = heart;
     heart.loop = true;
-    if (this.phase === "waiting") lure.play();
+    this.lureFull = lure.volume;
   }
 
   /**
-   * Draws her for a few frames while the screen is still black (before the player
-   * presses Enter), half-faded and whole, dancing and lit, so every shader, pipeline and
-   * skinning buffer she needs exists before the scare: built on the spot they stalled
-   * the frame she appeared on. She is drawn even behind the walls
-   * (alwaysSelectAsActiveMesh), so where the camera is does not matter.
+   * Puts her in her corner, dancing and lit, for the views drawn behind the black
+   * opening screen (Prologue.warmup), so every shader, pipeline and skinning buffer she
+   * needs exists before she appears. Returns what hides her again.
    */
-  async warm(): Promise<void> {
+  prepareWarm(): () => void {
     const root = this.root;
-    if (!root || this.phase !== "waiting") return;
-    const frames = (n: number) =>
-      new Promise<void>((done) => {
-        const observer = this.game.scene.onAfterRenderObservable.add(() => {
-          if (--n > 0) return;
-          observer.remove();
-          done();
-        });
-      });
+    if (!root || this.phase !== "waiting") return () => undefined;
     root.setEnabled(true);
     if (this.fill) this.fill.intensity = 0.001;
     this.dance?.start(true, 1, this.dance.from, this.dance.to);
-    for (const visibility of [0.5, 1]) {
-      for (const mesh of this.meshes) mesh.visibility = visibility;
-      await frames(3);
-    }
-    this.dance?.stop();
-    if (this.phase === "waiting") root.setEnabled(false);
-    if (this.fill && this.phase === "waiting") this.fill.intensity = 0;
+    return () => {
+      if (this.phase !== "waiting") return;
+      this.dance?.stop();
+      root.setEnabled(false);
+      if (this.fill) this.fill.intensity = 0;
+    };
   }
 
   /** Resolves when she has been seen and is gone again. */
@@ -200,72 +224,114 @@ export class DancerGhost {
   }
 
   update(dt: number): void {
+    this.clock += dt;
+    const player = this.game.player;
     if (this.phase === "waiting") {
-      if (this.done && this.sees()) this.appear();
+      this.updateLure(dt);
+      if (this.done && this.game.camera.globalPosition.z < DOORWAY_Z) this.blackout();
       return;
     }
-    if (this.phase !== "shown") return;
-    this.shownFor += dt;
-    const t = this.shownFor;
-    // Out of the dark, eased: she is there before the eye can say when she came.
-    const come = Math.min(1, t / FADE_IN);
-    const eased = come * come * (3 - 2 * come);
-    for (const mesh of this.meshes) mesh.visibility = eased;
-    // The light on her stutters on like a failing bulb, then trembles more and more as
-    // the music dies.
-    const unrest = Math.min(1, t / DANCER_SHOWN);
-    const tremble =
-      1 - (0.12 + 0.45 * unrest * unrest) * Math.abs(Math.sin(t * 23) * Math.sin(t * 7.1));
-    const stutter = come < 1 ? (Math.sin(t * 90) > -0.2 ? 1 : 0.25) : 1;
-    if (this.fill) this.fill.intensity = FILL * eased * tremble * stutter;
-    if (t >= DANCER_SHOWN) this.vanish();
+    if (this.phase === "gone") return;
+    this.since += dt;
+    const t = this.since;
+    // Her eyes drawn to the far wall, eased, the shorter way round.
+    if (player) {
+      const k = smooth(Math.min(1, Math.max(0, (t - 0.15) / TURN)));
+      let dy = this.look.toYaw - this.look.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      player.yaw = this.look.yaw + dy * k;
+      player.pitch = this.look.pitch + (this.look.toPitch - this.look.pitch) * k;
+    }
+    if (this.phase === "dark") {
+      if (t >= DARK) this.appear();
+      return;
+    }
+    const shown = t - DARK;
+    // The light comes up on her sputtering, then holds like a bulb about to go: dips that
+    // come and go smoothly, deeper as the end comes.
+    const rise = smooth(Math.min(1, shown / REVEAL));
+    const unrest = 0.35 + 0.5 * Math.min(1, shown / DANCER_SHOWN);
+    const dip = Math.max(0, Math.sin(this.clock * 7.3) * Math.sin(this.clock * 2.9 + 1.4)) ** 3;
+    const sputter = shown < REVEAL ? 0.55 + 0.45 * Math.abs(Math.sin(shown * 31)) : 1;
+    if (this.fill) this.fill.intensity = FILL * rise * sputter * (1 - unrest * dip);
+    // Her eyes close in on her as she dances.
+    // For the last of it she stops dead, mid-gesture.
+    if (shown >= DANCER_SHOWN - STILL && this.dance?.isPlaying) this.dance.pause();
+    if (shown >= DANCER_SHOWN) this.vanish();
   }
 
-  /** Sora is in the back room, looking her way, with nothing between them. */
-  private sees(): boolean {
-    const camera = this.game.camera;
-    const eye = camera.globalPosition;
-    if (eye.z > BACK_ROOM_Z) return false;
-    const to = this.chest.subtract(eye);
-    const distance = to.length();
-    to.scaleInPlace(1 / distance);
-    if (Vector3.Dot(camera.getDirection(Vector3.Forward()), to) < SEEN_COS) return false;
-    this.ray.origin.copyFrom(eye);
-    this.ray.direction.copyFrom(to);
-    this.ray.length = distance;
-    const hit = this.game.scene.pickWithRay(
-      this.ray,
-      (m) => m.isEnabled() && m.isVisible && m.isPickable && m.visibility > 0,
-    );
-    return !hit?.pickedMesh || hit.distance > distance - 0.4;
+  /** The music behind the wall: only near the back room, faded in and out. */
+  private updateLure(dt: number): void {
+    const lure = this.lure;
+    if (!lure) return;
+    const near = Vector3.Distance(this.game.camera.globalPosition, this.at);
+    const want = near < LURE_ON ? 1 : near > LURE_OFF ? 0 : this.lureLevel > 0 ? 1 : 0;
+    const step = dt / LURE_FADE;
+    this.lureLevel = Math.max(0, Math.min(1, this.lureLevel + (want ? step : -step)));
+    if (this.lureLevel > 0 && !this.lureOn) {
+      lure.volume = 0;
+      lure.play();
+      this.lureOn = true;
+    }
+    if (this.lureOn) lure.volume = this.lureFull * this.lureLevel;
+    if (this.lureLevel === 0 && this.lureOn) {
+      lure.stop();
+      this.lureOn = false;
+    }
   }
 
+  /** Sora steps into the doorway: the house goes dark and she is held where she is. */
+  private blackout(): void {
+    this.phase = "dark";
+    this.since = 0;
+    if (this.lureOn) {
+      this.lure?.stop();
+      this.lureOn = false;
+    }
+    const player = this.game.player;
+    if (player) {
+      const eye = this.game.camera.globalPosition;
+      const to = this.chest.subtract(eye);
+      this.look.yaw = player.yaw;
+      this.look.pitch = player.pitch;
+      this.look.toYaw = Math.atan2(to.x, to.z);
+      this.look.toPitch = Math.atan2(-to.y, Math.hypot(to.x, to.z));
+    }
+    this.onBlackout?.();
+  }
+
+  /** Out of the black, she is there. */
   private appear(): void {
     this.phase = "shown";
-    this.shownFor = 0;
     this.game.flags.set("ep1.studio.dancerSeen", true);
-    this.lure?.stop();
-    this.song?.play();
-    for (const mesh of this.meshes) mesh.visibility = 0;
     this.root?.setEnabled(true);
-    this.onAppear?.();
+    for (const mesh of this.meshes) mesh.visibility = 1;
     // Somewhere in the dance, not always the same moment of it.
     if (this.dance) {
       this.dance.start(true, 1, this.dance.from, this.dance.to);
       this.dance.goToFrame(this.dance.from + Math.random() * (this.dance.to - this.dance.from));
     }
+    this.song?.play();
+    this.drone?.play();
+    this.heartbeat(true);
+    this.onAppear?.();
   }
 
-  /** Gone with the light: the lights go out on this frame (onVanish), and she with them. */
+  /** Gone, and the lights come back (onVanish). */
   private vanish(): void {
     this.phase = "gone";
     this.song?.stop();
+    this.drone?.stop();
     this.dance?.stop();
     this.root?.setEnabled(false);
     if (this.fill) this.fill.intensity = 0;
     this.onVanish?.();
-    this.heartbeat(true);
     this.done?.();
     this.done = null;
   }
+}
+
+/** Eased in and out. */
+function smooth(x: number): number {
+  return x * x * (3 - 2 * x);
 }

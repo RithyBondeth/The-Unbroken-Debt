@@ -76,12 +76,16 @@ function paintPrints(ctx, W, H, data) {
       iy = y + my,
       iw = w - 2 * mx,
       ih = h - 2 * my - (kind === "mounted" ? Math.round(h * 0.05) : 0);
-    // Cover-fit the source into the image area.
-    const s = Math.max(iw / img.width, ih / img.height);
+    // Cover-fit the source into the image area; `crop` ([left, top, right, bottom], fractions)
+    // first trims what is not the picture (the archive's caption band).
+    const [c0, c1, c2, c3] = item.crop ?? [0, 0, 0, 0];
+    const cw = img.width * (1 - c0 - c2),
+      ch = img.height * (1 - c1 - c3);
+    const s = Math.max(iw / cw, ih / ch);
     const sw = iw / s,
       sh = ih / s;
-    const sx = (img.width - sw) / 2,
-      sy = (img.height - sh) / 2;
+    const sx = img.width * c0 + (cw - sw) / 2,
+      sy = img.height * c1 + (ch - sh) / 2;
     ctx.save();
     ctx.imageSmoothingQuality = "high";
     // Low-resolution sources (the 1906 poster is 429 px wide) are enlarged softly;
@@ -312,7 +316,8 @@ function atlas(key) {
   const items = Object.entries(spec.items).map(([id, item]) => ({
     ...item,
     id,
-    src: `data:image/jpeg;base64,${readFileSync(join(spec.folder ? join("art-source", "library", spec.folder) : ARCHIVE, `${id}.jpg`)).toString("base64")}`,
+    // An item may name its own file (`path`, under art-source/library/) instead of the atlas's folder.
+    src: `data:image/jpeg;base64,${readFileSync(item.path ? join("art-source", "library", item.path) : join(spec.folder ? join("art-source", "library", spec.folder) : ARCHIVE, `${id}.jpg`)).toString("base64")}`,
   }));
   const [w, h] = spec.size;
   return {

@@ -163,20 +163,31 @@ def scan(key, location, rot_deg=0.0, name=None, collide=True, scale=1.0, budget=
 
 def surface_z(x, y, z_from=H - 0.25):
     """Height of the first surface below (x, y, z_from), ignoring collision boxes: props
-    are set down on whatever shelf board or table top the scanned furniture really has."""
+    are set down on whatever shelf board or table top the scanned furniture really has.
+    Each mesh is cast against on its own. (A scene-wide cast that stepped past each
+    collider it met went wrong wherever a collider's top lay flush with the furniture's:
+    the collider won the tie, the ray carried on from inside the board and found its
+    underside, and everything set on the hall table, the rice chest and the washstand sat
+    2-3 cm down inside them. November 2026.)"""
     bpy.context.view_layer.update()
     depsgraph = bpy.context.evaluated_depsgraph_get()
     origin = mathutils.Vector((x, y, z_from))
     down = mathutils.Vector((0, 0, -1))
-    for _ in range(12):
-        hit, loc, _n, _i, obj, _m = bpy.context.scene.ray_cast(depsgraph, origin, down)
-        if not hit:
-            return 0.0
-        if obj.name.startswith("col_") or obj.type != "MESH":
-            origin = loc + down * 0.002
+    best = None
+    for obj in area.all_objects:
+        if obj.type != "MESH" or obj.name.startswith("col_"):
             continue
-        return loc.z
-    return 0.0
+        bb = [obj.matrix_world @ mathutils.Vector(c) for c in obj.bound_box]
+        if not (min(p.x for p in bb) <= x <= max(p.x for p in bb) and min(p.y for p in bb) <= y <= max(p.y for p in bb)
+                and min(p.z for p in bb) <= z_from):
+            continue
+        inv = obj.matrix_world.inverted()
+        hit, loc, _n, _i = obj.ray_cast(inv @ origin, (inv.to_3x3() @ down).normalized(), depsgraph=depsgraph)
+        if hit:
+            z = (obj.matrix_world @ loc).z
+            if z <= z_from + 1e-6 and (best is None or z > best):
+                best = z
+    return best if best is not None else 0.0
 
 
 def set_down(model_id, x, y, rot=0.0, z_from=H - 0.25, scale=1.0, budget=1500, name=None, lift=0.0):
@@ -1053,6 +1064,397 @@ def jar_glaze_material():
     return mat
 
 
+def save_png(name, rgb):
+    """Writes an (n, n, 3) sRGB array (row 0 at the bottom, as Blender stores images) to
+    art-source/textures/ep1/<name>.png and returns its path."""
+    h, w = rgb.shape[:2]
+    img = bpy.data.images.new(name, width=w, height=h, alpha=False)
+    rgba = np.concatenate([np.clip(rgb, 0, 1), np.ones((h, w, 1))], axis=2).astype(np.float32)
+    img.pixels.foreach_set(rgba.ravel())
+    img.filepath_raw = os.path.join(TEXTURES, f"{name}.png")
+    img.file_format = "PNG"
+    img.save()
+    return img.filepath_raw
+
+
+def top_projected_uvs(obj, cx, cy, radius):
+    """UVs straight down onto a disc of `radius` round (cx, cy): turned ware whose pattern
+    is painted round it (a plate's blue bands, an enamel dish's rim)."""
+    mesh = obj.data
+    layer = mesh.uv_layers[0] if mesh.uv_layers else mesh.uv_layers.new(name="UVMap")
+    mw = obj.matrix_world
+    for li, loop in enumerate(mesh.loops):
+        co = mw @ mesh.vertices[loop.vertex_index].co
+        layer.data[li].uv = ((co.x - cx) / (2 * radius) + 0.5, (co.y - cy) / (2 * radius) + 0.5)
+
+
+def radial_ware_material(name, kind, seed, rough):
+    """The glaze of round ware, painted as seen from above (top_projected_uvs), the disc's
+    edge at the image's edge. kind "plate": a Chinese blue-and-white export plate of the
+    kind every Phnom Penh kitchen had, cobalt bands at the rim and round the well, a
+    ring of dots and a flower in the middle, the brushwork uneven, the rim chipped to the
+    biscuit in two places. kind "enamel": white enamelled iron with a navy rim, chipped
+    black at the edge and round the socket."""
+    n = 1024
+    rgen = np.random.default_rng(seed)
+    yy, xx = (np.mgrid[:n, :n] + 0.5) / n * 2 - 1
+    r = np.hypot(xx, yy)
+    th = np.arctan2(yy, xx)
+    w = 3.0 / n
+
+    def band(r0, r1):
+        return np.clip((r - r0) / w, 0, 1) * np.clip((r1 - r) / w, 0, 1)
+
+    paint = np.zeros((n, n))
+    if kind == "plate":
+        base = np.array((0.88, 0.885, 0.85))
+        blue = np.array((0.11, 0.17, 0.42))
+        for r0, r1, a in ((0.935, 0.99, 1.0), (0.885, 0.897, 0.9), (0.628, 0.64, 0.85), (0.6, 0.607, 0.7)):
+            paint = np.maximum(paint, a * band(r0, r1))
+        # A ring of sixteen dots between the bands.
+        for k in range(16):
+            a = k * math.tau / 16 + 0.1
+            d = np.hypot(xx - 0.76 * math.cos(a), yy - 0.76 * math.sin(a))
+            paint = np.maximum(paint, 0.85 * np.clip((0.028 - d) / w, 0, 1))
+        # The flower: eight petals washed in, outlined darker, a solid heart.
+        rp = 0.3 * (0.55 + 0.45 * np.abs(np.cos(4 * th)))
+        paint = np.maximum(paint, 0.45 * np.clip((rp - r) / w, 0, 1) * np.clip((r - 0.07) / w, 0, 1))
+        paint = np.maximum(paint, 0.9 * np.clip(1 - np.abs(r - rp) / (2.2 * w), 0, 1))
+        paint = np.maximum(paint, np.clip((0.07 - r) / w, 0, 1))
+        chip = np.array((0.66, 0.6, 0.5))
+    else:
+        base = np.array((0.84, 0.845, 0.8))
+        blue = np.array((0.06, 0.08, 0.2))
+        paint = np.maximum(paint, band(0.9, 1.01))
+        chip = np.array((0.05, 0.045, 0.04))
+    # Brushed cobalt is never even: thicker and thinner along the stroke.
+    wash = 0.75 + 0.25 * np.sin(th * 7 + r * 11) * np.sin(th * 3 - 1.7)
+    rgb = base * (1 - paint[..., None]) + (blue * wash[..., None]) * paint[..., None]
+    # Glaze pooled a little darker in the hollow of the well, specks in it.
+    rgb *= (1 - 0.05 * np.exp(-((r - 0.62) / 0.05) ** 2))[..., None]
+    specks = rgen.random((n, n)) < 0.0012
+    rgb[specks] *= 0.6
+    # Chips at the rim (and, on the enamel, round the socket and a few on the dish).
+    spots = [(rgen.uniform(-math.pi, math.pi), 0.975, 0.035, 0.05) for _ in range(2 if kind == "plate" else 5)]
+    if kind == "enamel":
+        spots += [(rgen.uniform(-math.pi, math.pi), rgen.uniform(0.3, 0.8), 0.02, 0.025) for _ in range(4)]
+    for a, rc, size, _ in spots:
+        cx_, cy_ = rc * math.cos(a), rc * math.sin(a)
+        ang = np.arctan2(yy - cy_, xx - cx_)
+        d = np.hypot(xx - cx_, yy - cy_) * (1 + 0.22 * np.sin(ang * 3 + a) + 0.12 * np.sin(ang * 7 + 2 * a))
+        mask = np.clip((size - d) / w, 0, 1)
+        rgb = rgb * (1 - mask[..., None]) + chip * mask[..., None]
+        if kind == "enamel":  # rust bleeds out round the bare iron
+            halo = np.clip((size * 1.6 - d) / (size * 0.6), 0, 1) * (1 - mask)
+            rgb = rgb * (1 - 0.5 * halo[..., None]) + np.array((0.32, 0.17, 0.08)) * 0.5 * halo[..., None]
+    path = save_png(f"T_studio_{name}_BC", rgb)
+    mat = image_material(f"M_studio_{name}", path, rough=rough)
+    mat["tile"] = 0.0
+    return mat
+
+
+def swept(name, rings, mat, sides=20, cap_start=True, cap_end=True, smooth=True):
+    """A closed tube through `rings`: (centre, unit normal, unit binormal, radius function
+    of the angle, v) per ring, round each ring in the normal-binormal plane. UVs: u round
+    (0-1), v as given. Caps close the ends at their centres."""
+    verts, faces, uvs = [], [], []
+    for c, nrm, bin_, rad, _ in rings:
+        for k in range(sides + 1):
+            a = math.tau * k / sides
+            rr = rad(a)
+            verts.append(tuple(c + (nrm * math.cos(a) + bin_ * math.sin(a)) * rr))
+    for i in range(len(rings) - 1):
+        for k in range(sides):
+            a = i * (sides + 1) + k
+            faces.append((a, a + sides + 1, a + sides + 2, a + 1))
+            for (ii, kk) in ((i, k), (i + 1, k), (i + 1, k + 1), (i, k + 1)):
+                uvs.append((kk / sides, rings[ii][4]))
+    for cap, i, flip in ((cap_start, 0, True), (cap_end, len(rings) - 1, False)):
+        if not cap:
+            continue
+        centre = len(verts)
+        verts.append(tuple(rings[i][0]))
+        for k in range(sides):
+            a = i * (sides + 1) + k
+            faces.append((centre, a + 1, a) if flip else (centre, a, a + 1))
+            uvs += [(0.5, rings[i][4]), ((k + (0 if flip else 1)) / sides, rings[i][4]), ((k + (1 if flip else 0)) / sides, rings[i][4])]
+    return mesh_object(name, area, verts, faces, mat, uvs=uvs, smooth=smooth)
+
+
+def banana_skin_material():
+    """Ripe bananas, the short plump chek nam va of every Phnom Penh market: yellow, going to
+    brown sugar spots and a soft bruise or two, still green at the neck, the stalk fibrous
+    and the blossom tip black, the five edges a shade darker. UVs: u round the finger, v
+    along it from the stalk (0) to the tip (1)."""
+    if "banana_skin" in m:
+        return m["banana_skin"]
+    n = 512
+    rgen = np.random.default_rng(1932)
+    v, u = (np.mgrid[:n, :n] + 0.5) / n
+    rgb = np.ones((n, n, 3)) * np.array((0.83, 0.65, 0.17))
+    # Faint streaks running along the finger, and its edges.
+    col = np.convolve(np.tile(rgen.normal(0, 1, n), 3), np.ones(9) / 9, "same")[n:2 * n]
+    rgb *= (1 + 0.05 * col)[None, :, None]
+    f = (u * 5) % 1
+    ridge = np.clip(1 - np.minimum(f, 1 - f) / 0.07, 0, 1)
+    rgb = rgb * (1 - 0.2 * ridge[..., None]) + np.array((0.36, 0.38, 0.1)) * 0.12 * ridge[..., None]
+    # Sugar spots, small and many, and two soft bruises.
+    for _ in range(320):
+        cu, cv = rgen.uniform(0, 1), rgen.uniform(0.14, 0.9)
+        rad = rgen.uniform(1.2, 4.5) / n
+        du = np.minimum(np.abs(u - cu), 1 - np.abs(u - cu))
+        d = np.hypot(du, (v - cv) * 0.8)
+        a = np.clip(1 - d / rad, 0, 1) ** 0.7 * rgen.uniform(0.5, 0.95)
+        rgb = rgb * (1 - a[..., None]) + np.array((0.27, 0.15, 0.05)) * a[..., None]
+    for _ in range(2):
+        cu, cv = rgen.uniform(0, 1), rgen.uniform(0.3, 0.75)
+        du = np.minimum(np.abs(u - cu), 1 - np.abs(u - cu))
+        a = np.exp(-(du ** 2 + ((v - cv) * 0.5) ** 2) / (2 * 0.035 ** 2)) * 0.45
+        rgb = rgb * (1 - a[..., None]) + np.array((0.4, 0.26, 0.08)) * a[..., None]
+    # Green at the neck, the stalk grey-green and stringy; the tip black.
+    neck = np.clip((0.17 - v) / 0.1, 0, 1)[..., None]
+    rgb = rgb * (1 - 0.85 * neck) + np.array((0.4, 0.47, 0.15)) * 0.85 * neck
+    stalk = np.clip((0.06 - v) / 0.025, 0, 1)[..., None]
+    fibre = (0.85 + 0.3 * np.sin(u * math.tau * 23))[..., None]
+    rgb = rgb * (1 - stalk) + np.array((0.3, 0.29, 0.15)) * fibre * stalk
+    tip = np.clip((v - 0.93) / 0.045, 0, 1)[..., None]
+    rgb = rgb * (1 - tip) + np.array((0.08, 0.065, 0.04)) * tip
+    m["banana_skin"] = image_material("M_studio_banana_skin", save_png("T_studio_banana_skin_BC", rgb), rough=0.48)
+    m["banana_skin"]["tile"] = 0.0
+    m["banana_crown"] = plain("M_studio_banana_crown", (0.2, 0.19, 0.09), rough=0.85)
+    return m["banana_skin"]
+
+
+BANANA_PROFILE = ((0.0, 0.3), (0.04, 0.33), (0.1, 0.6), (0.18, 0.88), (0.45, 1.0), (0.72, 0.95), (0.86, 0.75), (0.95, 0.42), (1.0, 0.13))
+
+
+def banana(name, start, heading, length, radius, bend, roll=0.0):
+    """One banana finger: five-sided, thin at the neck, plump in the body, tapering to a
+    black tip; it starts at `start` (the neck, where it joins the crown) and runs along
+    `heading` (horizontal), curved so that it rests on its belly with both ends lifted."""
+    d = mathutils.Vector(heading).normalized()
+    up = mathutils.Vector((0, 0, 1))
+    side = d.cross(up).normalized()
+    R = length / bend
+    s0 = math.sin(-bend / 2)
+    lift = R * (1 - math.cos(bend / 2))
+    ts, fs = zip(*BANANA_PROFILE)
+    rings = []
+    for i in range(29):
+        t = i / 28
+        a = bend * (t - 0.5)
+        c = mathutils.Vector(start) + d * (R * (math.sin(a) - s0)) + up * (R * (1 - math.cos(a)) - lift)
+        tangent = d * math.cos(a) + up * math.sin(a)
+        nrm = (up * math.cos(a) - d * math.sin(a)).normalized()
+        rr = radius * float(np.interp(t, ts, fs))
+
+        def rad(ang, rr=rr):
+            # Pentagonal, the edges rounded: between a circle and the polygon.
+            seg = math.tau / 5
+            poly = math.cos(math.pi / 5) / math.cos(((ang + roll) % seg) - math.pi / 5)
+            return rr * (0.45 + 0.55 * poly)
+        rings.append((c, nrm, side, rad, t))
+        if i == 28:
+            tip = c + tangent * 0.004
+    rings.append((tip, rings[-1][1], side, lambda ang: 0.0008, 1.0))
+    return swept(name, rings, banana_skin_material(), sides=20, cap_start=True, cap_end=True)
+
+
+def banana_hand(name, at, heading_deg, count=4, length=0.12, radius=0.0155, seed=0):
+    """A hand of bananas lying on its side: the fingers fanned out from a short crown, each
+    resting on its belly with its neck and tip lifted. `at` is the middle of the necks, on
+    the surface the hand lies on; settle() it afterwards."""
+    rgen = np.random.default_rng(seed)
+    banana_skin_material()
+    root = empty(name, area, at)
+    bpy.context.view_layer.update()  # the fingers are parented keeping their world place
+    h = math.radians(heading_deg)
+    fwd = mathutils.Vector((math.cos(h), math.sin(h), 0))
+    side = mathutils.Vector((-math.sin(h), math.cos(h), 0))
+    bend = 0.95
+    lift = length / bend * (1 - math.cos(bend / 2))
+    base = mathutils.Vector(at) + mathutils.Vector((0, 0, lift + radius * 0.93))
+    for k in range(count):
+        off = k - (count - 1) / 2
+        a = h + off * math.radians(17) + float(rgen.normal(0, 0.03))
+        start = base + side * (off * 0.011)
+        f = banana(f"{name}_finger_{k}", start, (math.cos(a), math.sin(a), 0), length * float(rgen.uniform(0.94, 1.04)),
+                   radius * float(rgen.uniform(0.95, 1.04)), bend + float(rgen.normal(0, 0.04)), roll=float(rgen.uniform(0, 1.2)))
+        f.parent = root
+        f.matrix_parent_inverse = root.matrix_world.inverted()
+    # The crown: the stalk all the fingers grow from, cut off square.
+    c0 = base - fwd * 0.003
+    rings = []
+    for i in range(7):
+        t = i / 6
+        c = c0 - fwd * (0.034 * t) + mathutils.Vector((0, 0, 0.006 * t * t))
+        rings.append((c, mathutils.Vector((0, 0, 1)), side, (lambda ang, t=t: 0.0095 - 0.0025 * t + 0.0015 * math.sin(ang * 3)), t))
+    crown = swept(f"{name}_crown", rings, m["banana_crown"], sides=14)
+    crown.parent = root
+    crown.matrix_parent_inverse = root.matrix_world.inverted()
+    return root
+
+
+def fruit_plate(name, x, y, z, heading_deg, count=4, seed=0):
+    """A blue-and-white plate with a hand of bananas on it, both turned and modelled here
+    (the library's carved plate came out torn and its bananas plastic)."""
+    plate = [(0.0, 0.0035), (0.044, 0.0035), (0.046, 0.0), (0.056, 0.0), (0.058, 0.004), (0.086, 0.011), (0.107, 0.0175),
+             (0.11, 0.0195), (0.1095, 0.0215), (0.106, 0.0215), (0.084, 0.0135), (0.068, 0.0085), (0.066, 0.0078), (0.0, 0.0076)]
+    if "plate_glaze" not in m:
+        m["plate_glaze"] = radial_ware_material("plate_glaze", "plate", 1904, rough=0.12)
+    dish = turned(f"{name}_dish", plate, x, y, z, m["plate_glaze"], segments=48)
+    top_projected_uvs(dish, x, y, 0.11)
+    h = math.radians(heading_deg)
+    hand = banana_hand(f"{name}_bananas", (x - 0.052 * math.cos(h), y - 0.052 * math.sin(h), z + 0.0076), heading_deg, count=count, seed=seed)
+    settle(hand, max_drop=0.03)
+    return dish, hand
+
+
+def open_journal(cx, cy, z):
+    """Sora's diary, open on the blotter where she writes up her day at night: the studio's
+    save point (Prologue.ts finds it by name, `save_journal`; it replaces the game's stock
+    folio and votive, which stood in the desk's book stack). Worn brown leather boards
+    flat on the desk; the page blocks bow up out of the gutter, written in
+    (tools/drawings/journal.mjs) down the left-hand page and a third of the right, a
+    pencil study under it; a red silk ribbon down the page and over its foot onto the
+    blotter, a pencil lying in the gutter. She sits at +x: the head of the page is at -x,
+    the spine runs along x."""
+    PH, PW, b = 0.215, 0.152, 0.0025
+    root = empty("save_journal", area, (cx, cy, z))
+    bpy.context.view_layer.update()  # the parts are parented keeping their world place
+    leather = plain("M_studio_journal_leather", (0.15, 0.08, 0.042), rough=0.62)
+    pages_mat = image_material("M_studio_journal_pages", texture("T_studio_journal_BC"), rough=0.93)
+    pages_mat["tile"] = 0.0
+    edges = book_materials()[1]
+    x0, x1 = cx - PH / 2, cx + PH / 2
+    parts = [
+        box("save_journal_board_l", area, x0 - 0.004, x1 + 0.004, cy - PW - 0.007, cy - 0.005, z, z + b, leather, edge=0.0008),
+        box("save_journal_board_r", area, x0 - 0.004, x1 + 0.004, cy + 0.005, cy + PW + 0.007, z, z + b, leather, edge=0.0008),
+        box("save_journal_spine", area, x0 - 0.004, x1 + 0.004, cy - 0.007, cy + 0.007, z, z + 0.002, leather, edge=0.0006),
+    ]
+
+    def top(w, th):
+        # Down into the gutter, where the two blocks meet; bowed up beside it.
+        return z + b + th * (0.3 + 0.7 * min(1.0, w / 0.01)) + 0.008 * (1 - math.exp(-w / 0.016)) * (1 - 0.5 * w / PW)
+
+    ws = [0.0, 0.002, 0.005, 0.009, 0.014, 0.02, 0.03, 0.045, 0.065, 0.09, 0.115, 0.135, PW - 0.003, PW - 0.0005]
+    xs = list(np.linspace(x0 + 0.0015, x1 - 0.0015, 10))
+    for s, th, tag in ((-1, 0.0068, "l"), (1, 0.0052, "r")):
+        y_of = lambda w: cy + s * (0.0003 + w)  # noqa: E731
+        # The page surface: a grid, its UVs the page's place in the spread.
+        verts, faces, uvs = [], [], []
+        for w in ws:
+            for x in xs:
+                verts.append((x, y_of(w), top(w, th) - (0.0006 if w >= PW - 0.001 else 0.0)))
+        nx = len(xs)
+        for i in range(len(ws) - 1):
+            for j in range(nx - 1):
+                a, bq, c, d = i * nx + j, i * nx + j + 1, (i + 1) * nx + j + 1, (i + 1) * nx + j
+                pa, pb, pd = (mathutils.Vector(verts[k]) for k in (a, bq, d))
+                face = (a, bq, c, d) if (pb - pa).cross(pd - pa).z >= 0 else (a, d, c, bq)
+                faces.append(face)
+                for k in face:
+                    w = ws[k // nx]
+                    x = xs[k % nx]
+                    uvs.append((0.5 + s * 0.5 * min(1.0, w / PW), (x1 - x) / (x1 - x0)))
+        parts.append(mesh_object(f"save_journal_pages_{tag}", area, verts, faces, pages_mat, uvs=uvs, smooth=True))
+        # The edges of the page block: head, foot and fore-edge, down to the board.
+        verts, faces = [], []
+        for pts, out in (([(x0 + 0.0015, y_of(w), top(w, th)) for w in ws], (-1, 0, 0)),
+                         ([(x1 - 0.0015, y_of(w), top(w, th)) for w in ws], (1, 0, 0)),
+                         ([(x, y_of(PW - 0.0005), top(PW - 0.0005, th) - 0.0006) for x in xs], (0, s, 0))):
+            base = len(verts)
+            for p in pts:
+                verts += [p, (p[0], p[1], z + b)]
+            for k in range(len(pts) - 1):
+                a, bq, c, d = base + 2 * k, base + 2 * k + 2, base + 2 * k + 3, base + 2 * k + 1
+                pa, pb, pd = (mathutils.Vector(verts[i]) for i in (a, bq, d))
+                faces.append((a, bq, c, d) if (pb - pa).cross(pd - pa).dot(mathutils.Vector(out)) >= 0 else (a, d, c, bq))
+        parts.append(mesh_object(f"save_journal_edges_{tag}", area, verts, faces, edges))
+
+    # The ribbon: out of the head of the spine, down the right-hand page by the gutter,
+    # over the foot of the page and the board, and onto the blotter.
+    th_r = 0.0052
+    on_page = lambda x, w, dz=0.0005: (x, cy + 0.0003 + w, top(w, th_r) + dz)  # noqa: E731
+    pts = [on_page(x0 + 0.003, 0.004), on_page(cx, 0.0045), on_page(x1 - 0.006, 0.005), on_page(x1 - 0.0024, 0.0052, 0.0001),
+           on_page(x1 - 0.0009, 0.0054, -0.0016), (x1 - 0.0009, cy + 0.0059, z + b + 0.0012), (x1 + 0.0006, cy + 0.0061, z + b + 0.0005),
+           (x1 + 0.0034, cy + 0.0063, z + b + 0.0005), (x1 + 0.0047, cy + 0.0065, z + b - 0.0006), (x1 + 0.0054, cy + 0.0067, z + 0.0006),
+           (x1 + 0.009, cy + 0.0072, z + 0.0005), (x1 + 0.025, cy + 0.0105, z + 0.0005), (x1 + 0.041, cy + 0.009, z + 0.0005)]
+    verts, faces, uvs = [], [], []
+    total = 0.0
+    for k, p in enumerate(pts):
+        a = mathutils.Vector(pts[max(0, k - 1)])
+        c = mathutils.Vector(pts[min(len(pts) - 1, k + 1)])
+        t = (c - a).normalized()
+        side = mathutils.Vector((0, 0.003, 0))  # flat across the page, whichever way the ribbon runs
+        if k:
+            total += (mathutils.Vector(p) - mathutils.Vector(pts[k - 1])).length
+        verts += [tuple(mathutils.Vector(p) - side), tuple(mathutils.Vector(p) + side)]
+        if k:
+            i = 2 * k
+            pa, pb, pd = (mathutils.Vector(verts[j]) for j in (i - 2, i - 1, i))
+            face = (i - 2, i - 1, i + 1, i) if (pb - pa).cross(pd - pa).z >= 0 else (i - 2, i, i + 1, i - 1)
+            faces.append(face)
+    silk = plain("M_studio_journal_ribbon", (0.4, 0.045, 0.04), rough=0.4)
+    silk.use_backface_culling = False
+    parts.append(mesh_object("save_journal_ribbon", area, verts, faces, silk))
+    # A pencil in the gutter, its end sharpened with a knife.
+    a = mathutils.Vector((x0 + 0.032, cy - 0.0008, z + 0.0092))
+    e = mathutils.Vector((x1 - 0.022, cy + 0.0012, z + 0.0092))
+    d = (e - a).normalized()
+    nrm = mathutils.Vector((0, 0, 1))
+    bin_ = d.cross(nrm).normalized()
+    hexa = lambda ang: 0.0034 / math.cos(((ang + 0.26) % (math.tau / 6)) - math.pi / 6)  # noqa: E731
+    body = [(a + d * (t * (e - a).length), nrm, bin_, hexa, t) for t in (0.0, 0.5, 1.0)]
+    parts.append(swept("save_journal_pencil", body, plain("M_studio_pencil_varnish", (0.34, 0.11, 0.05), rough=0.35), sides=6))
+    cone = [(e + d * (0.016 * t), nrm, bin_, (lambda ang, t=t: 0.0033 * (1 - t) + 0.0007 * t), t) for t in (0.0, 0.5, 1.0)]
+    parts.append(swept("save_journal_pencil_wood", cone, plain("M_studio_pencil_wood", (0.62, 0.45, 0.28), rough=0.8), sides=10))
+    lead = [(e + d * (0.016 + 0.004 * t), nrm, bin_, (lambda ang, t=t: 0.0007 * (1 - t) + 0.0001), t) for t in (0.0, 1.0)]
+    parts.append(swept("save_journal_pencil_lead", lead, plain("M_studio_graphite", (0.08, 0.08, 0.085), rough=0.35, metal=0.3), sides=8))
+    for part in parts:
+        part.parent = root
+        part.matrix_parent_inverse = root.matrix_world.inverted()
+    return root
+
+
+def chamberstick(x, y, z):
+    """An enamelled iron chamberstick by the diary: white with a navy rim, chipped, a ring
+    handle; in it a candle burnt down a third, a crater round the wick and wax run down
+    its side and pooled in the dish. The flame is the game's (Studio.ts, `desk_candle`)."""
+    if "enamel_ware" not in m:
+        m["enamel_ware"] = radial_ware_material("enamel_ware", "enamel", 1931, rough=0.22)
+    dish = [(0.0, 0.0), (0.052, 0.0), (0.056, 0.002), (0.06, 0.012), (0.0625, 0.0145), (0.061, 0.0155), (0.058, 0.014),
+            (0.054, 0.0045), (0.05, 0.0035), (0.0, 0.0035)]
+    socket = [(0.0, 0.0035), (0.019, 0.0035), (0.017, 0.008), (0.0155, 0.035), (0.018, 0.038), (0.0185, 0.041), (0.0125, 0.041),
+              (0.0125, 0.012), (0.0, 0.012)]
+    parts = [turned("desk_candlestick_dish", dish, x, y, z, m["enamel_ware"], segments=40),
+             turned("desk_candlestick_socket", socket, x, y, z, m["enamel_ware"], segments=28)]
+    for p in parts:
+        top_projected_uvs(p, x, y, 0.0625)
+    navy = plain("M_studio_enamel_navy", (0.05, 0.07, 0.18), rough=0.3)
+    # The ring handle, in the upright plane through the dish's centre, its inner side in the rim.
+    hc = mathutils.Vector((x, y - 0.0755, z + 0.013))
+    ring = [(hc + mathutils.Vector((0, 0.0135 * math.cos(a), 0.0135 * math.sin(a))), mathutils.Vector((0, math.cos(a), math.sin(a))),
+             mathutils.Vector((1, 0, 0)), (lambda ang: 0.0033), a / math.tau) for a in np.linspace(0, math.tau, 33)]
+    parts.append(swept("desk_candlestick_handle", ring, navy, sides=10, cap_start=False, cap_end=False))
+    wax = m["candle"]
+    parts.append(turned("desk_candle_wax", [(0.0, 0.012), (0.0119, 0.012), (0.0119, 0.086), (0.0118, 0.0885), (0.0113, 0.0915), (0.0096, 0.0905),
+                                            (0.004, 0.0884), (0.0, 0.0879)], x, y, z, wax, segments=24))
+    for k, (ang, length) in enumerate(((0.6, 0.022), (2.5, 0.034), (4.4, 0.014))):
+        rings = []
+        for i in range(7):
+            t = i / 6
+            c = mathutils.Vector((x + 0.0117 * math.cos(ang), y + 0.0117 * math.sin(ang), z + 0.0905 - length * t))
+            out = mathutils.Vector((math.cos(ang), math.sin(ang), 0))
+            rings.append((c, out, out.cross(mathutils.Vector((0, 0, 1))), (lambda a_, t=t: 0.0013 + 0.0011 * t * t), t))
+        parts.append(swept(f"desk_candle_drip_{k}", rings, wax, sides=8))
+    parts.append(turned("desk_candle_wax_pool", [(0.0, 0.0033), (0.0085, 0.0033), (0.008, 0.0046), (0.0, 0.0049)], x + 0.028, y + 0.014, z, wax, segments=14))
+    parts.append(tube("desk_candle_wick", area, [(x, y, z + 0.0879), (x + 0.0006, y, z + 0.093), (x + 0.0022, y + 0.0004, z + 0.0965)],
+                      0.0007, plain("M_studio_wick", (0.03, 0.025, 0.02), rough=0.9), sides=5))
+    empty("light_flame_desk_candle", area, (x + 0.0016, y + 0.0003, z + 0.1045), radius=1.6, intensity=0.3)
+    return parts
+
+
 def rice_material():
     """Cooked rice, grain by grain: pale, slightly translucent-looking grains packed close."""
     n = 256
@@ -1272,16 +1674,9 @@ def hall():
             v.co.z += float(rng.normal(0, 0.0012)) * (v.co.z > top + 0.025)
         for e in (-1, 1):
             tube(f"hall_chopstick_{k}_{e}", area, [(bx + 0.078 + e * 0.006, by - 0.1, top + 0.0028), (bx + 0.082 + e * 0.009, by + 0.12, top + 0.0022)], 0.0028, m["worn"], sides=6, radius_end=0.0018)
-    lib("carved_wooden_plate", (tx + 0.4, ty - 0.12, top), 30, name="hall_fruit_plate", collide=False, scale=0.8, budget=600)
-    # A hand of small bananas on the plate (the limes and lychees read as painted balls).
-    hand = lib("bananas", (tx + 0.4, ty - 0.12, top + 0.03), 35, name="hall_plate_bananas", collide=False, scale=0.75, budget=1500)
-    # The model is a bunch and four loose bananas in a row: only the bunch, on the plate.
-    for part in [o for o in hand.children_recursive if o.name.startswith("bananas_") and "bunch" not in o.name]:
-        bpy.data.objects.remove(part)
-    centre = mesh_points(hand)[:, :2].mean(axis=0)
-    hand.location.x += (tx + 0.4) - centre[0]
-    hand.location.y += (ty - 0.12) - centre[1]
-    settle(hand)
+    # A blue-and-white plate with a hand of bananas on it (the limes and lychees read as
+    # painted balls; the library's carved plate came out torn, its bananas plastic).
+    fruit_plate("hall_fruit_plate", tx + 0.4, ty - 0.12, top, 35, count=4, seed=3)
     for k, (sx_, sy_, rot, mid, sc) in enumerate(((tx - 0.3, ty - 0.68, 10, "wooden_stool_01", 1.0), (tx + 0.32, ty - 0.66, 35, "painted_wooden_stool", 1.0),
                                                    (tx + 0.88, ty + 0.03, 80, "chinese_stool", 0.85))):
         lib(mid, (sx_, sy_, 0), rot, name=f"hall_stool_{k}", scale=sc, budget=2000)
@@ -1333,7 +1728,7 @@ def hall():
                                                ("oil_tin", fx0 + 0.25, 0.645, 0.9, 40), ("jug_01", fx0 + 0.6, 0.645, 0.75, 200),
                                                ("wooden_bowl_02", fx0 + 0.25, 0.145, 1.0, 0), ("ceramic_pot", fx0 + 0.6, 0.145, 0.4, 70))):
         lib(mid, (xx, fy0 + 0.2, z), rot, name=f"food_safe_store_{k}", collide=False, scale=sc, budget=900)
-    lib("bananas", (fx0 + 0.3, fy0 + 0.2, 1.59), 20, collide=False, scale=0.8, budget=1500)
+    settle(banana_hand("food_safe_bananas", (fx0 + 0.3, fy0 + 0.2, 1.59), 20, count=5, seed=7), max_drop=0.05)
     lib("ceramic_pot", (fx0 + 0.66, fy0 + 0.2, 1.59), 160, name="food_safe_top_crock", collide=False, scale=0.4, budget=900)
 
     # ---- The big glazed water jar in the corner by the stairs, its lid half off, a dipper;
@@ -1558,7 +1953,7 @@ def hall():
     # Telephone and lantern on the hall side of the partition.
     telephone((2.95, P1[1], 1.47))
     lantern_hook((2.42, P1[1], 1.62))
-    pinned_poster(4, "POSTER90_9", (3.85, P1[1] + 0.014, 1.75), (-1, 0, 0), 0.42, tilt=-0.012)
+    pinned_poster(4, "A36155", (3.85, P1[1] + 0.014, 1.75), (-1, 0, 0), 0.42, tilt=-0.012)
     # Electric wiring on porcelain cleats along the partition, up to the ceiling joists.
     wire = [(3.1, P1[1] + 0.012, 1.7), (3.1, P1[1] + 0.012, H - 0.6), (4.4, P1[1] + 0.012, H - 0.6)]
     tube("airwell_wiring", area, wire, 0.0035, m["cord"], sides=5)
@@ -1826,6 +2221,10 @@ def writing_desk():
         # Lying in a stack, spines to the room (+x).
         book(f"desk_book_{k}", frame((-math.cos(a), -math.sin(a), 0), (math.sin(a), -math.cos(a), 0), (0.3, 3.12, z)), w, d, h,
              cover=cov, bands=3, label=k == 1)
+    # Sora's diary open on the blotter, the candle she writes it by beside it: the studio's
+    # save point, clear of the books and the photograph.
+    open_journal(0.42, 2.62, 0.786)
+    chamberstick(0.53, 2.95, 0.786)
     # The photograph in its standing frame, turned to face the chair (it showed its back).
     photo_frame = lib("standing_picture_frame_01", (0.14, 3.2, 0.786), 320, collide=False)
     # Its picture is one of Busy's 1921 photographs of a royal dancer (the frame's own
@@ -2260,10 +2659,11 @@ def back_room():
     # Built standing (front -y), laid on its back on the folded krama: the flap faces up.
     satchel = empty("interact_satchel", area, (3.8, y1 - 1.68, 0.58 + 0.054), (-math.pi / 2, 0, math.radians(-14)), action="pickup", item="satchel")
     build_satchel(satchel)
-    # Where the headless dancer stands, in the dark between the altar and the shutters,
-    # facing the doorway (DancerGhost.ts).
+    # Where the dancer ghost stands, facing the doorway (DancerGhost.ts).
     door = ((P2_DOOR[0] + P2_DOOR[1]) / 2, y0)
-    gx, gy = 1.9, y1 - 0.5
+    # Against the far wall between the suitcase and the bed, as far from the doorway as the
+    # room allows (the user, November 19: Sora and the dancer a little farther apart).
+    gx, gy = 3.0, y1 - 0.6
     empty("marker_dancer_ghost", area, (gx, gy, 0.0), (0, 0, math.atan2(door[1] - gy, door[0] - gx) + math.pi / 2))
     frame_print("framed_princess", "colour", "A36107", (W - 0.013, y0 + 0.95, 1.7), (0, -1, 0), (0, 0, 1), 0.34)
     # A wardrobe on the west wall: teak, two panelled doors, a cornice.
@@ -2392,7 +2792,7 @@ def build():
     shell()
     front_studio()
     back_room()
-    empty("marker_save_studio", area, (0.18, 3.12, 0.8))
+    empty("marker_save_studio", area, (0.42, 2.62, 0.8))
     shrink_prop_textures()
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=BLEND)
