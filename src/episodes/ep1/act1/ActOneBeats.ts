@@ -22,9 +22,10 @@ import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
 import { PhoneBell } from "../audio/PhoneBell";
 import { checkpointName } from "@/systems/saves/Checkpoints";
+import { inFuneralRoom, inHall } from "../data/funeral";
 
-/** CP2's clear aisle at the south end of the pavilion, facing the house. */
-export const CP2_FEET = new Vector3(0, 0, -2);
+/** CP2: just inside the hall's front door, facing the altar and the coffin beyond it. */
+export const CP2_FEET = inHall(0, 0, -2);
 
 /** Arrival, optional Act I exploration, and the A1-12 → A2-02 handover. */
 export class ActOneBeats {
@@ -148,7 +149,7 @@ export class ActOneBeats {
     const game = this.game;
     const feet = game.player.feet;
     this.arrivalModels.updateTelephoneCord(game.hands.phoneCordPoint);
-    // A1-02: let the first view of the tent breathe without taking movement or look.
+    // A1-02: let the first view of the house breathe without taking movement or look.
     if (
       !game.cutscene &&
       !game.flags.get("ep1.arrival.courtyard", false) &&
@@ -194,9 +195,9 @@ export class ActOneBeats {
       this.startOpening();
   }
 
+  /** With the coffin, in the hall (data/funeral.ts). */
   private underTent(): boolean {
-    const p = this.game.player.feet;
-    return Math.abs(p.x) < 3.8 && p.z < -1 && p.z > -7 && p.y < 0.5;
+    return inFuneralRoom(this.game.player.feet);
   }
 
   /** Both relatives speak through the hall telephone; an interrupted call can be replayed. */

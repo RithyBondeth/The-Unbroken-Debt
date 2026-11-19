@@ -53,14 +53,18 @@ describe("listening presence and navigation", () => {
     }
     expect(last.equals(to)).toBe(true);
   });
-  it("keeps the later patrol on the open gate path without phantom cart colliders", () => {
+  it("walks the gate path to the foot of the front stairs without phantom cart colliders", () => {
+    // Sora keeps the vigil in the hall upstairs, out of its sight behind the walls.
     const b = new EarlyStealthBrain();
-    for (let i = 0; i < 1500; i++) {
-      b.update(0.025, new Vector3(0, 0, -2), false, true, true);
-      expect(b.position.z).toBeGreaterThanOrEqual(11.7);
+    let nearest = Infinity;
+    for (let i = 0; i < 6000; i++) {
+      b.update(0.025, new Vector3(0.25, 2.5, -12), false, true, false);
+      expect(b.position.z).toBeGreaterThanOrEqual(-7);
       expect(b.position.z).toBeLessThanOrEqual(24.3);
       expect(b.state).toBe("patrol");
+      nearest = Math.min(nearest, b.position.z);
     }
+    expect(nearest).toBeLessThan(-6);
     expect(b.navigation.obstacles).toHaveLength(0);
   });
 });

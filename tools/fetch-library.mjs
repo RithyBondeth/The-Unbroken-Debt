@@ -29,13 +29,18 @@ async function download(url, path) {
 }
 
 let total = 0;
-for (const [id, { resolution }] of Object.entries(manifest.models)) {
+for (const [id, { resolution, also = [] }] of Object.entries(manifest.models)) {
   const files = await json(`${API}/files/${id}`);
-  const gltf = files.gltf[resolution].gltf;
   const dir = join(ROOT, "models", id);
-  total += await download(gltf.url, join(dir, `${id}.gltf`));
-  for (const [rel, file] of Object.entries(gltf.include ?? {}))
-    total += await download(file.url, join(dir, rel));
+  // `also`: further texture sets kept beside the main one (the Ep1 village's plants use
+  // the 2K maps; other scenes keep the 1K files they were built with).
+  for (const res of [resolution, ...also]) {
+    const gltf = files.gltf[res].gltf;
+    const name = res === resolution ? `${id}.gltf` : `${id}_${res}.gltf`;
+    total += await download(gltf.url, join(dir, name));
+    for (const [rel, file] of Object.entries(gltf.include ?? {}))
+      total += await download(file.url, join(dir, rel));
+  }
   console.log(`model ${id}`);
 }
 for (const [id, { resolution, maps }] of Object.entries(manifest.materials)) {

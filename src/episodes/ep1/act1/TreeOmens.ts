@@ -10,7 +10,6 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateDecal } from "@babylonjs/core/Meshes/Builders/decalBuilder";
-import { CreateLathe } from "@babylonjs/core/Meshes/Builders/latheBuilder";
 import { PhysicsBody } from "@babylonjs/core/Physics/v2/physicsBody";
 import { PhysicsMotionType } from "@babylonjs/core/Physics/v2/IPhysicsEnginePlugin";
 import { PhysicsShapeBox, PhysicsShapeContainer } from "@babylonjs/core/Physics/v2/physicsShape";
@@ -22,11 +21,10 @@ import { pathDistance } from "../data/forestBorder";
 import {
   CORD_WEB,
   DRESSED_TRUNKS,
-  OMEN_FIG,
   type DressedTrunk,
   type ThreadColour,
 } from "../data/treeOmens";
-import { paintBetel, paintBlood, paintCloth, paintThread } from "./omenTextures";
+import { paintBlood, paintCloth, paintThread } from "./omenTextures";
 
 /** Geometry gathered for one merged mesh; `wind` is uv6: hanging length and phase. */
 interface Geo {
@@ -265,7 +263,8 @@ export class TreeOmens {
       ),
     };
     this.cordWeb(kit);
-    this.fig(threads, thread.white);
+    // No strangler fig on its dead host any more: the user wants no leafless trees in
+    // the village (November 19, 2026). The threads stay on the living trunks.
     for (const colour of ["white"] as const)
       this.mesh(`omen_thread_${colour}`, threads[colour], thread[colour]);
     this.mesh(
@@ -283,7 +282,7 @@ export class TreeOmens {
     );
     this.buildColliders();
     console.info(
-      `[TreeOmens] ${this.stats.trunks} trunks bound, ${this.stats.decals} stains, fig at ${OMEN_FIG.x}, ${OMEN_FIG.z}`,
+      `[TreeOmens] ${this.stats.trunks} trunks bound, ${this.stats.decals} stains`,
     );
   }
 
@@ -653,300 +652,6 @@ export class TreeOmens {
     new FoliageWind(material, this.wind, kind);
     this.materials.push(material);
     return material;
-  }
-
-  // ------------------------------------------------------------- the fig
-
-  /**
-   * A strangler fig: a dozen roots that came down from a seed in the host's
-   * crown and have choked it, twisting round one another to a knot of trunk,
-   * splaying into bare branches above, aerial roots hanging from them.
-   */
-  private fig(threads: Record<ThreadColour, Geo>, fallback: Material): void {
-    const random = seededRandom(6242120);
-    const bark = this.scene.getMaterialByName("M_wet_bark") ?? fallback;
-    const ground = this.groundAt(OMEN_FIG.x, OMEN_FIG.z);
-    const c = new Vector3(OMEN_FIG.x, ground, OMEN_FIG.z);
-    const trunk = geo();
-    const hangers = geo();
-    const tips: Vector3[] = [];
-    const roots = 18;
-    const height = (y: number) => Math.max(0, y - ground) * 0.45;
-    const radii: { a: number; r: (y: number) => number; thick: number }[] = [];
-    for (let i = 0; i < roots; i++) {
-      const a0 = (i / roots) * Math.PI * 2 + (random() - 0.5) * 0.4;
-      const spread = 1 + random() * 2;
-      // Roots wound both ways cross into the net that strangles the host.
-      const twist = (0.9 + random() * 1.7) * (i % 2 ? -1 : 1);
-      const top = 5.5 + random() * 3.5;
-      const thick = i % 3 === 1 ? 0.03 + random() * 0.03 : 0.07 + random() * 0.1;
-      const splay = i % 3 === 0 ? 1.5 + random() * 2.2 : 0;
-      const core = 0.24 + random() * 0.16;
-      const path: Vector3[] = [];
-      const crawl = 9,
-        rise = 20,
-        steps = crawl + rise;
-      const lift = 0.3;
-      // Up the trunk: the roots draw in tight, then splay into branches at the top.
-      const radiusAt = (t: number) => {
-        const s = Math.min(1, t / 0.15);
-        return (
-          core * (1 - 0.45 * t) +
-          lift * (1 - s * s * (3 - 2 * s)) +
-          (t > 0.72 ? (t - 0.72) * 3.6 * splay : 0)
-        );
-      };
-      // Along the ground first, half buried, in low arcs like a hand's tendons.
-      for (let k = 0; k < crawl; k++) {
-        const u = k / crawl;
-        const a = a0 + 0.22 * Math.sin(u * 5 + i);
-        const r = spread + (core + lift - spread) * u ** 1.3;
-        const y = ground - 0.07 + 0.13 * Math.sin(Math.PI * Math.min(1, u * 1.15)) + 0.3 * u ** 3;
-        path.push(new Vector3(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r));
-      }
-      const a1 = a0 + 0.22 * Math.sin(5 + i);
-      for (let k = 0; k <= rise; k++) {
-        const t = k / rise;
-        const a = a1 + twist * t + 0.12 * Math.sin(t * 9 + i);
-        const r = radiusAt(t) + 0.04 * Math.sin(t * 13 + i * 2);
-        const y = ground + lift - 0.07 + (top - lift) * t ** 1.08;
-        path.push(new Vector3(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r));
-      }
-      tube(
-        trunk,
-        path,
-        (k) => thick * (k < crawl ? 0.75 + 0.6 * (k / crawl) : 1.35 - 0.7 * ((k - crawl) / rise)),
-        7,
-        (k) => height(path[k].y),
-        0,
-        1,
-        1,
-      );
-      radii.push({
-        a: a1,
-        thick,
-        r: (y) => radiusAt(Math.max(0, (y - ground - lift) / (top - lift))),
-      });
-      // Bare branches go on from the splaying roots; aerial roots hang from them.
-      if (splay > 0) tips.push(...path.slice(steps - 6));
-    }
-    // The host: a pale trunk long dead inside the net, broken off above it.
-    const host = geo();
-    const hostPath: Vector3[] = [];
-    for (let s = 0; s <= 10; s++)
-      hostPath.push(
-        c.add(new Vector3(Math.sin(s * 0.7) * 0.05, -0.1 + s * 0.78, Math.cos(s * 0.5) * 0.04)),
-      );
-    tube(
-      host,
-      hostPath,
-      (s) => 0.24 - s * 0.012,
-      9,
-      (s) => height(hostPath[s].y),
-      0,
-      1,
-      1,
-    );
-    for (let k = 0; k < 8; k++) {
-      const a = random() * Math.PI * 2;
-      const from = c.add(new Vector3(Math.cos(a) * 0.2, 5 + random() * 1.5, Math.sin(a) * 0.2));
-      const path: Vector3[] = [from];
-      let dir = new Vector3(Math.cos(a), 0.6 + random() * 0.5, Math.sin(a)).normalize();
-      for (let s = 1; s <= 8; s++) {
-        dir = dir
-          .add(new Vector3((random() - 0.5) * 0.5, (random() - 0.45) * 0.4, (random() - 0.5) * 0.5))
-          .normalize();
-        path.push(path[s - 1].add(dir.scale(0.45 + random() * 0.2)));
-      }
-      tube(
-        trunk,
-        path,
-        (s) => 0.07 * (1 - s / 10),
-        6,
-        (s) => height(path[s].y),
-        0,
-        1,
-        1,
-      );
-      tips.push(...path.slice(2));
-    }
-    // Curtains of aerial roots, thickest over the path side, like hair let down.
-    const pathSide = Math.atan2(29 - c.z, 2.5 - c.x);
-    const facing = tips.filter((p) => Math.cos(Math.atan2(p.z - c.z, p.x - c.x) - pathSide) > 0.2);
-    for (let k = 0; k < 110 && tips.length; k++) {
-      const pool = k % 5 < 2 && facing.length ? facing : tips;
-      const from = pool[Math.floor(random() * pool.length)];
-      const length = Math.min(from.y - ground - 0.05, 1.2 + random() * 5);
-      const phase = random() * Math.PI * 2;
-      const drift = new Vector3((random() - 0.5) * 0.3, 0, (random() - 0.5) * 0.3);
-      const path: Vector3[] = [];
-      for (let s = 0; s <= 10; s++) {
-        const t = s / 10;
-        path.push(
-          from
-            .add(drift.scale(t * t))
-            .addInPlaceFromFloats(Math.sin(t * 6 + phase) * 0.03, -t * length, 0),
-        );
-      }
-      const r = 0.008 + random() * 0.014;
-      tube(
-        hangers,
-        path,
-        (s) => r * (1 - s / 14),
-        4,
-        (s) => (s / 10) * length,
-        phase,
-        1,
-        1,
-      );
-    }
-    const trunkMesh = this.mesh("omen_fig_trunk", trunk, bark);
-    this.mesh("omen_fig_host", host, this.scene.getMaterialByName("M_wet_bark_dead") ?? bark);
-    const rootMaterial = bark.clone("M_omen_fig_aerial_roots");
-    if (rootMaterial) {
-      rootMaterial.pluginManager?.getPlugin("FoliageWind")?.dispose();
-      new FoliageWind(rootMaterial, this.wind, "hanging");
-      this.materials.push(rootMaterial);
-      this.mesh("omen_fig_hanging_roots", hangers, rootMaterial);
-    }
-
-    // Two bands of faded cloth tied round the knot of trunk, and thread over them.
-    const outline = (y: number, a: number) => {
-      let r = 0.2;
-      for (const root of radii) {
-        const diff = Math.abs(Math.atan2(Math.sin(a - root.a), Math.cos(a - root.a)));
-        if (diff < 0.9) r = Math.max(r, root.r(y) * Math.cos(diff) + root.thick * 1.3);
-      }
-      return r;
-    };
-    const bands = geo();
-    const whiteBands = geo();
-    for (const [y, out] of [
-      [ground + 1.15, bands],
-      [ground + 1.5, whiteBands],
-    ] as const) {
-      const sides = 36,
-        h = 0.2;
-      const base = out.positions.length / 3;
-      for (let row = 0; row <= 1; row++)
-        for (let s = 0; s <= sides; s++) {
-          const a = (s / sides) * Math.PI * 2;
-          const r = outline(y + row * h, a) + 0.025 + 0.012 * Math.sin(a * 7 + y);
-          out.positions.push(
-            c.x + Math.cos(a) * r,
-            y + row * h - 0.03 * Math.sin(a * 2) ** 2,
-            c.z + Math.sin(a) * r,
-          );
-          out.normals.push(Math.cos(a), 0, Math.sin(a));
-          out.uvs.push((s / sides) * 4, 1 - row);
-          out.wind.push(row === 0 ? 0.05 : 0, 0);
-        }
-      for (let s = 0; s < sides; s++) {
-        const a = base + s,
-          b = a + sides + 1;
-        out.indices.push(a, a + 1, b, a + 1, b + 1, b);
-      }
-      const centre = new Vector3(c.x, 0, c.z);
-      const knot = this.windThread(
-        threads.white,
-        (a) => outline(y + 0.1, a) + 0.03,
-        centre,
-        y + 0.04,
-        3.5,
-        0.08,
-        random() * 6,
-      );
-      const a = Math.atan2(knot.z - c.z, knot.x - c.x);
-      this.knot(threads.white, knot, new Vector3(Math.cos(a), 0, Math.sin(a)));
-    }
-    this.mesh("omen_fig_cloth_red", bands, this.clothMaterial("M_omen_cloth_red", [112, 30, 22]));
-    this.mesh(
-      "omen_fig_cloth_white",
-      whiteBands,
-      this.clothMaterial("M_omen_cloth_white", [168, 158, 132]),
-    );
-
-    // At its roots: a clay pot, incense burnt down to the sticks, betel spat on the bark.
-    this.offerings(c, random);
-    if (trunkMesh) {
-      trunkMesh.isPickable = true;
-      const towards = Math.atan2(29 - c.z, 2.5 - c.x);
-      const profile: TrunkProfile = { x: c.x, z: c.z, from: ground, to: ground + 2, radii: [] };
-      const blood = this.stainMaterial(
-        "M_omen_fig_blood",
-        (ctx) => paintBlood(ctx, 256, 512, "hand", seededRandom(6242130)),
-        0.28,
-      );
-      this.stain(profile, towards, ground + 1.0, new Vector3(0.4, 0.8, 1.2), blood, trunkMesh);
-      const betel = this.stainMaterial(
-        "M_omen_betel",
-        (ctx) => paintBetel(ctx, 256, 512, seededRandom(6242131)),
-        0.7,
-      );
-      this.stain(
-        profile,
-        towards + 0.9,
-        ground + 0.35,
-        new Vector3(0.5, 0.6, 1.4),
-        betel,
-        trunkMesh,
-      );
-      trunkMesh.isPickable = false;
-    }
-    this.boxes.push([new Vector3(c.x, c.y + 2, c.z), new Vector3(2.2, 4.5, 2.2)]);
-  }
-
-  private offerings(c: Vector3, random: () => number): void {
-    const a = Math.atan2(29 - c.z, 2.5 - c.x);
-    const at = new Vector3(c.x + Math.cos(a) * 1.05, 0, c.z + Math.sin(a) * 1.05);
-    at.y = this.groundAt(at.x, at.z) - 0.02;
-    const clay = new PBRMaterial("M_omen_clay_pot", this.scene);
-    clay.albedoColor = new Color3(0.13, 0.055, 0.03);
-    clay.metallic = 0;
-    clay.roughness = 0.8;
-    clay.maxSimultaneousLights = 8;
-    this.materials.push(clay);
-    const profile = [
-      [0, 0],
-      [0.07, 0],
-      [0.1, 0.04],
-      [0.11, 0.09],
-      [0.085, 0.14],
-      [0.07, 0.155],
-      [0.08, 0.17],
-    ].map(([r, y]) => new Vector3(r, y, 0));
-    const pot = CreateLathe(
-      "omen_clay_pot",
-      { shape: profile, tessellation: 18, sideOrientation: Mesh.DOUBLESIDE },
-      this.scene,
-    );
-    pot.position.copyFrom(at);
-    pot.rotationQuaternion = Quaternion.RotationYawPitchRoll(random(), 0.08, 0.05);
-    pot.material = clay;
-    pot.isPickable = false;
-    this.meshes.push(pot);
-    const incense = geo();
-    for (let k = 0; k < 7; k++) {
-      const x = at.x + 0.2 + (random() - 0.5) * 0.12,
-        z = at.z + (random() - 0.5) * 0.14;
-      const y = this.groundAt(x, z);
-      const lean = new Vector3((random() - 0.5) * 0.25, 1, (random() - 0.5) * 0.25).normalize();
-      const length = 0.06 + random() * 0.16;
-      tube(
-        incense,
-        [new Vector3(x, y - 0.03, z), new Vector3(x, y - 0.03, z).add(lean.scale(length))],
-        () => 0.0018,
-        3,
-        () => 0,
-        0,
-      );
-    }
-    const sticks = new PBRMaterial("M_omen_incense", this.scene);
-    sticks.albedoColor = new Color3(0.2, 0.035, 0.025);
-    sticks.metallic = 0;
-    sticks.roughness = 0.9;
-    this.materials.push(sticks);
-    this.mesh("omen_incense", incense, sticks);
   }
 
   private buildColliders(): void {

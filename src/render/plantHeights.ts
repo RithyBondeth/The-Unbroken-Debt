@@ -1,5 +1,6 @@
 import type { AssetContainer } from "@babylonjs/core/assetContainer";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { Node } from "@babylonjs/core/node";
 import { foliageKind } from "./FoliageWind";
@@ -44,6 +45,8 @@ export function measureTrunk(
   points: ArrayLike<number>,
   from: number,
   to: number,
+  /** Thicker than this on average is a fork or a buttress (scanned giants allow more). */
+  widest = 0.9,
 ): TrunkProfile | null {
   let sx = 0,
     sz = 0,
@@ -69,7 +72,7 @@ export function measureTrunk(
   const known = radii.filter((r) => r > 0);
   const mean = known.reduce((a, b) => a + b, 0) / known.length;
   // A trunk too thick for its band is a fork or a buttress, not something to wind thread round.
-  if (mean > 0.9) return null;
+  if (mean > widest) return null;
   return { x, z, from, to, radii: radii.map((r) => (r > 0 ? r : mean)) };
 }
 
@@ -101,6 +104,22 @@ export function flexOf(name: string): number {
 export function plantPhase(x: number, z: number): number {
   const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
   return (s - Math.floor(s)) * Math.PI * 2;
+}
+
+/**
+ * A scanned plant's foot, in world space (the `foot` extra Blender writes: Babylon x, y,
+ * z). The asset pipeline's quantisation moves node origins to the middle of the mesh,
+ * so the node's position is not its foot.
+ */
+export function footOf(node: Node): Vector3 | null {
+  const metadata = node.metadata as { gltf?: { extras?: Record<string, unknown> } } | null;
+  const foot = metadata?.gltf?.extras?.foot;
+  return Array.isArray(foot) && foot.length === 3 ? new Vector3(Number(foot[0]), Number(foot[1]), Number(foot[2])) : null;
+}
+
+/** Is this a scanned plant that stands on its recorded foot (roots run on below it)? */
+export function footAtOrigin(node: Node): boolean {
+  return footOf(node) !== null;
 }
 
 /** The plant a mesh belongs to: its ancestor just below the file's root. */
@@ -186,10 +205,20 @@ export function bakePlantHeights(container: AssetContainer, rules: PlantRules = 
       foot = Math.min(foot, box.minimumWorld.y);
       top = Math.max(top, box.maximumWorld.y);
     }
-    const flex = flexOf(root.name);
-    const centre = meshes[0].getBoundingInfo().boundingBox.centerWorld;
+    // Scanned plants stand on their origin, the trunk's foot; their roots run on below
+    // the ground and must not lift the point the trunk bends from.
+    const scanFoot = footOf(root);
+    if (scanFoot) foot = scanFoot.y;
+    // A tree still named for the bare trunk it once was but grown leaves since (Episode
+    // 1's village, Nov 19: "remove all no leaf tree") rustles and bends like a leafy one.
+    const named = treeVoice(root.name);
+    const leafed = named === "dead" && meshes.some((mesh) => foliageKind(mesh.material!.name) === "leaf");
+    const voice: TreeVoice | null = leafed ? "leafy" : named;
+    const flex = leafed ? 0.85 : flexOf(root.name);
+    // A scan stands on its origin, the trunk's foot: its trunk is there, not under the
+    // middle of its crown.
+    const centre = scanFoot ?? meshes[0].getBoundingInfo().boundingBox.centerWorld;
     const phase = plantPhase(centre.x, centre.z);
-    const voice = treeVoice(root.name);
     const bark: number[] = [];
     for (const mesh of meshes) {
       // Copies placed from one source share its vertex buffers: give each its own.
@@ -221,7 +250,9 @@ export function bakePlantHeights(container: AssetContainer, rules: PlantRules = 
         z: centre.z,
         height: top - foot,
         voice,
-        trunk: measureTrunk(bark, foot + 0.8, foot + 1.8) ?? undefined,
+        // A scanned giant's trunk is thick and buttressed at chest height: thread still
+        // goes round it, following the buttresses (the profile is by angle).
+        trunk: measureTrunk(bark, foot + 0.8, foot + 1.8, footAtOrigin(root) ? 1.6 : 0.9) ?? undefined,
       });
   }
   return sites;

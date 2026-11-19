@@ -9,6 +9,7 @@ import type { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Effect } from "@babylonjs/core/Materials/effect";
 import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
+import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { PrePassEffectConfiguration } from "@babylonjs/core/Rendering/prePassEffectConfiguration";
 import "@babylonjs/core/Rendering/prePassRendererSceneComponent";
@@ -34,6 +35,14 @@ uniform maxDistance: f32;
 uniform steps: f32;
 uniform ambient: vec3f;
 uniform mistStrength: f32;
+uniform fieldBounds: vec4f;
+uniform fieldShape: vec4f;
+uniform fieldGlow: vec3f;
+uniform fieldDensity: f32;
+var mistFieldSamplerSampler: sampler;
+var mistFieldSampler: texture_2d<f32>;
+var mistNoiseSamplerSampler: sampler;
+var mistNoiseSampler: texture_2d<f32>;
 ${Array.from({ length: MAX_MIST_POCKETS }, (_, i) => `uniform mist${i}: vec4f; uniform mistShape${i}: vec4f;`).join("\n")}
 uniform light0: vec4f; uniform color0: vec3f;
 uniform light1: vec4f; uniform color1: vec3f;
@@ -55,6 +64,25 @@ fn groundMist(p: vec3f, region: vec4f, shape: vec4f, offset: vec2f) -> f32 {
   let q = (p.xz - region.xy + offset) * region.zw;
   let edge = max(0.0, 1.0 - dot(q, q));
   return shape.z * edge * edge * smoothstep(0.0, 0.15, h) * (1.0 - smoothstep(0.35, 1.0, h));
+}
+
+// The mist map (setMistField): a world-space RG map of how thick the mist lies (R) and
+// how high it stands (G, x fieldShape.w metres) over each spot of ground, broken into
+// drifting wisps by two scrolling layers of tiling noise. Sampled with an explicit
+// level: the step loop is not uniform control flow.
+fn fieldMist(p: vec3f, t: f32) -> f32 {
+  let uv = (p.xz - uniforms.fieldBounds.xy) / uniforms.fieldBounds.zw;
+  if (any(uv < vec2f(0.0)) || any(uv > vec2f(1.0))) { return 0.0; }
+  let m = textureSampleLevel(mistFieldSampler, mistFieldSamplerSampler, uv, 0.0);
+  let top = 0.25 + m.g * uniforms.fieldShape.w;
+  let h = p.y - uniforms.fieldShape.x;
+  if (m.r <= 0.0 || h > top) { return 0.0; }
+  let drift = uniforms.fieldShape.yz * t;
+  let a = textureSampleLevel(mistNoiseSampler, mistNoiseSamplerSampler, p.xz * 0.043 + drift * 0.035 + vec2f(h * 0.06, 0.0), 0.0).r;
+  let b = textureSampleLevel(mistNoiseSampler, mistNoiseSamplerSampler, p.zx * 0.121 - drift * 0.06 + vec2f(0.37, h * 0.13), 0.0).g;
+  let wisps = smoothstep(0.28, 0.78, a * 0.62 + b * 0.38);
+  let profile = smoothstep(-0.35, 0.1, h) * (1.0 - smoothstep(top * 0.3, top, h));
+  return m.r * profile * (0.25 + 0.75 * wisps);
 }
 
 // Henyey-Greenstein phase: light scatters mostly forwards, so flames glow when you look towards them.
@@ -127,11 +155,17 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
       let drift = vec2f(sin(p.z * 0.7 + uniforms.time * 0.09) * 0.25, sin(p.x * 0.6 - uniforms.time * 0.07) * 0.2);
       ${Array.from({ length: MAX_MIST_POCKETS }, (_, i) => `pockets += groundMist(p, uniforms.mist${i}, uniforms.mistShape${i}, drift);`).join("\n")}
     }
-    let sigma = (uniforms.density * heightFog + pockets * uniforms.mistStrength) * nearFade * (0.4 + 1.2 * density3(p, uniforms.time));
+    var field = 0.0;
+    if (uniforms.fieldBounds.z > 0.0 && p.y < uniforms.fieldShape.x + 0.25 + uniforms.fieldShape.w) {
+      field = fieldMist(p, uniforms.time);
+    }
+    let sigma = (uniforms.density * heightFog + pockets * uniforms.mistStrength) * nearFade * (0.4 + 1.2 * density3(p, uniforms.time))
+      + field * uniforms.fieldDensity * nearFade;
 
     // Cool sky bounce makes humid pockets readable at ground level. This never
     // raises the distant haze or puts a bright veil over the camera/lantern.
-    var light = uniforms.ambient + vec3f(0.008, 0.01, 0.014) * min(1.0, pockets * 8.0) * uniforms.mistStrength;
+    var light = uniforms.ambient + vec3f(0.008, 0.01, 0.014) * min(1.0, pockets * 8.0) * uniforms.mistStrength
+      + uniforms.fieldGlow * field;
     if (use0) { light += pointLight(p, dir, uniforms.light0, uniforms.color0); }
     if (use1) { light += pointLight(p, dir, uniforms.light1, uniforms.color1); }
     if (use2) { light += pointLight(p, dir, uniforms.light2, uniforms.color2); }
@@ -190,6 +224,27 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
 ShaderStore.ShadersStoreWGSL["volumetricFogMarchPixelShader"] = MARCH_SHADER;
 ShaderStore.ShadersStoreWGSL["volumetricFogCompositePixelShader"] = COMPOSITE_SHADER;
 
+/** A mist map over an area (see setMistField). */
+export interface MistField {
+  /** RG: R thickness (0-1 of `density`), G height (0-1 of `height`). */
+  texture: BaseTexture;
+  /** World x/z of the map's corner and its size (m). */
+  minX: number;
+  minZ: number;
+  width: number;
+  depth: number;
+  /** Ground level the heights stand on (m). */
+  baseY: number;
+  /** Tallest mist (m) at G = 1. */
+  height: number;
+  /** Extinction (per metre) where R = 1, in the thickest wisps. */
+  density: number;
+  /** Drift (m/s along x, z). */
+  wind: [number, number];
+  /** Light the mist gives back by itself in the dark (linear RGB), so its banks read. */
+  glow: [number, number, number];
+}
+
 export interface VolumetricFogOptions {
   /** Render scale of the ray march (0.5 = half resolution). */
   ratio: number;
@@ -218,6 +273,11 @@ export class VolumetricFog {
   /** 0 removes only local ground mist, e.g. at dawn or during visual comparisons. */
   mistStrength = 0;
   private mistPockets: readonly MistPocket[] = [];
+  private field: MistField | null = null;
+  /** Scales the mist map's thickness (0 hides it, e.g. at dawn). */
+  fieldStrength = 1;
+  private readonly fallbackField: RawTexture;
+  private noise: RawTexture | null = null;
 
   private readonly march: PostProcess;
   private readonly fallbackDepth: RawTexture;
@@ -257,6 +317,16 @@ export class VolumetricFog {
       Constants.TEXTURETYPE_FLOAT,
     );
 
+    this.fallbackField = RawTexture.CreateRGBATexture(
+      new Uint8Array([0, 0, 0, 255]),
+      1,
+      1,
+      scene,
+      false,
+      false,
+      Texture.NEAREST_SAMPLINGMODE,
+    );
+
     const lightUniforms = Array.from({ length: FOG_MAX_LIGHTS }, (_, i) => [
       `light${i}`,
       `color${i}`,
@@ -274,10 +344,14 @@ export class VolumetricFog {
         "steps",
         "ambient",
         "mistStrength",
+        "fieldBounds",
+        "fieldShape",
+        "fieldGlow",
+        "fieldDensity",
         ...Array.from({ length: MAX_MIST_POCKETS }, (_, i) => [`mist${i}`, `mistShape${i}`]).flat(),
         ...lightUniforms,
       ],
-      samplers: ["depthSampler"],
+      samplers: ["depthSampler", "mistFieldSampler", "mistNoiseSampler"],
       size: options.ratio,
       camera,
       textureType: Constants.TEXTURETYPE_HALF_FLOAT,
@@ -308,6 +382,17 @@ export class VolumetricFog {
     this.march.dispose(this.camera);
     this.composite.dispose(this.camera);
     this.fallbackDepth.dispose();
+    this.fallbackField.dispose();
+    this.noise?.dispose();
+  }
+
+  /**
+   * Mist laid out by a map over an area: thick, drifting banks where the map says so
+   * (forest, field edges), low and thin elsewhere. Null removes it.
+   */
+  setMistField(field: MistField | null): void {
+    this.field = field;
+    if (field && !this.noise) this.noise = mistNoise(this.scene);
   }
 
   setMistPockets(pockets: readonly MistPocket[]): void {
@@ -344,6 +429,24 @@ export class VolumetricFog {
     effect.setFloat("steps", this.steps);
     effect.setColor3("ambient", this.ambient);
     effect.setFloat("mistStrength", this.mistStrength);
+    const f = this.field;
+    effect.setTexture("mistFieldSampler", f?.texture ?? this.fallbackField);
+    effect.setTexture("mistNoiseSampler", this.noise ?? this.fallbackField);
+    effect.setFloat4(
+      "fieldBounds",
+      f?.minX ?? 0,
+      f?.minZ ?? 0,
+      f && this.fieldStrength > 0 ? f.width : 0,
+      f?.depth ?? 1,
+    );
+    effect.setFloat4("fieldShape", f?.baseY ?? 0, f?.wind[0] ?? 0, f?.wind[1] ?? 0, f?.height ?? 0);
+    effect.setFloat("fieldDensity", (f?.density ?? 0) * this.fieldStrength);
+    effect.setFloat3(
+      "fieldGlow",
+      (f?.glow[0] ?? 0) * this.fieldStrength,
+      (f?.glow[1] ?? 0) * this.fieldStrength,
+      (f?.glow[2] ?? 0) * this.fieldStrength,
+    );
     for (let i = 0; i < MAX_MIST_POCKETS; i++) {
       const p = this.mistPockets[i];
       effect.setFloat4(
@@ -372,4 +475,60 @@ export class VolumetricFog {
       }
     }
   }
+}
+
+/**
+ * Tiling noise for the mist's wisps: two octave-summed value-noise layers (R, G) on a
+ * 256 px torus, so the scrolled samples never show a seam.
+ */
+function mistNoise(scene: Scene): RawTexture {
+  const n = 256;
+  const data = new Uint8Array(n * n * 4);
+  const layer = (seed: number, cells: number) => {
+    const grid = new Float32Array(cells * cells);
+    let s = seed;
+    for (let i = 0; i < grid.length; i++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      grid[i] = s / 4294967296;
+    }
+    return (x: number, y: number) => {
+      const fx = (x / n) * cells,
+        fy = (y / n) * cells;
+      const ix = Math.floor(fx),
+        iy = Math.floor(fy);
+      const tx = fx - ix,
+        ty = fy - iy;
+      const ux = tx * tx * (3 - 2 * tx),
+        uy = ty * ty * (3 - 2 * ty);
+      const at = (i: number, j: number) => grid[(i % cells) + (j % cells) * cells];
+      return (
+        (at(ix, iy) * (1 - ux) + at(ix + 1, iy) * ux) * (1 - uy) +
+        (at(ix, iy + 1) * (1 - ux) + at(ix + 1, iy + 1) * ux) * uy
+      );
+    };
+  };
+  const octaves = (seed: number) => [layer(seed, 4), layer(seed + 7, 8), layer(seed + 13, 16), layer(seed + 29, 32)];
+  const r = octaves(11),
+    g = octaves(53);
+  const sum = (o: ((x: number, y: number) => number)[], x: number, y: number) =>
+    o[0](x, y) * 0.5 + o[1](x, y) * 0.27 + o[2](x, y) * 0.15 + o[3](x, y) * 0.08;
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const k = (y * n + x) * 4;
+      data[k] = Math.round(sum(r, x, y) * 255);
+      data[k + 1] = Math.round(sum(g, x, y) * 255);
+      data[k + 3] = 255;
+    }
+  const texture = RawTexture.CreateRGBATexture(
+    data,
+    n,
+    n,
+    scene,
+    true,
+    false,
+    Texture.TRILINEAR_SAMPLINGMODE,
+  );
+  texture.wrapU = texture.wrapV = Texture.WRAP_ADDRESSMODE;
+  texture.name = "T_mist_noise";
+  return texture;
 }

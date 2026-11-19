@@ -178,7 +178,6 @@ export const EP1_SKETCHBOOK: SketchbookData = {
   ],
   mapLabels: [
     { text: "House", khmer: "ផ្ទះរោងដឿង", x: 30, y: 74 },
-    { text: "Funeral tent", khmer: "រោងបុណ្យ", x: 76, y: 128 },
     { text: "Under the house", khmer: "ក្រោមផ្ទះ", x: 22, y: 118 },
   ],
   loreCount: 4,

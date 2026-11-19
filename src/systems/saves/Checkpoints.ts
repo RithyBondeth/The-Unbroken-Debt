@@ -6,9 +6,9 @@ const NAMES: Record<string, string> = {
   CP1: "Village · Flooded road",
   CP2: "House · Sok’s open doorway",
   CP3: "House · Sok’s room",
-  CP4: "Courtyard · Broken thread",
+  CP4: "Hall · Broken thread",
   CP5: "Under the house · Safe entrance",
-  CP6: "Funeral tent · Final ritual",
+  CP6: "Hall · Final ritual",
 };
 export function checkpointName(save: SaveData): string {
   const name = save.flags["checkpoint.location"];

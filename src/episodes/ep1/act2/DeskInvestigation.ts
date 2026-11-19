@@ -13,6 +13,7 @@ import { JOURNAL_B, FAILING_LAMPS } from "../data/desk";
 import { drawerOpen, pickUp } from "../audio/prologueSounds";
 import { branchSnap, breathOut } from "@/audio/sounds/nightSounds";
 import { boardCreak, seededRandom } from "@/audio/synth";
+import { inFuneralRoom } from "../data/funeral";
 
 /** Altar key → locked desk → final instructions → ash / portrait → CP4. */
 export class DeskInvestigation {
@@ -98,7 +99,7 @@ export class DeskInvestigation {
       p = this.progress;
     this.models.update(dt, p.compartmentOpen, p.drawerOpen, p.portraitAwake);
     const feet = g.player.feet;
-    const underTent = Math.abs(feet.x) < 3.8 && feet.z < -1 && feet.z > -7 && feet.y < 0.5;
+    const underTent = inFuneralRoom(feet);
     const event = p.update(
       dt,
       underTent,

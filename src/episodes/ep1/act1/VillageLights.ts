@@ -11,7 +11,8 @@ import { FLAME_COLOR, limitLightToRange } from "@/render/renderSetup";
 import { softFalloff, useSoftFalloff } from "@/render/softLampFalloff";
 import { applyRainWetness } from "@/render/surfaceDetail";
 import { Lightning } from "@/render/weather/Lightning";
-import { DAWN_LOOK, NIGHT_LOOK } from "@/render/nightLook";
+import { DAWN_LOOK } from "@/render/nightLook";
+import { VILLAGE_NIGHT } from "../data/villageLook";
 
 /**
  * The village at night (Art Bible, section 3): a dark, rain-heavy sky; the
@@ -61,19 +62,19 @@ export class VillageLights {
     // Rain-heavy sky with the moon somewhere behind the clouds: near black, the
     // storm dome and fog just light enough that roofs, palms and the flag read as
     // silhouettes (Art Bible 1, 3).
-    scene.clearColor = new Color4(...NIGHT_LOOK.clearColor, 1);
+    scene.clearColor = new Color4(...VILLAGE_NIGHT.clearColor, 1);
     this.sky = new HemisphericLight("night_sky", new Vector3(0.2, 1, -0.3), scene);
     this.sky.diffuse = new Color3(0.48, 0.56, 0.72);
     this.sky.groundColor = new Color3(0.13, 0.16, 0.2);
     this.sky.specular = new Color3(0.03, 0.04, 0.06);
     // Soft cloud bounce exposes leaf veins and bark between pools of lamplight.
-    this.sky.intensity = NIGHT_LOOK.skyIntensity;
+    this.sky.intensity = VILLAGE_NIGHT.skyIntensity;
     // The moon hides low in the south, over the flooded fields: their water catches it.
     this.moon = new DirectionalLight("moonlight", new Vector3(-0.25, -0.45, -0.85), scene);
     // Cool and weak through the cloud: the forest reads only as dim shapes in blue.
     this.moon.diffuse = Color3.FromHexString("#7F9FD6");
     this.moon.specular = new Color3(0.1, 0.13, 0.18);
-    this.moon.intensity = NIGHT_LOOK.moonIntensity;
+    this.moon.intensity = VILLAGE_NIGHT.moonIntensity;
 
     this.flash = new DirectionalLight("lightning", new Vector3(0.4, -1, 0.5), scene);
     this.flash.diffuse = new Color3(0.75, 0.82, 1);

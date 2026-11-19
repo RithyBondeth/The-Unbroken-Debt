@@ -26,6 +26,10 @@ export function gradeJungle(materials: readonly Material[], repainted = true): n
   for (const material of materials) {
     if (!(material instanceof PBRMaterial) || graded.has(material)) continue;
     if (repainted && material.name.startsWith("M_forest_")) continue;
+    // Plants given the village palette in Blender (village_nature.py) carry it already.
+    const extras = (material.metadata as { gltf?: { extras?: Record<string, unknown> } } | null)?.gltf
+      ?.extras;
+    if (extras?.palette || /^M_(flora|paddy)_/.test(material.name)) continue;
     const kind = foliageKind(material.name);
     const tint = kind && JUNGLE_TINT[kind];
     if (!tint) continue;

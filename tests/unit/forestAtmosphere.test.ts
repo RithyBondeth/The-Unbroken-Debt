@@ -95,7 +95,8 @@ describe("forest placement and ground mist", () => {
 
   it("stays below eye level, fades at boundaries and leaves the path center thin", () => {
     expect(GROUND_MIST.length).toBeLessThanOrEqual(MAX_MIST_POCKETS);
-    for (const p of GROUND_MIST) {
+    // Ground mist only: the hall's incense haze fills its room upstairs (baseY 2.5).
+    for (const p of GROUND_MIST.filter((pocket) => pocket.baseY < 2)) {
       expect(p.baseY + p.height).toBeLessThan(1);
       expect(mistDensityAt(p, p.x, p.baseY + 0.2, p.z)).toBeGreaterThan(0);
       expect(mistDensityAt(p, p.x, 1.3, p.z)).toBe(0);
@@ -103,11 +104,11 @@ describe("forest placement and ground mist", () => {
       expect(mistDensityAt(p, p.x + p.radiusX * 2, 0.2, p.z)).toBe(0);
     }
     const path = [
-      [-2.5, 50],
-      [-0.5, 40],
-      [2.5, 30],
-      [2, 20],
-      [-0.5, 10],
+      [0, 50],
+      [0, 40],
+      [0, 30],
+      [0, 20],
+      [0, 10],
     ];
     for (const [x, z] of path)
       expect(GROUND_MIST.reduce((sum, p) => sum + mistDensityAt(p, x, 0.3, z), 0)).toBeLessThan(

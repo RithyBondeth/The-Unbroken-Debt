@@ -5,8 +5,6 @@ import {
   TERRAIN,
   YARD,
   borderHeight,
-  inBelt,
-  inWild,
   inside,
   layoutBorder,
   outside,
@@ -15,7 +13,6 @@ import {
 } from "@/episodes/ep1/data/forestBorder";
 import {
   WEST_YARD,
-  ellipseValue,
   inClearing,
   laneDistance,
 } from "@/episodes/ep1/data/villageAreas";
@@ -67,12 +64,18 @@ describe("forest border layout", () => {
     }
   });
 
-  it("fills the thicket at the walls and the belt round the compound", () => {
-    const thicket = layout.plants.filter((p) => Math.abs(outside(PLAY, p.x, p.z)) < 3);
-    const belt = layout.plants.filter((p) => inBelt(p.x, p.z));
-    expect(thicket.length).toBeGreaterThan(150);
-    expect(belt.length).toBeGreaterThan(100);
-    expect(new Set(layout.plants.map((p) => p.species)).size).toBeGreaterThanOrEqual(8);
+  it("closes the walls with a tree line and stands palms in the fields past it", () => {
+    const line = layout.plants.filter((p) => outside(PLAY, p.x, p.z) < 10);
+    expect(line.length).toBeGreaterThan(150);
+    const species = new Set(line.map((p) => p.species));
+    expect(species.has("banana")).toBe(true);
+    expect(species.has("sugarPalm")).toBe(true);
+    // No bamboo anywhere: bananas and palms in its place (the user, Nov 19).
+    expect(layout.plants.some((p) => p.species === "bamboo")).toBe(false);
+    const fields = layout.plants.filter((p) => outside(PLAY, p.x, p.z) >= 10);
+    expect(fields.filter((p) => p.species === "sugarPalm").length).toBeGreaterThan(14);
+    // No leafless trees anywhere (the user, Nov 19).
+    expect(layout.plants.some((p) => p.species === "dead")).toBe(false);
   });
 
   it("puts painted far trees only beyond the modelled ring", () => {
@@ -87,10 +90,8 @@ describe("forest border layout", () => {
     expect(low.cards.length).toBeLessThan(layout.cards.length * 0.6);
   });
 
-  it("grows old forest with solid trunks on the expansion's new ground", () => {
-    const wild = layout.plants.filter((p) => inWild(p.x, p.z));
-    expect(wild.filter((p) => p.layer === "canopy").length).toBeGreaterThan(40);
-    for (const p of wild) if (p.layer !== "under") expect(p.solid).toBe(true);
+  it("grows nothing inside the walls: the village file carries the countryside there", () => {
+    for (const p of layout.plants) expect(outside(TERRAIN, p.x, p.z)).toBeGreaterThan(0);
   });
 
   it("keeps the expansion's clearings and lanes open", () => {
@@ -98,9 +99,8 @@ describe("forest border layout", () => {
       expect(inClearing(p.x, p.z)).toBe(false);
       expect(laneDistance(p.x, p.z)).toBeGreaterThan(1);
     }
-    // The old family yard is inside the walls, with forest round it.
+    // The old family yard is inside the walls.
     expect(inside(PLAY, WEST_YARD.x - WEST_YARD.rx, WEST_YARD.z, 2)).toBe(true);
-    expect(layout.plants.some((p) => ellipseValue(WEST_YARD, p.x, p.z) < 2)).toBe(true);
   });
 
   it("respects the area's own obstacles inside the terrain", () => {

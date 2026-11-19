@@ -14,6 +14,7 @@ import { matchStrike } from "../audio/vigilSounds";
 import { ritualDrone } from "../audio/actThreeSounds";
 import { spiritShriek } from "@/audio/sounds/spiritSounds";
 import { rattlingBreath, seededRandom } from "@/audio/synth";
+import { hallAt } from "../data/funeral";
 
 /** A3-07–08. The player keeps mouse look while movement and other interactions are gated. */
 export class FinalRitual {
@@ -35,7 +36,8 @@ export class FinalRitual {
   ) {
     this.progress = new RitualProgress(game.flags, game.inventory);
     const craft = new RelicCraft(game.scene);
-    this.burner = craft.root("ritual_burner", [0, 0, 0]);
+    // Authored against the old tent's main burner; the whole funeral moved into the hall.
+    this.burner = craft.root("ritual_burner", hallAt([0, 0, 0]));
     const brass = craft.mat("ritual_brass", "#93713b", 0.65, 0.7);
     // A thin rim over the existing main burner provides a precise interaction target.
     craft.ring(this.burner, "ritual_burner_rim", 0.41, 0.025, [0, 0.575, -3.55], brass);
@@ -68,7 +70,9 @@ export class FinalRitual {
     );
     const shade = craft.mat("ritual_shadow", "#09090a");
     shade.alpha = 0.78;
-    this.shadow = craft.root("ritual_shadow_on_tent", [0, 0, -6.85]);
+    // Behind the coffin, where the tent's back cloth hung: in the hall it stands free, a
+    // flat black figure at the dais's far edge.
+    this.shadow = craft.root("ritual_shadow_on_tent", hallAt([0, 0, -6.85]));
     craft.sphere(this.shadow, "ritual_shadow_head", [0.32, 0.45, 0.015], [0, 1.85, 0], shade);
     craft.sphere(this.shadow, "ritual_shadow_body", [0.65, 1.6, 0.015], [0, 0.95, 0], shade);
     this.fire = new PointLight("ritual_fire", RITUAL_BURNER.clone(), game.scene);

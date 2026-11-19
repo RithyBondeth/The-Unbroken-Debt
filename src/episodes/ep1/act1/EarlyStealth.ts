@@ -18,6 +18,7 @@ import { SpiritPresence } from "../entities/SpiritPresence";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { seededRandom } from "@/audio/synth";
 import { dreadBed, spiritRattle } from "../audio/presenceSounds";
+import { inFuneralRoom } from "../data/funeral";
 
 /** A1-11b: keep the vigil in darkness while the Preay comes in at the gate and searches
  * the yard, listening. The historic class/flags are retained so existing checkpoints
@@ -119,7 +120,7 @@ export class EarlyStealth {
     this.tension?.play();
     this.voice.step(this.brain.position);
     this.message(
-      "Footsteps at the gate. F puts out the lamp.\nStay beneath the pavilion. Hold C and let it pass.",
+      "Footsteps at the gate. F puts out the lamp.\nStay in the hall with the coffin. Hold C and let it pass.",
     );
     void g.subtitles.say("Sora", "Those footsteps… Keep the lamp out. Let it pass.", 5);
   }
@@ -127,7 +128,7 @@ export class EarlyStealth {
     const g = this.game,
       feet = g.player.feet;
     if (!this.active) {
-      const underTent = Math.abs(feet.x) < 3.8 && feet.z < -1 && feet.z > -7 && feet.y < 0.5;
+      const underTent = inFuneralRoom(feet);
       const handsFree =
         !g.cutscene &&
         !g.inspecting &&
@@ -184,7 +185,7 @@ export class EarlyStealth {
     if (this.time > PASSAGE_WARNING_SECONDS)
       this.message(
         this.brain.state === "chase"
-          ? "It noticed you. Put out the lamp; break its view behind the pavilion.\nCrouch and wait for the footsteps to move away."
+          ? "It noticed you. Put out the lamp; get away from the door and the windows.\nCrouch and wait for the footsteps to move away."
           : this.brain.suspicion > 0.12
             ? "It stopped to listen…\nF puts out the lamp. Hold C and stay still."
             : "Keep the vigil in darkness.\nLet its footsteps pass the gate. Hold C; F puts out the lamp.",

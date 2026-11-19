@@ -13,6 +13,7 @@ import type { DreadScore } from "@/audio/DreadScore";
 import { branchSnap } from "@/audio/sounds/nightSounds";
 import type { VillageLights } from "./VillageLights";
 import { Preay, PREAY_WALK_SPEED } from "../entities/Preay";
+import { HALL, inFuneralRoom } from "../data/funeral";
 
 /** Blender (x east, y north, z up) to Babylon. */
 const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
@@ -60,8 +61,9 @@ interface Watcher {
  * - The crossings: twice on the path, she walks across it a few metres ahead of Sora,
  *   once as Sora passes the Neak Ta shrine, once before the gate. Lightning finds her
  *   halfway across; her head comes round to Sora; she walks on into the dark.
- * - Behind the cloth: once the incense has died down, lightning throws her shadow along
- *   the tent's back cloth while Sora is inside, and her bare steps go with it.
+ * - On the wall: once the incense has died down, lightning throws her shadow along the
+ *   hall's back wall, behind the family altar, while Sora keeps the vigil by the coffin
+ *   (the funeral moved indoors, Nov 19), and her bare steps go with it.
  * - The follower: on the path she walks behind Sora, keeping her distance, her bare
  *   steps a little out of time with Sora's, stopping when Sora stops. If Sora turns
  *   round, she is standing there, looking at her; then the lightning, and she is gone.
@@ -69,6 +71,11 @@ interface Watcher {
  *   turn to face her while she isn't looking.
  */
 export class Apparitions {
+  /** The ground the Preay walks on in her crossings and following (the paddies' banks). */
+  walksOn(ground: (x: number, z: number) => number): void {
+    this.preay.ground = ground;
+  }
+
   /** Environmental false alarms must not compete with an authored presence. */
   get active(): boolean {
     return !!this.crossing || !!this.shadow || !!this.follower;
@@ -220,14 +227,7 @@ export class Apparitions {
     const ahead = this.forward.z < -0.55;
     if (by > -50 && by < -40 && Math.abs(bx) < 4 && ahead) this.once("shrine", () => this.cross(1));
     if (by > -24 && by < -14 && Math.abs(bx) < 4 && ahead) this.once("gate", () => this.cross(0.8));
-    if (
-      this.lights.tentLevel < 0.95 &&
-      this.lights.flashing &&
-      bx > -4 &&
-      bx < 4 &&
-      by > 1 &&
-      by < 7
-    )
+    if (this.lights.tentLevel < 0.95 && this.lights.flashing && inFuneralRoom(this.game.player.feet))
       this.once("cloth", () => this.startCloth());
     if (by > -45 && by < -12 && this.game.player.speed > 0.6)
       this.once("follower", () => this.startFollowing());
@@ -318,9 +318,10 @@ export class Apparitions {
   }
 
   private startCloth(): void {
-    // Just outside the tent's back cloth (y = 7 m), walking along it while the flash lasts.
+    // Pressed flat against the hall's back wall, walking along it behind the family altar
+    // while the flash lasts.
     const side = Math.random() < 0.5 ? -1 : 1;
-    this.shadeLayer.position.set(0, this.ground(), -6.92);
+    this.shadeLayer.position.set(0, HALL.floor, HALL.minZ + 0.06);
     const from = new Vector3(side * 1.6, 0, 0),
       to = new Vector3(-side * 1.6, 0, 0);
     this.shade.place(from, Math.atan2(to.x - from.x, 0));

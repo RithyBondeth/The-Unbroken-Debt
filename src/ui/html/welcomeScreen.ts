@@ -22,6 +22,22 @@ const MODEL_CREDITS = `<p class="welcome-note">3D scans, adapted for this game (
     "fdhlan21",
     "kuntilanak-merah-scary-f403d41cda214c06ab6044d780463b7e",
   ],
+  ["Tree GN", "TechArtBGN", "tree-gn-40da979cb23f492583ec89c4196cff4e"],
+  [
+    "Chinese Banyan (Ficus Microcarpa)",
+    "Valery.Li",
+    "chinese-banyan-ficus-microcarpa-2a0dbcdf8f5d48f5ad79987c7a8170ce",
+  ],
+  [
+    "Washingtonia Robusta Palm_01",
+    "andre.arq.89",
+    "washingtonia-robusta-palm-01-e59d8c7f054248fbbf32cfe4851b8911",
+  ],
+  [
+    "Smartinius Scarecrow Complete Mesh",
+    "smartinius",
+    "smartinius-scarecrow-complete-mesh-451f6d6c41cb47e5aee8aae4ec082d64",
+  ],
 ]
   .map(
     ([title, author, slug]) =>

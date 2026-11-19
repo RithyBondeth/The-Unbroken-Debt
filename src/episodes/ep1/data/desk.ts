@@ -1,7 +1,7 @@
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { inHall } from "./funeral";
 
-/** Clear south aisle: CP4 always restores under the tent facing the house. */
-export const CP4_FEET = new Vector3(0, 0, -2);
+/** Clear south aisle: CP4 always restores in the hall facing the altar. */
+export const CP4_FEET = inHall(0, 0, -2);
 export const CP4_YAW = Math.PI;
 
 /** Episode 1 script, required journal page B (A2-07). */

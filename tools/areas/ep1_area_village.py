@@ -44,8 +44,9 @@ HOUSE = {"x0": -6.0, "x1": 6.0, "y0": 10.0, "y1": 22.0}
 ALTAR_DY = HOUSE["y1"] - 18.0
 TENT = {"x0": -4.0, "x1": 4.0, "y0": 1.0, "y1": 7.0, "eave": 2.6, "ridge": 4.6}
 YARD = {"x0": -13.0, "x1": 13.0, "y0": -3.0, "y1": 27.0}
-# The 60 m path from the road (A1-01): a gentle S through the grove, south to north.
-PATH = [(1.5, -60.0), (2.5, -50.0), (0.5, -40.0), (-2.5, -30.0), (-2.0, -20.0), (0.5, -10.0), (0.0, -3.0)]
+# The 57 m earth road from the road (A1-01): dead straight to the compound between the
+# paddies (the user, Nov 19, 2026; countryside.ROAD_LINE).
+PATH = [(0.0, -60.0), (0.0, -3.0)]
 # The compound stands alone in the forest: no neighbours in sight, only old wells
 # (the open one just outside the west fence, one half covered in the grove).
 WELLS = [(-17.0, 7.5, False), (9.5, -33.0, True)]

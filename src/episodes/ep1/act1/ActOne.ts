@@ -15,9 +15,12 @@ import { TallGrass } from "./TallGrass";
 import { TreeOmens } from "./TreeOmens";
 import { blendPathGround } from "./pathGround";
 import { GuestTent } from "./GuestTent";
-import { PLAY } from "../data/forestBorder";
-import { DAWN_LOOK, NIGHT_LOOK } from "@/render/nightLook";
+import { PLAY, WATER_Y } from "../data/forestBorder";
+import { PaddyWater } from "./PaddyWater";
+import { DAWN_LOOK } from "@/render/nightLook";
+import { VILLAGE_NIGHT } from "../data/villageLook";
 import { GROUND_MIST } from "../data/forestAtmosphere";
+import { forestMistField, spawnForestWisp } from "./forestMist";
 import { ForestAtmosphere } from "./ForestAtmosphere";
 import { LowGroundMist } from "@/render/LowGroundMist";
 import { EaveDrips } from "./EaveDrips";
@@ -61,6 +64,7 @@ import { SavePoint } from "@/systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
 import { KrasueEncounter } from "../entities/KrasueEncounter";
 import { KrasueModel } from "@/shared/entities/KrasueModel";
+import { FuneralRoom } from "./FuneralRoom";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_LOCATION,
@@ -69,7 +73,7 @@ import {
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
-  /^(M_(banana|palm|tree_leaves|bamboo|grass|forest_|coconut|wet_bark)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
+  /^(M_(banana|palm|tree_leaves|bamboo|grass|forest_|coconut|wet_bark|flora_|paddy_)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
 
 /**
  * Episode 1 village: arrival and vigil, Sok’s investigations, the hallway
@@ -82,6 +86,8 @@ export class ActOne {
   private rain!: RainStreaks;
   private sky!: StormSky;
   border!: ForestBorder;
+  water!: PaddyWater;
+  funeralRoom!: FuneralRoom;
   grass!: TallGrass;
   omens!: TreeOmens;
   private drips!: EaveDrips;
@@ -171,7 +177,9 @@ export class ActOne {
       game.preset,
       game.wind,
       (x, z) => this.border.groundAt(x, z),
-      (x, z, r) => this.border.clear(x, z, r),
+      // Tall grass grows on dry ground only: never out of the paddies' water.
+      (x, z, r) => this.border.clear(x, z, r) && this.border.groundAt(x, z) > WATER_Y + 0.04,
+      this.border.grassClump,
     );
     this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
     this.omens.build(this.plantSites);
@@ -193,6 +201,11 @@ export class ActOne {
     const arrivalModels = new ArrivalModels(game.scene);
     this.guests = new GuestTent(game.scene, (x, z) => this.border.groundAt(x, z));
     this.sky = new StormSky(game.scene);
+    // The paddies' water: after the sky and the forest border, which it reflects.
+    this.water = new PaddyWater(game, (x, z) => this.border.groundAt(x, z));
+    // The hall the coffin lies in: wavering flames, incense smoke, the haze under its ceiling.
+    this.funeralRoom = new FuneralRoom(game.scene, this.area, game.preset.name === "low");
+    game.scene.onDisposeObservable.addOnce(() => this.funeralRoom.dispose());
     this.lights = new VillageLights(game.scene, this.area, game.camera);
     gradeJungle(game.scene.materials);
     blendPathGround(game.scene);
@@ -263,6 +276,8 @@ export class ActOne {
     );
     this.forest = new ForestAtmosphere(game);
     this.apparitions = new Apparitions(game, this.area, this.lights, preay);
+    // The Preay walks on the village's real ground: down into the paddies, up the banks.
+    this.apparitions.walksOn((x, z) => this.border.groundAt(x, z));
     this.pondSpirit = new PondSpirit(game, this.area, this.lights, preay);
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
@@ -329,10 +344,10 @@ export class ActOne {
     // A dark monsoon night: the lamp's warm pool, flames and lightning, and little
     // else; adapted eyes find shapes a few metres out. The exposure cap still keeps
     // extinguishing the lamp meaningfully darker.
-    game.atmosphere.baseExposure = NIGHT_LOOK.baseExposure;
-    game.atmosphere.maxExposure = NIGHT_LOOK.maxExposure;
-    game.atmosphere.nightSightIntensity = NIGHT_LOOK.nightSightIntensity;
-    game.atmosphere.nightSight.range = NIGHT_LOOK.nightSightRange;
+    game.atmosphere.baseExposure = VILLAGE_NIGHT.baseExposure;
+    game.atmosphere.maxExposure = VILLAGE_NIGHT.maxExposure;
+    game.atmosphere.nightSightIntensity = VILLAGE_NIGHT.nightSightIntensity;
+    game.atmosphere.nightSight.range = VILLAGE_NIGHT.nightSightRange;
     // Night sight is the dark around her, not a light on what she holds: the cold
     // lantern stays a dark shape at her side.
     game.atmosphere.nightSight.excludedMeshes.push(...this.vigil.heldMeshes, ...game.hands.meshes);
@@ -340,17 +355,23 @@ export class ActOne {
     // trees, so their silhouettes stand against it.
     const fog = game.pipeline.fog;
     if (fog) {
-      fog.density = NIGHT_LOOK.fogDensity;
+      fog.density = VILLAGE_NIGHT.fogDensity;
       fog.heightFalloff = 0.25;
-      fog.ambient.set(...NIGHT_LOOK.fogAmbient);
+      fog.ambient.set(...VILLAGE_NIGHT.fogAmbient);
       fog.setMistPockets(GROUND_MIST);
+      fog.setMistField(forestMistField(game.scene));
     } else {
-      game.scene.fogDensity = NIGHT_LOOK.fogDensity;
-      game.scene.fogColor.set(...NIGHT_LOOK.fogAmbient);
-      this.lowMist = new LowGroundMist(game.scene, GROUND_MIST);
+      game.scene.fogDensity = VILLAGE_NIGHT.fogDensity;
+      game.scene.fogColor.set(...VILLAGE_NIGHT.fogAmbient);
+      // No volumetric fog on the Low preset: drifting wisps placed by the same mist map.
+      this.lowMist = new LowGroundMist(game.scene, GROUND_MIST, spawnForestWisp, 160);
     }
-    // A monsoon night: steady wind off the paddies, gusting through the forest.
+    // A monsoon night: steady wind off the paddies, gusting through the trees. The
+    // plants lean and stir in it but never thrash (the user, Nov 19: the swaying was
+    // "so much sensitive"); the wind is heard at full strength.
     game.wind.base = 0.55;
+    game.wind.sway = 0.4;
+    game.scene.onDisposeObservable.addOnce(() => (game.wind.sway = 1));
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
 
@@ -377,7 +398,7 @@ export class ActOne {
       rotation: node.rotation.clone(),
       enabled: node.isEnabled(),
     }));
-    this.walker.models.pose(new Vector3(-1.65, 2.5, -13.8), new Vector3(0, 0, -1), 0);
+    this.walker.models.pose(new Vector3(-1.85, 2.5, -13.8), new Vector3(0, 0, -1), 0);
     this.walker.models.walker.setEnabled(true);
     this.hunt.models.pose(new Vector3(-1.5, 0, -10.65), new Vector3(0, 0, -1), 0, 1);
     try {
@@ -390,8 +411,8 @@ export class ActOne {
           eye: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.58, 3)),
           target: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.6, 0)),
         },
-        { eye: new Vector3(0, 1.58, -2), target: new Vector3(0, 1.3, -12) },
-        { eye: new Vector3(-1.65, 4.08, -21.05), target: new Vector3(-1.65, 3.65, -13.8) },
+        { eye: new Vector3(0.25, 4.08, -12), target: new Vector3(0.25, 3.3, -16) },
+        { eye: new Vector3(-1.85, 4.08, -21.05), target: new Vector3(-1.85, 3.65, -13.8) },
         { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
       ]);
     } finally {
@@ -409,6 +430,10 @@ export class ActOne {
     const game = this.game;
     const eye = game.camera.globalPosition;
     this.windAudio.update(dt);
+    // Still water, no rain pocks (the user, Nov 19: the water moved too much); rings
+    // only where Sora wades or something breaks the surface.
+    this.water.update(dt, 0);
+    this.funeralRoom.update(dt, this.lights.tentLevel);
     this.grass.update(dt, eye);
     if (this.resolution.active) {
       this.resolution.update(dt);
@@ -532,6 +557,8 @@ export class ActOne {
     g.pipeline.main.imageProcessing.exposure = DAWN_LOOK.baseExposure;
     if (g.pipeline.fog) {
       g.pipeline.fog.mistStrength = 0;
+      // Dawn burns the night mist off to a thin haze over the fields.
+      g.pipeline.fog.fieldStrength = 0.25;
       g.pipeline.fog.density = DAWN_LOOK.fogDensity;
       g.pipeline.fog.ambient.set(...DAWN_LOOK.fogAmbient);
     } else {
@@ -562,6 +589,7 @@ export class ActOne {
       await this.investigation.makeSounds();
       return;
     }
+    await this.water.makeSounds();
     const rate = audio.context.sampleRate;
     const eye = this.game.camera.globalPosition;
     // Two takes, one per ear: rain all round, not a point at the listener's head.

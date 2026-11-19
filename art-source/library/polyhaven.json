@@ -129,7 +129,10 @@
   },
   "fern_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "wooden_lantern_01": {
    "resolution": "1k",
@@ -141,27 +144,45 @@
   },
   "dead_tree_trunk": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "dead_tree_trunk_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "tree_stump_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "root_cluster_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "dry_branches_medium_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "pachira_aquatica_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "rusted_spade_01": {
    "resolution": "1k",
@@ -173,39 +194,66 @@
   },
   "shrub_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "shrub_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "shrub_03": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "shrub_04": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "grass_medium_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "grass_medium_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "moss_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "rock_moss_set_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "tree_stump_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "island_tree_02": {
    "resolution": "1k",
@@ -341,14 +389,55 @@
   },
   "calathea_orbifolia_01": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "weed_plant_02": {
    "resolution": "1k",
-   "format": "gltf"
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
   },
   "nettle_plant": {
    "resolution": "1k",
+   "format": "gltf",
+   "also": [
+    "2k"
+   ]
+  },
+  "anthurium_botany_01": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "grass_bermuda_01": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "bark_debris_01": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "root_cluster_02": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "single_root": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "rock_moss_set_02": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "periwinkle_plant": {
+   "resolution": "2k",
+   "format": "gltf"
+  },
+  "shrub_sorrel_01": {
+   "resolution": "2k",
    "format": "gltf"
   }
  },
@@ -642,6 +731,30 @@
    }
   },
   "dirty_carpet": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "dry_decay_leaves": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "brown_mud_03": {
+   "resolution": "2k",
+   "maps": {
+    "BC": "Diffuse",
+    "N": "nor_gl",
+    "ORM": "arm"
+   }
+  },
+  "forest_leaves_03": {
    "resolution": "2k",
    "maps": {
     "BC": "Diffuse",

@@ -5,7 +5,7 @@ import { boardCreak, seededRandom } from "@/audio/synth";
 import { drawerOpen } from "../audio/prologueSounds";
 import { coffinKnock } from "../audio/actThreeSounds";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { inHall } from "../data/funeral";
 
 export class CoffinEncounter {
   readonly progress: CoffinProgress;
@@ -38,7 +38,7 @@ export class CoffinEncounter {
           `coffin_${name}`,
           audio.buffer(data, rate),
           "sfx",
-          new Vector3(0, 1, -5.9),
+          inHall(0, 1, -5.9),
           { minDistance: 2, volume: 0.65 },
         ),
       );
