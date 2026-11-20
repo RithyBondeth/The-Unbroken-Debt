@@ -20,13 +20,16 @@ export interface DressedTrunk {
   blood?: "hand" | "drips";
 }
 
-/** Real trunks a step or two off the path, from the road to the compound. */
+/**
+ * Sugar palms of the road's two rows (tools/areas/countryside.py ROAD_PALMS), from the
+ * road to the compound: thread wound round their trunks as the walk goes on.
+ */
 export const DRESSED_TRUNKS: readonly DressedTrunk[] = [
-  { x: -10.1, z: 47.8, threads: ["white"] },
-  { x: 6.5, z: 44.3, threads: ["white", "white"] },
-  { x: -4.2, z: 37.1, threads: ["white"], blood: "drips" },
-  { x: 3.7, z: 15.4, threads: ["white", "white"] },
-  { x: -3.1, z: 14.9, threads: ["white"], blood: "hand" },
+  { x: -2.9, z: 47.0, threads: ["white"] },
+  { x: 2.9, z: 43.5, threads: ["white", "white"] },
+  { x: -2.9, z: 34.0, threads: ["white"], blood: "drips" },
+  { x: 2.9, z: 17.5, threads: ["white", "white"] },
+  { x: -2.9, z: 14.5, threads: ["white"], blood: "hand" },
 ];
 
 /** The fig, right of the path halfway down the walk. */
@@ -40,7 +43,7 @@ export const CORD_WEB = {
   /** [x, z, height] of each pole. */
   poles: [
     [-5.0, 55.8, 4.4],
-    [1.3, 55.2, 4.0],
+    [2.6, 55.2, 4.0],
     [3.3, 52.3, 3.5],
     [-5.7, 52.1, 3.7],
   ],

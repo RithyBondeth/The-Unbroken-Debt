@@ -44,12 +44,16 @@ while i < len(argv):
 
 # Objects that are meant to hang in the air, or are not solid things at all.
 SKIP_OBJECT = re.compile(
-    r"^(col_|sky|storm|rain|light_|marker_|spawn_|proto_|terrain_far|fog|mist)"
+    r"^(col_|sky|storm|rain|light_|marker_|spawn_|proto_|tpl_|terrain_far|fog|mist|paddy_rice_)"
     r"|^(banana|palm|coconut|shrub|fern|pachira|grass|moss|island_tree|jungle|forest_leaf|forest_canopy|vine|liana|leaf)",
     re.I,
 )
 SKIP_MATERIAL = re.compile(
-    r"^M_(banana_leaf|palm_fan|coconut_leaf|tree_leaves|bamboo_leaves|grass|forest_|leaf|flame|lamp_window|cobweb)", re.I
+    r"^M_(banana_leaf|palm_fan|coconut_leaf|tree_leaves|bamboo_leaves|grass|forest_|leaf|flame|lamp_window|cobweb"
+    # The scanned plants (village_nature.py): leaves, fronds and vines hang from their own
+    # wood by design; their trunks stand on their origin, checked in the game (groundSnap).
+    r"|flora_(forest_tree_gn|forest_banyan|sugar_palm|bamboo_clump|banana_clump|scarecrow|anthurium|calathea"
+    r"|fern|shrub|nettle|weed|periwinkle|grass)|paddy_rice)", re.I
 )
 
 

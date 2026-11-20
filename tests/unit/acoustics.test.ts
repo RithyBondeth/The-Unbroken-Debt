@@ -49,7 +49,7 @@ describe("room acoustics", () => {
   it("knows where Sora is", () => {
     expect(spaceAt(new Vector3(-4.15, 2.5, -13.55))).toBe("house"); // CP3, the upper hall
     expect(spaceAt(new Vector3(1.5, 0, -16.5))).toBe("underHouse"); // beside jar J2
-    expect(spaceAt(new Vector3(0, 0, -2.5))).toBe("tent"); // CP6, at the coffin
+    expect(spaceAt(new Vector3(0.25, 2.5, -12.5))).toBe("house"); // CP6, at the coffin in the hall
     expect(spaceAt(new Vector3(-8.6, 0, -10.75))).toBe("outdoors"); // the foot of the stairs
     expect(spaceAt(new Vector3(20, 3, 30))).toBe("outdoors"); // high ground, not the house
   });

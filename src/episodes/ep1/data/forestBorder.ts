@@ -30,13 +30,14 @@ const PADDIES = { minZ: 60.5, maxZ: 86.5 };
 const BUND_X = 53.5;
 /** The compound inside its fence; the back fence stands behind the porch stairs (colonial_house.py). */
 export const YARD: Rect = { minX: -13, maxX: 13, minZ: -32, maxZ: 3 };
+/**
+ * The earth road from the road bank to the compound's gate: dead straight between the
+ * fields, a sugar palm row along each side (the user, Nov 19: "The road should be
+ * straight to the house but long along with the rice field and palm trees also
+ * scarecrow"; tools/areas/countryside.py ROAD_LINE).
+ */
 export const PATH: readonly (readonly [number, number])[] = [
-  [-1.5, 60],
-  [-2.5, 50],
-  [-0.5, 40],
-  [2.5, 30],
-  [2, 20],
-  [-0.5, 10],
+  [0, 60],
   [0, 3],
 ];
 const POND = { x: 20, z: -19, rx: 4, rz: 3 };
@@ -44,6 +45,19 @@ const WELLS: readonly (readonly [number, number])[] = [
   [17, -7.5],
   [-9.5, 33],
 ];
+/** The paddies' mud and their water (tools/areas/village_nature.py PADDY_FLOOR, WATER_Z). */
+export const PADDY_FLOOR = -0.32;
+export const WATER_Y = -0.1;
+
+/** 0-1: how much a spot past the walls is a hamlet's ground (bananas, palms, a shade tree). */
+export function hamlet(x: number, z: number): number {
+  const n =
+    0.5 +
+    0.28 * Math.sin(x * 0.043 + 1.7) * Math.cos(z * 0.051 - 0.6) +
+    0.22 * Math.sin(x * 0.11 - z * 0.083 + 2.4);
+  return Math.max(0, Math.min(1, n));
+}
+
 /** Floor-UV tile of the terrain's mud and forest floor (kit.world_uvs). */
 export const GROUND_TILE = 2.25;
 
@@ -124,19 +138,25 @@ export function borderHeight(
     Math.max(TERRAIN.minX, Math.min(TERRAIN.maxX, x)),
     Math.max(TERRAIN.minZ, Math.min(TERRAIN.maxZ, z)),
   );
-  let natural =
-    0.1 * Math.sin(x * 0.37 + 1.1) * Math.cos(z * 0.29 + 0.4) +
-    0.05 * Math.sin(x * 1.1 + z * 0.7 + 2.3) +
-    0.9 * smoothstep(6, 46, d) +
-    0.35 * Math.sin(x * 0.06 + 0.8) * Math.sin(z * 0.05 + 2.1) * smoothstep(8, 30, d);
+  // The countryside past the walls (the user, Nov 19): the tree line's raised ground
+  // along the terrain's edge, then flooded paddies cut by dikes, a hamlet's mound here
+  // and there, on into the mist.
+  const raised = 0.04 + 0.04 * Math.sin(x * 0.37 + 1.1) * Math.cos(z * 0.29 + 0.4);
+  const dikeX = Math.abs(((((x + 4 + 0.6 * Math.sin(z * 0.2)) % 16) + 16) % 16) - 8);
+  const dikeZ = Math.abs(((((z + 2 + 0.5 * Math.sin(x * 0.17)) % 13) + 13) % 13) - 6.5);
+  const ridge = Math.max(0, 0.42 - 0.6 * Math.min(8 - dikeX, 6.5 - dikeZ));
+  let field = PADDY_FLOOR + 0.02 * Math.sin(x * 0.7 + z * 0.4) + Math.min(0.42, ridge);
+  field = field + (raised - field) * smoothstep(0.55, 0.75, hamlet(x, z));
+  let natural = raised + (field - raised) * smoothstep(3, 7, d);
   if (r < 2.6) natural = roadBank(r);
   else if (r < 6 && Math.abs(x) > TERRAIN.maxX)
-    natural = Math.min(natural, roadBank(2.6) - 0.05 * (r - 2.6));
+    natural = Math.max(natural, roadBank(2.6) - 0.12 * (r - 2.6));
   return edge + (natural - edge) * smoothstep(0, 4, d);
 }
 
 export type Species =
   | "broadleaf"
+  | "fig"
   | "young"
   | "sugarPalm"
   | "coconut"
@@ -169,7 +189,7 @@ export interface Card {
   yaw: number;
   height: number;
   width: number;
-  /** Painted atlas cell: 0–3 broadleaf crowns, 4 sugar palm, 5 bamboo, 6 coconut, 7 dead tree. */
+  /** Painted atlas cell: 0–2 broadleaf crowns, 3 and 6 fig, 4 and 7 sugar palm, 5 banana clump. */
   variant: number;
 }
 
@@ -209,83 +229,65 @@ interface LayerSpec {
  * ferns over the floor. Palms and bananas belong to the village, not here.
  */
 const RING: LayerSpec[] = [
+  // The next village's tree line along the walls: bananas and sugar palms set close, a
+  // shade tree or a fig here and there (the user, Nov 19: countryside, and no bamboo).
   {
     layer: "canopy",
-    spacing: 6.2,
-    keep: 0.97,
-    radius: 3,
+    spacing: 5.2,
+    keep: 0.95,
+    radius: 2.2,
     mix: [
-      ["broadleaf", 0.74],
-      ["bamboo", 0.08],
-      ["dead", 0.08],
-      ["pachira", 0.06],
-      ["sugarPalm", 0.04],
+      ["banana", 0.4],
+      ["sugarPalm", 0.4],
+      ["broadleaf", 0.12],
+      ["fig", 0.08],
     ],
   },
   {
     layer: "mid",
-    spacing: 3.6,
+    spacing: 3.2,
     keep: 0.85,
-    radius: 1.4,
+    radius: 1.1,
     mix: [
-      ["young", 0.28],
-      ["pachira", 0.3],
-      ["bamboo", 0.1],
-      ["shrub", 0.32],
+      ["banana", 0.5],
+      ["shrub", 0.3],
+      ["pachira", 0.2],
     ],
   },
   {
     layer: "under",
-    spacing: 2,
-    keep: 0.85,
+    spacing: 2.2,
+    keep: 0.8,
     radius: 0.6,
     mix: [
-      ["shrub", 0.35],
-      ["fern", 0.65],
+      ["shrub", 0.5],
+      ["fern", 0.5],
     ],
   },
 ];
 
 /**
- * The thick forest either side of the walk, from the road down to the compound:
- * giants close together, saplings and shrubs between, ferns over the floor, a
- * wall of growth a step off the trodden path.
+ * The fields past the tree line: open paddies with lone sugar palms standing in them,
+ * and the hamlets' banana groves under palms round a shade tree (hamlet()).
  */
-const WALK: LayerSpec[] = [
+const COUNTRY: LayerSpec[] = [
   {
     layer: "canopy",
-    spacing: 6,
-    keep: 0.9,
-    radius: 2.6,
+    spacing: 7,
+    keep: 1,
+    radius: 2.5,
     mix: [
-      ["broadleaf", 0.72],
-      ["bamboo", 0.12],
-      ["dead", 0.08],
-      ["pachira", 0.08],
+      ["sugarPalm", 0.72],
+      ["banana", 0.18],
+      ["broadleaf", 0.1],
     ],
   },
-  {
-    layer: "mid",
-    spacing: 3.6,
-    keep: 0.85,
-    radius: 1.2,
-    mix: [
-      ["young", 0.3],
-      ["pachira", 0.3],
-      ["shrub", 0.3],
-      ["bamboo", 0.1],
-    ],
-  },
-  {
-    layer: "under",
-    spacing: 2.6,
-    keep: 0.8,
-    radius: 0.5,
-    mix: [
-      ["fern", 0.6],
-      ["shrub", 0.4],
-    ],
-  },
+];
+const HAMLET: Mix = [
+  ["banana", 0.5],
+  ["sugarPalm", 0.32],
+  ["broadleaf", 0.12],
+  ["fig", 0.06],
 ];
 
 /** Beside the walk, inside the authored terrain: off the trodden path, short of the road. */
@@ -297,53 +299,15 @@ export function inWalk(x: number, z: number): boolean {
   return d > 3.4 && d < 22;
 }
 
-/** The belt round the compound: fewer new crowns, a fuller layered understory. */
-const BELT: LayerSpec[] = [
-  {
-    layer: "canopy",
-    spacing: 6.5,
-    keep: 1,
-    radius: 3.2,
-    mix: [
-      ["broadleaf", 0.74],
-      ["sugarPalm", 0.08],
-      ["bamboo", 0.1],
-      ["dead", 0.08],
-    ],
-  },
-  {
-    layer: "mid",
-    spacing: 3.8,
-    keep: 0.75,
-    radius: 1.6,
-    mix: [
-      ["young", 0.24],
-      ["pachira", 0.32],
-      ["banana", 0.1],
-      ["bamboo", 0.08],
-      ["shrub", 0.26],
-    ],
-  },
-  {
-    layer: "under",
-    spacing: 2.3,
-    keep: 0.7,
-    radius: 0.7,
-    mix: [
-      ["shrub", 0.4],
-      ["fern", 0.6],
-    ],
-  },
-];
-
 const SCALE: Record<Species, [number, number]> = {
-  broadleaf: [0.75, 1.15],
-  young: [0.32, 0.5],
+  broadleaf: [0.8, 1.12],
+  fig: [0.72, 0.95],
+  young: [0.34, 0.52],
   sugarPalm: [0.8, 1.2],
   coconut: [0.85, 1.15],
   bamboo: [0.8, 1.25],
-  banana: [0.8, 1.2],
-  dead: [0.8, 1.2],
+  banana: [0.55, 0.85],
+  dead: [0.6, 0.88],
   pachira: [1.5, 2.6],
   shrub: [0.9, 1.9],
   fern: [0.8, 1.5],
@@ -361,14 +325,15 @@ function choose(mix: Mix, u: number): Species {
 }
 
 /** Ground the walls' thicket and the outer forest grow on. */
-function inRing(x: number, z: number, nearDepth: number): boolean {
-  const d = outside(TERRAIN, x, z);
-  if (outside(PLAY, x, z) < -2.5 || d > nearDepth) return false;
-  if (onOuterRoad(x, z, 0.8)) return false;
-  // Inside the terrain the fields and the road stay open, apart from the bunds.
-  if (d < 0 && z > PADDIES.minZ - 0.5 && z < PADDIES.maxZ && Math.abs(x) < BUND_X + 1) return false;
-  if (d < 0 && Math.abs(z - ROAD_Z) < 3.2) return false;
-  return true;
+/** The tree line: past the authored terrain, close along the walls. */
+function inTreeline(x: number, z: number): boolean {
+  return outside(TERRAIN, x, z) > 0 && outside(PLAY, x, z) < 10 && !onOuterRoad(x, z, 0.8);
+}
+
+/** The fields past the tree line, as far as the modelled ring goes. */
+function inCountry(x: number, z: number, nearDepth: number): boolean {
+  const d = outside(PLAY, x, z);
+  return d >= 10 && outside(TERRAIN, x, z) <= nearDepth && !onOuterRoad(x, z, 1.5);
 }
 
 /** The forest belt round the house and compound, short of the walls' thicket. */
@@ -378,48 +343,6 @@ export function inBelt(x: number, z: number): boolean {
   const rear = z <= -28.5;
   return (sides || rear) && !inside(YARD, x, z, -1.8) && pathDistance(x, z) > 3;
 }
-
-/**
- * The ground the village expansion added (data/villageAreas), short of the walls'
- * thicket and the road: grown over as old forest round the built areas' clearings.
- */
-const WILD: LayerSpec[] = [
-  {
-    layer: "canopy",
-    spacing: 7,
-    keep: 0.85,
-    radius: 3,
-    mix: [
-      ["broadleaf", 0.7],
-      ["bamboo", 0.08],
-      ["dead", 0.07],
-      ["pachira", 0.08],
-      ["sugarPalm", 0.07],
-    ],
-  },
-  {
-    layer: "mid",
-    spacing: 3.8,
-    keep: 0.8,
-    radius: 1.3,
-    mix: [
-      ["young", 0.3],
-      ["pachira", 0.3],
-      ["shrub", 0.3],
-      ["bamboo", 0.1],
-    ],
-  },
-  {
-    layer: "under",
-    spacing: 2.4,
-    keep: 0.8,
-    radius: 0.6,
-    mix: [
-      ["fern", 0.6],
-      ["shrub", 0.4],
-    ],
-  },
-];
 
 /** The expansion's new ground inside the walls' thicket, north of the road bank. */
 export function inWild(x: number, z: number): boolean {
@@ -457,21 +380,16 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
     minZ: TERRAIN.minZ - options.nearDepth,
     maxZ: TERRAIN.maxZ + options.nearDepth,
   };
+  // Inside the walls the village file carries its own plants now (the countryside round
+  // the house, tools/areas/countryside.py): the runtime grows only past them.
   const zones: [LayerSpec[], (x: number, z: number) => boolean][] = [
-    [RING, (x, z) => inRing(x, z, options.nearDepth)],
-    [BELT, inBelt],
-    [WALK, inWalk],
-    [WILD, inWild],
+    [RING, inTreeline],
+    [COUNTRY, (x, z) => inCountry(x, z, options.nearDepth)],
   ];
   for (const [specs, within] of zones) {
     for (const spec of specs) {
       const s = spec.spacing;
-      const keep =
-        spec.layer !== "canopy"
-          ? spec.keep * options.density
-          : specs === WALK
-            ? spec.keep * (options.walkCanopy ?? 1)
-            : spec.keep;
+      const keep = spec.layer !== "canopy" ? spec.keep * options.density : spec.keep;
       for (let gx = bounds.minX; gx < bounds.maxX; gx += s) {
         for (let gz = bounds.minZ; gz < bounds.maxZ; gz += s) {
           const x = gx + s * (0.15 + 0.7 * random());
@@ -483,7 +401,18 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
           if (u > keep || !within(x, z)) continue;
           // Low ground layers only matter near where Sora can stand.
           if (spec.layer === "under" && outside(TERRAIN, x, z) > options.nearDepth * 0.45) continue;
-          const species = choose(spec.mix, random());
+          let species = choose(
+            specs === COUNTRY && hamlet(x, z) > 0.62 ? HAMLET : spec.mix,
+            random(),
+          );
+          // Open field: most spots stay bare water and rice; a hamlet's ground is close set.
+          if (specs === COUNTRY && hamlet(x, z) <= 0.62 && u > 0.42) continue;
+          // Past the paddies the ring is the next village's tree line: sugar palms over
+          // bananas, a shade tree here and there (Khmer countryside).
+          if (specs === RING && spec.layer === "canopy" && z > PADDIES.maxZ - 1) {
+            const u = random();
+            species = u < 0.45 ? "sugarPalm" : u < 0.85 ? "banana" : "broadleaf";
+          }
           const inTerrain = outside(TERRAIN, x, z) < 0;
           if (inTerrain && (!openGround(x, z, spec.radius) || !options.clear(x, z, spec.radius)))
             continue;
@@ -499,7 +428,6 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
             scale: lo + (hi - lo) * k,
             pick,
           };
-          if (specs === WILD) plant.solid = true;
           plants.push(plant);
           if (spec.layer !== "under") trunks.push({ x, z, r: spec.layer === "canopy" ? 2.2 : 1 });
         }
@@ -528,8 +456,13 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
       }
     }
   };
-  // A closed canopy of old broadleaf giants, a little bamboo and dead wood; few palms.
-  card(4.2, (u) => (u < 0.84 ? Math.floor((u / 0.84) * 4) : u < 0.93 ? 5 : 7), [15, 26]);
-  card(12, (u) => (u < 0.5 ? 3 : 4), [20, 28]);
+  // The country's horizon (no leafless trees and no bamboo, the user, Nov 19): tree lines
+  // of crowns and banana groves round distant hamlets, sugar palms standing over the fields.
+  card(
+    6.5,
+    (u) => (u < 0.42 ? Math.floor((u / 0.42) * 3) : u < 0.55 ? 3 : u < 0.72 ? 5 : u < 0.86 ? 4 : 7),
+    [12, 22],
+  );
+  card(9, (u) => (u < 0.5 ? 4 : 7), [15, 22]);
   return { plants, cards };
 }

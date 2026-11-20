@@ -10,6 +10,7 @@ Only assets in use (status other than Not started or Retired) by someone other t
 | Alexander Shulha | CC0 1.0 | [Bananas](https://polyhaven.com/a/bananas) (V1-090) |
 | Alnazir | CC BY 4.0 | [Banana plants by the stilt houses (Banana tree) (adapted: scaled, reduced)](https://sketchfab.com/3d-models/3b658ecad29f4d9a9606dbf8fea7c9bb) (V1-213) |
 | Amal Kumar | CC0 1.0 | [Dark Wooden Planks](https://polyhaven.com/a/dark_wooden_planks) (V1-083), [Bamboo Wall](https://polyhaven.com/a/bamboo_wall) (V1-104), [Clay Roof Tiles 02](https://polyhaven.com/a/clay_roof_tiles_02) (V1-105), [Muddy Tracks](https://polyhaven.com/a/muddy_tracks) (V1-107), [Clay Plaster](https://polyhaven.com/a/clay_plaster) (V1-139) |
+| andre.arq.89 | CC BY 4.0 | [Washingtonia Robusta Palm_01 (stands in for the sugar palms over the paddies; adapted: decimated, scaled to 14.5 m)](https://sketchfab.com/3d-models/washingtonia-robusta-palm-01-e59d8c7f054248fbbf32cfe4851b8911) (V1-226) |
 | Anya_Media | CC0 1.0 | [Wind: distant crowns roaring in gusts](https://freesound.org/people/Anya_Media/sounds/523389/) (S2-006) |
 | Apple (synthetic voice) | Scratch only | Sok's English scratch recording (fallback) (S1-041) |
 | Aron Łyczek | CC0 1.0 | [Ceramic Pot](https://polyhaven.com/a/ceramic_pot) (V1-094) |
@@ -106,8 +107,10 @@ Only assets in use (status other than Not started or Retired) by someone other t
 | Serhii Khromov | CC0 1.0 | [Wooden Table 02](https://polyhaven.com/a/wooden_table_02) (V1-162) |
 | sidequesting | CC0 1.0 | [Kmaoch coming down a tree: scrambling down bark (take 1)](https://freesound.org/people/sidequesting/sounds/491179/) (S2-033) |
 | Skjor1 | CC0 1.0 | [Night insects, take B (Ko Jum, southern Thailand)](https://freesound.org/people/Skjor1/sounds/386474/) (S2-002) |
+| smartinius | CC BY 4.0 | [Smartinius Scarecrow Complete Mesh (the Ting Mong watchers; adapted: scaled to 2.15 m, stake set 0.3 m into the ground)](https://sketchfab.com/3d-models/smartinius-scarecrow-complete-mesh-451f6d6c41cb47e5aee8aae4ec082d64) (V1-228) |
 | sofiarudi | CC BY 4.0 | [Burmese Buddha in National Museum Ireland (adapted: decimated)](https://sketchfab.com/3d-models/burmese-buddha-in-national-museum-ireland-658fab5464e94f118947c2384121104a) (V2-003) |
 | tec_studio | CC0 1.0 | [Middle bronze bell (1532 temple bell, raised a fifth)](https://freesound.org/people/tec_studio/sounds/668647/) (S2-013) |
+| TechArtBGN | CC BY 4.0 | [Tree GN (the village's broadleaf giants and the forest past the walls; adapted: materials rebuilt with alpha clip, bark greyed, leaves toned to the jungle palette, trunk foot at the origin, LOD1 at a third of the triangles)](https://sketchfab.com/3d-models/tree-gn-40da979cb23f492583ec89c4196cff4e) (V1-224) |
 | teilorandersen | CC BY 4.0 | [Burlap rice sack (Old burlap bag photo scan) (adapted: scaled, reduced)](https://sketchfab.com/3d-models/d52b9c947f994d528e872f71a1cabba1) (V1-183) |
 | The Preahvihear Project Authors (Danh Hong) | SIL OFL 1.1 | [Khmer interface font](https://github.com/danhhong/Preahvihear) (V1-153) |
 | Tina | CC0 1.0 | [Brass Candleholders](https://polyhaven.com/a/brass_candleholders) (V1-070) |
@@ -116,6 +119,7 @@ Only assets in use (status other than Not started or Retired) by someone other t
 | Unknown (user-supplied recording) | Unconfirmed | Apsara dance music for the dancer ghost: 4 s played close while she is there (running down to a stop as the lights come back) and a 24 s muffled loop through the back-room wall once Sora comes near (V1-220) |
 | Unknown (user-supplied) | Unconfirmed | The user's posters on the studio walls (8: a 1960s songbook cover, travel and film posters, a painted shop sign, three street photographs; the barbershop sign POSTER90_9 taken down on the user's request, November 19), aged as paper, photo prints and signboards (V1-219) |
 | Unknown artist for Butterfield & Swire / Jardine Matheson (1920s); Le Petit Journal (1893); René Piot (d. 1934); Léon Busy, Musée Albert-Kahn (1921) | Public domain; CC0 1.0 (Busy, and the photograph of the Piot painting) | Colour print atlas: Kuling travel poster (1920s), Le Petit Journal colour map of Siam and Cambodia (1893), René Piot's Cambodian dancer, three 1921 Busy autochromes of royal dancers in costume (V1-161) |
+| Valery.Li | CC BY 4.0 | [Chinese Banyan (Ficus Microcarpa) (the Neak Ta shrine's banyan and the strangler figs of the forest; adapted: materials rebuilt with alpha clip, trunk centred, scaled 1.2, aerial roots cut clear of the path and shrine)](https://sketchfab.com/3d-models/chinese-banyan-ficus-microcarpa-2a0dbcdf8f5d48f5ad79987c7a8170ce) (V1-225) |
 | vestibule-door | CC0 1.0 | [Kmaoch scuttling on hands and knees](https://freesound.org/people/vestibule-door/sounds/669085/) (S2-038) |
 | Wang Sh D | CC BY 4.0 | [Stilt houses by the paddies (Stilt house in DenHung (CanTho - VietNam)) (adapted: scaled, reduced)](https://sketchfab.com/3d-models/73b917a1b8564feaad1583dfe263c40b) (V1-210) |
 | Wigglesworth | CC0 1.0 | [Kmaoch on a trunk: nails dug into the wood (3 takes)](https://freesound.org/people/Wigglesworth/sounds/830466/) (S2-035), [Kmaoch hitting the leaf litter (3 takes)](https://freesound.org/people/Wigglesworth/sounds/853591/) (S2-036) |

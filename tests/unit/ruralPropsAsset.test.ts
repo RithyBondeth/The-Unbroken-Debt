@@ -27,11 +27,9 @@ describe.skipIf(isLfsPointer(PATH))("ruralPropsAsset (needs the real Git LFS ass
     );
   }, 20000);
 
-  it("grounds the actual shipped spade, folded umbrellas and stored traps within 5mm of soil", () => {
-    for (const name of [
-      "rusted_spade_01.001",
-      ...[0, 1, 2].flatMap((i) => [`umbrella_${i}`, `fish_trap_${i}`]),
-    ]) {
+  // The funeral's folded umbrellas went with the tent when the funeral moved indoors (Nov 19).
+  it("grounds the actual shipped spade and stored traps within 5mm of soil", () => {
+    for (const name of ["rusted_spade_01.001", ...[0, 1, 2].map((i) => `fish_trap_${i}`)]) {
       const node = nodes.get(name)!;
       expect(node, name).toBeTruthy();
       const box = getBounds(node);

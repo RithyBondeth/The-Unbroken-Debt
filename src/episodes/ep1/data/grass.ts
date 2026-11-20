@@ -53,6 +53,15 @@ function verge(d: number, edge: number, width: number): number {
   return Math.min(1, t * 5) * (1 - t * t);
 }
 
+/** 0-1 in soft-edged patches a few metres across (light gaps in the canopy). */
+function patch(x: number, z: number): number {
+  const n =
+    0.5 +
+    0.3 * Math.sin(x * 0.41 + 1.3) * Math.cos(z * 0.37 - 0.7) +
+    0.2 * Math.sin(x * 0.93 - z * 0.71 + 2.1);
+  return Math.max(0, Math.min(1, (n - 0.55) / 0.25));
+}
+
 /** How likely tall grass is to grow at a point, 0–1. */
 export function grassChance(x: number, z: number): number {
   if (!inside(PLAY, x, z, 0.5)) return 0;
@@ -67,20 +76,26 @@ export function grassChance(x: number, z: number): number {
   // The pond and its wet bank: reeds there are authored (east_pond.py).
   if (inPond(x, z, 2.6)) return 0;
   let chance = 0;
-  // Under the old-growth canopy little grass grows: a thin fringe along the trodden path.
-  if (z > 2 && z < 61) chance = Math.max(chance, 0.45 * verge(path, 0.9, 3.4));
-  if (Math.abs(x) < 54) chance = Math.max(chance, 0.85 * verge(road, 2.4, 3.2));
+  // A thick fringe of grass along the trodden path, thinning into the forest (the user,
+  // Nov 19: "there should be more and more grasses").
+  if (z > 2 && z < 61) chance = Math.max(chance, 0.72 * verge(path, 0.9, 5.5));
+  if (Math.abs(x) < 54) chance = Math.max(chance, 0.95 * verge(road, 2.4, 4.6));
   // The overgrown clearings: thick in the open, thinning under the trees at their edge.
   for (const e of CLEARINGS) {
     const k = ellipseValue(e, x, z);
-    if (k < 1.3) chance = Math.max(chance, 0.6 * (1 - Math.max(0, k - 0.7) / 0.6));
+    if (k < 1.3) chance = Math.max(chance, 0.8 * (1 - Math.max(0, k - 0.7) / 0.6));
   }
-  if (lane < 3) chance = Math.max(chance, 0.4 * verge(lane, 0.6, 2.4));
-  if (inWild(x, z)) chance = Math.max(chance, 0.08);
-  if (inBund(x, z)) chance = Math.max(chance, 0.6);
+  if (lane < 4) chance = Math.max(chance, 0.6 * verge(lane, 0.6, 3.4));
+  if (inWild(x, z)) chance = Math.max(chance, 0.26);
+  if (inBund(x, z)) chance = Math.max(chance, 0.85);
   const yard = outside(YARD, x, z);
-  if (yard > 0 && yard < 3) chance = Math.max(chance, 0.45 * (1 - yard / 3));
-  if (inBelt(x, z)) chance = Math.max(chance, 0.22);
+  if (yard > 0 && yard < 5) chance = Math.max(chance, 0.7 * (1 - yard / 5));
+  if (inBelt(x, z)) chance = Math.max(chance, 0.42);
+  // Patches under the trees where a gap in the canopy lets light down.
+  if (z > 2 && z < 61 && path < 24) chance = Math.max(chance, 0.4 * patch(x, z));
+  // The countryside round the house (Nov 19): grass on every bit of dry ground, the
+  // mounds, the dikes' crowns and the banks (the game keeps it out of the water).
+  chance = Math.max(chance, 0.42 + 0.3 * patch(x, z));
   return chance;
 }
 

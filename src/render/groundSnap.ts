@@ -3,6 +3,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { VertexBuffer } from "@babylonjs/core/Buffers/buffer";
 import type { Node } from "@babylonjs/core/node";
+import { footAtOrigin } from "./plantHeights";
 
 /**
  * Things that stand on the ground: plants, dead wood, mounds, rocks and the
@@ -61,6 +62,9 @@ export function snapToGround(
   const moved: { name: string; drop: number }[] = [];
   for (const [root, meshes] of roots) {
     if (!(root instanceof TransformNode)) continue;
+    // Scanned plants are set down by their trunk's foot in Blender; their roots run on
+    // below the ground and would read as the lowest point.
+    if (footAtOrigin(root)) continue;
     const points: number[] = [];
     for (const mesh of meshes) {
       const positions = mesh.getVerticesData(VertexBuffer.PositionKind);

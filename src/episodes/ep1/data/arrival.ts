@@ -73,7 +73,7 @@ export const ARRIVAL: Record<"road" | "greeting" | "vuthy" | "duties", Line[]> =
     {
       id: "E1-A1-05-4",
       speaker: "Mak Yey · Phone",
-      text: "And the thread around the tent. It must not break. Whatever you hear.",
+      text: "And the thread around the coffin. It must not break. Whatever you hear.",
       seconds: 5,
     },
   ],

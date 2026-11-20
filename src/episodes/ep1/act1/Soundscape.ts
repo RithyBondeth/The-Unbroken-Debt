@@ -10,15 +10,12 @@ import { canopyWind, pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 /** The upper floor of the house, its boards at 2.5 m. */
 const inHouse = (feet: Vector3) =>
   feet.y > 1.9 && Math.abs(feet.x) < 6.3 && feet.z < -9.3 && feet.z > -22.7;
-/** Under the funeral pavilion's cloth. */
-const inTent = (feet: Vector3) =>
-  Math.abs(feet.x) < 3.8 && feet.z < -1 && feet.z > -7 && feet.y < 0.5;
 
 /** Which space Sora is in, for its acoustics and its ambience (Audio Design Document, section 3). */
 export function spaceAt(feet: Vector3): SpaceName {
   if (inHunt(feet)) return "underHouse";
+  // The funeral is in the hall now (data/funeral.ts): the house's own acoustics.
   if (inHouse(feet)) return "house";
-  if (inTent(feet)) return "tent";
   return "outdoors";
 }
 

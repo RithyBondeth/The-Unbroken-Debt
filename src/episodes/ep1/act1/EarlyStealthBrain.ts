@@ -6,10 +6,16 @@ export interface CoverRect {
   minZ: number;
   maxZ: number;
 }
+/**
+ * Up the road to the gate, across the yard to the foot of the front stairs, where it
+ * stands listening under the hall Sora keeps the vigil in (the funeral moved indoors,
+ * Nov 19), then back down the road.
+ */
 const PATROL = [
   new Vector3(-1.8, 0, 22),
-  new Vector3(-1.8, 0, 12),
-  new Vector3(2.8, 0, 12),
+  new Vector3(-1.8, 0, 6),
+  new Vector3(0.4, 0, -6.6),
+  new Vector3(2.8, 0, 6),
   new Vector3(2.8, 0, 24),
 ];
 
@@ -24,7 +30,7 @@ export class RoadNavigation {
       if (
         x < -7 ||
         x > 8 ||
-        z < 9 ||
+        z < -7.4 ||
         z > 57 ||
         this.obstacles.some(
           (r) => x > r.minX - 0.36 && x < r.maxX + 0.36 && z > r.minZ - 0.36 && z < r.maxZ + 0.36,
@@ -38,7 +44,7 @@ export class RoadNavigation {
     const end = new Vector3(
       Math.max(-6.8, Math.min(7.8, target.x)),
       0,
-      Math.max(9.2, Math.min(56.8, target.z)),
+      Math.max(-7.2, Math.min(56.8, target.z)),
     );
     const nodes = [
       from,

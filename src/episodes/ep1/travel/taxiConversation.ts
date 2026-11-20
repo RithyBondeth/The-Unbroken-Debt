@@ -87,7 +87,7 @@ export const TAXI_CONVERSATION: readonly TaxiLine[] = [
   {
     at: 62,
     speaker: "Driver",
-    text: "This is as far as I go. Follow the path to the funeral tent. Stay quiet.",
+    text: "This is as far as I go. Follow the path to the house. Stay quiet.",
     seconds: 7,
     voice: 7,
     clip: 5.84,

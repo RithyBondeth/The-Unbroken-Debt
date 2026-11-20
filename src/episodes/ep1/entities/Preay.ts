@@ -104,6 +104,9 @@ export class Preay {
     }
   }
 
+  /** The ground she walks on, where the scene knows it (null: she keeps her targets' height). */
+  ground: ((x: number, z: number) => number) | null = null;
+
   /** Puts her somewhere, facing `yaw` (radians; 0 faces +Z), standing still. */
   place(at: Vector3, yaw: number): void {
     this.figure.root.position.copyFrom(at);
@@ -182,7 +185,10 @@ export class Preay {
     const step = Math.min(left, this.speed * dt);
     p.x += Math.sin(this.yaw) * step;
     p.z += Math.cos(this.yaw) * step;
-    p.y += (target.y - p.y) * (1 - Math.exp(-dt * 6));
+    // On ground that rises and falls (the paddies' banks), her feet stay on it: she
+    // wades down into the water rather than walking over it.
+    const floor = this.ground ? this.ground(p.x, p.z) : target.y;
+    p.y += (floor - p.y) * (1 - Math.exp(-dt * 6));
     this.last.copyFrom(p);
     this.step(dt, true);
     return false;

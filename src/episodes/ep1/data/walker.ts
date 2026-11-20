@@ -16,8 +16,9 @@ export const WALKER_ROUTE = [
   { at: new Vector3(0, 2.5, -12) },
   { at: new Vector3(-0.25, 2.5, -13.45) },
   { at: new Vector3(-2.5, 2.5, -13.45), pause: 4 },
-  { at: new Vector3(-1.65, 2.5, -13.45) },
-  { at: new Vector3(-1.65, 2.5, -20.2) },
+  // Down the hall's east side, clear of the coffin's corner burners (data/funeral.ts).
+  { at: new Vector3(-1.85, 2.5, -13.45) },
+  { at: new Vector3(-1.85, 2.5, -20.2) },
   { at: new Vector3(-2.35, 2.5, -21.2) },
   { at: new Vector3(-2.35, 2.5, -22.15) },
   { at: new Vector3(-2.35, 0, -24.8) },

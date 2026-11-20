@@ -461,7 +461,7 @@ export function drawNightCircles(
   }
 }
 
-/** Sora's plan of the house and the funeral tent, drawn as she explores. */
+/** Sora's plan of the house and the coffin in its hall, drawn as she explores. */
 export function drawHousePlan(pen: Pen, x: number, y: number, w: number, h: number): void {
   // House on stilts (plan): outer walls, rooms, stair.
   const house: [number, number][] = [
@@ -509,31 +509,20 @@ export function drawHousePlan(pen: Pen, x: number, y: number, w: number, h: numb
   ]) {
     stroke(pen, ellipse(x + w * px, y + h * py, 0.8, 0.8, 8), 0.3, true);
   }
-  // Funeral tent in the courtyard.
-  const tent: [number, number][] = [
-    [x + w * 0.45, y + h * 0.68],
-    [x + w * 0.98, y + h * 0.68],
-    [x + w * 0.98, y + h],
-    [x + w * 0.45, y + h],
+  // The coffin in the hall, an incense stick at each corner (the funeral is indoors).
+  const coffin: [number, number][] = [
+    [x + w * 0.4, y + h * 0.36],
+    [x + w * 0.54, y + h * 0.36],
+    [x + w * 0.54, y + h * 0.44],
+    [x + w * 0.4, y + h * 0.44],
   ];
-  stroke(pen, tent, 0.35, true);
-  for (let i = 1; i < 5; i++)
-    stroke(
-      pen,
-      [
-        [x + w * (0.45 + i * 0.106), y + h * 0.68],
-        [x + w * (0.45 + i * 0.106), y + h],
-      ],
-      0.12,
-    );
-  // The path between them.
-  stroke(
-    pen,
-    [
-      [x + w * 0.66, y + h * 0.56],
-      [x + w * 0.68, y + h * 0.62],
-      [x + w * 0.66, y + h * 0.67],
-    ],
-    0.2,
-  );
+  stroke(pen, coffin, 0.35, true);
+  wash(pen, coffin, 0.12);
+  for (const [px, py] of [
+    [0.38, 0.34],
+    [0.56, 0.34],
+    [0.38, 0.46],
+    [0.56, 0.46],
+  ])
+    stroke(pen, ellipse(x + w * px, y + h * py, 0.35, 0.35, 6), 0.25, true);
 }

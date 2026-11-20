@@ -55,6 +55,12 @@ export class WindState {
   tension = 0;
   /** The strength drawn and heard: `base` eased through calm and tension. */
   strength = 0;
+  /**
+   * How far what is drawn follows the wind (1 in full): a scene can calm the swaying
+   * of its plants without hushing the wind's sound (Episode 1's village, Nov 19:
+   * "Don't make everything too swing").
+   */
+  sway = 1;
   /** Heading the wind blows towards (radians; 0 is +x, π/2 is +z). */
   heading: number;
   /** Two fronts at most: the foliage shader has two slots. */
@@ -164,13 +170,13 @@ export class WindState {
     out[0] = this.time;
     out[1] = this.dirX;
     out[2] = this.dirZ;
-    out[3] = this.strength;
+    out[3] = this.strength * this.sway;
     for (let k = 0; k < 2; k++) {
       const g = this.gusts[k];
       const o = 4 + k * 4;
       out[o] = g?.start ?? 0;
       out[o + 1] = g?.duration ?? 0;
-      out[o + 2] = g ? g.peak * (1 - this.calm) : 0;
+      out[o + 2] = g ? g.peak * (1 - this.calm) * this.sway : 0;
       out[o + 3] = g?.origin ?? 0;
     }
     out[12] = this.push?.x ?? 0;

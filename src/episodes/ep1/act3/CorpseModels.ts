@@ -11,6 +11,7 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import { extrasOf } from "@/core/levelBuilder";
 import { RelicCraft } from "@/shared/RelicCraft";
+import { hallAt, inHall } from "../data/funeral";
 
 /** Anatomical, textured funeral body with five baked, instantaneous offscreen poses. */
 export class CorpseModels {
@@ -27,7 +28,7 @@ export class CorpseModels {
   private constructor(scene: Scene, area: Area) {
     this.scene = scene;
     const b = new RelicCraft(scene);
-    const lid = (this.lid = b.root("coffin_lid_hinge", [0, 1.12, -6.25]));
+    const lid = (this.lid = b.root("coffin_lid_hinge", hallAt([0, 1.12, -6.25])));
     const original = area.container.meshes.find((mesh) => mesh.name === "coffin_body");
     const authoredShell = original ? extrasOf(original).hollow === true : false;
     const timber =
@@ -48,7 +49,7 @@ export class CorpseModels {
       if (!authoredShell && /^coffin_(body|band)/.test(mesh.name)) mesh.setEnabled(false);
     }
     // Four separate walls and a low bed leave a genuine open cavity.
-    const shell = b.root("coffin_open_shell", [0, 0, -5.9]);
+    const shell = b.root("coffin_open_shell", hallAt([0, 0, -5.9]));
     if (!authoredShell) {
       b.box(shell, "coffin_bed", [1.96, 0.045, 0.66], [0, 0.7, 0], timber);
       for (const z of [-0.335, 0.335])
@@ -65,10 +66,10 @@ export class CorpseModels {
     b.box(lid, "coffin_lid_inner_board", [2.08, 0.025, 0.76], [0, -0.016, 0.35], underside);
     for (const x of [-0.7, 0.7])
       b.box(lid, "coffin_lid_inner_brace", [0.045, 0.035, 0.7], [x, -0.045, 0.35], underside);
-    this.closeGrip = b.root("coffin_close_grip", [0.65, 1.13, -5.53]);
+    this.closeGrip = b.root("coffin_close_grip", hallAt([0.65, 1.13, -5.53]));
     b.box(this.closeGrip, "coffin_close_handle", [0.28, 0.035, 0.045], [0, 0, 0], gilt);
     area.container.transformNodes.push(shell, this.closeGrip);
-    this.root = b.root("sok_funeral_body", [0, 0.725, -5.9]);
+    this.root = b.root("sok_funeral_body", hallAt([0, 0.725, -5.9]));
     const authoredLining = area.container.materials.find(
       (material) => material.name === "M_funeral_lining",
     );
@@ -118,7 +119,7 @@ export class CorpseModels {
   }
 
   headCovered(camera: Camera): boolean {
-    const target = new Vector3(0.72, 1.0, -5.9);
+    const target = inHall(0.72, 1.0, -5.9);
     const from = camera.globalPosition;
     const direction = target.subtract(from);
     const ray = new Ray(from, direction.normalize(), Vector3.Distance(from, target));

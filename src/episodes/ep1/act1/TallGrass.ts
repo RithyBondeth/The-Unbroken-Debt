@@ -8,6 +8,7 @@ import { FoliageWind } from "@/render/FoliageWind";
 import type { QualityPreset } from "@/render/qualityPresets";
 import type { WindState } from "@/render/wind";
 import { layoutGrass } from "../data/grass";
+import type { Part } from "./ForestBorder";
 
 /** Grass is batched in square cells this wide (m), each one draw call. */
 const CELL = 12;
@@ -74,6 +75,17 @@ export function grassClumpData(random: () => number, blades = 16, segments = 4):
   return data;
 }
 
+/** The scanned clump as thin-instance geometry: white vertex colours, so instance tints show. */
+function scannedClumpData(part: Part): VertexData {
+  const data = new VertexData();
+  data.positions = part.positions;
+  data.normals = part.normals;
+  if (part.uvs) data.uvs = part.uvs;
+  data.indices = part.indices;
+  data.colors = new Float32Array((part.positions.length / 3) * 4).fill(1);
+  return data;
+}
+
 /**
  * Tall grass along the path, the road bank and the bunds (data/grass): thin
  * instances of a few clumps, one draw call per cell, culled by distance. It
@@ -92,6 +104,8 @@ export class TallGrass {
     wind: WindState,
     groundAt: (x: number, z: number) => number,
     clear: (x: number, z: number, radius: number) => boolean,
+    /** The scanned grass clump (ForestBorder.grassClump); the drawn blades when absent. */
+    scanned: Part | null = null,
   ) {
     const low = preset.name === "low";
     const clumps = layoutGrass({
@@ -111,10 +125,22 @@ export class TallGrass {
       material.environmentIntensity = carpet.environmentIntensity;
       material.directIntensity = carpet.directIntensity;
     }
+    const scan = scanned?.material instanceof PBRMaterial ? scanned.material : null;
+    if (scan?.albedoTexture) {
+      // The scanned blades: their own photograph, cut out by its alpha.
+      material.albedoTexture = scan.albedoTexture;
+      material.bumpTexture = scan.bumpTexture;
+      material.useAlphaFromAlbedoTexture = true;
+      material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
+      material.alphaCutOff = 0.5;
+      material.albedoColor.copyFrom(scan.albedoColor);
+      material.roughness = 0.62;
+    }
     new FoliageWind(material, wind, "grass", true);
     this.material = material;
 
-    const shape = grassClumpData(seededRandom(6242071));
+    const shape =
+      scan && scanned ? scannedClumpData(scanned) : grassClumpData(seededRandom(6242071));
     const cells = new Map<string, typeof clumps>();
     for (const clump of clumps) {
       const key = `${Math.floor(clump.x / CELL)},${Math.floor(clump.z / CELL)}`;
@@ -143,7 +169,8 @@ export class TallGrass {
         // Dry clumps bleach towards straw; green ones vary a little in shade.
         const dry = clump.variant === 2;
         const shade = clump.variant === 1 ? 0.85 : 1;
-        tints.set(dry ? [2.1, 1.55, 1.45, 1] : [shade, shade, shade * 0.95, 1], i * 4);
+        if (scan) tints.set(dry ? [1.35, 1.12, 0.72, 1] : [shade, shade, shade * 0.96, 1], i * 4);
+        else tints.set(dry ? [2.1, 1.55, 1.45, 1] : [shade, shade, shade * 0.95, 1], i * 4);
       });
       mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);
       mesh.thinInstanceSetBuffer("color", tints, 4, true);

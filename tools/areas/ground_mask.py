@@ -8,7 +8,7 @@ import math
 
 import village_layout as L
 
-PATH = [(-1.5, 60), (-2.5, 50), (-0.5, 40), (2.5, 30), (2, 20), (-0.5, 10), (0, 3)]
+PATH = [(0, 60), (0, 3)]  # forestBorder.ts PATH: straight from the road (Nov 19, 2026)
 YARD = (-13, 13, -32, 3)  # minX, maxX, minZ, maxZ
 ROAD_Z = 63.5
 
