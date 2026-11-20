@@ -254,7 +254,8 @@ export class ForestBorder {
           if (t) found.push(t);
         }
       // No bamboo in Episode 1's countryside any more (the user, Nov 19): none expected.
-      if (found.length === 0 && species !== "bamboo") console.warn(`[ForestBorder] no templates for ${species}`);
+      if (found.length === 0 && species !== "bamboo")
+        console.warn(`[ForestBorder] no templates for ${species}`);
       this.templates.set(species, found);
       this.farTemplates.set(species, found);
     }
@@ -804,19 +805,40 @@ export class ForestBorder {
     // The countryside past the walls: litter under the tree line and the hamlets, the
     // paddies' mud under their water.
     const wet = (cx: number, cz: number) => height(cx, cz) < WATER_Y + 0.02;
-    this.grid("forest_border_ground", floor, xs, zs, height, (cx, cz) => drawn(cx, cz) && !wet(cx, cz));
-    this.grid("forest_border_paddy_floor", mud, xs, zs, height, (cx, cz) => drawn(cx, cz) && wet(cx, cz));
+    this.grid(
+      "forest_border_ground",
+      floor,
+      xs,
+      zs,
+      height,
+      (cx, cz) => drawn(cx, cz) && !wet(cx, cz),
+    );
+    this.grid(
+      "forest_border_paddy_floor",
+      mud,
+      xs,
+      zs,
+      height,
+      (cx, cz) => drawn(cx, cz) && wet(cx, cz),
+    );
     const flood = this.materials.get("M_flood_water");
     if (flood) {
       const lowest = (cx: number, cz: number) =>
-        Math.min(height(cx - 0.5, cz - 0.5), height(cx + 0.5, cz - 0.5), height(cx, cz), height(cx - 0.5, cz + 0.5), height(cx + 0.5, cz + 0.5));
+        Math.min(
+          height(cx - 0.5, cz - 0.5),
+          height(cx + 0.5, cz - 0.5),
+          height(cx, cz),
+          height(cx - 0.5, cz + 0.5),
+          height(cx + 0.5, cz + 0.5),
+        );
       this.grid(
         "forest_border_water",
         flood,
         xs,
         zs,
         () => WATER_Y,
-        (cx, cz) => outside(TERRAIN, cx, cz) > 0 && !onOuterRoad(cx, cz) && lowest(cx, cz) < WATER_Y - 0.004,
+        (cx, cz) =>
+          outside(TERRAIN, cx, cz) > 0 && !onOuterRoad(cx, cz) && lowest(cx, cz) < WATER_Y - 0.004,
       ).receiveShadows = true;
     }
     const road: number[] = [];

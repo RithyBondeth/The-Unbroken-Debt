@@ -18,12 +18,7 @@ import { FoliageWind, type FoliageKind } from "@/render/FoliageWind";
 import { trunkRadius, type PlantSite, type TrunkProfile } from "@/render/plantHeights";
 import type { WindState } from "@/render/wind";
 import { pathDistance } from "../data/forestBorder";
-import {
-  CORD_WEB,
-  DRESSED_TRUNKS,
-  type DressedTrunk,
-  type ThreadColour,
-} from "../data/treeOmens";
+import { CORD_WEB, DRESSED_TRUNKS, type DressedTrunk, type ThreadColour } from "../data/treeOmens";
 import { paintBlood, paintCloth, paintThread } from "./omenTextures";
 
 /** Geometry gathered for one merged mesh; `wind` is uv6: hanging length and phase. */
@@ -281,9 +276,7 @@ export class TreeOmens {
       this.clothMaterial("M_omen_effigy", [150, 138, 112], "effigy", false),
     );
     this.buildColliders();
-    console.info(
-      `[TreeOmens] ${this.stats.trunks} trunks bound, ${this.stats.decals} stains`,
-    );
+    console.info(`[TreeOmens] ${this.stats.trunks} trunks bound, ${this.stats.decals} stains`);
   }
 
   dispose(): void {

@@ -49,22 +49,40 @@ export class FuneralRoom {
       // Waver from the wick: the pivot at the bottom of the flame, not its middle.
       const box = mesh.getBoundingInfo().boundingBox;
       mesh.setPivotPoint(
-        new Vector3((box.minimum.x + box.maximum.x) / 2, box.minimum.y, (box.minimum.z + box.maximum.z) / 2),
+        new Vector3(
+          (box.minimum.x + box.maximum.x) / 2,
+          box.minimum.y,
+          (box.minimum.z + box.maximum.z) / 2,
+        ),
       );
       const turn = mesh.rotationQuaternion?.clone() ?? Quaternion.FromEulerVector(mesh.rotation);
       mesh.rotationQuaternion = turn.clone();
-      this.flames.push({ mesh, base: mesh.scaling.clone(), turn, phase: random() * 100, rate: 0.8 + random() * 0.5 });
+      this.flames.push({
+        mesh,
+        base: mesh.scaling.clone(),
+        turn,
+        phase: random() * 100,
+        rate: 0.8 + random() * 0.5,
+      });
     }
 
     this.texture = wisp(scene);
-    const altar = [area.level.flames.get("altar_0"), area.level.flames.get("altar_1")].filter((f) => !!f);
+    const altar = [area.level.flames.get("altar_0"), area.level.flames.get("altar_1")].filter(
+      (f) => !!f,
+    );
     const sources: Vector3[] = [];
     const burner = area.level.markers.get("main_burner");
     if (burner) sources.push(burner.position.add(new Vector3(0, 0.12, 0)));
     if (altar.length === 2)
       // The altar's incense pot stands between its two candles, a little lower.
-      sources.push(altar[0].position.add(altar[1].position).scale(0.5).add(new Vector3(0, -0.06, -0.12)));
-    for (const [i, at] of sources.entries()) this.columns.push(this.column(scene, `hall_incense_${i}`, at, low));
+      sources.push(
+        altar[0].position
+          .add(altar[1].position)
+          .scale(0.5)
+          .add(new Vector3(0, -0.06, -0.12)),
+      );
+    for (const [i, at] of sources.entries())
+      this.columns.push(this.column(scene, `hall_incense_${i}`, at, low));
     this.haze = this.ceilingHaze(scene, low);
   }
 
@@ -109,7 +127,11 @@ export class FuneralRoom {
   private ceilingHaze(scene: Scene, low: boolean): ParticleSystem {
     const ps = new ParticleSystem("hall_incense_haze", low ? 24 : 60, scene);
     ps.particleTexture = this.texture;
-    const centre = new Vector3((HALL.minX + HALL.maxX) / 2, HALL.floor + 2.2, (HALL.minZ + HALL.maxZ) / 2);
+    const centre = new Vector3(
+      (HALL.minX + HALL.maxX) / 2,
+      HALL.floor + 2.2,
+      (HALL.minZ + HALL.maxZ) / 2,
+    );
     ps.emitter = centre;
     const hx = (HALL.maxX - HALL.minX) / 2 - 0.6,
       hz = (HALL.maxZ - HALL.minZ) / 2 - 0.8;
@@ -181,7 +203,12 @@ export class FuneralRoom {
 /** A soft, ragged wisp: smoke, not a ball. */
 function wisp(scene: Scene): DynamicTexture {
   const size = 128;
-  const texture = new DynamicTexture("T_hall_incense_wisp", { width: size, height: size }, scene, false);
+  const texture = new DynamicTexture(
+    "T_hall_incense_wisp",
+    { width: size, height: size },
+    scene,
+    false,
+  );
   const ctx = texture.getContext();
   ctx.clearRect(0, 0, size, size);
   const random = seededRandom(6242802);

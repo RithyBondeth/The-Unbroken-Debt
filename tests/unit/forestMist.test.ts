@@ -10,7 +10,9 @@ describe("forest mist map", () => {
       expect(m.height * MIST_HEIGHT).toBeLessThan(1.5);
     }
     // Out over the fields beside the walk: mist on the water, and somewhere a taller bank.
-    const fields = [-30, -20, -14, 14, 20, 30].flatMap((x) => [20, 40, 50].map((z) => mistAt(x, z)));
+    const fields = [-30, -20, -14, 14, 20, 30].flatMap((x) =>
+      [20, 40, 50].map((z) => mistAt(x, z)),
+    );
     expect(Math.max(...fields.map((m) => m.density))).toBeGreaterThan(0.45);
     expect(Math.max(...fields.map((m) => m.height * MIST_HEIGHT))).toBeGreaterThan(2.2);
     expect(Math.min(...fields.map((m) => m.height * MIST_HEIGHT))).toBeGreaterThan(0.8);

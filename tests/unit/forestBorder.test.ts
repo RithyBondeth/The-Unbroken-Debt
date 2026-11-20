@@ -11,11 +11,7 @@ import {
   pathDistance,
   roadBank,
 } from "@/episodes/ep1/data/forestBorder";
-import {
-  WEST_YARD,
-  inClearing,
-  laneDistance,
-} from "@/episodes/ep1/data/villageAreas";
+import { WEST_YARD, inClearing, laneDistance } from "@/episodes/ep1/data/villageAreas";
 
 const flat = () => 0;
 const options = { nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true };

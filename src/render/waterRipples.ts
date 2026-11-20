@@ -52,7 +52,11 @@ export class WaterRipples extends MaterialPluginBase {
     const ubo = [
       { name: "rippleTime", size: 1, type: "float" },
       { name: "rippleRain", size: 1, type: "float" },
-      ...Array.from({ length: MAX_RIPPLES }, (_, i) => ({ name: `ripple${i}`, size: 4, type: "vec4" })),
+      ...Array.from({ length: MAX_RIPPLES }, (_, i) => ({
+        name: `ripple${i}`,
+        size: 4,
+        type: "vec4",
+      })),
     ];
     const glsl = ["uniform float rippleTime;", "uniform float rippleRain;"]
       .concat(Array.from({ length: MAX_RIPPLES }, (_, i) => `uniform vec4 ripple${i};`))

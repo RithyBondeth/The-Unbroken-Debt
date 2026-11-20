@@ -142,8 +142,8 @@ export function borderHeight(
   // along the terrain's edge, then flooded paddies cut by dikes, a hamlet's mound here
   // and there, on into the mist.
   const raised = 0.04 + 0.04 * Math.sin(x * 0.37 + 1.1) * Math.cos(z * 0.29 + 0.4);
-  const dikeX = Math.abs(((x + 4 + 0.6 * Math.sin(z * 0.2)) % 16 + 16) % 16 - 8);
-  const dikeZ = Math.abs(((z + 2 + 0.5 * Math.sin(x * 0.17)) % 13 + 13) % 13 - 6.5);
+  const dikeX = Math.abs(((((x + 4 + 0.6 * Math.sin(z * 0.2)) % 16) + 16) % 16) - 8);
+  const dikeZ = Math.abs(((((z + 2 + 0.5 * Math.sin(x * 0.17)) % 13) + 13) % 13) - 6.5);
   const ridge = Math.max(0, 0.42 - 0.6 * Math.min(8 - dikeX, 6.5 - dikeZ));
   let field = PADDY_FLOOR + 0.02 * Math.sin(x * 0.7 + z * 0.4) + Math.min(0.42, ridge);
   field = field + (raised - field) * smoothstep(0.55, 0.75, hamlet(x, z));
@@ -290,7 +290,6 @@ const HAMLET: Mix = [
   ["fig", 0.06],
 ];
 
-
 /** Beside the walk, inside the authored terrain: off the trodden path, short of the road. */
 export function inWalk(x: number, z: number): boolean {
   if (z < 6 || z > ROAD_Z - 4.5 || !inside(TERRAIN, x, z, 2)) return false;
@@ -299,7 +298,6 @@ export function inWalk(x: number, z: number): boolean {
   const d = pathDistance(x, z);
   return d > 3.4 && d < 22;
 }
-
 
 const SCALE: Record<Species, [number, number]> = {
   broadleaf: [0.8, 1.12],
@@ -338,7 +336,6 @@ function inCountry(x: number, z: number, nearDepth: number): boolean {
   return d >= 10 && outside(TERRAIN, x, z) <= nearDepth && !onOuterRoad(x, z, 1.5);
 }
 
-
 /** The forest belt round the house and compound, short of the walls' thicket. */
 export function inBelt(x: number, z: number): boolean {
   if (!inside(PLAY, x, z, 2.5) || inNewGround(x, z)) return false;
@@ -346,7 +343,6 @@ export function inBelt(x: number, z: number): boolean {
   const rear = z <= -28.5;
   return (sides || rear) && !inside(YARD, x, z, -1.8) && pathDistance(x, z) > 3;
 }
-
 
 /** The expansion's new ground inside the walls' thicket, north of the road bank. */
 export function inWild(x: number, z: number): boolean {
@@ -405,7 +401,10 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
           if (u > keep || !within(x, z)) continue;
           // Low ground layers only matter near where Sora can stand.
           if (spec.layer === "under" && outside(TERRAIN, x, z) > options.nearDepth * 0.45) continue;
-          let species = choose(specs === COUNTRY && hamlet(x, z) > 0.62 ? HAMLET : spec.mix, random());
+          let species = choose(
+            specs === COUNTRY && hamlet(x, z) > 0.62 ? HAMLET : spec.mix,
+            random(),
+          );
           // Open field: most spots stay bare water and rice; a hamlet's ground is close set.
           if (specs === COUNTRY && hamlet(x, z) <= 0.62 && u > 0.42) continue;
           // Past the paddies the ring is the next village's tree line: sugar palms over
@@ -459,7 +458,11 @@ export function layoutBorder(options: BorderOptions): BorderLayout {
   };
   // The country's horizon (no leafless trees and no bamboo, the user, Nov 19): tree lines
   // of crowns and banana groves round distant hamlets, sugar palms standing over the fields.
-  card(6.5, (u) => (u < 0.42 ? Math.floor((u / 0.42) * 3) : u < 0.55 ? 3 : u < 0.72 ? 5 : u < 0.86 ? 4 : 7), [12, 22]);
+  card(
+    6.5,
+    (u) => (u < 0.42 ? Math.floor((u / 0.42) * 3) : u < 0.55 ? 3 : u < 0.72 ? 5 : u < 0.86 ? 4 : 7),
+    [12, 22],
+  );
   card(9, (u) => (u < 0.5 ? 4 : 7), [15, 22]);
   return { plants, cards };
 }

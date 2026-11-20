@@ -114,7 +114,9 @@ export function plantPhase(x: number, z: number): number {
 export function footOf(node: Node): Vector3 | null {
   const metadata = node.metadata as { gltf?: { extras?: Record<string, unknown> } } | null;
   const foot = metadata?.gltf?.extras?.foot;
-  return Array.isArray(foot) && foot.length === 3 ? new Vector3(Number(foot[0]), Number(foot[1]), Number(foot[2])) : null;
+  return Array.isArray(foot) && foot.length === 3
+    ? new Vector3(Number(foot[0]), Number(foot[1]), Number(foot[2]))
+    : null;
 }
 
 /** Is this a scanned plant that stands on its recorded foot (roots run on below it)? */
@@ -212,7 +214,8 @@ export function bakePlantHeights(container: AssetContainer, rules: PlantRules = 
     // A tree still named for the bare trunk it once was but grown leaves since (Episode
     // 1's village, Nov 19: "remove all no leaf tree") rustles and bends like a leafy one.
     const named = treeVoice(root.name);
-    const leafed = named === "dead" && meshes.some((mesh) => foliageKind(mesh.material!.name) === "leaf");
+    const leafed =
+      named === "dead" && meshes.some((mesh) => foliageKind(mesh.material!.name) === "leaf");
     const voice: TreeVoice | null = leafed ? "leafy" : named;
     const flex = leafed ? 0.85 : flexOf(root.name);
     // A scan stands on its origin, the trunk's foot: its trunk is there, not under the
@@ -252,7 +255,8 @@ export function bakePlantHeights(container: AssetContainer, rules: PlantRules = 
         voice,
         // A scanned giant's trunk is thick and buttressed at chest height: thread still
         // goes round it, following the buttresses (the profile is by angle).
-        trunk: measureTrunk(bark, foot + 0.8, foot + 1.8, footAtOrigin(root) ? 1.6 : 0.9) ?? undefined,
+        trunk:
+          measureTrunk(bark, foot + 0.8, foot + 1.8, footAtOrigin(root) ? 1.6 : 0.9) ?? undefined,
       });
   }
   return sites;

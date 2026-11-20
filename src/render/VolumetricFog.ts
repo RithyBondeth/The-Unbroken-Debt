@@ -507,7 +507,12 @@ function mistNoise(scene: Scene): RawTexture {
       );
     };
   };
-  const octaves = (seed: number) => [layer(seed, 4), layer(seed + 7, 8), layer(seed + 13, 16), layer(seed + 29, 32)];
+  const octaves = (seed: number) => [
+    layer(seed, 4),
+    layer(seed + 7, 8),
+    layer(seed + 13, 16),
+    layer(seed + 29, 32),
+  ];
   const r = octaves(11),
     g = octaves(53);
   const sum = (o: ((x: number, y: number) => number)[], x: number, y: number) =>

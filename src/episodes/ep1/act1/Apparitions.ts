@@ -227,7 +227,11 @@ export class Apparitions {
     const ahead = this.forward.z < -0.55;
     if (by > -50 && by < -40 && Math.abs(bx) < 4 && ahead) this.once("shrine", () => this.cross(1));
     if (by > -24 && by < -14 && Math.abs(bx) < 4 && ahead) this.once("gate", () => this.cross(0.8));
-    if (this.lights.tentLevel < 0.95 && this.lights.flashing && inFuneralRoom(this.game.player.feet))
+    if (
+      this.lights.tentLevel < 0.95 &&
+      this.lights.flashing &&
+      inFuneralRoom(this.game.player.feet)
+    )
       this.once("cloth", () => this.startCloth());
     if (by > -45 && by < -12 && this.game.player.speed > 0.6)
       this.once("follower", () => this.startFollowing());

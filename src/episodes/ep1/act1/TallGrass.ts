@@ -139,7 +139,8 @@ export class TallGrass {
     new FoliageWind(material, wind, "grass", true);
     this.material = material;
 
-    const shape = scan && scanned ? scannedClumpData(scanned) : grassClumpData(seededRandom(6242071));
+    const shape =
+      scan && scanned ? scannedClumpData(scanned) : grassClumpData(seededRandom(6242071));
     const cells = new Map<string, typeof clumps>();
     for (const clump of clumps) {
       const key = `${Math.floor(clump.x / CELL)},${Math.floor(clump.z / CELL)}`;
@@ -168,8 +169,7 @@ export class TallGrass {
         // Dry clumps bleach towards straw; green ones vary a little in shade.
         const dry = clump.variant === 2;
         const shade = clump.variant === 1 ? 0.85 : 1;
-        if (scan)
-          tints.set(dry ? [1.35, 1.12, 0.72, 1] : [shade, shade, shade * 0.96, 1], i * 4);
+        if (scan) tints.set(dry ? [1.35, 1.12, 0.72, 1] : [shade, shade, shade * 0.96, 1], i * 4);
         else tints.set(dry ? [2.1, 1.55, 1.45, 1] : [shade, shade, shade * 0.95, 1], i * 4);
       });
       mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);

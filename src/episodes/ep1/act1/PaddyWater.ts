@@ -169,7 +169,11 @@ export class PaddyWater {
     } else if (speed <= 0.25 && this.idle <= 0) {
       // Standing still, her weight shifts: a slow ring now and then.
       this.idle = 1.3 + this.random() * 1.2;
-      this.disturb(feet.x + (this.random() - 0.5) * 0.15, feet.z + (this.random() - 0.5) * 0.15, 0.07);
+      this.disturb(
+        feet.x + (this.random() - 0.5) * 0.15,
+        feet.z + (this.random() - 0.5) * 0.15,
+        0.07,
+      );
     }
   }
 
