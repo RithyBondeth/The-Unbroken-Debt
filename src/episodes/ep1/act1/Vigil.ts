@@ -387,8 +387,9 @@ export class Vigil {
     smoke.addSizeGradient(1, 0.25);
     smoke.minAngularSpeed = -0.6;
     smoke.maxAngularSpeed = 0.6;
-    smoke.color1 = new Color4(0.75, 0.72, 0.68, 0.18);
-    smoke.color2 = new Color4(0.65, 0.62, 0.6, 0.12);
+    // Unlit: coloured as the candles light it in the dark under the house, not white.
+    smoke.color1 = new Color4(0.3, 0.25, 0.19, 0.16);
+    smoke.color2 = new Color4(0.26, 0.21, 0.17, 0.11);
     smoke.colorDead = new Color4(0.6, 0.6, 0.6, 0);
     smoke.blendMode = ParticleSystem.BLENDMODE_STANDARD;
     smoke.emitRate = 8;

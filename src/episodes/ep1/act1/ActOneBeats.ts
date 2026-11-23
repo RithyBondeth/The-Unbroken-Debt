@@ -67,7 +67,8 @@ export class ActOneBeats {
     const door = (id: string, collider: string, lock: string) => {
       const marker = area.level.interactables.find((m) => m.name === id);
       if (!marker) throw new Error(`[Act I] missing ${id}`);
-      return new VillageDoor(game.scene, marker, collider, lock);
+      // Sok's study lies west of its door; the tool shed north of its own.
+      return new VillageDoor(game.scene, marker, collider, lock, -1);
     };
     this.sok = door("interact_door_sok", "col_door_sok", "door_sok_padlock");
     this.shed = door("interact_shed_door", "col_shed_door", "shed_padlock");
@@ -341,9 +342,10 @@ export class ActOneBeats {
       for (const flame of this.flames) flame.visibility = 1 - snuff;
     }
     while (this.nextStep < timing.stepTimes.length && t >= timing.stepTimes[this.nextStep]) {
-      // The sound crosses the actual upper hall towards Sok's door, at floor height.
+      // Heavy steps cross the hall's floor right over the funeral (the farmstead house, Nov 22,
+      // 2026): in by the altar's east door and over the coffin towards the front, at floor height.
       const k = this.nextStep++;
-      const at = new Vector3(1.5 - k * 0.9, 2.55, -13.45);
+      const at = new Vector3(-2.4 + k * 0.8, 2.55, -17.2 + k * 0.76);
       const sound = this.steps[k % Math.max(1, this.steps.length)];
       if (sound) {
         sound.spatial.position = at;

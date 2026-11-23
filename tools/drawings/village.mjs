@@ -93,11 +93,212 @@ const DATA = ${JSON.stringify(data)};
 
 // ------------------------------------------------------------------ portrait
 
-/** Identity-matched original funeral photograph; the family archive prints stay separate. */
+/**
+ * Sok's funeral portrait (the user, Nov 20 2026: a real person's picture on a sky-blue
+ * background, the face blurred). A real man: the civil servant of Léon Busy's 1921
+ * autochrome A36130 (CC0), the father in the family prints on the hall wall. Cut from
+ * the group, set before a painted sky-blue studio backdrop, hand-tinted as Phnom Penh
+ * studios did, and his face gone soft as if the print were wiped and wept on.
+ */
 function portrait() {
-  // Original Sok identity, shared with the sketchbook, already mounted and aged.
-  const file = join("art-source", "textures", "ep1", "notebook", "sok-funeral-photo.png");
-  return `<img width="768" height="1024" src="data:image/png;base64,${readFileSync(file).toString("base64")}">`;
+  const src = `data:image/jpeg;base64,${readFileSync(
+    join(ARCHIVE, "Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg"),
+  ).toString("base64")}`;
+  // His outline, traced in the 2560 x 1898 original: hat, face, collar, shoulders.
+  const outline = [
+    [198, 228],
+    [215, 252],
+    [250, 262],
+    [268, 330],
+    [290, 385],
+    [275, 412],
+    [235, 438],
+    [160, 488],
+    [100, 532],
+    [50, 590],
+    [20, 660],
+    [0, 840],
+    [495, 840],
+    [500, 700],
+    [528, 628],
+    [600, 598],
+    [650, 578],
+    [610, 540],
+    [560, 503],
+    [490, 445],
+    [452, 414],
+    [440, 395],
+    [455, 360],
+    [468, 320],
+    [472, 262],
+    [500, 230],
+    [530, 202],
+    [526, 178],
+    [458, 112],
+    [442, 62],
+    [396, 30],
+    [330, 32],
+    [286, 50],
+    [262, 100],
+  ].map(([x, y]) => [1440 + x / 2, 690 + y / 2]);
+  return canvasPage(768, 1024, paintSokPortrait, {
+    src,
+    outline,
+    // The region of the original shown, and the face to soften (centre, radii).
+    view: [1440, 690, 340, 420],
+    face: [1622, 840, 54, 60],
+  });
+}
+
+function paintSokPortrait(ctx, W, H, data) {
+  const img = new Image();
+  img.onload = () => {
+    const r = rng(1932);
+    const [vx, vy, vw] = data.view;
+    // The bust: hat to the chest; his hands and the chair stay below the print.
+    const s = (W * 1.22) / vw;
+    const ox = W / 2 - (data.face[0] - vx) * s,
+      oy = 46;
+    const at = ([x, y]) => [ox + (x - vx) * s, oy + (y - vy) * s];
+    // -- The studio's painted sky: pale behind the head, deeper blue toward the edges,
+    // brushed clouds, the canvas weave showing through.
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#5f8fbf");
+    sky.addColorStop(0.42, "#93bddf");
+    sky.addColorStop(1, "#6d9ac4");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+    const halo = ctx.createRadialGradient(W * 0.5, H * 0.34, 20, W * 0.5, H * 0.38, W * 0.62);
+    halo.addColorStop(0, "rgba(214,232,244,0.75)");
+    halo.addColorStop(1, "rgba(214,232,244,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, W, H);
+    ctx.filter = "blur(18px)";
+    for (let k = 0; k < 26; k++) {
+      ctx.fillStyle = `rgba(236,244,250,${r(0.08, 0.22)})`;
+      ctx.beginPath();
+      ctx.ellipse(
+        r(-40, W + 40),
+        r(0, H * 0.75),
+        r(40, 150),
+        r(18, 50),
+        r(-0.3, 0.3),
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
+    ctx.filter = "none";
+    mottle(ctx, W, H, 34, 7, 0.16);
+    // -- The man, cut out along his outline, the edge feathered like a retoucher's mask.
+    const man = document.createElement("canvas");
+    man.width = W;
+    man.height = H;
+    const m = man.getContext("2d");
+    m.filter = "blur(1.1px)";
+    m.drawImage(img, ox - vx * s, oy - vy * s, img.width * s, img.height * s);
+    m.filter = "none";
+    const mask = document.createElement("canvas");
+    mask.width = W;
+    mask.height = H;
+    const k = mask.getContext("2d");
+    k.filter = "blur(5px)";
+    k.fillStyle = "#fff";
+    k.beginPath();
+    data.outline.forEach((p, i) => (i ? k.lineTo(...at(p)) : k.moveTo(...at(p))));
+    k.closePath();
+    k.fill();
+    m.globalCompositeOperation = "destination-in";
+    m.drawImage(mask, 0, 0);
+    // -- Hand tint: the autochrome's colours calmed, skin warmed, blacks lifted to the
+    // soft brown-black of a print.
+    const px = m.getImageData(0, 0, W, H),
+      p = px.data;
+    for (let i = 0; i < p.length; i += 4) {
+      if (!p[i + 3]) continue;
+      const L = 0.3 * p[i] + 0.55 * p[i + 1] + 0.15 * p[i + 2];
+      const sat = 0.72;
+      let R = lerp(L, p[i], sat) * 1.06 + 6,
+        G = lerp(L, p[i + 1], sat) * 1.0 + 4,
+        B = lerp(L, p[i + 2], sat) * 0.9 + 2;
+      const lift = 18;
+      p[i] = clamp(lift + R * 0.93, 0, 255);
+      p[i + 1] = clamp(lift * 0.85 + G * 0.93, 0, 255);
+      p[i + 2] = clamp(lift * 0.7 + B * 0.93, 0, 255);
+    }
+    m.putImageData(px, 0, 0);
+    ctx.drawImage(man, 0, 0);
+    // -- His face, gone soft: a heavy blur inside a feathered oval.
+    const [fx, fy] = at([data.face[0], data.face[1]]);
+    const frx = data.face[2] * s,
+      fry = data.face[3] * s;
+    const soft = document.createElement("canvas");
+    soft.width = W;
+    soft.height = H;
+    const sf = soft.getContext("2d");
+    sf.filter = "blur(11px)";
+    sf.drawImage(ctx.canvas, 0, 0);
+    sf.filter = "none";
+    const fo = sf.createRadialGradient(
+      fx,
+      fy,
+      Math.min(frx, fry) * 0.55,
+      fx,
+      fy,
+      Math.max(frx, fry) * 1.08,
+    );
+    fo.addColorStop(0, "rgba(0,0,0,1)");
+    fo.addColorStop(1, "rgba(0,0,0,0)");
+    sf.globalCompositeOperation = "destination-in";
+    sf.save();
+    sf.translate(fx, fy);
+    sf.scale(1, fry / frx);
+    sf.translate(-fx, -fy);
+    sf.fillStyle = fo;
+    sf.fillRect(0, 0, W, H * 2);
+    sf.restore();
+    ctx.drawImage(soft, 0, 0);
+    // -- Print grain over everything, the corners darkened, the paper fading.
+    const grain = noise(W, H, 1.4, 31, 2);
+    const g = ctx.getImageData(0, 0, W, H),
+      q = g.data;
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        const dx = (x - W / 2) / (W * 0.62),
+          dy = (y - H * 0.45) / (H * 0.62);
+        const vig = 1 - 0.32 * smooth(0.55, 1.25, Math.sqrt(dx * dx + dy * dy));
+        const n = 1 + (grain[y * W + x] - 0.5) * 0.16;
+        for (let c = 0; c < 3; c++) q[i + c] = clamp(lerp(q[i + c] * vig * n, 205, 0.08), 0, 255);
+      }
+    ctx.putImageData(g, 0, 0);
+    // Foxing and fine scratches.
+    for (let j = 0; j < 22; j++) {
+      const x = r(0, W),
+        y = r(0, H),
+        z = r(1.5, 7);
+      const f = ctx.createRadialGradient(x, y, 0, x, y, z * 2);
+      f.addColorStop(0, "rgba(120,86,48,0.45)");
+      f.addColorStop(1, "rgba(120,86,48,0)");
+      ctx.fillStyle = f;
+      ctx.fillRect(x - z * 2, y - z * 2, z * 4, z * 4);
+    }
+    ctx.strokeStyle = "rgba(240,236,226,0.28)";
+    for (let j = 0; j < 7; j++) {
+      ctx.lineWidth = r(0.5, 1.3);
+      const x = r(0, W),
+        y = r(0, H);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + r(-30, 30), y + r(60, 220));
+      ctx.stroke();
+    }
+    // The white border of a studio print.
+    ctx.strokeStyle = "rgba(236,230,214,1)";
+    ctx.lineWidth = 22;
+    ctx.strokeRect(0, 0, W, H);
+  };
+  img.src = data.src;
 }
 
 /**

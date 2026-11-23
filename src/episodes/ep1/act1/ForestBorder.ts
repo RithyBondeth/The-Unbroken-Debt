@@ -19,6 +19,7 @@ import { foliageKind } from "@/render/FoliageWind";
 import { footOf, plantPhase, type PlantSite, type TreeVoice } from "@/render/plantHeights";
 import {
   GROUND_TILE,
+  GROW_FOREST,
   PLAY,
   ROAD_Z,
   TERRAIN,
@@ -220,6 +221,10 @@ export class ForestBorder {
       if (!mesh.name.startsWith("col_") || mesh.name === "col_ground") continue;
       mesh.computeWorldMatrix(true);
       const box = mesh.getBoundingInfo().boundingBox;
+      // A floor the size of a field (the old paddies' wading floor) is ground, not an obstacle.
+      const footprint =
+        (box.maximumWorld.x - box.minimumWorld.x) * (box.maximumWorld.z - box.minimumWorld.z);
+      if (footprint > 400) continue;
       this.obstacles.push({
         minX: box.minimumWorld.x,
         maxX: box.maximumWorld.x,
@@ -298,15 +303,19 @@ export class ForestBorder {
       walkCanopy: low ? 0.45 : 1,
       clear: (x: number, z: number, r: number) => this.clear(x, z, r),
     };
-    const layout = layoutBorder(options);
+    // The compound's tree wall is in the area itself (GROW_FOREST): only the ground
+    // past the terrain and the walls are made here.
+    const layout = GROW_FOREST ? layoutBorder(options) : { plants: [], cards: [] };
     this.buildGround(options.farDepth + 6);
     const buckets = new Map<string, Bucket>();
     const trunks: Box[] = [];
     for (const plant of layout.plants) this.place(plant, buckets, trunks);
-    this.placeRoadblocks(buckets, trunks);
-    this.placeTelegraph(buckets, options.farDepth);
+    if (GROW_FOREST) {
+      this.placeRoadblocks(buckets, trunks);
+      this.placeTelegraph(buckets, options.farDepth);
+    }
     for (const bucket of buckets.values()) this.bake(bucket);
-    this.buildCards(layout.cards);
+    if (layout.cards.length) this.buildCards(layout.cards);
     // (No puddles in the old forest belt: the countryside's water is the paddies.)
     this.buildColliders(trunks);
     this.stats.plants = layout.plants.length;

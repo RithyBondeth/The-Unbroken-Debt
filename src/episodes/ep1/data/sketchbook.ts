@@ -101,7 +101,7 @@ export const EP1_SKETCHBOOK: SketchbookData = {
       id: "SB-A3-01",
       beat: "A3-01",
       section: "now",
-      text: "The thread snapped. The lamps are dying. Find the three key pieces in the jars beneath the house.",
+      text: "The thread snapped. The lamps are dying. Find the three key pieces in the jars beneath the house and in the rice barn.",
       drawing: { id: "jars", height: 36 },
     },
     {

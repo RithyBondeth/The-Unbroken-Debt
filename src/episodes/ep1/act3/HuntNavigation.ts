@@ -1,28 +1,38 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { HUNT_OBSTACLES, type GroundObstacle } from "../data/hunt";
+import { HOUSE_ARENA, type GroundObstacle, type HuntArena } from "../data/hunt";
 
-/** Ground-plane A*: the spirit routes around the same posts / jars as Sora. */
+/** Ground-plane A* over one arena's floor: the spirit routes around the same posts / jars as Sora. */
 export class HuntNavigation {
   readonly radius = 0.36;
   private readonly step = 0.35;
-  private readonly width = 33;
-  private readonly depth = 35;
+  private readonly width: number;
+  private readonly depth: number;
   private readonly cells: Vector3[] = [];
   private readonly open: boolean[] = [];
-  constructor(readonly obstacles: readonly GroundObstacle[] = HUNT_OBSTACLES) {
+  readonly obstacles: readonly GroundObstacle[];
+  constructor(readonly arena: HuntArena = HOUSE_ARENA) {
+    const area = arena.area;
+    this.obstacles = arena.obstacles;
+    this.width = Math.ceil((area.maxX - area.minX - 0.5) / this.step) + 1;
+    this.depth = Math.ceil((area.maxZ - area.minZ - 0.5) / this.step) + 1;
     for (let z = 0; z < this.depth; z++)
       for (let x = 0; x < this.width; x++) {
-        const at = new Vector3(-5.6 + x * this.step, 0, -21.6 + z * this.step);
+        const at = new Vector3(
+          area.minX + 0.25 + x * this.step,
+          arena.floor,
+          area.minZ + 0.25 + z * this.step,
+        );
         this.cells.push(at);
         this.open.push(this.walkable(at));
       }
   }
   walkable(at: Vector3, radius = this.radius): boolean {
+    const area = this.arena.area;
     return (
-      at.x >= -5.85 &&
-      at.x <= 5.85 &&
-      at.z >= -21.8 &&
-      at.z <= -9.65 &&
+      at.x >= area.minX &&
+      at.x <= area.maxX &&
+      at.z >= area.minZ &&
+      at.z <= area.maxZ &&
       !this.obstacles.some(
         (b) =>
           at.x > b.minX - radius &&
@@ -105,7 +115,7 @@ export class HuntNavigation {
     }
     points.unshift(from.clone());
     if (this.walkable(to) && this.clear(points.at(-1)!, to))
-      points.push(new Vector3(to.x, 0, to.z));
+      points.push(new Vector3(to.x, this.arena.floor, to.z));
     const smooth: Vector3[] = [];
     for (let i = 0; i < points.length;) {
       smooth.push(points[i]);

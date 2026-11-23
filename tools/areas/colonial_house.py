@@ -36,6 +36,9 @@ DOOR = FLOOR + 2.05
 SILL, HEAD = FLOOR + 0.8, FLOOR + 1.75
 VENT_W = HEAD + 0.08, HEAD + 0.45  # fanlight over a window
 VENT_D = DOOR + 0.08, DOOR + 0.43  # fanlight over a door
+# How high the walls are cut over a doorway: to the fanlight's top here; a plan with
+# plain doors (stilt_house) closes the wall down to the door head.
+DOOR_TOP = VENT_D[1]
 PITCH = math.radians(42)
 OVER, GX = 0.9, 0.9  # eave and gable overhangs (the eave drip markers sit on them)
 YM = (H["y0"] + H["y1"]) / 2
@@ -149,7 +152,7 @@ def _leaf_outward(rotation, out_axis_x, out):
 def walls(coll, m):
     """Linings, weatherboards, sill beams, plates and colliders for every wall."""
     for name, along_x, lo, hi, a0, a1, doors, windows, out in WALLS:
-        vis = [(a, b, VENT_D[1], FLOOR) for a, b in doors] + [(a, b, VENT_W[1], SILL) for a, b in windows]
+        vis = [(a, b, DOOR_TOP, FLOOR) for a, b in doors] + [(a, b, VENT_W[1], SILL) for a, b in windows]
         # Colliders as before: doorways and window openings up to their heads.
         pieces, at = [], a0
         for (g0, g1, top, sill) in sorted([(a, b, DOOR, FLOOR) for a, b in doors] + [(a, b, HEAD, SILL) for a, b in windows]):

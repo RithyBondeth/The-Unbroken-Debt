@@ -32,7 +32,7 @@ describe("Krasue window sight", () => {
     for (const p of [
       new Vector3(4.8, 1.58, -13),
       new Vector3(2.8, 4.08, -13),
-      new Vector3(4.8, 4.08, -15),
+      new Vector3(4.8, 4.08, -16.5), // the loom room, through Yay Mey's north wall
       new Vector3(4.8, 4.08, -11),
     ])
       expect(inKrasueKitchen(p)).toBe(false);

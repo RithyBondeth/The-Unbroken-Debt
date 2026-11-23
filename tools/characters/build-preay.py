@@ -130,7 +130,7 @@ def build_rig(body):
 
 
 def bone_heat(body, rig):
-    """Bone-heat weights, solved on a closed voxel copy (the scan is thousands of loose
+    """Bone-heat weights, solved on a closed voxel copy (the scan has a few loose
     shells) and carried back to the scan's own vertices."""
     proxy = body.copy()
     proxy.data = body.data.copy()

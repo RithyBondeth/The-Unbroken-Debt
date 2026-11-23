@@ -5,8 +5,11 @@
     blender -b --factory-startup --python-exit-code 1 -P tools/areas/import-blood-spirit.py -- \\
         ~/Downloads/horror_ghost_character_-_blood_stained_spirit.glb
 
-Joins its two meshes, decimates them (198k -> about 30k triangles), stands it
-1.58 m tall with its feet at the origin facing +X, and writes
+Joins its two meshes, welds the vertices the file splits along its texture seams (left
+split, the decimation frays every seam into loose shards: her hair and dress broke up
+into splinters up close), decimates the closed surface (198k -> about 60k triangles,
+the seams kept so the texture stays put), stands it 1.58 m tall with its feet at the
+origin facing +X, and writes
 art-source/library/scans/blood_stained_spirit.glb with the credit in asset.extras.
 """
 import json
@@ -14,13 +17,14 @@ import os
 import struct
 import sys
 
+import bmesh
 import bpy
 
 SRC = os.path.expanduser(sys.argv[sys.argv.index("--") + 1])
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "art-source", "library", "scans", "blood_stained_spirit.glb")
 HEIGHT = 1.58
-TRIS = 30000
+TRIS = 60000
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=SRC)
@@ -40,10 +44,22 @@ bpy.ops.object.join()
 body = bpy.context.view_layer.objects.active
 body.name = "blood_stained_spirit"
 body.data.name = "blood_stained_spirit"
+bm = bmesh.new()
+bm.from_mesh(body.data)
+bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+bm.to_mesh(body.data)
+bm.free()
+bpy.ops.object.mode_set(mode="EDIT")
+bpy.ops.mesh.select_all(action="SELECT")
+bpy.ops.uv.seams_from_islands()
+bpy.ops.object.mode_set(mode="OBJECT")
 tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
 mod = body.modifiers.new("decimate", "DECIMATE")
 mod.ratio = min(1.0, TRIS / tris)
+mod.use_collapse_triangulate = True
 bpy.ops.object.modifier_apply(modifier=mod.name)
+for p in body.data.polygons:
+    p.use_smooth = True
 co = [v.co for v in body.data.vertices]
 z0, z1 = min(c.z for c in co), max(c.z for c in co)
 cx = sum(c.x for c in co) / len(co)
@@ -63,7 +79,7 @@ with open(SRC, "rb") as f:
     data = f.read()
 n = struct.unpack("<I", data[12:16])[0]
 extras = json.loads(data[20:20 + n])["asset"].get("extras", {})
-extras["adapted"] = f"joined, decimated to {sum(len(p.vertices) - 2 for p in body.data.polygons)} triangles, scaled to {HEIGHT} m"
+extras["adapted"] = f"joined, seams welded, decimated to {sum(len(p.vertices) - 2 for p in body.data.polygons)} triangles, scaled to {HEIGHT} m"
 with open(OUT, "rb") as f:
     glb = bytearray(f.read())
 n = struct.unpack("<I", glb[12:16])[0]

@@ -5,17 +5,39 @@ import type { SpaceName } from "@/audio/acoustics";
 import { seededRandom } from "@/audio/synth";
 import { floorDrips, houseSettle, roofRain, shutterWind } from "../audio/houseSounds";
 import { inHunt } from "../data/hunt";
+import { ROOFS } from "../data/farmLayout";
 import { canopyWind, pavilionCloth } from "@/audio/sounds/atmosphereSounds";
 
-/** The upper floor of the house, its boards at 2.5 m. */
+/** Under the house's footprint (its two blocks and the veranda), off the floor above. */
+const underFootprint = (feet: Vector3) => Math.abs(feet.x) < 8.3 && feet.z < -9.6 && feet.z > -34.3;
+
+/** On a floor at 2.5 m: the house's (and its veranda's), or the kitchen house's. */
 const inHouse = (feet: Vector3) =>
-  feet.y > 1.9 && Math.abs(feet.x) < 6.3 && feet.z < -9.3 && feet.z > -22.7;
+  feet.y > 1.9 &&
+  (underFootprint(feet) || (feet.x > 19.9 && feet.x < 28.1 && feet.z < -15.6 && feet.z > -22.7));
+
+/**
+ * Under one of the farm's own roofs (the barn, the kitchen house, the tool shed, the
+ * servants' hut, the byre...: farmLayout.ROOFS after the house's), well below its ridge.
+ */
+export const underHutRoof = (feet: Vector3) =>
+  ROOFS.slice(1).some(
+    (r) =>
+      feet.x > r.minX &&
+      feet.x < r.maxX &&
+      feet.z > r.minZ &&
+      feet.z < r.maxZ &&
+      feet.y < r.top - 1.6,
+  );
 
 /** Which space Sora is in, for its acoustics and its ambience (Audio Design Document, section 3). */
 export function spaceAt(feet: Vector3): SpaceName {
-  if (inHunt(feet)) return "underHouse";
-  // The funeral is in the hall now (data/funeral.ts): the house's own acoustics.
-  if (inHouse(feet)) return "house";
+  // On the ground under the stilts: the funeral under the front block, the storage under
+  // the back (the hunt's ground).
+  // The rice barn is a hunt arena too, but it is a room under its own thatch.
+  if (underHutRoof(feet) && !underFootprint(feet)) return "house";
+  if (inHunt(feet) || (feet.y < 0.9 && underFootprint(feet))) return "underHouse";
+  if (inHouse(feet) || underHutRoof(feet)) return "house";
   return "outdoors";
 }
 
@@ -100,12 +122,18 @@ export class Soundscape {
     const space = where === "house" && g.hiding ? "wardrobe" : where;
     g.audio?.setSpace(space, space === "wardrobe" || where === "house" ? 0.6 : 2.5);
     const target = LAYERS[space];
+    // Thatch and old boards deaden the rain: the huts' roofs drum softer and duller than
+    // the house's tiles.
+    const thatch = where === "house" && !inHouse(feet) ? 0.55 : 1;
     const k = Math.min(1, dt / 0.8);
     // Shutters, draughts and cloth answer the same gusts the trees do.
     const gusts = 0.45 + 0.7 * Math.min(1.6, g.wind.at(feet.x, feet.z));
     [this.roof, this.wind, this.drips, this.canopy, this.cloth].forEach((sound, i) => {
       const level =
-        target[i] * (i >= 3 ? 1 - this.silence() * 0.75 : 1) * (i === 1 || i >= 3 ? gusts : 1);
+        target[i] *
+        (i >= 3 ? 1 - this.silence() * 0.75 : 1) *
+        (i === 1 || i >= 3 ? gusts : 1) *
+        (i === 0 ? thatch : 1);
       this.levels[i] += (level - this.levels[i]) * k;
       if (sound) sound.volume = this.levels[i];
     });

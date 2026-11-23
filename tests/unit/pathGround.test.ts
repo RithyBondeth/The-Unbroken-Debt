@@ -4,8 +4,8 @@ import { PATH, TERRAIN } from "@/episodes/ep1/data/forestBorder";
 
 describe("village path ground", () => {
   it("is mud down the middle of the path and litter well off it", () => {
-    // In the grove: the road bank (z > 59) is mud from edge to edge.
-    for (const [x, z] of PATH.slice(1, -1)) {
+    // Along the winding track between the fields, away from the old yard's bare earth.
+    for (const [x, z] of PATH.filter(([, z]) => z > 8 && z < 46)) {
       expect(groundMix(x, z).mud).toBeGreaterThan(0.45);
       expect(groundMix(x + 6, z).mud).toBe(0);
     }
@@ -21,7 +21,7 @@ describe("village path ground", () => {
     });
     expect(Math.max(...edges) - Math.min(...edges)).toBeGreaterThan(0.2);
     // ...and across it the mud fades out over more than a texel.
-    const [x, z] = [PATH[0][0], 30];
+    const [x, z] = PATH.reduce((a, b) => (Math.abs(b[1] - 30) < Math.abs(a[1] - 30) ? b : a));
     const steps = Array.from({ length: 60 }, (_, i) => groundMix(x + i * 0.05, z).mud);
     expect(steps.filter((m) => m > 0.05 && m < 0.95).length).toBeGreaterThan(3);
   });

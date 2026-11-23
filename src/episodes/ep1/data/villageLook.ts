@@ -1,19 +1,21 @@
 import { NIGHT_LOOK, type Look } from "@/render/nightLook";
 
 /**
- * Episode 1's village night: the monsoon night of the Art Bible lifted a step (the
- * user, Nov 19: "Make the whole environment a bit more brighter"). The paddies, the
- * palms and the tree line read in the cloud light past the lamp's pool, as in the
- * preview the user chose; the mist glows a little; the dark under the trees and in
- * the house stays dark. Other episodes keep the shared NIGHT_LOOK.
+ * Episode 1's farmstead night (the user, Nov 21, 2026, after the playtest: "the whole
+ * scene is too bright ... darker"): darker than the Nov 19 village's, a step brighter
+ * than the forest's NIGHT_LOOK. Past the lamp's pool the yard is black until the
+ * lightning (every 8-20 s here) shows it all at once; the mist stands a grey-blue bank
+ * 20-30 m out; the funeral's candles under the house and the kitchen's embers carry the
+ * scene. Other episodes keep the shared NIGHT_LOOK.
  */
 export const VILLAGE_NIGHT: Look = {
   ...NIGHT_LOOK,
-  baseExposure: 2.2,
-  maxExposure: 3.1,
-  fogDensity: 0.019,
-  fogAmbient: [0.011, 0.016, 0.021],
-  clearColor: [0.011, 0.014, 0.018],
-  skyIntensity: 0.5,
-  moonIntensity: 0.42,
+  baseExposure: 1.65,
+  maxExposure: 2.4,
+  fogDensity: 0.036,
+  // A dark blue-grey the trees and the sky fade into, as the previews' mist (not black).
+  fogAmbient: [0.016, 0.021, 0.03],
+  clearColor: [0.008, 0.011, 0.015],
+  skyIntensity: 0.27,
+  moonIntensity: 0.17,
 };

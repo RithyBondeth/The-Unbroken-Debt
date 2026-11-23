@@ -36,8 +36,16 @@ export class FinalRitual {
   ) {
     this.progress = new RitualProgress(game.flags, game.inventory);
     const craft = new RelicCraft(game.scene);
-    // Authored against the old tent's main burner; the whole funeral moved into the hall.
-    this.burner = craft.root("ritual_burner", hallAt([0, 0, 0]));
+    // Authored against the old tent's main burner (the rim at (0, 0.575, -3.55) in the
+    // root's frame); set so the rim sits on the burner on the offering table under the
+    // house (marker_main_burner, Nov 22, 2026).
+    const burner = area.level.markers.get("main_burner");
+    this.burner = craft.root(
+      "ritual_burner",
+      burner
+        ? [burner.position.x, burner.position.y - 0.575, burner.position.z + 3.55]
+        : hallAt([0, 0, 0]),
+    );
     const brass = craft.mat("ritual_brass", "#93713b", 0.65, 0.7);
     // A thin rim over the existing main burner provides a precise interaction target.
     craft.ring(this.burner, "ritual_burner_rim", 0.41, 0.025, [0, 0.575, -3.55], brass);
@@ -75,7 +83,11 @@ export class FinalRitual {
     this.shadow = craft.root("ritual_shadow_on_tent", hallAt([0, 0, -6.85]));
     craft.sphere(this.shadow, "ritual_shadow_head", [0.32, 0.45, 0.015], [0, 1.85, 0], shade);
     craft.sphere(this.shadow, "ritual_shadow_body", [0.65, 1.6, 0.015], [0, 0.95, 0], shade);
-    this.fire = new PointLight("ritual_fire", RITUAL_BURNER.clone(), game.scene);
+    this.fire = new PointLight(
+      "ritual_fire",
+      burner ? burner.position.add(new Vector3(0, 0.05, 0)) : RITUAL_BURNER.clone(),
+      game.scene,
+    );
     this.fire.diffuse.set(1, 0.35, 0.06);
     this.fire.range = 3;
     this.fire.renderPriority = 9;

@@ -18,7 +18,13 @@ import {
   trunkRadius,
 } from "@/render/plantHeights";
 import { grassChance, layoutGrass } from "@/episodes/ep1/data/grass";
-import { PATH, ROAD_Z, pathDistance } from "@/episodes/ep1/data/forestBorder";
+import {
+  GROW_FOREST,
+  PATH,
+  ROAD_Z,
+  oldRoadDistance,
+  pathDistance,
+} from "@/episodes/ep1/data/forestBorder";
 import { SAVE_SHRINE_POSITION } from "@/episodes/ep1/data/saveShrine";
 import { grassClumpData } from "@/episodes/ep1/act1/TallGrass";
 import { effigy, tube } from "@/episodes/ep1/act1/TreeOmens";
@@ -109,15 +115,18 @@ describe("plant heights for the wind", () => {
 });
 
 describe("tall grass", () => {
-  it("grows on the verges, never on the trodden path, the road or the shrine's clearing", () => {
-    for (const [x, z] of PATH) expect(grassChance(x, z)).toBe(0);
-    expect(grassChance(0, ROAD_Z)).toBe(0);
-    expect(grassChance(SAVE_SHRINE_POSITION.x, SAVE_SHRINE_POSITION.z)).toBe(0);
-    expect(grassChance(0, -10)).toBe(0); // the swept yard
-    expect(grassChance(4.2, 31)).toBeGreaterThan(0.3); // a thin fringe off the path
-    expect(grassChance(4.2, 31)).toBeLessThan(grassChance(10, ROAD_Z - 3.2)); // the open bank is thicker
-    expect(grassChance(10, ROAD_Z - 3.2)).toBeGreaterThan(0.5); // the road bank
-  });
+  it.skipIf(!GROW_FOREST)(
+    "grows on the verges, never on the trodden path, the road or the shrine's clearing",
+    () => {
+      for (const [x, z] of PATH) expect(grassChance(x, z)).toBe(0);
+      expect(grassChance(0, ROAD_Z)).toBe(0);
+      expect(grassChance(SAVE_SHRINE_POSITION.x, SAVE_SHRINE_POSITION.z)).toBe(0);
+      expect(grassChance(0, -10)).toBe(0); // the swept yard
+      expect(grassChance(4.2, 31)).toBeGreaterThan(0.3); // a thin fringe off the path
+      expect(grassChance(4.2, 31)).toBeLessThan(grassChance(10, ROAD_Z - 3.2)); // the open bank is thicker
+      expect(grassChance(10, ROAD_Z - 3.2)).toBeGreaterThan(0.5); // the road bank
+    },
+  );
 
   it("lays out the same clumps every time, fewer when spaced wider, clear of art", () => {
     const options = { spacing: 0.7, clear: () => true };
@@ -182,6 +191,8 @@ describe("tree omens", () => {
   });
 
   it("marks trunks a step off the path and keeps the fig and the web's poles off it", () => {
+    // Set out along the old straight road (the omens grow only with GROW_FOREST).
+    const pathDistance = oldRoadDistance;
     for (const trunk of DRESSED_TRUNKS) {
       const d = pathDistance(trunk.x, trunk.z);
       expect(d).toBeGreaterThan(2);

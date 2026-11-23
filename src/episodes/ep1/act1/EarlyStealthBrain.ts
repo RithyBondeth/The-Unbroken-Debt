@@ -7,21 +7,33 @@ export interface CoverRect {
   maxZ: number;
 }
 /**
- * Up the road to the gate, across the yard to the foot of the front stairs, where it
- * stands listening under the hall Sora keeps the vigil in (the funeral moved indoors,
- * Nov 19), then back down the road.
+ * Up the winding cart track's west verge (farmstead.TRACK, Nov 22, 2026), through the
+ * yard gate to the front of the house, where it stands listening by the funeral under
+ * it, then back out and down the east verge.
  */
 const PATROL = [
-  new Vector3(-1.8, 0, 22),
-  new Vector3(-1.8, 0, 6),
+  new Vector3(0.5, 0, 22),
+  new Vector3(4.2, 0, 16),
+  new Vector3(4.95, 0, 10),
+  new Vector3(2.3, 0, 2),
+  new Vector3(1.0, 0, -2),
   new Vector3(0.4, 0, -6.6),
-  new Vector3(2.8, 0, 6),
-  new Vector3(2.8, 0, 24),
+  new Vector3(-1.0, 0, -2),
+  new Vector3(-1.5, 0, 2),
+  new Vector3(1.15, 0, 10),
+  new Vector3(0.4, 0, 16),
+  new Vector3(-3.3, 0, 22),
+];
+
+/** The house yard's fence (farmstead.YARD) either side of its gate: the road's walker goes through the gap. */
+export const YARD_FENCE: readonly CoverRect[] = [
+  { minX: 1.9, maxX: 12.5, minZ: -3.08, maxZ: -2.92 },
+  { minX: -12.5, maxX: -1.9, minZ: -3.08, maxZ: -2.92 },
 ];
 
 /** Visibility graph around solid cover. Every returned segment clears the actor's capsule. */
 export class RoadNavigation {
-  constructor(readonly obstacles: readonly CoverRect[] = []) {}
+  constructor(readonly obstacles: readonly CoverRect[] = YARD_FENCE) {}
   clear(a: Vector3, b: Vector3): boolean {
     const steps = Math.max(1, Math.ceil(Vector3.Distance(a, b) / 0.1));
     for (let i = 0; i <= steps; i++) {

@@ -466,7 +466,10 @@ export class VolumetricFog {
         effect.setFloat4(`light${i}`, this.tmpPos.x, this.tmpPos.y, this.tmpPos.z, light.range);
         // Camera-carried lights illuminate surfaces; only a little of their
         // light returns as mist. Keep distant practical flames' halos intact.
-        const scatter = light.parent === this.camera ? 0.18 : 1;
+        // A light may say how much of it the mist gives back (metadata.fogScatter): the
+        // practical lights carry their surface strength, and the mist wants less of it.
+        const own = (light.metadata as { fogScatter?: number } | null)?.fogScatter;
+        const scatter = light.parent === this.camera ? 0.18 : (own ?? 1);
         light.diffuse.scaleToRef(light.intensity * scatter, this.tmpColor);
         effect.setColor3(`color${i}`, this.tmpColor);
       } else {

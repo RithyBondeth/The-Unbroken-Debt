@@ -14,7 +14,36 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Ray } from "@babylonjs/core/Culling/ray";
 import { seededRandom } from "@/audio/synth";
+import { HALL, inHall } from "../data/funeral";
+
+/** The house's floor over the funeral (tools/areas/stilt_house.py FLOOR). */
+const HOUSE_FLOOR = 2.5;
+
+/** The middle of `meshes` in plan, at the house's floor. */
+/** The protective thread's corners round the coffin (Blender x, y), just outside the four
+ * corner incense sticks (interact_incense_0..3) and clear of the stilts at (0, 18), (3, 18). */
+const RING: readonly (readonly [number, number])[] = [
+  [0.22, 16.8],
+  [2.78, 16.8],
+  [2.78, 18.6],
+  [0.22, 18.6],
+];
+/** Knee high, as the monks' thread (m over the mats). */
+const THREAD_HEIGHT = 0.8;
+
+function centreOnFloor(meshes: readonly AbstractMesh[]): Vector3 {
+  const min = new Vector3(Infinity, Infinity, Infinity),
+    max = new Vector3(-Infinity, -Infinity, -Infinity);
+  for (const mesh of meshes) {
+    mesh.computeWorldMatrix(true);
+    const box = mesh.getBoundingInfo().boundingBox;
+    min.minimizeInPlace(box.minimumWorld);
+    max.maximizeInPlace(box.maximumWorld);
+  }
+  return new Vector3((min.x + max.x) / 2, HOUSE_FLOOR, (min.z + max.z) / 2);
+}
 
 /** Period props at real scale, with separate moving parts and hollow drawer geometry. */
 export class DeskModels {
@@ -35,6 +64,9 @@ export class DeskModels {
   private readonly eyes: TransformNode[] = [];
   private readonly lids: Mesh[] = [];
   private readonly northThread: AbstractMesh[] = [];
+  /** The north side's two tied ends (north-west, north-east) and the mats' height. */
+  private threadEnds: [Vector3, Vector3] = [inHall(-1, 0.8, -6), inHall(1, 0.8, -6)];
+  private threadFloor = HALL.floor + 0.03;
   private readonly cords: Mesh[] = [];
   private readonly frays: TransformNode[] = [];
   private panelAmount = 0;
@@ -52,7 +84,15 @@ export class DeskModels {
     this.brass = this.mat("aged_brass", "#9b7840", 0.52, 0.75);
     this.iron = this.mat("lock_iron", "#242420", 0.68, 0.6);
     this.woodGrain();
-    this.compartment = this.root("altar_key_recess", new Vector3(0, 2.5, -21.365));
+    // The key recess in the hall altar's base, at the altar's front (interact_altar): the
+    // altar stands against the hall's north wall in the farmstead house (Nov 22, 2026).
+    const altar = area.level.interactables.find((m) => m.name === "interact_altar");
+    this.compartment = this.root(
+      "altar_key_recess",
+      altar
+        ? new Vector3(altar.position.x, HOUSE_FLOOR, altar.position.z)
+        : new Vector3(0, 2.5, -21.365),
+    );
     this.panel = this.root(
       "altar_hinged_panel",
       new Vector3(-0.235, 0.26, 0.025),
@@ -61,10 +101,16 @@ export class DeskModels {
     this.key = this.root("sok_desk_key", new Vector3(0, 0.26, 0.031), this.compartment);
     this.buildCompartment();
 
-    // The existing collider is retained; only the visible placeholder desk is replaced.
-    for (const mesh of area.container.meshes)
-      if (/^sok_desk(?:$|_|\.)/.test(mesh.name)) mesh.setEnabled(false);
-    this.desk = this.root("sok_investigation_desk", new Vector3(-5.2, 2.5, -17.1));
+    // The existing collider is retained; only the visible placeholder desk is replaced,
+    // where the rebuild set it: in Sok's study at the back, the room turned a quarter
+    // (-90 degrees in Blender, +90 about y here), so its drawer opens to the west.
+    const placeholder = area.container.meshes.filter((mesh) =>
+      /^sok_desk(?:$|_|\.)/.test(mesh.name),
+    );
+    const spot = placeholder.length ? centreOnFloor(placeholder) : null;
+    for (const mesh of placeholder) mesh.setEnabled(false);
+    this.desk = this.root("sok_investigation_desk", spot ?? new Vector3(-5.2, 2.5, -17.1));
+    if (spot) this.desk.rotation.y = Math.PI / 2;
     this.drawer = this.root("sok_locking_drawer", Vector3.Zero(), this.desk);
     this.journal = this.root("sok_journal_b", new Vector3(0.01, 0.608, 0.285), this.drawer);
     this.buildDesk();
@@ -74,8 +120,14 @@ export class DeskModels {
     // room, and it must stay clear of the gramophone stand at (-5.4, -15.6).
     const chair = scene.getTransformNodeByName("prop_chinese_armchair");
     if (chair) {
+      // 1.25 m along the desk from its middle, a little out: (1.25, 0.1) in the desk's frame.
       const at = chair.getAbsolutePosition();
-      chair.setAbsolutePosition(new Vector3(-3.95, at.y, -17));
+      this.desk.computeWorldMatrix(true);
+      const to = Vector3.TransformCoordinates(
+        new Vector3(1.25, 0, 0.1),
+        this.desk.getWorldMatrix(),
+      );
+      chair.setAbsolutePosition(new Vector3(to.x, at.y, to.z));
     }
 
     const photo = area.level.interactables.find((m) => m.name === "interact_portrait");
@@ -92,19 +144,42 @@ export class DeskModels {
     this.buildPortrait(authoredFrame);
 
     const cotton = this.mat("cotton", "#d4cdb7", 1);
-    // The exported village combines all four sides into one thread_mesh. Replace
-    // that mesh so the north side can actually disappear when the cord snaps.
+    // The exported village combines the old hall's thread into one thread_mesh: hidden.
     const importedThread = area.level.interactables.find((m) => m.name === "interact_thread");
     importedThread?.node.getChildMeshes().forEach((mesh) => mesh.setEnabled(false));
-    const corners = [
-      new Vector3(4, 2.3, -1),
-      new Vector3(-4, 2.3, -1),
-      new Vector3(-4, 2.3, -7),
-      new Vector3(4, 2.3, -7),
-    ];
+    // The protective thread: a ring round the coffin, knee high, tied to four slim stakes
+    // just outside the four corner incense sticks, sagging between them (it hung under the
+    // floor joists, round the whole funeral). The monks' thread from their table to the
+    // coffin is the village file's own. Its north side is the one that snaps (A3-01).
+    const stake = this.mat("stake", "#5c4a33", 0.9);
+    const floorAt = (x: number, z: number): number => {
+      const ray = new Ray(new Vector3(x, HALL.floor + 0.3, z), Vector3.Down(), 1);
+      const hit = scene.pickWithRay(
+        ray,
+        (m) => m.isVisible && m.isEnabled() && !/thread|flame|candle|incense/.test(m.name),
+      );
+      return hit?.pickedPoint?.y ?? HALL.floor;
+    };
+    // Blender (x, y) of the corners, south-west round to north-west.
+    const ring = RING.map(([bx, by]) => {
+      const x = -bx,
+        z = -by,
+        y = floorAt(x, z);
+      const post = CreateCylinder(
+        `protective_thread_stake_${bx}_${by}`,
+        { height: THREAD_HEIGHT + 0.1, diameterTop: 0.016, diameterBottom: 0.024, tessellation: 8 },
+        scene,
+      );
+      post.position.set(x, y + (THREAD_HEIGHT + 0.1) / 2 - 0.02, z);
+      post.rotation.set((by - 17.7) * 0.02, 0, (bx - 1.5) * 0.015);
+      post.material = stake;
+      this.meshes.push(post);
+      return new Vector3(x, y + THREAD_HEIGHT, z);
+    });
+    this.threadFloor = Math.min(...ring.map((p) => p.y)) - THREAD_HEIGHT + 0.012;
     for (let i = 0; i < 4; i++) {
-      const a = corners[i],
-        b = corners[(i + 1) % 4];
+      const a = ring[i],
+        b = ring[(i + 1) % 4];
       const path = Array.from({ length: 33 }, (_, k) => {
         const t = k / 32,
           point = Vector3.Lerp(a, b, t);
@@ -113,13 +188,14 @@ export class DeskModels {
       });
       const cord = CreateTube(
         `protective_thread_side_${i}`,
-        { path, radius: 0.004, tessellation: 8 },
+        { path, radius: 0.003, tessellation: 8 },
         scene,
       );
       cord.material = cotton;
       this.intactThreadMeshes.push(cord);
       if (i === 2) this.northThread.push(cord);
     }
+    this.threadEnds = [ring[3], ring[2]];
     for (const side of [-1, 1]) {
       const cord = CreateTube(
         `broken_thread_${side}`,
@@ -202,14 +278,23 @@ export class DeskModels {
     }
   }
 
+  /**
+   * Each snapped half of the monks' thread: from its tied end (the monks' table, -1, or
+   * the coffin, +1) towards the break near the middle, sagging and, as `drop` runs to 1,
+   * falling to lie on the mats.
+   */
   private cordPath(side: number, drop: number): Vector3[] {
+    const [a, b] = this.threadEnds;
+    const from = side < 0 ? a : b;
+    const to = side < 0 ? b : a;
+    const floor = this.threadFloor;
     return Array.from({ length: 25 }, (_, k) => {
       const t = k / 24;
-      return new Vector3(
-        side * (4 - t * (3.98 - drop * 0.38)),
-        2.3 - 0.1 * Math.sin(t * Math.PI) - drop * 0.94 * t ** 2,
-        -7 + Math.sin(t * 3) * drop * 0.05,
-      );
+      const p = Vector3.Lerp(from, to, t * (0.49 - drop * 0.12));
+      const sag = 0.04 * Math.sin(t * Math.PI) + drop * (p.y - floor) * t ** 1.5;
+      p.y = Math.max(floor, p.y - sag);
+      p.x += Math.sin(t * 3) * drop * 0.05 * side;
+      return p;
     });
   }
 
@@ -568,8 +653,9 @@ export class DeskModels {
       lid.parent = lidRoot;
       this.lids.push(lid);
     }
-    this.portrait.rotation.x = authoredFrame ? Math.PI / 18 : -0.12;
-    if (authoredFrame) this.portrait.scaling.set(0.404 / 0.3, 0.56 / 0.4, 1);
+    // The wreath's photograph under the house stands upright, 0.3 by 0.4 m, in its red
+    // frame (funeral_under.wreath_portrait): the animated one lies exactly over it.
+    this.portrait.rotation.x = authoredFrame ? 0 : -0.12;
   }
 
   private woodGrain(): void {

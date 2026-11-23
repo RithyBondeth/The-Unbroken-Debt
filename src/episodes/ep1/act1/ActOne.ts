@@ -1,5 +1,8 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { Material } from "@babylonjs/core/Materials/material";
+import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { Game } from "@/core/Game";
 import { loadArea, type Area } from "@/core/areaLoader";
 import { seededRandom } from "@/audio/synth";
@@ -14,9 +17,8 @@ import { ForestBorder } from "./ForestBorder";
 import { TallGrass } from "./TallGrass";
 import { TreeOmens } from "./TreeOmens";
 import { blendPathGround } from "./pathGround";
-import { GuestTent } from "./GuestTent";
-import { PLAY, WATER_Y } from "../data/forestBorder";
-import { PaddyWater } from "./PaddyWater";
+import { GROW_FOREST, PLAY } from "../data/forestBorder";
+import { ROOFS } from "../data/farmLayout";
 import { DAWN_LOOK } from "@/render/nightLook";
 import { VILLAGE_NIGHT } from "../data/villageLook";
 import { GROUND_MIST } from "../data/forestAtmosphere";
@@ -33,13 +35,13 @@ import { WindAudio, stingGust } from "../audio/WindAudio";
 import { Vigil } from "./Vigil";
 import { NightLife } from "./NightLife";
 import { Apparitions } from "./Apparitions";
-import { PondSpirit } from "./PondSpirit";
 import { ShadowFigure } from "@/shared/entities/ShadowFigure";
 import { Preay } from "../entities/Preay";
 import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
 import { TENT_FLAME_MESH } from "../data/arrival";
+import { inFuneralRoom } from "../data/funeral";
 import { OfferingModels } from "./OfferingModels";
 import { SokRoomModels } from "../act2/SokRoomModels";
 import { SokInvestigation } from "../act2/SokInvestigation";
@@ -63,13 +65,35 @@ import { EarlyStealth } from "./EarlyStealth";
 import { SavePoint } from "@/systems/saves/SavePoint";
 import { PhraPhum } from "./PhraPhum";
 import { KrasueEncounter } from "../entities/KrasueEncounter";
-import { KrasueModel } from "@/shared/entities/KrasueModel";
+import { KrasueFlyer } from "../entities/KrasueFlyer";
+import { DEV_SPOTS } from "../data/devSpots";
 import { FuneralRoom } from "./FuneralRoom";
+import { FuneralWatcher } from "./FuneralWatcher";
+import { applySkyShelter } from "@/render/skyShelter";
+import { HOUSE_SHELTER } from "../data/shelter";
+import { BarnGate, BARN_GATE_MESH } from "../act3/BarnGate";
+import { Trapdoor, TRAPDOOR_MESH } from "./Trapdoor";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_LOCATION,
   inSaveShrineClearing,
 } from "../data/saveShrine";
+
+/** Props smaller than this (bounding radius, m) are not drawn past SMALL_PROP_DISTANCE. */
+const SMALL_PROP_RADIUS = 0.35;
+const SMALL_PROP_DISTANCE = 14;
+/**
+ * How far the merged plant batches are drawn (m, to a batch's middle; its cell is up to
+ * 24 m across). Past it the rain mist has the farm: at the farmstead's fog a tree 70 m
+ * off keeps a tenth of its contrast (Nov 22, 2026: the farm's plants are 7 M triangles).
+ */
+const PLANT_DISTANCE: Record<string, number> = { low: 62, medium: 86, high: 120 };
+/**
+ * What a full lightning flash adds to the mist's own light (linear RGB): the previews'
+ * flash frames, a deep slate blue in which the red earth still shows (0.3, 0.34, 0.42
+ * washed the farm out to grey-white; Nov 23 side-by-sides).
+ */
+const FLASH_MIST: readonly [number, number, number] = [0.15, 0.19, 0.29];
 
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
@@ -86,15 +110,13 @@ export class ActOne {
   private rain!: RainStreaks;
   private sky!: StormSky;
   border!: ForestBorder;
-  water!: PaddyWater;
   funeralRoom!: FuneralRoom;
-  grass!: TallGrass;
-  omens!: TreeOmens;
+  grass: TallGrass | null = null;
+  omens: TreeOmens | null = null;
   private drips!: EaveDrips;
   vigil!: Vigil;
   night!: NightLife;
   apparitions!: Apparitions;
-  pondSpirit!: PondSpirit;
   betel!: BetelOffering;
   beats!: ActOneBeats;
   investigation!: SokInvestigation;
@@ -107,10 +129,12 @@ export class ActOne {
   early!: EarlyStealth;
   saveShrine!: PhraPhum;
   krasue!: KrasueEncounter;
+  barnGate!: BarnGate;
+  trapdoor!: Trapdoor;
+  watcher!: FuneralWatcher;
   private resolutionDelay = 0;
   private running = false;
   forest!: ForestAtmosphere;
-  private guests!: GuestTent;
   private lowMist: LowGroundMist | null = null;
   private readonly rainAt = new Vector3();
   private rainSound: StaticSound | null = null;
@@ -120,6 +144,8 @@ export class ActOne {
   private windAudio!: WindAudio;
   private plantSites: PlantSite[] = [];
   private wasFlashing = false;
+  /** 0-1: how far night sight has turned to candlelight (the funeral room). */
+  private candlelit = 0;
 
   constructor(private readonly game: Game) {}
 
@@ -132,10 +158,15 @@ export class ActOne {
       keep: [
         /^tingmong_\d+$/,
         "neakta_stone_watch",
-        "pond_spirit",
         "door_sok_padlock",
         "shed_padlock",
         TENT_FLAME_MESH,
+        // The rooms' candle flames, each wavering on its wick (FuneralRoom).
+        /^house_flame_[\d_]+$/,
+        // The barn gate's leaf, padlock and chain (O3: BarnGate swings it open).
+        BARN_GATE_MESH,
+        // The hall trapdoor's lid (O6: Trapdoor lifts it).
+        TRAPDOOR_MESH,
         /^sok_desk(?:$|_|\.)/,
         "portrait_sok",
         /^floor_board_(10|11|12|13)(\.|$)/,
@@ -172,22 +203,25 @@ export class ActOne {
       },
     });
     this.border.build();
+    // The farmstead (Nov 22, 2026) is overgrown: tall grass wherever nobody walks
+    // (data/grass.ts). The threads and rags tied round trunks stay with GROW_FOREST.
     this.grass = new TallGrass(
       game.scene,
       game.preset,
       game.wind,
       (x, z) => this.border.groundAt(x, z),
-      // Tall grass grows on dry ground only: never out of the paddies' water.
-      (x, z, r) => this.border.clear(x, z, r) && this.border.groundAt(x, z) > WATER_Y + 0.04,
+      (x, z, r) => this.border.clear(x, z, r),
       this.border.grassClump,
     );
-    this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
-    this.omens.build(this.plantSites);
+    if (GROW_FOREST) {
+      this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
+      this.omens.build(this.plantSites);
+    }
     game.fallGuard.bounds = PLAY;
     const [, , , preay] = await Promise.all([
       ShadowFigure.prepare(game.scene),
       PhraPhum.prepare(game.scene),
-      KrasueModel.prepare(game.scene),
+      KrasueFlyer.prepare(game.scene),
       Preay.load(game.scene),
     ]);
     const offeringModels = new OfferingModels(game.scene);
@@ -195,19 +229,24 @@ export class ActOne {
     const sokModels = new SokRoomModels(game.scene, this.area);
     const walkerModels = new WalkerModels(game.scene, this.area, preay);
     const deskModels = new DeskModels(game.scene, this.area);
-    const huntModels = new HuntModels(game.scene, this.area, preay);
+    const huntModels = new HuntModels(game.scene, this.area, preay, (x, z) =>
+      this.border.groundAt(x, z),
+    );
     const chestModels = new ChestModels(game.scene, this.area);
     const corpseModels = await CorpseModels.load(game.scene, this.area);
     const arrivalModels = new ArrivalModels(game.scene);
-    this.guests = new GuestTent(game.scene, (x, z) => this.border.groundAt(x, z));
     this.sky = new StormSky(game.scene);
-    // The paddies' water: after the sky and the forest border, which it reflects.
-    this.water = new PaddyWater(game, (x, z) => this.border.groundAt(x, z));
     // The hall the coffin lies in: wavering flames, incense smoke, the haze under its ceiling.
     this.funeralRoom = new FuneralRoom(game.scene, this.area, game.preset.name === "low");
     game.scene.onDisposeObservable.addOnce(() => this.funeralRoom.dispose());
-    this.lights = new VillageLights(game.scene, this.area, game.camera);
+    this.lights = new VillageLights(
+      game.scene,
+      this.area,
+      game.camera,
+      game.preset.clusteredLights,
+    );
     gradeJungle(game.scene.materials);
+    sheerNets(game.scene.materials);
     blendPathGround(game.scene);
     applyFoliageWind(game.scene.materials, game.wind);
     this.windAudio = new WindAudio(game, game.wind, {
@@ -219,6 +258,8 @@ export class ActOne {
     this.rain.system.emitter = this.rainAt;
     this.rain.system.minEmitBox.set(-9, 0, -9);
     this.rain.system.maxEmitBox.set(9, 0, 9);
+    // Never through a roof: dry under the house (the funeral), in the sheds and huts.
+    this.rain.shelter(ROOFS);
     this.drips = new EaveDrips(game.scene, this.area);
 
     const spawn = this.area.level.spawns.get("player");
@@ -251,6 +292,16 @@ export class ActOne {
                 ? Math.PI
                 : (spawn?.yaw ?? 0),
     );
+    // Development: `?start=act1&at=hall` (see DEV_SPOTS) starts Sora inside the house.
+    const devAt = import.meta.env.DEV ? new URLSearchParams(location.search).get("at") : null;
+    const devSpot = devAt ? DEV_SPOTS[devAt] : undefined;
+    if (devSpot) {
+      game.player.teleport(new Vector3(...devSpot.feet), devSpot.yaw);
+      game.fallGuard.reset(game.player.feet);
+    }
+    // The area's ladders (the trapdoor's, the attic's, the barn loft's and the kitchen
+    // and servants' houses'): the player climbs only the ones it is given.
+    for (const ladder of this.area.level.ladders) game.player.addLadder(ladder);
     const saved = game.resumedSave;
     if (saved && saved.flags["checkpoint.spawn.cp"] === saved.checkpoint) {
       const p = ["x", "y", "z", "yaw"].map((axis) => saved.flags[`checkpoint.spawn.${axis}`]);
@@ -266,6 +317,8 @@ export class ActOne {
       if (game.flags.get(`ep1.pickup.${name}`, false)) node.setEnabled(false);
       else game.interaction.add(name, node);
     }
+    this.barnGate = new BarnGate(game, this.area);
+    this.trapdoor = new Trapdoor(game, this.area);
     this.vigil = new Vigil(game, this.area, this.lights);
     await this.vigil.load();
     this.night = new NightLife(game, this.area, () =>
@@ -278,7 +331,9 @@ export class ActOne {
     this.apparitions = new Apparitions(game, this.area, this.lights, preay);
     // The Preay walks on the village's real ground: down into the paddies, up the banks.
     this.apparitions.walksOn((x, z) => this.border.groundAt(x, z));
-    this.pondSpirit = new PondSpirit(game, this.area, this.lights, preay);
+    // The approved previews' watcher behind the monks' table at the funeral (Act I).
+    this.watcher = new FuneralWatcher(game, preay, (x, z) => this.border.groundAt(x, z));
+    game.scene.onDisposeObservable.addOnce(() => this.watcher.dispose());
     this.betel = new BetelOffering(game, this.area, offeringModels);
     this.beats = new ActOneBeats(
       game,
@@ -336,11 +391,89 @@ export class ActOne {
       () => !this.early.active && !game.hiding && !game.flags.get("ep1.seal1.broken", false),
       this.saveShrine,
     );
+    this.cullSmallProps();
+    this.cullFarPlants();
+    this.unpickDecor();
+    // No sky in the rooms or under the floor: the previews are black there but for the
+    // candles, the lamps and Sora's lantern.
+    const sheltered = applySkyShelter(game.scene.materials, HOUSE_SHELTER);
+    console.info(`[ActOne] ${sheltered} materials sheltered from the sky in the house`);
+  }
+
+  /**
+   * In the funeral room the dark round Sora is candlelit, not moonlit: night sight
+   * turns warm and drops back so the shroud stays the colour of old cotton and the
+   * candles carry the room (Nov 20, 2026, against the approved previews).
+   */
+  private candlelitSight(dt: number): void {
+    // Dawn sets its own night sight (DawnResolution); leave it be then.
+    if (this.resolution?.active) return;
+    const sight = this.game.atmosphere.nightSight;
+    const inside = inFuneralRoom(this.game.player.feet) ? 1 : 0;
+    this.candlelit += (inside - this.candlelit) * Math.min(1, dt * 1.5);
+    const k = this.candlelit;
+    this.lights.indoors = k;
+    sight.diffuse.set(0.55 + 0.27 * k, 0.62 + 0.02 * k, 0.75 - 0.3 * k);
+    this.game.atmosphere.nightSightIntensity = VILLAGE_NIGHT.nightSightIntensity * (1 - 0.45 * k);
+  }
+
+  /**
+   * Decoration does not stop the interaction ray: the offerings, candles, cloth, fences
+   * and plants are dense merged meshes, and testing the ray against their triangles
+   * every frame cost 40 ms at the altar. What hangs under an `interact_` node stays.
+   */
+  private unpickDecor(): void {
+    const decor =
+      /(offering|phra_phum_|^M_fo_|shroud|^M_cp_|^M_rk_|^M_flora_|incense|flame|marigold|jasmine|beeswax|^M_funeral_petal|^M_rice$)/i;
+    let n = 0;
+    for (const mesh of this.game.scene.meshes) {
+      if (!mesh.isPickable || !decor.test(mesh.material?.name ?? "")) continue;
+      let used = false;
+      for (let p = mesh.parent; p && !used; p = p.parent) used = /^interact_/.test(p.name);
+      if (used || /^interact_/.test(mesh.name)) continue;
+      mesh.isPickable = false;
+      n++;
+    }
+    console.info(`[ActOne] ${n} decorative meshes left out of the interaction ray`);
+  }
+
+  /**
+   * Small things are not drawn from far off: a matchbox, a hinge or a jar's lid 14 m
+   * away is a pixel in the dark, and the house's props were a thousand draw calls seen
+   * from the lane (Nov 20, 2026). Flames, skinned figures and merged batches are left.
+   */
+  private cullFarPlants(): void {
+    const distance = PLANT_DISTANCE[this.game.preset.name];
+    if (!distance) return;
+    let culled = 0;
+    for (const mesh of this.game.scene.meshes) {
+      if (!(mesh instanceof Mesh) || !/^batch_/.test(mesh.name) || mesh.hasLODLevels) continue;
+      if (!PLANTS.test(mesh.material?.name ?? "")) continue;
+      mesh.addLODLevel(distance, null);
+      culled++;
+    }
+    console.info(`[ActOne] ${culled} plant batches drawn only within ${distance} m`);
+  }
+
+  private cullSmallProps(): void {
+    let culled = 0;
+    for (const mesh of this.game.scene.meshes) {
+      if (!(mesh instanceof Mesh) || mesh.skeleton || mesh.getTotalVertices() === 0) continue;
+      if (/^batch/.test(mesh.name) || mesh.material?.name === "M_flame") continue;
+      if (mesh.hasLODLevels) continue;
+      mesh.computeWorldMatrix(true);
+      if (mesh.getBoundingInfo().boundingSphere.radiusWorld > SMALL_PROP_RADIUS) continue;
+      mesh.addLODLevel(SMALL_PROP_DISTANCE, null);
+      culled++;
+    }
+    console.info(`[ActOne] ${culled} small props drawn only within ${SMALL_PROP_DISTANCE} m`);
   }
 
   async begin(): Promise<void> {
     const game = this.game;
-    game.addFlameLights(...this.lights.flames.slice(0, 4), this.lights.lamp);
+    // The fog's halos: Sora's lamp and the four flames that reach her most, chosen afresh
+    // each frame (VillageLights.chooseFogLights).
+    this.lights.fogLights = game.pipeline.fog?.lights ?? null;
     // A dark monsoon night: the lamp's warm pool, flames and lightning, and little
     // else; adapted eyes find shapes a few metres out. The exposure cap still keeps
     // extinguishing the lamp meaningfully darker.
@@ -356,7 +489,9 @@ export class ActOne {
     const fog = game.pipeline.fog;
     if (fog) {
       fog.density = VILLAGE_NIGHT.fogDensity;
-      fog.heightFalloff = 0.25;
+      // The previews' rain mist stands 16 m deep over the farm, veiling the sky as well
+      // as the trees: it thins slowly with height.
+      fog.heightFalloff = 0.09;
       fog.ambient.set(...VILLAGE_NIGHT.fogAmbient);
       fog.setMistPockets(GROUND_MIST);
       fog.setMistField(forestMistField(game.scene));
@@ -366,11 +501,11 @@ export class ActOne {
       // No volumetric fog on the Low preset: drifting wisps placed by the same mist map.
       this.lowMist = new LowGroundMist(game.scene, GROUND_MIST, spawnForestWisp, 160);
     }
-    // A monsoon night: steady wind off the paddies, gusting through the trees. The
-    // plants lean and stir in it but never thrash (the user, Nov 19: the swaying was
-    // "so much sensitive"); the wind is heard at full strength.
+    // A monsoon night: the wind is heard at full strength, but nothing drawn moves
+    // in it. Trees, palms, grass and hanging cloth stand still (the user, Nov 20:
+    // "Everything is so shake. Don't make interact with the wind").
     game.wind.base = 0.55;
-    game.wind.sway = 0.4;
+    game.wind.sway = 0;
     game.scene.onDisposeObservable.addOnce(() => (game.wind.sway = 1));
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { act: ActOne }).act = this;
@@ -398,22 +533,28 @@ export class ActOne {
       rotation: node.rotation.clone(),
       enabled: node.isEnabled(),
     }));
-    this.walker.models.pose(new Vector3(-1.85, 2.5, -13.8), new Vector3(0, 0, -1), 0);
+    // The farmstead (Nov 22, 2026): the walker in the hall over the funeral, the hunter
+    // among the jars under the back block.
+    this.walker.models.pose(new Vector3(0, 2.5, -14.5), new Vector3(0, 0, -1), 0);
     this.walker.models.walker.setEnabled(true);
-    this.hunt.models.pose(new Vector3(-1.5, 0, -10.65), new Vector3(0, 0, -1), 0, 1);
+    this.hunt.models.pose(new Vector3(2.6, 0, -26.5), new Vector3(0, 0, -1), 0, 1);
     try {
+      // Where Sora will look: the track from the gate, the yard and the house, the funeral
+      // under it, the hall, the long corridor, Sok's study, the kitchen house, the barn.
       await warmSceneViews(this.game.scene, this.game.camera, [
-        { eye: new Vector3(0, 1.58, 53), target: new Vector3(0, 1.3, 40) },
-        { eye: new Vector3(0, 1.58, 46), target: new Vector3(5, 1.25, 37.2) },
-        { eye: new Vector3(0, 1.58, 24), target: new Vector3(0, 1.3, 6) },
-        { eye: new Vector3(0, 1.58, 8), target: new Vector3(0, 1.3, -10) },
+        { eye: new Vector3(0, 1.58, 42), target: new Vector3(-1, 1.3, 26) },
+        { eye: new Vector3(1, 1.58, 18), target: new Vector3(0.5, 1.3, 2) },
+        { eye: new Vector3(0, 1.58, 0), target: new Vector3(0, 1.8, -12) },
+        { eye: new Vector3(-2.4, 1.58, -11.4), target: new Vector3(-1.2, 1.0, -19) },
         {
           eye: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.58, 3)),
           target: SAVE_SHRINE_POSITION.add(new Vector3(0, 1.6, 0)),
         },
-        { eye: new Vector3(0.25, 4.08, -12), target: new Vector3(0.25, 3.3, -16) },
-        { eye: new Vector3(-1.85, 4.08, -21.05), target: new Vector3(-1.85, 3.65, -13.8) },
-        { eye: new Vector3(-2.4, 1.58, -12.8), target: new Vector3(-1.5, 0.96, -10.65) },
+        { eye: new Vector3(-2.2, 4.12, -12.1), target: new Vector3(0.6, 3.4, -17.4) },
+        { eye: new Vector3(-0.15, 4.1, -22.55), target: new Vector3(0, 3.6, -34) },
+        { eye: new Vector3(1.7, 4.05, -25), target: new Vector3(7.5, 3.2, -25.3) },
+        { eye: new Vector3(14.5, 1.7, -6.5), target: new Vector3(24, 3.2, -19) },
+        { eye: new Vector3(-22.2, 2.8, -22.5), target: new Vector3(-28.5, 1.7, -23) },
       ]);
     } finally {
       finishForest();
@@ -430,11 +571,9 @@ export class ActOne {
     const game = this.game;
     const eye = game.camera.globalPosition;
     this.windAudio.update(dt);
-    // Still water, no rain pocks (the user, Nov 19: the water moved too much); rings
-    // only where Sora wades or something breaks the surface.
-    this.water.update(dt, 0);
     this.funeralRoom.update(dt, this.lights.tentLevel);
-    this.grass.update(dt, eye);
+    this.candlelitSight(dt);
+    this.grass?.update(dt, eye);
     if (this.resolution.active) {
       this.resolution.update(dt);
       return;
@@ -447,10 +586,11 @@ export class ActOne {
       }
     }
     this.vigil.update(dt);
+    this.barnGate.update(dt);
+    this.trapdoor.update(dt);
     this.early.update(dt);
     if (!this.early.active) {
       this.apparitions.update(dt);
-      this.pondSpirit.update(dt);
       this.betel.update(dt);
       this.beats.update(dt);
       this.investigation.update(dt);
@@ -460,13 +600,8 @@ export class ActOne {
       this.chest.update(dt);
       this.ritual.update(dt);
     }
-    this.guests.update(
-      dt,
-      game.camera.globalPosition,
-      this.lights.tentLevel,
-      game.flags.get("ep1.act2.started", false),
-    );
     this.krasue.update(dt, this.early.active || this.apparitions.active);
+    this.watcher.update(dt, !this.early.active && !this.apparitions.active);
     // Story scripts get first refusal on the soundscape every frame.
     this.forest.update(
       dt,
@@ -480,7 +615,6 @@ export class ActOne {
         ? 0
         : Math.max(
             this.apparitions.dread * 0.55,
-            this.pondSpirit.dread * 0.5,
             this.night.threatSilence * 0.4,
             (this.forest?.silence ?? 0) * 0.35,
             (this.saveShrine?.silence ?? 0) * 0.4,
@@ -505,7 +639,16 @@ export class ActOne {
     this.rain.system.direction2.set(wind.dirX * slant + 0.01, -1, wind.dirZ * slant + 0.08);
     this.rainAt.set(eye.x - wind.dirX * slant * 4, eye.y + 7, eye.z - wind.dirZ * slant * 4);
     // Unlit streaks: faint in the dark, warmed a little by the lamp, white in lightning.
-    this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.12, 0.25);
+    // Pale streaks against the dark, as the previews' rain (warmed by the lamp, white in
+    // lightning); at a quarter of this they were never seen.
+    this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.25, 0.55);
+    // The lightning lights the mist: the whole night goes a pale blue-grey for the flash.
+    const mist = game.pipeline.fog;
+    if (mist && !this.resolution.active) {
+      const f = this.lights.storm.level;
+      const [r, g, b] = VILLAGE_NIGHT.fogAmbient;
+      mist.ambient.set(r + f * FLASH_MIST[0], g + f * FLASH_MIST[1], b + f * FLASH_MIST[2]);
+    }
     this.drips.light(this.lights.storm.level);
     this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure, dt);
     game.atmosphere.update(dt, this.lights.lightAtEye(eye));
@@ -589,7 +732,6 @@ export class ActOne {
       await this.investigation.makeSounds();
       return;
     }
-    await this.water.makeSounds();
     const rate = audio.context.sampleRate;
     const eye = this.game.camera.globalPosition;
     // Two takes, one per ear: rain all round, not a point at the listener's head.
@@ -617,15 +759,12 @@ export class ActOne {
       stingGust(this.game.wind, kind, volume, this.score.lead(kind));
     await this.score.load();
     this.apparitions.score = this.score;
-    this.pondSpirit.score = this.score;
     this.saveShrine.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
     await this.forest.makeSounds();
     await this.windAudio.makeSounds();
     await this.apparitions.makeSounds();
-    await this.pondSpirit.makeSounds();
-    await this.guests.makeSounds(audio);
     await this.betel.makeSounds();
     await this.beats.makeSounds();
     await this.investigation.makeSounds();
@@ -637,5 +776,20 @@ export class ActOne {
     await this.early.makeSounds();
     await this.krasue.makeSounds();
     await this.saveShrine.makeSounds();
+  }
+}
+
+/**
+ * The mosquito nets: sheer, as in the approved previews. Exported as a cut-out of fine
+ * threads, they thinned to nothing once mipmapped and the nets vanished; drawn instead
+ * as one see-through layer of the net's own colour.
+ */
+function sheerNets(materials: readonly Material[]): void {
+  for (const material of materials) {
+    if (!(material instanceof PBRMaterial) || !/mosquito_net/.test(material.name)) continue;
+    material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+    material.useAlphaFromAlbedoTexture = false;
+    material.alpha = 0.26;
+    material.backFaceCulling = false;
   }
 }

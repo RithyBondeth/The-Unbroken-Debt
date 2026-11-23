@@ -334,4 +334,5 @@ export const studioPrintTextures = [
   atlas("colour"),
   atlas("nineties_p"),
   atlas("nineties_l"),
+  atlas("house"),
 ];

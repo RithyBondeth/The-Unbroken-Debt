@@ -7,7 +7,7 @@ import type { Vigil } from "../act1/Vigil";
 import { wetStep, seededRandom } from "@/audio/synth";
 import { jarLid } from "../audio/actThreeSounds";
 import { StalkerVoice } from "../audio/StalkerVoice";
-import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, JARS, inHunt } from "../data/hunt";
+import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, HOUSE_ARENA, JARS, arenaAt, inHunt } from "../data/hunt";
 import { HuntProgress } from "./HuntProgress";
 import { RoamerBrain } from "./RoamerBrain";
 import type { HuntModels } from "./HuntModels";
@@ -133,7 +133,7 @@ export class UnderHouseHunt {
       g.stopInspecting();
       g.satchel.close();
       g.sketchbook?.close();
-      this.brain.start();
+      this.brain.start(arenaAt(g.player.feet) ?? HOUSE_ARENA);
       this.intro = 2.5;
       this.stepCount = 0;
       g.hints.show("hint.underHouse", 12);
@@ -274,7 +274,8 @@ export class UnderHouseHunt {
       } else if (spec.contents === "lore") {
         this.remember("L2");
         g.hints.show("note.jarLore", 5);
-      } else g.hints.show("note.jarOil", 4);
+      } else if (spec.contents === "gate") g.hints.show("note.barnKey", 5);
+      else g.hints.show("note.jarOil", 4);
     }
     this.commit();
   }
