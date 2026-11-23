@@ -8,7 +8,10 @@ from pathlib import Path
 from mathutils import Vector, Matrix, Quaternion
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT/'tools/areas'))
+sys.path.insert(0, str(ROOT/'tools/travel'))
 from kit import library_material, plain, world_uvs
+from taxi_cabin_details import apply_cabin_details
+from taxi_roadside_details import apply_roadside_details
 OUT = ROOT/'art-export/ep1'
 OUT.mkdir(parents=True, exist_ok=True)
 ART = ROOT/'art-source/blender/ep1'
@@ -187,8 +190,8 @@ def cabin():
     parts={o.name.split('_M_')[0]+('' if '.0' not in o.name else o.name[-4:]):o for o in import_glb(CAR_SCAN)}
     for o in parts.values(): o.data.transform(Matrix.Translation((0,0,-CAR_FLOOR)))
     # Photo-textured linings for what the car's own maps leave as flat paint.
-    headliner=library_material('rough_linen','M_taxi_headliner',tint=(.1,.092,.076),tile=.22)
-    cloth=library_material('quatrefoil_jacquard_fabric','M_taxi_trim_cloth',tint=(.26,.22,.18),tile=.3)
+    headliner=library_material('rough_linen','M_taxi_headliner',tint=(.095,.088,.076),tile=.22)
+    cloth=library_material('rough_linen','M_taxi_trim_cloth',tint=(.085,.078,.068),tile=.26)
     carpet=library_material('dirty_carpet','M_taxi_carpet',tint=(.42,.38,.33),tile=.7)
     fascia=library_material('rosewood_veneer1','M_taxi_dashboard_walnut',tint=(.26,.17,.11),tile=.28)
     steel=library_material('rusty_metal','M_taxi_painted_steel',colour=(.028,.03,.028),tile=.5)
@@ -224,9 +227,10 @@ def cabin():
                 for f in group:
                     n=f.normal; fc=f.calc_center_median()
                     if n.z>.6 and fc.z<.15: f.material_index=slot(o,carpet)
-                    elif fc.z>1.1: f.material_index=slot(o,headliner)
-                    elif -.75<fc.y<-.45 and .35<fc.z<.85 and abs(fc.x)<.5: f.material_index=slot(o,fascia)
-                    elif fc.y<-.45: f.material_index=slot(o,steel)
+                    elif fc.z>.86: f.material_index=slot(o,headliner)
+                    elif -.78<fc.y<-.40 and .35<fc.z<=.86 and abs(fc.x)<.62: f.material_index=slot(o,fascia)
+                    elif fc.y<-.42: f.material_index=slot(o,steel)
+                    elif fc.z>.72: f.material_index=slot(o,headliner)
                     else: f.material_index=slot(o,cloth)
             elif name.startswith('SM_door') or name.startswith('Object136') or name.startswith('SM_external'):
                 rgb=Vector((0,0,0))
@@ -243,11 +247,11 @@ def cabin():
                 # cloth, and the roof skin seen from the seats with the headliner.
                 for f in group:
                     fc=f.calc_center_median(); n=f.normal
-                    inside=abs(fc.x)<.68 and -.45<fc.y<1.62
+                    inside=abs(fc.x)<.68 and -.52<fc.y<1.62
                     # Pillars and roof are cloth-covered above the sills, as the headlining ran down them.
-                    if inside and abs(fc.x)<.645 and fc.z>.74 and fc.y>-.62 and (fc.y>-.42 or abs(fc.x)>.5): f.material_index=slot(o,headliner)
+                    if inside and abs(fc.x)<.645 and fc.z>.72 and fc.y>-.62 and (fc.y>-.46 or abs(fc.x)>.47): f.material_index=slot(o,headliner)
                     # (The car's normals here are not reliable: the inner skin lies inboard of the outer.)
-                    elif abs(fc.x)<.645 and -.45<fc.y<1.62 and .0<fc.z<.74 and abs(n.x)>.5: f.material_index=slot(o,cloth)
+                    elif abs(fc.x)<.645 and -.48<fc.y<1.62 and .0<fc.z<.72 and abs(n.x)>.5: f.material_index=slot(o,cloth)
         bm.faces.ensure_lookup_table()
         if doomed: bmesh.ops.delete(bm,geom=list(set(doomed)),context='FACES')
         bm.to_mesh(o.data); bm.free(); o.data.update()
@@ -322,6 +326,7 @@ def cabin():
     driver(bakelite)
     driver_on_scan()
     passenger_on_scan()
+    apply_cabin_details(library_material, plain, world_uvs, neck_pos=DRIVER_SCAN_NECK)
     export('ep1_taxi_cabin')
 
 def painted_material(name,array,rough=.8):
@@ -1233,6 +1238,7 @@ def roadside():
     # French colonial kilometre stones on the shoulder.
     for z,side in [(38,-1),(238,-1),(438,-1)]:
         plant('milestone',side*3.2,z,1,yaw=math.pi/2,clear=None,label='milestone_'+str(z),lift=-.2,ground=True,anywhere=True)
+    apply_roadside_details(mats,rng,w,road_point,road_heading,PADDY_WATER,library_material,plain,world_uvs,full_gltf_group,import_glb,plant)
     for obj in far_templates:bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.scenes.remove(original)
     bpy.data.orphans_purge(do_recursive=True)
@@ -1285,14 +1291,38 @@ def road_surface(mats,rng):
             for j in range(steps): a=(i-r0)*(steps+1)+j; fs.append((a,a+steps+1,a+steps+2,a+1))
         smooth(mesh(name,vs[r0*(steps+1):(r1+1)*(steps+1)],fs,material))
     puddle=mats['M_puddle']
+    ditch_water=puddle.copy(); ditch_water.name='M_ditch_water'
+    puddle.blend_method='BLEND'
+    if puddle.node_tree and 'Principled BSDF' in puddle.node_tree.nodes:
+        pbs=puddle.node_tree.nodes['Principled BSDF']
+        pbs.inputs['Base Color'].default_value=(0.011,0.014,0.017,1.0)
+        pbs.inputs['Roughness'].default_value=0.036
+        pbs.inputs['Alpha'].default_value=0.92
+    ditch_water.blend_method='OPAQUE'
+    if ditch_water.node_tree and 'Principled BSDF' in ditch_water.node_tree.nodes:
+        dbs=ditch_water.node_tree.nodes['Principled BSDF']
+        dbs.inputs['Base Color'].default_value=(0.018,0.021,0.024,1.0)
+        dbs.inputs['Roughness'].default_value=0.055
+        dbs.inputs['Alpha'].default_value=1.0
     def water_patch(x,z,radius,long,name='taxi_rut_water',y=-.058,limit=ROAD_HALF_WIDTH-.08):
         # Shallow standing water lies above the road crown, never buried beneath mud.
+        # Radial UVs ((0.5, 0.5) at center -> rim on r=0.5 circle) let runtime feather puddle edges into wet mud!
         vs=[road_point(x,y,z)]; count=24
+        angles=[]
         for j in range(count):
             a=j/count*math.tau; r=radius*(.90+.07*math.sin(j*2.7)+.03*math.sin(j*4.1))
             lateral=max(-limit,min(limit,x+math.cos(a)*r)) if limit else x+math.cos(a)*r
             vs.append(road_point(lateral,y,z+math.sin(a)*long))
-        mesh(name,vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
+            angles.append(a)
+        o=mesh(name,vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
+        uvl=o.data.uv_layers.active or o.data.uv_layers.new(name='UVMap')
+        for p in o.data.polygons:
+            for li in p.loop_indices:
+                vi=o.data.loops[li].vertex_index
+                if vi==0: uvl.data[li].uv=(0.5,0.5)
+                else:
+                    a=angles[vi-1]
+                    uvl.data[li].uv=(0.5+0.49*math.cos(a),0.5+0.49*math.sin(a))
     for i in range(170):
         x=float(rng.choice([-1,1]))*.74+float(rng.normal(0,.22)); z=-24+float(rng.random()*532)
         water_patch(x,z,float(rng.uniform(.4,.95)),float(rng.uniform(.8,2.7)))
@@ -1308,7 +1338,7 @@ def road_surface(mats,rng):
                 zz=z+k; wobble=.05*math.sin(zz*.9+side)
                 vs+= [road_point(side*3.3-r+wobble,-.31,zz),road_point(side*3.3+r+wobble,-.31,zz)]
             for k in range(int(length)): a=k*2; fs.append((a,a+2,a+3,a+1))
-            mesh('taxi_ditch_water',vs,fs,puddle)
+            mesh('taxi_ditch_water',vs,fs,ditch_water)
             z+=length+float(rng.uniform(2,9))
     # Laterite gravel and pebbles kicked out of the ruts, mostly on the crown and verges.
     stone=mud
@@ -1338,9 +1368,9 @@ def road_surface(mats,rng):
     for i in range(11000):
         tx,tz=tufts[i%len(tufts)]
         x=tx+float(rng.normal(0,.035)); z=tz+float(rng.normal(0,.05))
-        h=float(rng.uniform(.05,.16)); lean=float(rng.uniform(0,math.tau)); bend=float(rng.uniform(.01,.06))
-        base=-.13+.055*(1-(x/ROAD_HALF_WIDTH)**2)+math.exp(-((abs(x)-1.0)/.12)**2)*.022-.004
-        width=float(rng.uniform(.006,.012))
+        h=float(rng.uniform(.035,.095)); lean=float(rng.uniform(0,math.tau)); bend=float(rng.uniform(.015,.048))
+        base=-.13+.055*(1-(x/ROAD_HALF_WIDTH)**2)+math.exp(-((abs(x)-1.0)/.12)**2)*.022-.008
+        width=float(rng.uniform(.0035,.0065))
         k=len(blades)
         root=Vector(road_point(x,base,z)); tip=Vector(road_point(x+math.cos(lean)*bend,base+h,z+math.sin(lean)*bend))
         across=Vector((math.cos(lean+1.57)*width,0,math.sin(lean+1.57)*width))
@@ -1738,11 +1768,14 @@ def driver_photo(photo):
     browned=np.where(lin<=.0031308,lin*12.92,1.055*np.power(np.maximum(lin,0),1/2.4)-.055)
     skin=np.clip(((rgb[...,0]-rgb[...,2])-.07)/.06,0,1)*np.clip((rgb[...,0]-rgb[...,1]+.02)/.04,0,1)*np.clip((hi-.12)/.08,0,1)
     shade=soft_shading(photo,20); mean=float(np.median(shade[(lo>.5)&(hi-lo<.08)])) if ((lo>.5)&(hi-lo<.08)).any() else .7
-    cream=np.array((.5,.46,.38),np.float32)*np.clip(shade/mean,.8,1.12)[...,None]
+    yy_w,xx_w=np.mgrid[:ht,:wd]
+    weave=(0.95+0.05*np.sin(xx_w*1.1)*np.sin(yy_w*1.1)).astype(np.float32)
+    cream=np.array((.42,.37,.30),np.float32)*np.clip(shade/mean,.72,1.12)[...,None]*weave[...,None]
     shirt=np.clip((lo-.34)/.12,0,1)*np.clip((.14-(hi-lo))/.05,0,1)
-    out=rgb*(1-skin[...,None])+browned*skin[...,None]
+    suit=rgb*np.array((.62,.58,.54),np.float32)
+    out=suit*(1-skin[...,None])+browned*skin[...,None]
     out=out*(1-shirt[...,None])+cream*shirt[...,None]
-    img=bpy.data.images.new('T_taxi_driver_clothes',wd,ht); img.pixels.foreach_set(np.concatenate([out,np.ones((ht,wd,1),np.float32)],-1).ravel()); img.pack()
+    img=bpy.data.images.new('T_taxi_driver_clothes',wd,ht); img.pixels.foreach_set(np.concatenate([np.clip(out,0,1),np.ones((ht,wd,1),np.float32)],-1).astype(np.float32).ravel()); img.pack()
     return img
 
 def simulate_sleeves(arm,body,rest,kinds):
@@ -1871,8 +1904,8 @@ def driver_on_scan():
         z=sum(rest[v].z for v in f.vertices)/len(f.vertices); x=sum(abs(rest[v].x) for v in f.vertices)/len(f.vertices)
         r=math.hypot(*(sum((rest[v].xy for v in f.vertices),Vector((0,0)))/len(f.vertices)))
         c=colour[f.index]; white=min(c)>.36 and max(c)-min(c)<.12
-        # His own neck, head and hair go; the whole collar stays, to its sewn edge.
-        if (z>1.47 and skin_like(c) and r<.09) or (z>1.6 and not white): kinds.append(3)
+        # His own neck, head and hair go cleanly (prevents stray chin triangles poking into 4K head scan!).
+        if (z>1.445 and x<.14) or z>1.54: kinds.append(3)
         # The hands beyond the cuffs (in his A-pose rest), the wrist's shaded skin included.
         elif x>.5 and z<1.2 and not white and (skin_like(c) or x>.58): kinds.append(1)
         elif white or (x>.215 and z>.95 and max(c)>.2 and not skin_like(c)): kinds.append(2)
@@ -1997,14 +2030,21 @@ def redyed(base,name,image_name,colour,shade,mean):
     return m
 
 def passenger_on_scan():
-    """Sora's seated lower body from Carla's photoscan: plain dark cotton travel trousers
-    with the scan's own folds, bare ankles, black leather pumps on the passenger mat, and
-    a cream cotton blouse tucked in at her waist."""
+    """Sora's full seated first-person human body from Carla's photoscan: cream woven
+    cotton blouse & sleeves, warm posed forearms & articulated human hands resting on
+    her thighs, tailored olive-taupe travel trousers, bare ankles, and black leather
+    pumps on the passenger floor mat. Only her head & upper neck are removed so the
+    first-person eye camera never clips inside her chin or collar."""
     for o in [o for o in bpy.data.objects if o.name.startswith('taxi_sora')]: bpy.data.objects.remove(o)
     arm,body=import_rigged('taxi_sora_scan')
     rest=[(body.matrix_world@v.co).copy() for v in body.data.vertices]
     hip=Vector(w(SORA_HIP))
     arm.location+=hip-joint(arm,bone(arm,'hip_'))
+    # Subtle natural lean back against the front passenger backrest so her torso & shoulders sit
+    # comfortably behind Sora's eye camera without obstructing downward view to her lap & shoes.
+    for sp, deg in [('spine_01', -4.0), ('spine_02', -4.0), ('spine_03', -3.0)]:
+        try: turn_bone(arm, bone(arm, sp), Vector((1, 0, 0)), math.radians(deg))
+        except StopIteration: pass
     for side,knee,ankle,ball in [('l',(-.19,-.31,.44),(-.18,-.53,.12),(-.18,-.67,.03)),
                                  ('r',(-.35,-.31,.44),(-.37,-.53,.12),(-.38,-.67,.03))]:
         # Her heels and the balls of her feet on the Rosalie's own floorboards, not through them.
@@ -2014,6 +2054,35 @@ def passenger_on_scan():
         aim(arm,bone(arm,f'upperleg_{side}'),bone(arm,f'lowerleg_{side}'),knee)
         aim(arm,bone(arm,f'lowerleg_{side}'),bone(arm,f'foot_{side}'),ankle)
         aim(arm,bone(arm,f'foot_{side}'),bone(arm,f'ball_{side}'),ball)
+    # Pose both arms & realistic human hands resting naturally palms-down ON TOP of her thighs
+    # (measured thigh tops: L=0.529->0.518, R=0.520->0.502; kept cleanly behind knees so shoes stay 100% visible!).
+    reach(arm,bone(arm,'upperarm_l'),bone(arm,'lowerarm_l'),bone(arm,'hand_l'),
+          Vector((-.190,-.215,.556)),Vector((-.05,.04,.49)))
+    reach(arm,bone(arm,'upperarm_r'),bone(arm,'lowerarm_r'),bone(arm,'hand_r'),
+          Vector((-.355,-.215,.548)),Vector((-.48,.04,.49)))
+    for side,aim_pt,palm_dir in [
+        ('l', Vector((-.225,-.335,.544)), Vector((-.16,-.08,-1.0))),
+        ('r', Vector((-.320,-.335,.534)), Vector(( .16,-.08,-1.0))),
+    ]:
+        hand=bone(arm,f'hand_{side}')
+        aim(arm,hand,bone(arm,f'middle_01_{side}'),aim_pt)
+        _,d=knuckles(arm,side)
+        want=palm_dir.normalized(); want=(want-d*want.dot(d)).normalized()
+        have=palm_of(arm,side); have=(have-d*have.dot(d)).normalized()
+        roll=math.atan2(have.cross(want).dot(d),have.dot(want))
+        turn_bone(arm,hand,d,roll)
+        curl(arm,side,0.16,0.10)
+    neck_pos=joint(arm,bone(arm,'neck_')).copy()
+    wrists={}
+    for side in ('l','r'):
+        w_pos=joint(arm,bone(arm,f'hand_{side}')).copy()
+        e_pos=joint(arm,bone(arm,f'lowerarm_{side}')).copy()
+        across,fwd=knuckles(arm,side)
+        arm_dir=(w_pos-e_pos).normalized()
+        up_dir=palm_of(arm,side)*(-1.0)
+        up_dir=(up_dir-arm_dir*up_dir.dot(arm_dir)).normalized()
+        side_dir=up_dir.cross(arm_dir).normalized()
+        wrists[side]=(w_pos,arm_dir,side_dir,up_dir)
     bake_pose(arm,body)
     colour=scan_colour(body)
     base=body.data.materials[0]
@@ -2021,32 +2090,80 @@ def passenger_on_scan():
     for f in body.data.polygons:
         z=sum(rest[v].z for v in f.vertices)/len(f.vertices)
         x=sum(abs(rest[v].x) for v in f.vertices)/len(f.vertices); c=colour[f.index]
-        if z>1.06 or (x>.24 and z>.6): kinds.append(-1)      # above her waist, and her arms
-        elif z<.16 and max(c)<.2: kinds.append(2)            # her black pumps
-        elif skin_like(c) and z<.3: kinds.append(1)          # bare ankles
-        elif z>.96 and max(c)<.25: kinds.append(3)           # her top, tucked in: a blouse now
-        else: kinds.append(0)                                # trousers
+        if z<.16 and max(c)<.22: kinds.append(2)                                  # her dark leather pumps
+        elif x>.510 or (skin_like(c) and (z<.30 or x>.475)): kinds.append(1)      # full hands/fingers/wrists & bare ankles (clean cuffs, zero white fingertips!)
+        elif z>.95 or x>.22: kinds.append(3)                                      # vintage cream 1930s linen blouse & sleeves
+        else: kinds.append(0)                                                     # tailored travel trousers
     shade=soft_shading(scan_photo(base),16)
     def mean(k): return shade_at(body,shade,{i for i,kk in enumerate(kinds) if kk==k})
-    trousers=redyed(base,'M_taxi_sora_trousers_scan','T_taxi_sora_trousers',(.115,.102,.088),shade,mean(0))
-    blouse=redyed(base,'M_taxi_sora_blouse_scan','T_taxi_sora_blouse',(.66,.62,.53),shade,mean(3))
-    skin=tinted(base,'M_taxi_sora_skin_scan',(.66,.48,.36))
+    trousers=redyed(base,'M_taxi_sora_trousers_scan','T_taxi_sora_trousers',(.28,.24,.19),shade,mean(0))
+    blouse=redyed(base,'M_taxi_sora_blouse_scan','T_taxi_sora_blouse',(.54,.49,.41),shade,mean(3))
+    skin=tinted(base,'M_taxi_sora_skin_scan',(.92,.72,.56))
+    neck_shadow=plain('M_taxi_sora_neck_cap',(.14,.11,.09),.94)
     body.data.materials.clear()
-    for m in (trousers,skin,base,blouse): body.data.materials.append(m)
+    for m in (trousers,skin,base,blouse,neck_shadow): body.data.materials.append(m)
     base.name='M_taxi_sora_shoes_scan'
     bm=bmesh.new(); bm.from_mesh(body.data); bm.faces.ensure_lookup_table()
     for f in bm.faces:
-        if kinds[f.index]>=0: f.material_index=kinds[f.index]
-    bmesh.ops.delete(bm,geom=[f for f in bm.faces if kinds[f.index]<0],context='FACES')
-    # The cut at her waist closed with blouse, seen from her own eyes as the cloth over her stomach.
-    top=[e for e in bm.edges if e.is_boundary and min(v.co.z for v in e.verts)>hip.z+.05]
-    filled=bmesh.ops.holes_fill(bm,edges=top,sides=0)['faces']
-    for f in filled: f.material_index=3
-    bmesh.ops.triangulate(bm,faces=filled)
+        f.material_index=kinds[f.index]
+    # Razor-smooth plane cut right at the base of Sora's neck (behind and below the eye camera)
+    # so her shoulders & upper chest stay 100% smooth and intact with zero jagged sawtooth edges.
+    cut_co=neck_pos-Vector((0.0,0.0,0.025))
+    cut_no=Vector((0.0,-0.18,1.0)).normalized()
+    res=bmesh.ops.bisect_plane(
+        bm,
+        geom=list(bm.verts)+list(bm.edges)+list(bm.faces),
+        plane_co=cut_co,
+        plane_no=cut_no,
+        clear_outer=True,
+        use_snap_center=False,
+    )
+    cut_edges=[g for g in res['geom_cut'] if isinstance(g,bmesh.types.BMEdge)]
+    if cut_edges:
+        filled=bmesh.ops.holes_fill(bm,edges=cut_edges,sides=0)['faces']
+        for f in filled: f.material_index=4
+        bmesh.ops.triangulate(bm,faces=filled)
     bm.to_mesh(body.data); bm.free()
     for p in body.data.polygons: p.use_smooth=True
     body.name=body.data.name='taxi_sora_legs_scan'
-    print('TAXI_SORA_SCAN faces',len(body.data.polygons),'kinds',[kinds.count(k) for k in (-1,0,1,2,3)])
+    # Delicate 1930s rectangular antique-gold tank wristwatch on a dark brown leather strap
+    # wrapped snugly around Sora's left wrist (dresses the wrist cleanly while preserving her natural scanned sleeve cuffs!).
+    coll=bpy.context.collection
+    watch_gold=plain('M_taxi_sora_watch_gold',(.58,.44,.18),.24,.92)
+    watch_strap=plain('M_taxi_sora_watch_strap',(.14,.07,.04),.68)
+    watch_dial=plain('M_taxi_sora_watch_dial',(.78,.72,.58),.22)
+    bm_wgold,bm_wstrap,bm_wdial,bm_whands=bmesh.new(),bmesh.new(),bmesh.new(),bmesh.new()
+    watch_hands=plain('M_taxi_sora_watch_hands',(.04,.05,.09),.28,.85)
+    segs=20
+    w_pos,arm_dir,side_dir,up_dir=wrists['l']
+    # Seat forward onto Sora's bare left wrist skin (+arm_dir), cleanly clear of her blouse sleeve cuff!
+    w_ctr=w_pos+arm_dir*0.015+up_dir*0.0025
+    M_w=Matrix.Translation(w_ctr)@Matrix((side_dir,arm_dir,up_dir)).transposed().to_4x4()
+    s_rings=[]
+    for dy,rx,rz in [(-0.0055,0.0315,0.0255),(0.0055,0.0315,0.0255),(0.0055,0.0278,0.0222),(-0.0055,0.0278,0.0222)]:
+        s_rings.append([bm_wstrap.verts.new(M_w@Vector((math.cos(k/segs*math.tau)*rx,dy,math.sin(k/segs*math.tau)*rz))) for k in range(segs)])
+    for r_idx in range(4):
+        rA,rB=s_rings[r_idx],s_rings[(r_idx+1)%4]
+        for k in range(segs):
+            bm_wstrap.faces.new((rA[k],rA[(k+1)%segs],rB[(k+1)%segs],rB[k]))
+    def _wbox(bm_t,loc,sz,rot_z=0.0):
+        M=M_w@Matrix.Translation(loc)@Matrix.Rotation(rot_z,4,'Z')@Matrix.Diagonal((*sz,1.0))
+        ret=bmesh.ops.create_cube(bm_t,size=1.0,matrix=M)
+        edges=list({e for v in ret['verts'] for e in v.link_edges})
+        bmesh.ops.bevel(bm_t,geom=edges,offset=0.0007,segments=1,affect='EDGES',clamp_overlap=True)
+    _wbox(bm_wgold,(0.0,0.0,0.0268),(0.0152,0.0205,0.0044))
+    _wbox(bm_wgold,(0.0,0.0114,0.0266),(0.0030,0.0026,0.0028))
+    _wbox(bm_wdial,(0.0,0.0,0.0290),(0.0114,0.0158,0.0014))
+    # Delicate blued-steel hands set to 22:45 on the rectangular tank dial
+    _wbox(bm_whands,(-0.0018,0.0012,0.0299),(0.0009,0.0046,0.0005),rot_z=0.65)
+    _wbox(bm_whands,(-0.0026,-0.0004,0.0301),(0.0007,0.0062,0.0005),rot_z=1.57)
+    for nm,bm_x,mt in [('taxi_sora_watch_case',bm_wgold,watch_gold),('taxi_sora_watch_strap',bm_wstrap,watch_strap),
+                       ('taxi_sora_watch_dial',bm_wdial,watch_dial),('taxi_sora_watch_hands',bm_whands,watch_hands)]:
+        bmesh.ops.recalc_face_normals(bm_x,faces=bm_x.faces)
+        me=bpy.data.meshes.new(nm); bm_x.to_mesh(me); bm_x.free()
+        for p in me.polygons: p.use_smooth=True
+        o=bpy.data.objects.new(nm,me); coll.objects.link(o); o.data.materials.append(mt)
+    print('TAXI_SORA_SCAN faces',len(body.data.polygons),'kinds',[kinds.count(k) for k in (0,1,2,3)])
 
 mode=sys.argv[sys.argv.index('--')+1] if '--' in sys.argv else 'all'
 if mode in ['all','roadside']: palm_card(); roadside()

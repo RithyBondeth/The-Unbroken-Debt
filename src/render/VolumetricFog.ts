@@ -6,6 +6,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { PointLight } from "@babylonjs/core/Lights/pointLight";
+import type { SpotLight } from "@babylonjs/core/Lights/spotLight";
 import type { Scene } from "@babylonjs/core/scene";
 import type { Effect } from "@babylonjs/core/Materials/effect";
 import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
@@ -17,6 +18,8 @@ import { MAX_MIST_POCKETS, type MistPocket } from "./mist";
 
 /** Lights that scatter in the fog: the lamp plus the shadowed flames. */
 const FOG_MAX_LIGHTS = 5;
+/** Directional spot cones that scatter in the fog (e.g. twin car headlamps). */
+const FOG_MAX_SPOTS = 2;
 
 const MARCH_SHADER = `
 varying vUV: vec2f;
@@ -49,6 +52,8 @@ uniform light1: vec4f; uniform color1: vec3f;
 uniform light2: vec4f; uniform color2: vec3f;
 uniform light3: vec4f; uniform color3: vec3f;
 uniform light4: vec4f; uniform color4: vec3f;
+uniform spotPos0: vec4f; uniform spotDir0: vec4f; uniform spotColor0: vec3f;
+uniform spotPos1: vec4f; uniform spotDir1: vec4f; uniform spotColor1: vec3f;
 
 // Cheap drifting density variation: a few sines instead of hashed value noise,
 // which cost about half the pass (Spike S2 measurement).
@@ -105,6 +110,28 @@ fn pointLight(p: vec3f, dir: vec3f, light: vec4f, color: vec3f) -> vec3f {
   return color * att * phase(dot(v, dir) * inverseSqrt(d2));
 }
 
+fn spotLight(p: vec3f, dir: vec3f, posRange: vec4f, dirCos: vec4f, color: vec3f) -> vec3f {
+  let toP = p - posRange.xyz;
+  let d2 = dot(toP, toP);
+  let r2 = posRange.w * posRange.w;
+  if (d2 >= r2 || d2 < 0.04) { return vec3f(0.0); }
+  let invD = inverseSqrt(d2);
+  let lDir = toP * invD;
+  let cosAngle = dot(lDir, dirCos.xyz);
+  let cosOuter = dirCos.w;
+  if (cosAngle <= cosOuter) { return vec3f(0.0); }
+  let cosInner = mix(cosOuter, 1.0, 0.32);
+  let cone = smoothstep(cosOuter, cosInner, cosAngle);
+  var att = clamp(1.0 - d2 / r2, 0.0, 1.0);
+  att = att * att / max(d2, 1.35);
+  // Stronger Mie forward scatter for wet headlamp fog beams (Schlick g ≈ 0.52).
+  let k = 0.728;
+  let cosTheta = dot(-lDir, dir);
+  let denom = 1.0 - k * cosTheta;
+  let mie = (1.0 - k * k) / (12.566 * denom * denom);
+  return color * (cone * cone * att * mie);
+}
+
 // Does this light's range reach the ray segment at all? Checked once per pixel,
 // so the step loop only pays for lights the ray actually passes near.
 fn reaches(origin: vec3f, dir: vec3f, rayLength: f32, light: vec4f) -> bool {
@@ -142,6 +169,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
   let use2 = reaches(origin, dir, rayLength, uniforms.light2);
   let use3 = reaches(origin, dir, rayLength, uniforms.light3);
   let use4 = reaches(origin, dir, rayLength, uniforms.light4);
+  let useSpot0 = reaches(origin, dir, rayLength, uniforms.spotPos0);
+  let useSpot1 = reaches(origin, dir, rayLength, uniforms.spotPos1);
 
   for (var i = 0; i < stepCount; i++) {
     let p = uniforms.cameraPos + dir * t;
@@ -171,6 +200,8 @@ fn main(input: FragmentInputs) -> FragmentOutputs {
     if (use2) { light += pointLight(p, dir, uniforms.light2, uniforms.color2); }
     if (use3) { light += pointLight(p, dir, uniforms.light3, uniforms.color3); }
     if (use4) { light += pointLight(p, dir, uniforms.light4, uniforms.color4); }
+    if (useSpot0) { light += spotLight(p, dir, uniforms.spotPos0, uniforms.spotDir0, uniforms.spotColor0); }
+    if (useSpot1) { light += spotLight(p, dir, uniforms.spotPos1, uniforms.spotDir1, uniforms.spotColor1); }
 
     let stepTransmittance = exp(-sigma * stepLength);
     // Energy-conserving integration of in-scattered light over the step.
@@ -270,6 +301,8 @@ export class VolumetricFog {
   steps: number;
   readonly ambient: Color3;
   readonly lights: PointLight[] = [];
+  /** Directional spot cones that scatter inside the volumetric mist (up to 2). */
+  readonly spots: { light: SpotLight; scatter?: number }[] = [];
   /** 0 removes only local ground mist, e.g. at dawn or during visual comparisons. */
   mistStrength = 0;
   private mistPockets: readonly MistPocket[] = [];
@@ -285,6 +318,7 @@ export class VolumetricFog {
   private readonly invView = new Matrix();
   private readonly tmpColor = new Color3();
   private readonly tmpPos = new Vector3();
+  private readonly tmpDir = new Vector3();
 
   constructor(
     private readonly scene: Scene,
@@ -331,6 +365,11 @@ export class VolumetricFog {
       `light${i}`,
       `color${i}`,
     ]).flat();
+    const spotUniforms = Array.from({ length: FOG_MAX_SPOTS }, (_, i) => [
+      `spotPos${i}`,
+      `spotDir${i}`,
+      `spotColor${i}`,
+    ]).flat();
     this.march = new PostProcess("fogMarch", "volumetricFogMarch", {
       uniforms: [
         "invView",
@@ -350,6 +389,7 @@ export class VolumetricFog {
         "fieldDensity",
         ...Array.from({ length: MAX_MIST_POCKETS }, (_, i) => [`mist${i}`, `mistShape${i}`]).flat(),
         ...lightUniforms,
+        ...spotUniforms,
       ],
       samplers: ["depthSampler", "mistFieldSampler", "mistNoiseSampler"],
       size: options.ratio,
@@ -475,6 +515,24 @@ export class VolumetricFog {
       } else {
         effect.setFloat4(`light${i}`, 0, -1000, 0, 0.01);
         effect.setColor3(`color${i}`, Color3.BlackReadOnly);
+      }
+    }
+
+    for (let i = 0; i < FOG_MAX_SPOTS; i++) {
+      const entry = this.spots[i];
+      const spot = entry?.light;
+      if (spot && spot.isEnabled() && spot.intensity > 0.01) {
+        this.tmpPos.copyFrom(spot.getAbsolutePosition());
+        this.tmpDir.copyFrom(spot.direction).normalize();
+        const cosOuter = Math.cos(Math.min(Math.PI * 0.49, spot.angle * 0.5));
+        effect.setFloat4(`spotPos${i}`, this.tmpPos.x, this.tmpPos.y, this.tmpPos.z, spot.range);
+        effect.setFloat4(`spotDir${i}`, this.tmpDir.x, this.tmpDir.y, this.tmpDir.z, cosOuter);
+        spot.diffuse.scaleToRef(spot.intensity * (entry.scatter ?? 0.025), this.tmpColor);
+        effect.setColor3(`spotColor${i}`, this.tmpColor);
+      } else {
+        effect.setFloat4(`spotPos${i}`, 0, -1000, 0, 0.01);
+        effect.setFloat4(`spotDir${i}`, 0, 0, 1, 1);
+        effect.setColor3(`spotColor${i}`, Color3.BlackReadOnly);
       }
     }
   }

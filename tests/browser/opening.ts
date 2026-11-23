@@ -16,7 +16,8 @@ const button = (label: string, action: () => void) => {
   const b = document.createElement("button");
   b.textContent = label;
   b.onclick = action;
-  b.style.cssText = "padding:8px 12px;background:#d8ceb3;color:#211d17;cursor:pointer";
+  b.style.cssText =
+    "padding:4px 8px;font-size:11px;background:#d8ceb3;color:#211d17;cursor:pointer";
   nav.append(b);
 };
 async function boot() {
@@ -75,7 +76,7 @@ async function boot() {
     if (params.has("review"))
       game.scene.onBeforeRenderObservable.add(() => {
         if (inspectionTime !== null) taxi.elapsed = inspectionTime;
-        if (taxi.elapsed > 56) taxi.elapsed = 8;
+        else if (taxi.elapsed > 56) taxi.elapsed = 8;
       });
     for (const [name, yaw, pitch] of [
       ["Road", 0, 0.025],
@@ -93,15 +94,93 @@ async function boot() {
         game.player.yaw = yaw;
         game.player.pitch = pitch;
       });
-    if (params.has("review"))
+    if (params.has("review")) {
+      button("Noodle & barber", () => {
+        view = "shop-noodle-barber";
+        inspectionTime = 1.1;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Shop & posters", () => {
+        view = "shop-posters";
+        inspectionTime = 2.6;
+        game.player.yaw = 0.12;
+        game.player.pitch = 0.015;
+      });
+      button("Dentist & TV shops", () => {
+        view = "shops-dentist-tv";
+        inspectionTime = 6.2;
+        game.player.yaw = 0.04;
+        game.player.pitch = 0.015;
+      });
+      button("Moto & grocery", () => {
+        view = "shops-mid";
+        inspectionTime = 11.2;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Rice & palms", () => {
+        view = "rice-palms";
+        inspectionTime = 5.4;
+        game.player.yaw = 0.56;
+        game.player.pitch = 0.03;
+      });
+      button("Jungle & bananas", () => {
+        view = "jungle-bananas";
+        inspectionTime = 28.5;
+        game.player.yaw = 0.02;
+        game.player.pitch = 0.02;
+      });
+      button("Verge ghost", () => {
+        view = "verge-ghost";
+        inspectionTime = 22.25;
+        game.player.yaw = 0.14;
+        game.player.pitch = 0.02;
+      });
       button("Lightning detail", () => {
         view = "lightning";
         inspectionTime = 37.8;
         game.player.yaw = -0.12;
         game.player.pitch = 0.025;
       });
+      button("Mirror ghost", () => {
+        view = "mirror-ghost";
+        inspectionTime = 52.22;
+        game.player.yaw = -0.44;
+        game.player.pitch = -0.08;
+      });
+      button("Rear seat ghost", () => {
+        view = "rear-ghost";
+        inspectionTime = 52.24;
+        game.player.yaw = -2.88;
+        game.player.pitch = 0.04;
+      });
+      button("Window ghost", () => {
+        view = "window-ghost";
+        inspectionTime = 60.56;
+        game.player.yaw = 1.42;
+        game.player.pitch = 0.0;
+      });
+      button("Bonnet ghost", () => {
+        view = "bonnet-ghost";
+        inspectionTime = 65.56;
+        game.player.yaw = -0.05;
+        game.player.pitch = 0.02;
+      });
+    }
     const captureStatus = document.createElement("output");
     captureStatus.setAttribute("aria-live", "polite");
+    captureStatus.style.cssText =
+      "padding:4px 8px;background:rgba(16,14,12,0.88);color:#eee5d1;border-radius:3px;font-size:11px";
+    nav.style.maxWidth = "calc(100vw - 340px)";
+    nav.style.gap = "4px";
+    output.style.top = "224px";
+    output.style.bottom = "auto";
+    output.style.left = "auto";
+    output.style.right = "8px";
+    output.style.maxWidth = "220px";
+    output.style.fontSize = "9px";
+    output.style.lineHeight = "1.25";
     nav.append(captureStatus);
     button("Save screenshot", () => {
       engine.setSize(1600, 1000);
@@ -114,11 +193,18 @@ async function boot() {
         })
         .finally(() => engine.resize());
     });
-    button("Hide review overlays", () => {
-      nav.style.display = "none";
-      output.hidden = true;
+    const setDebugUiVisible = (visible: boolean) => {
+      nav.style.display = visible ? "flex" : "none";
+      output.hidden = !visible;
       const perf = document.querySelector<HTMLElement>(".perf-overlay");
-      if (perf) perf.style.display = "none";
+      if (perf) perf.style.display = visible ? "" : "none";
+    };
+    button("Hide review overlays", () => setDebugUiVisible(false));
+    // Clean fullscreen playtest when opened without ?review or ?qa (F9 toggles QA HUD anytime).
+    const showQa = params.has("review") || params.has("qa");
+    setDebugUiVisible(showQa);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "F9" && !e.repeat) setDebugUiVisible(Boolean(output.hidden));
     });
   }
   button("Notebook Q", () => window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" })));

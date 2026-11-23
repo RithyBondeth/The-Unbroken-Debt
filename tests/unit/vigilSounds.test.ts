@@ -10,10 +10,13 @@ describe("vigil placeholder sounds", () => {
       const samples = make(RATE, seededRandom(11));
       expect(samples.length).toBeGreaterThan(RATE * 0.2);
       let peak = 0;
+      let allFinite = true;
       for (const s of samples) {
-        expect(Number.isFinite(s)).toBe(true);
-        peak = Math.max(peak, Math.abs(s));
+        if (!Number.isFinite(s)) allFinite = false;
+        const mag = Math.abs(s);
+        if (mag > peak) peak = mag;
       }
+      expect(allFinite).toBe(true);
       expect(peak).toBeGreaterThan(0.3);
       expect(peak).toBeLessThanOrEqual(0.9 + 1e-6);
     });
