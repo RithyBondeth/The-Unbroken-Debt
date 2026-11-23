@@ -1,14 +1,23 @@
 import { expect, it } from "vitest";
 import { taxiMeter, taxiMotor, taxiWipers } from "@/episodes/ep1/audio/taxiSounds";
 import {
+  anxiousHeartbeat,
   brakeSlither,
+  branchSnap,
+  cabinStormBed,
   driverGasp,
+  electricalArcZap,
   ghostRush,
+  ghostScreechSting,
   mudSprint,
+  neckBreathWhisper,
   radioStatic,
+  subTensionDrone,
+  thunderCrack,
   windowSlap,
 } from "@/episodes/ep1/audio/taxiDreadSounds";
 import { seededRandom } from "@/audio/synth";
+
 it.each([
   taxiMotor,
   taxiWipers,
@@ -18,7 +27,15 @@ it.each([
   windowSlap,
   driverGasp,
   brakeSlither,
-])("generates bounded audible taxi ambience without invalid samples", (synth) => {
+  anxiousHeartbeat,
+  subTensionDrone,
+  neckBreathWhisper,
+  ghostScreechSting,
+  electricalArcZap,
+  branchSnap,
+  cabinStormBed,
+  thunderCrack,
+])("generates bounded audible taxi ambience and dread audio without invalid samples", (synth) => {
   const samples = synth(12000, seededRandom(7));
   let energy = 0,
     max = 0;

@@ -265,16 +265,17 @@ describe("authored taxi assets", () => {
     expect(halfWidth).toBeLessThan(2.85);
     expect(water).toBeGreaterThanOrEqual(218);
   });
-  it("seats Sora's photoscanned legs and shoes inside the passenger footwell", () => {
+  it("seats Sora's full photoscanned body, arms, hands and shoes inside the passenger seat", () => {
     const nodes = cabin.getRoot().listNodes();
     const legs = nodes.find((n) => n.getName() === "taxi_sora_legs_scan")!;
     expect(legs).toBeDefined();
     const bounds = getBounds(legs);
-    expect(bounds.max[0] - bounds.min[0]).toBeLessThan(0.5);
-    // Her shoes rest on the floorboards (the carpet lies between -0.01 and 0.1 m; the tips of
-    // her heels press into its pile).
+    expect(bounds.max[0] - bounds.min[0]).toBeLessThan(0.62);
+    // Her shoes rest on the floorboards and her seated blouse torso/shoulders reach ~0.85-0.96 m
+    // while staying cleanly below Sora's eye camera at 1.065 m.
     expect(bounds.min[1]).toBeGreaterThan(-0.03);
-    expect(bounds.max[1]).toBeLessThan(0.75);
+    expect(bounds.max[1]).toBeGreaterThan(0.72);
+    expect(bounds.max[1]).toBeLessThan(0.99);
     const materials = legs
       .getMesh()!
       .listPrimitives()
@@ -286,8 +287,26 @@ describe("authored taxi assets", () => {
       "M_taxi_sora_blouse_scan",
     ])
       expect(materials).toContain(name);
-    // The old flat cloth over her lap is gone: her own blouse closes the scan at the waist.
+    // The old flat cloth over her lap is gone: her own blouse closes the scan cleanly.
     expect(nodes.some((n) => n.getName() === "taxi_sora_lap_fold")).toBe(false);
+    // Rich coachbuilt front footwell, console, and rear cabin craftsmanship are present.
+    const names = nodes.map((n) => n.getName());
+    for (const detailPart of [
+      "taxi_trans_tunnel",
+      "taxi_handbrake_lever",
+      "taxi_firewall_bulkhead",
+      "taxi_underdash_shelf",
+      "taxi_underdash_brass_torch",
+      "taxi_door_sill_plates",
+      "taxi_sora_watch_case",
+      "taxi_rear_bench_tufted",
+      "taxi_rear_door_cards",
+      "taxi_cabin_dome_glass",
+      "taxi_rear_leather_suitcase",
+      "taxi_rear_bamboo_basket",
+      "taxi_rear_lotus_bud",
+    ])
+      expect(names).toContain(detailPart);
   });
   it("leaves both shoes visible from Sora's eyes", () => {
     const node = cabin
@@ -400,12 +419,18 @@ describe("authored taxi assets", () => {
       .getRoot()
       .listNodes()
       .map((n) => n.getName());
-    // The mirror charm hangs from one pivot the runtime swings.
+    // The mirror charm (carved rosewood prayer beads + rolled bronze Takrut) hangs from one pivot the runtime swings.
     const pivot = cabin
       .getRoot()
       .listNodes()
       .find((n) => n.getName() === "taxi_mirror_charm_pivot")!;
-    expect(pivot.listChildren().length).toBeGreaterThan(40);
+    const charmChildren = pivot.listChildren().map((c) => c.getName());
+    expect(charmChildren.length).toBeGreaterThanOrEqual(8);
+    expect(charmChildren).toContain("taxi_charm_rosewood_beads");
+    expect(charmChildren).toContain("taxi_charm_takrut");
+    expect(cabinNames).toContain("taxi_steering_wheel_pivot");
+    expect(cabinNames).toContain("taxi_driver_krama");
+    expect(roadNames).toContain("taxi_road_khmer_posters");
     for (const name of ["taxi_meter_case", "taxi_rear_lotus_bud"])
       expect(cabinNames).toContain(name);
   });
