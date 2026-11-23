@@ -72,8 +72,8 @@ export const TAXI_STANDER = {
   /** Ride seconds the car draws level with it. */
   level: 23.4,
   lateral: 5.2,
-  /** Lightning blink where she snaps 2.4 m closer right inside the right headlight beam ahead of the windscreen! */
-  snapAt: 22.55,
+  /** Lightning blink where she snaps 3.0 m closer squarely inside the right windscreen & headlamp cone! */
+  snapAt: 22.25,
   /** Seen from here (already standing there when the headlight cones find her). */
   from: 17.4,
   /** Gone once past Sora's window. */
@@ -140,18 +140,18 @@ export function taxiLightning(t: number): number {
 
 /** Where the Preay is at ride time `t`, and what she is doing; null when nowhere near. */
 export function taxiSpiritAt(t: number): SpiritPose | null {
-  // Beat 1: Verge watcher who snaps 2.45 m closer into the right headlight beam during the 22.55 s lightning blink!
+  // Beat 1: Verge watcher who snaps 3.05 m closer squarely inside the right windscreen & headlamp cone!
   if (t >= TAXI_STANDER.from && t <= TAXI_STANDER.until) {
     const snapped = t >= TAXI_STANDER.snapAt - 0.05;
     const along = taxiDistance(TAXI_STANDER.level);
-    const lat = snapped ? 2.75 : TAXI_STANDER.lateral;
+    const lat = snapped ? 2.15 : TAXI_STANDER.lateral;
     const at = taxiRoadPoint(lat, along);
     return {
       kind: "stander",
       x: at.x,
       z: at.z,
       y: -0.1 + TAXI_GROUND_DROP,
-      heading: taxiRoadHeading(along) + Math.PI + (snapped ? 0.55 : 0.75),
+      heading: taxiRoadHeading(along) + Math.PI + (snapped ? 0.35 : 0.75),
       clip: snapped ? "reach" : "stand",
       clipTime: snapped ? 0.35 + (t - TAXI_STANDER.snapAt) * 1.4 : t - TAXI_STANDER.from,
       look: snapped ? 1 : Math.min(1, (t - TAXI_STANDER.from) / 2.2),
@@ -308,9 +308,9 @@ export function taxiElectrics(t: number): number {
     if (t < face + 0.48) return 0;
     return stutter(t) * clamp01((t - face - 0.48) / 0.45 + 0.4);
   }
-  // Final sudden stutter during braking for the unexpected bonnet silhouette!
+  // Final sudden blackout through the bonnet lightning silhouette, then lamps stutter back onto an empty road!
   if (t > TAXI_BONNET.start - 0.14 && t < TAXI_BONNET.end + 0.18) {
-    return t < TAXI_BONNET.beat ? 0 : stutter(t);
+    return t <= TAXI_BONNET.beat + 0.04 ? 0 : stutter(t);
   }
   return 1;
 }
@@ -368,16 +368,16 @@ export function taxiMirrorRiderAt(t: number): MirrorRiderPose | null {
     };
   }
   if (t >= lean.from && t <= lean.to) {
-    // Explosive snap-lunge ease-out curve (fills the entire mirror & leans between the front seats in 0.18 s!)
+    // Explosive snap-lunge ease-out curve framing her pale gaunt face & white shoulders cleanly in mirror & rear cabin!
     const raw = clamp01((t - lean.from) / (lean.beat - lean.from));
     const p = 1 - (1 - raw) ** 3;
     const fadeOut = clamp01((lean.to - t) / 0.18);
     return {
       kind: "lean",
-      x: 0.14 - 0.06 * p,
-      y: -0.49 + 0.1 * p,
-      z: -1.14 + 0.54 * p,
-      lean: 0.03 + 0.04 * p,
+      x: 0.14 - 0.08 * p,
+      y: -0.49 + 0.05 * p,
+      z: -1.14 + 0.48 * p,
+      lean: 0.02 + 0.03 * p,
       presence: fadeOut,
       attention: 1,
       inCabin: true,

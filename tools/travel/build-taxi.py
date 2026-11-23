@@ -1291,14 +1291,38 @@ def road_surface(mats,rng):
             for j in range(steps): a=(i-r0)*(steps+1)+j; fs.append((a,a+steps+1,a+steps+2,a+1))
         smooth(mesh(name,vs[r0*(steps+1):(r1+1)*(steps+1)],fs,material))
     puddle=mats['M_puddle']
+    ditch_water=puddle.copy(); ditch_water.name='M_ditch_water'
+    puddle.blend_method='BLEND'
+    if puddle.node_tree and 'Principled BSDF' in puddle.node_tree.nodes:
+        pbs=puddle.node_tree.nodes['Principled BSDF']
+        pbs.inputs['Base Color'].default_value=(0.011,0.014,0.017,1.0)
+        pbs.inputs['Roughness'].default_value=0.036
+        pbs.inputs['Alpha'].default_value=0.92
+    ditch_water.blend_method='OPAQUE'
+    if ditch_water.node_tree and 'Principled BSDF' in ditch_water.node_tree.nodes:
+        dbs=ditch_water.node_tree.nodes['Principled BSDF']
+        dbs.inputs['Base Color'].default_value=(0.018,0.021,0.024,1.0)
+        dbs.inputs['Roughness'].default_value=0.055
+        dbs.inputs['Alpha'].default_value=1.0
     def water_patch(x,z,radius,long,name='taxi_rut_water',y=-.058,limit=ROAD_HALF_WIDTH-.08):
         # Shallow standing water lies above the road crown, never buried beneath mud.
+        # Radial UVs ((0.5, 0.5) at center -> rim on r=0.5 circle) let runtime feather puddle edges into wet mud!
         vs=[road_point(x,y,z)]; count=24
+        angles=[]
         for j in range(count):
             a=j/count*math.tau; r=radius*(.90+.07*math.sin(j*2.7)+.03*math.sin(j*4.1))
             lateral=max(-limit,min(limit,x+math.cos(a)*r)) if limit else x+math.cos(a)*r
             vs.append(road_point(lateral,y,z+math.sin(a)*long))
-        mesh(name,vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
+            angles.append(a)
+        o=mesh(name,vs,[(0,(j+1)%count+1,j+1) for j in range(count)],puddle)
+        uvl=o.data.uv_layers.active or o.data.uv_layers.new(name='UVMap')
+        for p in o.data.polygons:
+            for li in p.loop_indices:
+                vi=o.data.loops[li].vertex_index
+                if vi==0: uvl.data[li].uv=(0.5,0.5)
+                else:
+                    a=angles[vi-1]
+                    uvl.data[li].uv=(0.5+0.49*math.cos(a),0.5+0.49*math.sin(a))
     for i in range(170):
         x=float(rng.choice([-1,1]))*.74+float(rng.normal(0,.22)); z=-24+float(rng.random()*532)
         water_patch(x,z,float(rng.uniform(.4,.95)),float(rng.uniform(.8,2.7)))
@@ -1314,7 +1338,7 @@ def road_surface(mats,rng):
                 zz=z+k; wobble=.05*math.sin(zz*.9+side)
                 vs+= [road_point(side*3.3-r+wobble,-.31,zz),road_point(side*3.3+r+wobble,-.31,zz)]
             for k in range(int(length)): a=k*2; fs.append((a,a+2,a+3,a+1))
-            mesh('taxi_ditch_water',vs,fs,puddle)
+            mesh('taxi_ditch_water',vs,fs,ditch_water)
             z+=length+float(rng.uniform(2,9))
     # Laterite gravel and pebbles kicked out of the ruts, mostly on the crown and verges.
     stone=mud
@@ -1344,9 +1368,9 @@ def road_surface(mats,rng):
     for i in range(11000):
         tx,tz=tufts[i%len(tufts)]
         x=tx+float(rng.normal(0,.035)); z=tz+float(rng.normal(0,.05))
-        h=float(rng.uniform(.05,.16)); lean=float(rng.uniform(0,math.tau)); bend=float(rng.uniform(.01,.06))
-        base=-.13+.055*(1-(x/ROAD_HALF_WIDTH)**2)+math.exp(-((abs(x)-1.0)/.12)**2)*.022-.004
-        width=float(rng.uniform(.006,.012))
+        h=float(rng.uniform(.035,.095)); lean=float(rng.uniform(0,math.tau)); bend=float(rng.uniform(.015,.048))
+        base=-.13+.055*(1-(x/ROAD_HALF_WIDTH)**2)+math.exp(-((abs(x)-1.0)/.12)**2)*.022-.008
+        width=float(rng.uniform(.0035,.0065))
         k=len(blades)
         root=Vector(road_point(x,base,z)); tip=Vector(road_point(x+math.cos(lean)*bend,base+h,z+math.sin(lean)*bend))
         across=Vector((math.cos(lean+1.57)*width,0,math.sin(lean+1.57)*width))
@@ -2108,28 +2132,33 @@ def passenger_on_scan():
     watch_gold=plain('M_taxi_sora_watch_gold',(.58,.44,.18),.24,.92)
     watch_strap=plain('M_taxi_sora_watch_strap',(.14,.07,.04),.68)
     watch_dial=plain('M_taxi_sora_watch_dial',(.78,.72,.58),.22)
-    bm_wgold,bm_wstrap,bm_wdial=bmesh.new(),bmesh.new(),bmesh.new()
+    bm_wgold,bm_wstrap,bm_wdial,bm_whands=bmesh.new(),bmesh.new(),bmesh.new(),bmesh.new()
+    watch_hands=plain('M_taxi_sora_watch_hands',(.04,.05,.09),.28,.85)
     segs=20
     w_pos,arm_dir,side_dir,up_dir=wrists['l']
-    w_ctr=w_pos-arm_dir*0.008
+    # Seat forward onto Sora's bare left wrist skin (+arm_dir), cleanly clear of her blouse sleeve cuff!
+    w_ctr=w_pos+arm_dir*0.015+up_dir*0.0025
     M_w=Matrix.Translation(w_ctr)@Matrix((side_dir,arm_dir,up_dir)).transposed().to_4x4()
     s_rings=[]
-    for dy,rx,rz in [(-0.0055,0.0295,0.0235),(0.0055,0.0295,0.0235),(0.0055,0.0260,0.0205),(-0.0055,0.0260,0.0205)]:
+    for dy,rx,rz in [(-0.0055,0.0315,0.0255),(0.0055,0.0315,0.0255),(0.0055,0.0278,0.0222),(-0.0055,0.0278,0.0222)]:
         s_rings.append([bm_wstrap.verts.new(M_w@Vector((math.cos(k/segs*math.tau)*rx,dy,math.sin(k/segs*math.tau)*rz))) for k in range(segs)])
     for r_idx in range(4):
         rA,rB=s_rings[r_idx],s_rings[(r_idx+1)%4]
         for k in range(segs):
             bm_wstrap.faces.new((rA[k],rA[(k+1)%segs],rB[(k+1)%segs],rB[k]))
-    def _wbox(bm_t,loc,sz):
-        M=M_w@Matrix.Translation(loc)@Matrix.Diagonal((*sz,1.0))
+    def _wbox(bm_t,loc,sz,rot_z=0.0):
+        M=M_w@Matrix.Translation(loc)@Matrix.Rotation(rot_z,4,'Z')@Matrix.Diagonal((*sz,1.0))
         ret=bmesh.ops.create_cube(bm_t,size=1.0,matrix=M)
         edges=list({e for v in ret['verts'] for e in v.link_edges})
-        bmesh.ops.bevel(bm_t,geom=edges,offset=0.0009,segments=1,affect='EDGES',clamp_overlap=True)
-    _wbox(bm_wgold,(0.0,0.0,0.0242),(0.0145,0.0195,0.0042))
-    _wbox(bm_wgold,(0.0,0.011,0.0240),(0.0030,0.0026,0.0028))
-    _wbox(bm_wdial,(0.0,0.0,0.0262),(0.0108,0.0150,0.0014))
+        bmesh.ops.bevel(bm_t,geom=edges,offset=0.0007,segments=1,affect='EDGES',clamp_overlap=True)
+    _wbox(bm_wgold,(0.0,0.0,0.0268),(0.0152,0.0205,0.0044))
+    _wbox(bm_wgold,(0.0,0.0114,0.0266),(0.0030,0.0026,0.0028))
+    _wbox(bm_wdial,(0.0,0.0,0.0290),(0.0114,0.0158,0.0014))
+    # Delicate blued-steel hands set to 22:45 on the rectangular tank dial
+    _wbox(bm_whands,(-0.0018,0.0012,0.0299),(0.0009,0.0046,0.0005),rot_z=0.65)
+    _wbox(bm_whands,(-0.0026,-0.0004,0.0301),(0.0007,0.0062,0.0005),rot_z=1.57)
     for nm,bm_x,mt in [('taxi_sora_watch_case',bm_wgold,watch_gold),('taxi_sora_watch_strap',bm_wstrap,watch_strap),
-                       ('taxi_sora_watch_dial',bm_wdial,watch_dial)]:
+                       ('taxi_sora_watch_dial',bm_wdial,watch_dial),('taxi_sora_watch_hands',bm_whands,watch_hands)]:
         bmesh.ops.recalc_face_normals(bm_x,faces=bm_x.faces)
         me=bpy.data.meshes.new(nm); bm_x.to_mesh(me); bm_x.free()
         for p in me.polygons: p.use_smooth=True

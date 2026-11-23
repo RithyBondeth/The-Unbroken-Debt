@@ -16,6 +16,7 @@ export function buildTaxiRoadside(roadside: AssetContainer, scene: Scene) {
   );
   const landscape = mergeStaticMeshes(meshes, {
     cellSize: 18,
+    cellSizeFor: (mesh) => (mesh.material?.name.startsWith("M_taxi_shop_") ? 44 : undefined),
     group: (mesh) => (mesh.name.includes("far_tree_") ? "distant" : "near"),
   });
   // Batching leaves the parents of merged glTF primitives behind as empty, still-painted

@@ -16,7 +16,8 @@ const button = (label: string, action: () => void) => {
   const b = document.createElement("button");
   b.textContent = label;
   b.onclick = action;
-  b.style.cssText = "padding:8px 12px;background:#d8ceb3;color:#211d17;cursor:pointer";
+  b.style.cssText =
+    "padding:4px 8px;font-size:11px;background:#d8ceb3;color:#211d17;cursor:pointer";
   nav.append(b);
 };
 async function boot() {
@@ -94,10 +95,46 @@ async function boot() {
         game.player.pitch = pitch;
       });
     if (params.has("review")) {
+      button("Noodle & barber", () => {
+        view = "shop-noodle-barber";
+        inspectionTime = 1.1;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Shop & posters", () => {
+        view = "shop-posters";
+        inspectionTime = 2.6;
+        game.player.yaw = 0.12;
+        game.player.pitch = 0.015;
+      });
+      button("Dentist & TV shops", () => {
+        view = "shops-dentist-tv";
+        inspectionTime = 6.2;
+        game.player.yaw = 0.04;
+        game.player.pitch = 0.015;
+      });
+      button("Moto & grocery", () => {
+        view = "shops-mid";
+        inspectionTime = 11.2;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Rice & palms", () => {
+        view = "rice-palms";
+        inspectionTime = 5.4;
+        game.player.yaw = 0.56;
+        game.player.pitch = 0.03;
+      });
+      button("Jungle & bananas", () => {
+        view = "jungle-bananas";
+        inspectionTime = 28.5;
+        game.player.yaw = 0.02;
+        game.player.pitch = 0.02;
+      });
       button("Verge ghost", () => {
         view = "verge-ghost";
-        inspectionTime = 22.55;
-        game.player.yaw = 0.22;
+        inspectionTime = 22.25;
+        game.player.yaw = 0.14;
         game.player.pitch = 0.02;
       });
       button("Lightning detail", () => {
@@ -115,7 +152,7 @@ async function boot() {
       button("Rear seat ghost", () => {
         view = "rear-ghost";
         inspectionTime = 52.24;
-        game.player.yaw = -2.85;
+        game.player.yaw = -2.88;
         game.player.pitch = 0.04;
       });
       button("Window ghost", () => {
@@ -133,6 +170,17 @@ async function boot() {
     }
     const captureStatus = document.createElement("output");
     captureStatus.setAttribute("aria-live", "polite");
+    captureStatus.style.cssText =
+      "padding:4px 8px;background:rgba(16,14,12,0.88);color:#eee5d1;border-radius:3px;font-size:11px";
+    nav.style.maxWidth = "calc(100vw - 340px)";
+    nav.style.gap = "4px";
+    output.style.top = "224px";
+    output.style.bottom = "auto";
+    output.style.left = "auto";
+    output.style.right = "8px";
+    output.style.maxWidth = "220px";
+    output.style.fontSize = "9px";
+    output.style.lineHeight = "1.25";
     nav.append(captureStatus);
     button("Save screenshot", () => {
       engine.setSize(1600, 1000);
