@@ -75,7 +75,7 @@ async function boot() {
     if (params.has("review"))
       game.scene.onBeforeRenderObservable.add(() => {
         if (inspectionTime !== null) taxi.elapsed = inspectionTime;
-        if (taxi.elapsed > 56) taxi.elapsed = 8;
+        else if (taxi.elapsed > 56) taxi.elapsed = 8;
       });
     for (const [name, yaw, pitch] of [
       ["Road", 0, 0.025],
@@ -93,13 +93,44 @@ async function boot() {
         game.player.yaw = yaw;
         game.player.pitch = pitch;
       });
-    if (params.has("review"))
+    if (params.has("review")) {
+      button("Verge ghost", () => {
+        view = "verge-ghost";
+        inspectionTime = 22.55;
+        game.player.yaw = 0.22;
+        game.player.pitch = 0.02;
+      });
       button("Lightning detail", () => {
         view = "lightning";
         inspectionTime = 37.8;
         game.player.yaw = -0.12;
         game.player.pitch = 0.025;
       });
+      button("Mirror ghost", () => {
+        view = "mirror-ghost";
+        inspectionTime = 52.22;
+        game.player.yaw = -0.44;
+        game.player.pitch = -0.08;
+      });
+      button("Rear seat ghost", () => {
+        view = "rear-ghost";
+        inspectionTime = 52.24;
+        game.player.yaw = -2.85;
+        game.player.pitch = 0.04;
+      });
+      button("Window ghost", () => {
+        view = "window-ghost";
+        inspectionTime = 60.56;
+        game.player.yaw = 1.42;
+        game.player.pitch = 0.0;
+      });
+      button("Bonnet ghost", () => {
+        view = "bonnet-ghost";
+        inspectionTime = 65.56;
+        game.player.yaw = -0.05;
+        game.player.pitch = 0.02;
+      });
+    }
     const captureStatus = document.createElement("output");
     captureStatus.setAttribute("aria-live", "polite");
     nav.append(captureStatus);
@@ -114,11 +145,18 @@ async function boot() {
         })
         .finally(() => engine.resize());
     });
-    button("Hide review overlays", () => {
-      nav.style.display = "none";
-      output.hidden = true;
+    const setDebugUiVisible = (visible: boolean) => {
+      nav.style.display = visible ? "flex" : "none";
+      output.hidden = !visible;
       const perf = document.querySelector<HTMLElement>(".perf-overlay");
-      if (perf) perf.style.display = "none";
+      if (perf) perf.style.display = visible ? "" : "none";
+    };
+    button("Hide review overlays", () => setDebugUiVisible(false));
+    // Clean fullscreen playtest when opened without ?review or ?qa (F9 toggles QA HUD anytime).
+    const showQa = params.has("review") || params.has("qa");
+    setDebugUiVisible(showQa);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "F9" && !e.repeat) setDebugUiVisible(Boolean(output.hidden));
     });
   }
   button("Notebook Q", () => window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" })));

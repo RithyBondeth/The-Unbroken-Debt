@@ -12,12 +12,12 @@ const requested = process.argv[2];
 if (requested && !["cabin", "roadside"].includes(requested))
   throw new Error("Expected cabin or roadside");
 const PROPS =
-  "{clay_*,weathered_planks_*,old_planks_*,rough_linen_*,dark_wood_*,T_ep1_tingmong_*,T_ep1_offering_*,T_ep1_banana_*,T_ep1_flag_*,shrub_02_*,fern_02_*,brown_mud_leaves_*,red_dirt_mud_*,clay_roof_*}";
+  "{clay_*,weathered_planks_*,old_planks_*,rough_linen_*,dark_wood_*,wood_shutter_*,rusty_metal_*,bark_brown_02_N,effigy-painted-*,cotton-*,T_ep1_tingmong_*,T_ep1_offering_*,T_ep1_banana_*,T_ep1_flag_*,shrub_02_*,fern_02_*,brown_mud_leaves_*,red_dirt_mud_*,clay_roof_*}";
 const PROP_RELIEF =
-  "{clay_*_N,weathered_planks_N,old_planks_02_N,rough_linen_N,dark_wood_N,T_ep1_tingmong_weave_N,T_ep1_offering_leaf_N,shrub_02_nor_gl_1k,fern_02_nor_gl_1k,brown_mud_leaves_01_N,red_dirt_mud_01_N}";
+  "{clay_*_N,weathered_planks_N,old_planks_02_N,rough_linen_N,dark_wood_N,wood_shutter_N,rusty_metal_N,T_ep1_tingmong_weave_N,T_ep1_offering_leaf_N,shrub_02_nor_gl_1k,fern_02_nor_gl_1k,brown_mud_leaves_01_N,red_dirt_mud_01_N}";
 // The paddies' scans stand 15 m and more from the road: palm, stilt houses, bananas,
-// and the shrine's offerings at the forest edge.
-const FAR_SCANS = ["Wash_*", "Wahs_*", "set1_*", "banana_leef*", "T_ep1_chicken_*"];
+// roadside shop props, scarecrows, and the shrine's offerings at the forest edge.
+const FAR_SCANS = ["Wash_*", "Wahs_*", "set1_*", "banana_leef*", "T_ep1_chicken_*", "Image_*"];
 // One pattern each: the CLI splits a brace list without wildcards into separate arguments.
 const CAR_FAR = ["M_gardeboue_*", "M_detailled_*"];
 const CAR_RELIEF = [
@@ -34,7 +34,7 @@ const CAR_RELIEF = [
 // (ETC1S blocks smear pores and stubble).
 // (The CLI's --pattern cannot exclude names, so the 1024 px cap runs through the API.)
 // (A name is tested, and the empty URI must not pass: hence the trailing ".")
-const NOT_PEOPLE = /^(?!rp_|T_taxi_driver_head_|T_taxi_sora_)./;
+const NOT_PEOPLE = /^(?!rp_|T_taxi_driver_head_|T_taxi_sora_|T_taxi_khmer_posters)./;
 const PEOPLE_2K = ["rp_*", "T_taxi_sora_*", "T_taxi_driver_head_BC"];
 const FACE = "T_taxi_driver_head_BC";
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

@@ -80,7 +80,7 @@ export class TaxiRain {
       mist.ellipse(x, y, 0.5 + this.random(), 0.8 + this.random() * 1.5, 0, 0, Math.PI * 2);
       mist.fill();
     }
-    for (let i = 0; i < 700; i++) this.drops.push(this.drop(true));
+    for (let i = 0; i < 950; i++) this.drops.push(this.drop(true));
     this.material = new PBRMaterial("M_taxi_wet_windshield", scene);
     this.material.albedoTexture = this.texture;
     this.material.emissiveTexture = this.texture;
@@ -145,7 +145,7 @@ export class TaxiRain {
     }
     const mask = this.mask.getContext("2d")!;
     mask.globalCompositeOperation = "source-over";
-    mask.fillStyle = `rgba(255,255,255,${Math.min(1, dt * 1.2)})`;
+    mask.fillStyle = `rgba(255,255,255,${Math.min(1, dt * 1.65)})`;
     mask.fillRect(0, 0, WIDTH, HEIGHT);
     mask.globalCompositeOperation = "destination-out";
     mask.fillStyle = "black";

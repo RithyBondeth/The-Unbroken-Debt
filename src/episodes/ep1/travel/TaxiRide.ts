@@ -3,15 +3,15 @@ import type { Game } from "@/core/Game";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { newGameSave, type SaveData } from "@/systems/saves/SaveData";
 import { seededRandom } from "@/audio/synth";
-import { thunder } from "../audio/prologueSounds";
 import { villageRain } from "@/audio/sounds/nightSounds";
 import { taxiMotor, taxiWipers } from "../audio/taxiSounds";
+import { cabinStormBed } from "../audio/taxiDreadSounds";
 import { DreadScore } from "@/audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
 import { TAXI_CONVERSATION, taxiConversationAt, taxiDriverVoiceUrls } from "./taxiConversation";
-import { TaxiSoundscape, taxiThrottle } from "./TaxiSoundscape";
-import { taxiLightning } from "./taxiApparitions";
+import { TaxiSoundscape, taxiAnxietyLevel, taxiThrottle } from "./TaxiSoundscape";
+import { taxiLightning, taxiVacuumDuck } from "./taxiApparitions";
 
 const TAXI_SECONDS = 72;
 /** The playable journey between CP0 and CP1. Reload resumes the ride, never an empty studio. */
@@ -22,16 +22,14 @@ export class TaxiRide {
   private dialogueIndex = -1;
   private savedBucket = -1;
   private persisting: Promise<void> = Promise.resolve();
-  private readonly loops: StaticSound[] = [];
+  private readonly loops: { sound: StaticSound; base: number }[] = [];
   private visuals!: TaxiVisuals;
   private windAudio!: WindAudio;
   private dread: TaxiSoundscape | null = null;
-  private thunder: StaticSound | null = null;
   /** The driver's Khmer lines, by their `voice` number. */
   private readonly driverVoice = new Map<number, StaticSound>();
   private speaking: StaticSound | null = null;
   private score = new DreadScore(null);
-  private thunderPlayed = false;
   private skip: HTMLButtonElement | null = null;
 
   constructor(private readonly game: Game) {}
@@ -61,7 +59,7 @@ export class TaxiRide {
       void g.audio?.unlock();
     });
     await this.makeSounds();
-    for (const sound of this.loops) sound.play();
+    for (const loop of this.loops) loop.sound.play();
     this.dread?.begin(this.elapsed);
     await g.fade.to(0, 2);
     this.running = true;
@@ -85,24 +83,29 @@ export class TaxiRide {
     if (!this.running || this.ending) return;
     this.elapsed = Math.min(TAXI_SECONDS, this.elapsed + dt);
     const t = this.elapsed,
-      flash = taxiLightning(t);
+      flash = taxiLightning(t),
+      vacuum = taxiVacuumDuck(t),
+      ambientKeep = 1 - vacuum;
     this.visuals.update(dt, t, flash);
     this.windAudio.update(dt);
     this.dread?.update(t);
-    // The engine note follows the driver's foot: off when something crosses, then harder.
-    if (this.loops[0]) this.loops[0].volume = 0.65 * taxiThrottle(t);
-    // The driver keeps looking into the forest; something is standing there at 37.8 s.
-    const pressure = t < 25 ? 0 : t < 37.8 ? 0.3 : t < 49.5 ? 0.65 : 0.25;
+    // Vacuum-silence ducking before major haunt hits pulls engine, wipers, rain and roof drumming
+    // into suffocating dead air so each spatial impact detonates with maximum anxiety and surprise.
+    if (this.loops[0])
+      this.loops[0].sound.volume =
+        this.loops[0].base * taxiThrottle(t) * (0.28 + 0.72 * ambientKeep);
+    for (let i = 1; i < this.loops.length; i++)
+      this.loops[i].sound.volume = this.loops[i].base * ambientKeep;
+    // Dread score and storm wind track the full 5-beat psychological anxiety arc.
+    const pressure = Math.min(1, taxiAnxietyLevel(t) * 0.85 + (t > 24 && t < 62 ? 0.15 : 0));
     this.score.pressure(pressure);
-    // The roadside falls still in the seconds before it, then the gust comes with the sting.
     const g = this.game;
     g.wind.tension = pressure;
-    g.wind.calm = t > 33.5 && t < 37.6 ? Math.min(1, (t - 33.5) / 2) * 0.85 : 0;
+    g.wind.calm = Math.max(
+      t > 33.5 && t < 37.6 ? Math.min(1, (t - 33.5) / 2) * 0.85 : 0,
+      vacuum * 0.92,
+    );
     this.score.update(dt);
-    if (t > 37.8 && !this.thunderPlayed) {
-      this.thunderPlayed = true;
-      this.thunder?.play();
-    }
     const line = taxiConversationAt(t);
     if ((line?.index ?? -1) !== this.dialogueIndex) {
       this.dialogueIndex = line?.index ?? -1;
@@ -153,7 +156,7 @@ export class TaxiRide {
     const g = this.game;
     await g.fade.to(1, 2);
     this.speaking?.stop();
-    for (const sound of this.loops) sound.stop();
+    for (const loop of this.loops) loop.sound.stop();
     this.score.stop();
     this.windAudio.stop();
     this.dread?.stop();
@@ -192,22 +195,19 @@ export class TaxiRide {
   private async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
+    // Place the listener inside tight 1933 steel-and-upholstery sedan cabin acoustics.
+    audio.setSpace("cabin", 0.3);
     const rate = audio.context.sampleRate;
     for (const [name, samples, volume] of [
-      ["taxi_motor", taxiMotor(rate, seededRandom(210)), 0.65],
-      ["taxi_wipers", taxiWipers(rate, seededRandom(211)), 0.4],
-      ["taxi_rain", villageRain(rate, seededRandom(212)), 0.58],
+      ["taxi_motor", taxiMotor(rate, seededRandom(210)), 0.62],
+      ["taxi_wipers", taxiWipers(rate, seededRandom(211)), 0.42],
+      ["taxi_rain", villageRain(rate, seededRandom(212)), 0.5],
+      ["taxi_cabin_storm", cabinStormBed(rate, seededRandom(214)), 0.64],
     ] as const) {
       const sound = await audio.sound(name, audio.buffer(samples, rate), "room", volume);
       sound.loop = true;
-      this.loops.push(sound);
+      this.loops.push({ sound, base: volume });
     }
-    this.thunder = await audio.sound(
-      "taxi_thunder",
-      audio.buffer(thunder(rate, seededRandom(213)), rate),
-      "threat",
-      0.65,
-    );
     // The driver's voice, recorded in Khmer (S1-042), heard from the front seat.
     await Promise.all(
       TAXI_CONVERSATION.filter((line) => line.voice).map(async (line) => {

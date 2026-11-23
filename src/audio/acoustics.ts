@@ -8,11 +8,14 @@ import { biquad, noise } from "./synth";
  */
 export type SpaceName = "studio" | "house" | "wardrobe" | "underHouse" | "tent" | "outdoors";
 
+/** Episode 1's vehicle interior: the 1933 Citroën Rosalie driving through the storm. */
+export type TravelSpace = "cabin";
+
 /** Episode 2's spaces: the pagoda garden, the monk's kuti, the prayer hall and the library. */
 export type PagodaSpace = "jungle" | "kuti" | "hall" | "library";
 
 /** Any space the listener can be moved into. */
-export type AcousticSpace = SpaceName | PagodaSpace;
+export type AcousticSpace = SpaceName | TravelSpace | PagodaSpace;
 
 export interface Space {
   /** Seconds the late tail takes to fall 60 dB, in the lows, mids and highs. */
@@ -45,6 +48,19 @@ export const SPACES: Record<AcousticSpace, Space> = {
     wet: 0.2,
     // The prologue's rain is already the rain heard from inside.
     occlusion: [20000, 1],
+  },
+  // Inside the 1933 Citroën Rosalie: tight glass & steel early reflections, upholstered seats
+  // swallowing the late tail, and closed panes muffling the jungle outside.
+  cabin: {
+    rt60: [0.22, 0.14, 0.08],
+    preDelay: 0.0012,
+    early: [
+      [0.0018, 0.58],
+      [0.0034, 0.44],
+      [0.0056, 0.28],
+    ],
+    wet: 0.24,
+    occlusion: [1450, 0.72],
   },
   // A small wooden room up on stilts: warm, a little boomy, quick to die.
   house: {
