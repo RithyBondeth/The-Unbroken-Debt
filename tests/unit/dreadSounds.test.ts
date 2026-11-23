@@ -12,12 +12,16 @@ const RATE = 22050;
 
 function peak(sides: Float32Array[], from = 0, to = sides[0].length): number {
   let max = 0;
+  let allFinite = true;
   for (const side of sides) {
     for (let i = from; i < to; i++) {
-      expect(Number.isFinite(side[i])).toBe(true);
-      max = Math.max(max, Math.abs(side[i]));
+      const sample = side[i];
+      if (!Number.isFinite(sample)) allFinite = false;
+      const mag = Math.abs(sample);
+      if (mag > max) max = mag;
     }
   }
+  expect(allFinite).toBe(true);
   return max;
 }
 
@@ -27,8 +31,9 @@ describe("in-game dread", () => {
     (kind) => {
       const [left, right] = sting(RATE, kind);
       expect(left.length).toBe(right.length);
-      expect(peak([left, right])).toBeLessThanOrEqual(0.95 + 1e-6);
-      expect(peak([left, right])).toBeGreaterThan(0.3);
+      const level = peak([left, right]);
+      expect(level).toBeLessThanOrEqual(0.95 + 1e-6);
+      expect(level).toBeGreaterThan(0.3);
       expect(Math.abs(left[left.length - 1])).toBeLessThan(0.01);
       expect(Math.abs(right[right.length - 1])).toBeLessThan(0.01);
     },
