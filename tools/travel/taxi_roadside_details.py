@@ -236,6 +236,74 @@ def _load_decimated_scan(filename, ratio=0.22, full_gltf_group=None, import_glb=
     return out
 
 
+def _load_decimated_polyhaven(model_name, target_polys=450, full_gltf_group=None, import_glb=None):
+    """Load a PolyHaven .gltf prop, merge multi-part submeshes, normalize bottom-center to (0,0,0),
+    decimate to `target_polys`, and prefix images/materials for tight GLB & draw-call budgeting."""
+    path = MODELS / model_name / f"{model_name}.gltf"
+    if not path.exists():
+        return []
+    if full_gltf_group:
+        full_gltf_group()
+    before_imgs = set(bpy.data.images)
+    before_mats = set(bpy.data.materials)
+    objs = import_glb(path)
+    keep = []
+    for o in objs:
+        if "_lod" in o.name.lower() or o.type != "MESH" or len(o.data.polygons) == 0:
+            bpy.data.objects.remove(o, do_unlink=True)
+        else:
+            keep.append(o)
+    if not keep:
+        return []
+    for idx, img in enumerate(sorted((i for i in bpy.data.images if i not in before_imgs), key=lambda i: i.name)):
+        img.name = f"shop_ph_{model_name}_{idx}"
+    seen_mats = []
+    for o in keep:
+        for slot in o.material_slots:
+            mt = slot.material
+            if mt and mt not in before_mats and mt not in seen_mats:
+                seen_mats.append(mt)
+    for mi, mt in enumerate(seen_mats):
+        mt.name = f"M_taxi_shop_ph_{model_name}_{mi}"
+    for o in keep:
+        if o.data.uv_layers:
+            o.data.uv_layers[0].name = "UVMap"
+            while len(o.data.uv_layers) > 1:
+                o.data.uv_layers.remove(o.data.uv_layers[-1])
+    if len(keep) > 1:
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in keep:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = keep[0]
+        bpy.ops.object.join()
+    obj = keep[0]
+    xs = [v.co.x for v in obj.data.vertices]
+    ys = [v.co.y for v in obj.data.vertices]
+    zs = [v.co.z for v in obj.data.vertices]
+    cx = (min(xs) + max(xs)) * 0.5
+    cy = (min(ys) + max(ys)) * 0.5
+    mz = min(zs)
+    for v in obj.data.vertices:
+        v.co.x -= cx
+        v.co.y -= cy
+        v.co.z -= mz
+    obj.data.update()
+    if len(obj.data.polygons) > target_polys:
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        mod = obj.modifiers.new("ph_lod", "DECIMATE")
+        mod.ratio = max(0.01, target_polys / len(obj.data.polygons))
+        mod.use_collapse_triangulate = True
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+    for p in obj.data.polygons:
+        p.use_smooth = True
+    obj.data.update()
+    obj.name = f"tpl_ph_{model_name}"
+    obj.hide_render = True
+    return [obj]
+
+
 def _place_linked(tpls, coll, M_world, prefix):
     out = []
     for src in tpls:
@@ -667,7 +735,40 @@ def _add_dress_form(bm_posts, bm_silk, pos):
     _cyl_bm(bm_posts, (x, y, z + 1.49), (x, y, z + 1.56), 0.036, 0.028, segs=8)
 
 
-def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spec, shop_idx):
+def _add_crt_tv(bm_iron, bm_posts, bm_crt, bm_white, origin, yaw=0.0, scale=1.0):
+    """Detailed vintage 1990s box CRT television: beveled casing, recessed glow tube, speaker grille, knobs & V-antenna."""
+    M = Matrix.Translation(origin) @ Matrix.Rotation(yaw, 4, "Z") @ Matrix.Scale(scale, 4)
+    rot_e = Euler((0, 0, yaw))
+    # Main tapered plastic/wood casing (front faces +X)
+    _box_bm(bm_iron, M @ Vector((0.0, 0.0, 0.23)), (0.38, 0.56, 0.44), rot=rot_e, bevel=0.018, segs=2)
+    _box_bm(bm_iron, M @ Vector((-0.18, 0.0, 0.22)), (0.16, 0.38, 0.30), rot=rot_e, bevel=0.012, segs=1)
+    # Recessed dark bezel frame + glowing slightly curved CRT screen + speaker ribs & dials
+    _box_bm(bm_posts, M @ Vector((0.186, -0.055, 0.23)), (0.024, 0.37, 0.32), rot=rot_e, bevel=0.008, segs=1)
+    _box_bm(bm_crt, M @ Vector((0.194, -0.055, 0.23)), (0.014, 0.33, 0.27), rot=rot_e, bevel=0.005, segs=1)
+    # Right-side speaker grille slats & channel knobs
+    for gz in range(5):
+        _box_bm(bm_posts, M @ Vector((0.192, 0.19, 0.12 + gz * 0.032)), (0.012, 0.085, 0.012), rot=rot_e)
+    for kz in (0.30, 0.37):
+        _cyl_bm(bm_white, M @ Vector((0.188, 0.19, kz)), M @ Vector((0.208, 0.19, kz)), 0.018, 0.016, segs=8)
+    # Twin chrome telescoping rabbit-ear antenna rods
+    for sgn in (-1.0, 1.0):
+        _cyl_bm(bm_iron, M @ Vector((0.02, 0.0, 0.45)), M @ Vector((-0.06, sgn * 0.26, 0.84)), 0.006, 0.004, segs=6)
+
+
+def _add_pa_speaker(bm_iron, bm_rubber, origin, yaw=0.0):
+    """Detailed Cambodian wedding-band twin-woofer PA loudspeaker cabinet with horn tweeter & corner guards."""
+    M = Matrix.Translation(origin) @ Matrix.Rotation(yaw, 4, "Z")
+    rot_e = Euler((0, 0, yaw))
+    _box_bm(bm_iron, M @ Vector((0.0, 0.0, 0.36)), (0.48, 0.60, 0.72), rot=rot_e, bevel=0.018, segs=1)
+    # Baffle recess + dual 12-inch woofer cones + upper horn tweeter
+    for wz in (0.20, 0.48):
+        _torus_bm(bm_rubber, M @ Vector((0.242, -0.06, wz)), (M.to_3x3() @ Vector((1, 0, 0))), 0.125, 0.018, n_maj=14, n_min=6)
+        _cyl_bm(bm_rubber, M @ Vector((0.228, -0.06, wz)), M @ Vector((0.242, -0.06, wz)), 0.045, 0.115, segs=12)
+        _cyl_bm(bm_iron, M @ Vector((0.236, -0.06, wz)), M @ Vector((0.248, -0.06, wz)), 0.032, 0.022, segs=10)
+    _box_bm(bm_rubber, M @ Vector((0.242, 0.16, 0.56)), (0.024, 0.16, 0.11), rot=rot_e)
+
+
+def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, p_uvs, spec, shop_idx):
     """Build ONE hyper-detailed, bespoke rural Cambodian roadside shop matching its specific trade.
 
     Local shop frame (Blender axes):
@@ -684,7 +785,7 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
     dim_outpost = spec.get("dim", False)
     door_w = 1.95 if not dim_outpost else 0.72
 
-    # Material-grouped bmeshes -> only ~12 clean meshes per shop, zero bloat, super crisp detail!
+    # Material-grouped bmeshes -> crisp textured PBR surfaces + zero bloat!
     bm_posts = bmesh.new()
     bm_walls = bmesh.new()
     bm_paint = bmesh.new()
@@ -719,6 +820,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
     bm_news = bmesh.new()
     bm_kantel = bmesh.new()
     bm_wire_local = bmesh.new()
+    bm_leather = bmesh.new()
+    bm_linen = bmesh.new()
 
     def to_w(p):
         return M_shop @ Vector(p)
@@ -894,53 +997,58 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
     # Interior warm wooden ceiling beam & rear workbench/table shared base
     _box_bm(bm_posts, (-1.62, 0.0, 3.12), (0.12, hw * 1.98, 0.14))
 
+    # Curated linked PolyHaven props placed per trade alongside rural scans (zero cartoon primitives!)
+    ph_layout = []
+
     if trade == "noodle":
         # SHOP 0: CAMBODIAN ROADSIDE KUY TEAV NOODLE & ICED COFFEE CART/STALL!
-        # Iconic illuminated glass-front Khmer noodle display cart on front veranda edge!
-        nx, ny, nz = 1.05, 0.35, 0.17
-        # Lower painted steel/wood cart cabinet + wheels
-        _box_bm(bm_blue, (nx, ny, nz + 0.46), (0.66, 1.48, 0.76), bevel=0.01, segs=1)
-        _box_bm(bm_white, (nx, ny, nz + 0.86), (0.72, 1.54, 0.055))
+        nx, ny, nz = 1.05, 0.35, 0.175
+        # Lower painted wood/tin cart cabinet with steel corners & pneumatic wheels
+        _box_bm(bm_blue, (nx, ny, nz + 0.44), (0.66, 1.48, 0.72), bevel=0.015, segs=1)
+        _box_bm(bm_posts, (nx, ny, nz + 0.44), (0.70, 0.04, 0.74))
+        _box_bm(bm_white, (nx, ny, nz + 0.83), (0.74, 1.54, 0.055), bevel=0.008, segs=1)
         for wy in (ny - 0.58, ny + 0.58):
-            _torus_bm(bm_rubber, (nx + 0.26, wy, nz + 0.10), (0, 1, 0), 0.10, 0.025, n_maj=10, n_min=5)
-        # Glowing warm amber glass-front noodle showcase box with aluminum corner rails & stacked bowls inside!
-        _box_bm(bm_noodle_glow, (nx + 0.04, ny - 0.18, nz + 1.26), (0.48, 0.84, 0.74))
+            _torus_bm(bm_rubber, (nx + 0.26, wy, nz + 0.10), (0, 1, 0), 0.10, 0.025, n_maj=12, n_min=5)
+            _cyl_bm(bm_iron, (nx + 0.26, wy - 0.03, nz + 0.10), (nx + 0.26, wy + 0.03, nz + 0.10), 0.045, 0.045, segs=8)
+        # Glowing warm amber glass-front noodle showcase box with corner trim, hanging glazed meats & bowls
+        _box_bm(bm_noodle_glow, (nx + 0.04, ny - 0.18, nz + 1.24), (0.48, 0.84, 0.74))
         for dx_c in (-0.25, 0.25):
             for dy_c in (-0.43, 0.43):
-                _box_bm(bm_iron, (nx + 0.04 + dx_c, ny - 0.18 + dy_c, nz + 1.26), (0.032, 0.032, 0.78))
-        _box_bm(bm_iron, (nx + 0.04, ny - 0.18, nz + 1.64), (0.54, 0.90, 0.045))
-        # Stacked white ceramic noodle bowls & hanging red BBQ pork strips visible along showcase!
+                _box_bm(bm_iron, (nx + 0.04 + dx_c, ny - 0.18 + dy_c, nz + 1.24), (0.034, 0.034, 0.78))
+        _box_bm(bm_iron, (nx + 0.04, ny - 0.18, nz + 1.62), (0.56, 0.92, 0.05), bevel=0.006, segs=1)
+        for hy_p in (-0.32, -0.18, -0.04):
+            _cyl_bm(bm_red, (nx + 0.04, ny + hy_p, nz + 1.54), (nx + 0.04, ny + hy_p, nz + 1.22), 0.042, 0.032, segs=8)
         for bs_i in range(4):
-            _cyl_bm(bm_white, (nx + 0.06, ny + 0.45, nz + 0.89 + bs_i * 0.055), (nx + 0.06, ny + 0.45, nz + 0.94 + bs_i * 0.055), 0.075, 0.095, segs=9)
-        # Big stainless broth cauldron pot steaming on side burner + galvanized exhaust hood & red gas cylinder!
+            _cyl_bm(bm_white, (nx + 0.06, ny + 0.45, nz + 0.87 + bs_i * 0.052), (nx + 0.06, ny + 0.45, nz + 0.92 + bs_i * 0.052), 0.075, 0.095, segs=10)
+        # Stainless broth cauldron on burner + exhaust hood + red LPG cylinder + ladle
         _cyl_bm(bm_iron, (nx - 0.02, ny + 0.98, nz + 0.48), (nx - 0.02, ny + 0.98, nz + 0.98), 0.24, 0.25, segs=12)
         _cyl_bm(bm_iron, (nx - 0.02, ny + 0.98, nz + 1.56), (nx - 0.02, ny + 0.98, nz + 1.88), 0.34, 0.10, segs=10)
         _cyl_bm(bm_iron, (nx - 0.02, ny + 0.98, nz + 1.88), (nx - 0.02, ny + 0.98, nz + 2.62), 0.09, 0.09, segs=8)
         _cyl_bm(bm_red, (nx - 0.06, ny + 1.48, nz), (nx - 0.06, ny + 1.48, nz + 0.56), 0.155, 0.155, segs=12)
         _cyl_bm(bm_iron, (nx - 0.06, ny + 1.48, nz + 0.56), (nx - 0.06, ny + 1.48, nz + 0.66), 0.075, 0.065, segs=8)
-        # Iconic blue plastic roadside ice cooler chest + stacked red/blue Cambodian soda crates with glass bottles!
-        _box_bm(bm_blue, (0.72, 1.88, nz + 0.24), (0.46, 0.68, 0.46), bevel=0.015, segs=1)
-        _box_bm(bm_white, (0.72, 1.88, nz + 0.48), (0.48, 0.70, 0.045), bevel=0.008, segs=1)
-        _add_plastic_crate(bm_red, bm_amber, bm_green, (1.42, 1.92, nz), rot_z=0.14, filled=True)
-        _add_plastic_crate(bm_blue, bm_amber, bm_green, (1.44, 1.90, nz + 0.28), rot_z=-0.08, filled=True)
-        # Hanging red-glazed roast duck/pork strips inside showcase + soup ladle in broth cauldron!
-        for hy_p in (-0.32, -0.18, -0.04):
-            _cyl_bm(bm_red, (nx + 0.04, ny + hy_p, nz + 1.56), (nx + 0.04, ny + hy_p, nz + 1.24), 0.042, 0.032, segs=7)
         _cyl_bm(bm_iron, (nx + 0.02, ny + 0.96, nz + 0.92), (nx + 0.18, ny + 0.88, nz + 1.32), 0.010, 0.008, segs=6)
-        # Folding weathered-wood dining table + condiment jars + 3 red plastic stools + interior shelving!
-        _box_bm(bm_table_wood, (0.98, -1.42, nz + 0.72), (0.76, 1.02, 0.045))
-        for lx in (0.66, 1.30):
-            for ly in (-1.86, -0.98):
-                _box_bm(bm_posts, (lx, ly, nz + 0.36), (0.05, 0.05, 0.72))
-        _add_bottles_row(bm_amber, bm_green, bm_red, (0.98, -1.68, nz + 0.75), (0, 0.13, 0), 5, seed=701)
-        for sx_s, sy_s in [(1.46, -1.42), (0.98, -2.06), (0.98, -0.78)]:
-            _add_stool(bm_red, bm_posts, (sx_s, sy_s, nz), red_plastic=True)
-        _add_banana_bunch(bm_green, bm_amber, bm_bamboo, (1.56, -0.65, 2.24), seed=711)
+        # Blue ice cooler chest & openwork bottle crates
+        _box_bm(bm_blue, (0.72, 1.88, nz + 0.23), (0.46, 0.68, 0.46), bevel=0.015, segs=1)
+        _box_bm(bm_white, (0.72, 1.88, nz + 0.47), (0.48, 0.70, 0.045), bevel=0.008, segs=1)
+        _add_plastic_crate(bm_red, bm_amber, bm_green, (1.42, 1.92, nz), rot_z=0.14, filled=True)
+        _add_bottles_row(bm_amber, bm_green, bm_red, (nx + 0.14, ny + 0.42, nz + 0.86), (0, 0.11, 0), 4, seed=701)
         _add_shelf_unit(bm_posts, bm_amber, bm_green, bm_red, (-2.85, 0.0, 0.18), width=2.45, height=1.88, depth=0.38, seed=720)
+        # Real PolyHaven outdoor dining table, wooden stools, tea set, enamel pot, hanging bananas, crate, basket & oil lamp!
+        ph_layout += [
+            ("wooden_table_02", (0.98, -1.42, nz), (0.0, 0.0, math.pi * 0.5 + 0.06), 0.92),
+            ("tea_set_01", (0.98, -1.36, nz + 0.736), (0.0, 0.0, 0.42), 0.72),
+            ("pot_enamel_01", (nx + 0.04, ny + 0.20, nz + 0.86), (0.0, 0.0, 0.30), 0.95),
+            ("vintage_oil_lamp", (0.92, -1.78, nz + 0.736), (0.0, 0.0, 0.2), 0.42),
+            ("wooden_stool_01", (1.46, -1.42, nz), (0.0, 0.0, -0.35), 0.95),
+            ("folding_wooden_stool", (0.98, -2.14, nz), (0.0, 0.0, 0.45), 0.95),
+            ("wooden_stool_01", (0.58, -0.92, nz), (0.0, 0.0, 1.1), 0.95),
+            ("wicker_basket_01", (0.76, -0.52, nz), (0.0, 0.0, 0.35), 1.15),
+            ("wooden_crate_01", (1.34, 1.32, nz), (0.0, 0.0, -0.22), 0.82),
+            ("bananas", (1.56, -0.65, 2.04), (0.0, math.radians(78), 0.4), 0.92),
+        ]
 
     elif trade == "barber":
         # SHOP 1: CHEANG LENG 1990s KHMER BARBER SHOP!
-        # Classic striped red-white-blue Cambodian barber pole on front roadside corner post!
         bp = Vector((1.88, hw - 0.06, 1.56))
         _cyl_bm(bm_iron, bp + Vector((0, 0, -0.44)), bp + Vector((0, 0, -0.37)), 0.072, 0.062, segs=12)
         _cyl_bm(bm_iron, bp + Vector((0, 0, 0.37)), bp + Vector((0, 0, 0.44)), 0.062, 0.072, segs=12)
@@ -949,37 +1057,43 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
             sz = -0.32 + st * 0.105
             bm_c = bm_red if st % 2 == 0 else bm_blue
             _cyl_bm(bm_c, bp + Vector((0, 0, sz)), bp + Vector((0, 0, sz + 0.055)), 0.059, 0.059, segs=12)
-        # Interior wide framed wall mirror + vanity shelf + folded white barber towels + tonic bottles!
+        # Interior wide framed wall mirror + vanity shelf + folded textured linen towels + tonic bottles!
         _box_bm(bm_posts, (-3.14, 0.0, 1.72), (0.06, 2.35, 1.18))
         _box_bm(bm_mirror, (-3.10, 0.0, 1.72), (0.02, 2.18, 1.02))
         _box_bm(bm_posts, (-2.94, 0.0, 1.02), (0.38, 2.48, 0.05))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.88, -0.88, 1.05), (0, 0.16, 0), 9, seed=101)
         for tw in range(4):
-            _box_bm(bm_white, (-2.86, 0.86, 1.06 + tw * 0.042), (0.24, 0.30, 0.034), bevel=0.006, segs=1)
-        # TWO sculpted vintage leather & chrome barber chairs facing the mirror!
+            _box_bm(bm_linen, (-2.86, 0.86, 1.06 + tw * 0.042), (0.24, 0.30, 0.036), bevel=0.008, segs=1)
+        # TWO sculpted quilted brown-leather & chrome hydraulic barber chairs facing the mirror!
         for cx, cy in [(-1.78, -0.52), (-1.78, 0.62)]:
-            _cyl_bm(bm_iron, (cx, cy, 0.18), (cx, cy, 0.25), 0.28, 0.22, segs=12)
+            _cyl_bm(bm_iron, (cx, cy, 0.18), (cx, cy, 0.25), 0.28, 0.22, segs=14)
             _cyl_bm(bm_iron, (cx, cy, 0.25), (cx, cy, 0.62), 0.062, 0.055, segs=10)
-            _box_bm(bm_red, (cx, cy, 0.68), (0.50, 0.48, 0.11), bevel=0.02, segs=1)
-            _box_bm(bm_red, (cx + 0.22, cy, 1.08), (0.11, 0.46, 0.66), rot=Euler((0, math.radians(-14), 0)), bevel=0.02, segs=1)
-            _box_bm(bm_red, (cx + 0.30, cy, 1.48), (0.09, 0.22, 0.15), bevel=0.015, segs=1)
+            _box_bm(bm_leather, (cx, cy, 0.68), (0.50, 0.48, 0.12), bevel=0.025, segs=2)
+            _box_bm(bm_leather, (cx + 0.22, cy, 1.08), (0.12, 0.46, 0.66), rot=Euler((0, math.radians(-14), 0)), bevel=0.025, segs=2)
+            _box_bm(bm_leather, (cx + 0.30, cy, 1.48), (0.09, 0.22, 0.15), bevel=0.018, segs=2)
             for ay in (-0.26, 0.26):
                 _box_bm(bm_iron, (cx + 0.02, cy + ay, 0.88), (0.46, 0.045, 0.042))
+                _box_bm(bm_leather, (cx + 0.02, cy + ay, 0.91), (0.34, 0.058, 0.032), bevel=0.01, segs=1)
             _box_bm(bm_iron, (cx - 0.32, cy, 0.42), (0.22, 0.34, 0.032))
-        # Veranda waiting bench + real aged Khmer newspaper + rooftop Yagi TV antenna + 2 red stools
+        # Veranda waiting bench + real aged Khmer newspaper + rooftop Yagi TV antenna
         _box_bm(bm_table_wood, (1.05, -1.55, 0.52), (0.40, 1.52, 0.055))
         for by in (-2.12, -0.98):
             _box_bm(bm_posts, (1.05, by, 0.33), (0.34, 0.07, 0.38))
-        _box_bm(bm_news, (1.05, -1.35, 0.556), (0.26, 0.34, 0.014))  # Real aged newspaper on waiting bench!
-        _add_stool(bm_red, bm_posts, (0.95, 1.25, 0.17), red_plastic=True)
-        _add_stool(bm_red, bm_posts, (1.28, 1.68, 0.17), red_plastic=True)
+        _box_bm(bm_news, (1.05, -1.35, 0.556), (0.26, 0.34, 0.014))
         _add_tv_antenna(bm_iron, (-0.22, -hw * 0.72, 3.68))
-        # Interior hairstyle chart poster hung right beside the barber mirror!
         _add_poster_to_lists(p_verts, p_faces, p_uvs, to_w((-3.16, 1.56, 1.78)), dir_w((0, 1, 0)), dir_w((0, 0, 1)), 0.86, 0.96, 11, seed=901)
+        ph_layout += [
+            ("ornate_mirror_01", (-3.12, -1.62, 1.24), (0.0, 0.0, math.pi * 0.5), 1.05),
+            ("painted_wooden_shelves", (-2.78, -2.06, 0.18), (0.0, 0.0, math.pi * 0.5), 1.06),
+            ("jug_01", (-2.88, 1.24, 1.05), (0.0, 0.0, -0.5), 0.95),
+            ("wooden_stool_01", (0.98, 1.24, 0.175), (0.0, 0.0, 0.38), 0.95),
+            ("folding_wooden_stool", (1.28, 1.66, 0.175), (0.0, 0.0, -0.25), 0.95),
+            ("wicker_basket_01", (1.02, -0.35, 0.175), (0.0, 0.0, 0.6), 1.1),
+            ("vintage_oil_lamp", (1.06, -2.02, 0.548), (0.0, 0.0, 0.1), 0.40),
+        ]
 
     elif trade == "dentist_salon":
         # SHOP 2: KIM CHENG DENTIST & RACHANA BEAUTY SALON TWIN COLONIAL SHOPHOUSE!
-        # Veranda X-braced timber railings + decorative colonial eaves fretwork spindles!
         for sgn in (-1, 1):
             ry = sgn * (hw * 0.64)
             _box_bm(bm_posts, (1.75, ry, 0.92), (0.08, hw * 0.72, 0.07))
@@ -989,73 +1103,74 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
         for sp_k in range(11):
             sy_f = -hw * 0.90 + sp_k * (hw * 1.80 / 10.0)
             _box_bm(bm_posts, (1.75, sy_f, 2.34), (0.036, 0.036, 0.24))
-        # Illuminated backlit glass dental/apothecary display vitrine facing front + medicine shelves!
-        _box_bm(bm_white, (-1.85, -0.95, 0.56), (0.64, 1.24, 0.78))
+        # Illuminated backlit glass dental/apothecary display vitrine + vanity shelf
+        _box_bm(bm_white, (-1.85, -0.95, 0.56), (0.64, 1.24, 0.78), bevel=0.01, segs=1)
         _box_bm(bm_win_glow, (-1.82, -0.95, 1.24), (0.50, 1.12, 0.56))
         for dx_v in (-0.26, 0.26):
             for dy_v in (-0.57, 0.57):
                 _box_bm(bm_iron, (-1.82 + dx_v, -0.95 + dy_v, 1.24), (0.028, 0.028, 0.60))
-        _add_shelf_unit(bm_posts, bm_amber, bm_green, bm_red, (-2.85, -1.25, 0.18), width=1.55, height=1.88, depth=0.38, seed=201)
         _box_bm(bm_posts, (-3.14, 0.95, 1.72), (0.06, 1.25, 1.10))
         _box_bm(bm_mirror, (-3.10, 0.95, 1.72), (0.02, 1.12, 0.96))
         _add_bottles_row(bm_amber, bm_green, bm_white, (-1.70, -1.42, 1.54), (0, 0.15, 0), 7, seed=209)
-        # Vintage salon wheeled hooded hair-dryer + clinical enamel washbasin on tripod stand!
         _add_hair_dryer_stand(bm_iron, bm_white, (-1.45, 1.22, 0.18))
-        _cyl_bm(bm_white, (-0.92, -1.55, 0.78), (-0.92, -1.55, 0.92), 0.14, 0.21, segs=10)
+        _cyl_bm(bm_white, (-0.92, -1.55, 0.78), (-0.92, -1.55, 0.92), 0.14, 0.21, segs=12)
         for ta in range(3):
             ang = ta * math.tau / 3.0
             _cyl_bm(bm_iron, (-0.92 + math.cos(ang) * 0.22, -1.55 + math.sin(ang) * 0.22, 0.18),
                     (-0.92 + math.cos(ang) * 0.12, -1.55 + math.sin(ang) * 0.12, 0.84), 0.014, 0.012, segs=6)
-        _add_stool(bm_red, bm_posts, (-1.95, 0.82, 0.18), red_plastic=True)
-        _add_stool(bm_red, bm_posts, (1.02, -1.65, 0.17), red_plastic=False)
-        _add_crate(bm_posts, (1.12, 1.95, 0.17), (0.52, 0.42, 0.36), rot_z=0.22)
-        # Authentic woven Khmer checkered krama draped over the colonial veranda rail!
         _box_bm(bm_krama, (1.76, -1.65, 0.82), (0.14, 0.46, 0.34))
-        # Hanging decorative bamboo birdcage under the veranda eave
         bc = Vector((1.28, 1.48, 2.02))
         _cyl_bm(bm_bamboo, bc + Vector((0, 0, 0.22)), bc + Vector((0, 0, 0.56)), 0.008, 0.008, segs=6)
         _cyl_bm(bm_bamboo, bc - Vector((0, 0, 0.18)), bc + Vector((0, 0, 0.22)), 0.16, 0.13, segs=10)
+        ph_layout += [
+            ("vintage_cabinet_01", (-2.80, -1.35, 0.18), (0.0, 0.0, math.pi * 0.5), 0.88),
+            ("ornate_mirror_01", (-3.12, -0.05, 1.38), (0.0, 0.0, math.pi * 0.5), 1.05),
+            ("painted_wooden_shelves", (-2.80, 2.02, 0.18), (0.0, 0.0, math.pi * 0.5), 1.08),
+            ("jug_01", (-0.94, -1.55, 0.80), (0.0, 0.0, 0.2), 1.0),
+            ("tea_set_01", (-1.82, -0.95, 1.54), (0.0, 0.0, 0.25), 0.66),
+            ("wooden_stool_01", (-1.95, 0.82, 0.18), (0.0, 0.0, 0.4), 0.95),
+            ("folding_wooden_stool", (1.02, -1.65, 0.175), (0.0, 0.0, -0.35), 0.95),
+            ("wooden_crate_01", (1.12, 1.95, 0.175), (0.0, 0.0, 0.22), 0.85),
+            ("wicker_basket_01", (0.72, 1.65, 0.175), (0.0, 0.0, -0.4), 1.15),
+        ]
 
     elif trade == "tv_coffee":
         # SHOP 3: CHANTRA ELECTRONICS / CRT TV / WATCH REPAIR & ROADSIDE COFFEE COUNTER!
-        # Interior repair workbench with TWO vintage CRT TVs + glowing articulated swing-arm bench lamp!
-        _box_bm(bm_posts, (-2.65, 0.0, 0.94), (0.78, 2.55, 0.065))
+        _box_bm(bm_table_wood, (-2.65, 0.0, 0.94), (0.78, 2.55, 0.065))
         for ly in (-1.15, 1.15):
             for lx in (-2.96, -2.34):
                 _box_bm(bm_posts, (lx, ly, 0.54), (0.07, 0.07, 0.78))
-        # Primary glowing blue-cyan CRT television facing out toward the open road!
-        _box_bm(bm_iron, (-2.52, -0.42, 1.24), (0.44, 0.56, 0.46), rot=Euler((0, 0, 0.16)), bevel=0.015, segs=1)
-        _box_bm(bm_crt, (-2.29, -0.38, 1.25), (0.04, 0.40, 0.32), rot=Euler((0, 0, 0.16)))
-        # Second boxy CRT television stacked slightly askew with open rear service chassis + boombox!
-        _box_bm(bm_iron, (-2.58, 0.38, 1.19), (0.38, 0.48, 0.38), rot=Euler((0, 0, -0.22)), bevel=0.012, segs=1)
-        _box_bm(bm_amber, (-2.38, 0.34, 1.20), (0.03, 0.32, 0.24), rot=Euler((0, 0, -0.22)))
-        # Articulated swing-arm electronics bench lamp glowing over the CRT repair mat
+        # Detailed vintage CRT TVs with recessed tube, speaker grille, knobs & V-antennas
+        _add_crt_tv(bm_iron, bm_posts, bm_crt, bm_white, (-2.52, -0.42, 0.975), yaw=0.16, scale=1.0)
+        _add_crt_tv(bm_iron, bm_posts, bm_amber, bm_white, (-2.58, 0.42, 0.975), yaw=-0.22, scale=0.84)
+        # Articulated swing-arm electronics bench lamp + oscilloscope + cables + news on front counter
         _cyl_bm(bm_iron, (-2.85, -0.95, 0.96), (-2.62, -0.78, 1.48), 0.011, 0.011, segs=6)
         _cyl_bm(bm_iron, (-2.62, -0.78, 1.48), (-2.42, -0.58, 1.62), 0.010, 0.010, segs=6)
         _cyl_bm(bm_shade, (-2.42, -0.58, 1.62), (-2.36, -0.52, 1.48), 0.025, 0.095, segs=10)
         bmesh.ops.create_uvsphere(bm_bulb, u_segments=8, v_segments=5, radius=0.032, matrix=Matrix.Translation((-2.38, -0.54, 1.50)))
-        _box_bm(bm_red, (-2.60, 0.98, 1.08), (0.30, 0.24, 0.18))
-        # Open oscilloscope/multimeter test box + coiled black antenna cables on electronics repair bench!
-        _box_bm(bm_iron, (-2.54, -1.04, 1.12), (0.26, 0.28, 0.22), rot=Euler((0, 0, 0.28)))
+        _box_bm(bm_iron, (-2.54, -1.04, 1.12), (0.26, 0.28, 0.22), rot=Euler((0, 0, 0.28)), bevel=0.008, segs=1)
         _box_bm(bm_crt, (-2.40, -1.02, 1.14), (0.02, 0.12, 0.09), rot=Euler((0, 0, 0.28)))
-        _torus_bm(bm_wire_local, (-2.42, 0.84, 0.99), (0, 0, 1), 0.095, 0.012, n_maj=10, n_min=5)
+        _torus_bm(bm_wire_local, (-2.42, 0.84, 0.99), (0, 0, 1), 0.095, 0.012, n_maj=12, n_min=5)
         _box_bm(bm_news, (0.16, -1.16, 1.082), (0.24, 0.32, 0.012), rot=Euler((0, 0, 0.15)))
-        # Wall-mounted parts shelf behind workbench
-        _add_shelf_unit(bm_posts, bm_amber, bm_green, bm_red, (-3.05, 0.10, 1.48), width=2.2, height=1.25, depth=0.28, seed=301)
-        # Illuminated glass watchmaker counter showcase right on the front serving counter + coffee tins!
         _box_bm(bm_noodle_glow, (0.14, 0.52, 1.22), (0.38, 0.68, 0.28))
         _box_bm(bm_iron, (0.14, 0.52, 1.37), (0.42, 0.72, 0.025))
         _add_bottles_row(bm_amber, bm_green, bm_white, (0.16, -0.78, 1.08), (0, 0.16, 0), 6, seed=310)
-        for sy_s in (-0.68, 0.0, 0.68):
-            _add_stool(bm_red, bm_posts, (0.86, sy_s, 0.17), red_plastic=(sy_s != 0.0))
-        _add_plastic_crate(bm_blue, bm_amber, bm_green, (1.18, -1.78, 0.17), rot_z=-0.18, filled=True)
-        # Tall aluminum Yagi rooftop TV antenna bolted right above the electronics shop!
+        _add_plastic_crate(bm_blue, bm_amber, bm_green, (1.18, -1.78, 0.175), rot_z=-0.18, filled=True)
         _add_tv_antenna(bm_iron, (0.18, hw * 0.78, 3.68))
+        ph_layout += [
+            ("painted_wooden_shelves", (-2.96, 1.55, 0.18), (0.0, 0.0, math.pi * 0.5), 1.06),
+            ("tea_set_01", (0.16, -0.35, 1.073), (0.0, 0.0, math.pi * 0.5), 0.66),
+            ("jug_01", (0.16, 0.02, 1.073), (0.0, 0.0, -0.3), 0.95),
+            ("oil_tin", (-2.55, 0.95, 0.975), (0.0, 0.0, 0.4), 1.2),
+            ("wooden_stool_01", (0.86, -0.68, 0.175), (0.0, 0.0, 0.2), 0.95),
+            ("folding_wooden_stool", (0.86, 0.0, 0.175), (0.0, 0.0, -0.15), 0.95),
+            ("wooden_stool_01", (0.86, 0.68, 0.175), (0.0, 0.0, 0.5), 0.95),
+            ("wooden_crate_01", (0.88, 1.48, 0.175), (0.0, 0.0, 0.14), 0.85),
+        ]
 
     elif trade == "moto":
         # SHOP 4: PONLEU PICH MOTORCYCLE REPAIR & ROADSIDE GLASS PETROL-BOTTLE STAND!
-        # Iconic Cambodian wooden roadside petrol-bottle rack with 8 tall golden gasoline bottles!
-        rx, ry, rz = 1.62, -1.28, 0.17
+        rx, ry, rz = 1.62, -1.28, 0.175
         _box_bm(bm_posts, (rx, ry, rz + 0.48), (0.28, 1.18, 0.04))
         _box_bm(bm_posts, (rx, ry, rz + 0.90), (0.28, 1.18, 0.04))
         _box_bm(bm_posts, (rx, ry, rz + 1.06), (0.04, 1.18, 0.06))
@@ -1066,78 +1181,75 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
             _cyl_bm(bm_amber, (rx, by, rz + 0.51), (rx, by, rz + 0.74), 0.042, 0.040, segs=8)
             _cyl_bm(bm_white, (rx, by, rz + 0.74), (rx, by, rz + 0.85), 0.019, 0.015, segs=7)
             _cyl_bm(bm_red, (rx, by, rz + 0.85), (rx, by, rz + 0.88), 0.017, 0.017, segs=6)
-        # HERO PROP: Sculpted vintage Cambodian Honda-Cub-style motorbike on center stand on the veranda apron!
-        _add_motorbike(bm_iron, bm_rubber, bm_blue, bm_white, bm_red, (0.88, 0.35, 0.17), yaw=math.radians(34))
-        # Stack of 4 weathered black rubber motorcycle tires leaning at front corner!
+        _add_motorbike(bm_iron, bm_rubber, bm_blue, bm_white, bm_red, (0.88, 0.35, 0.175), yaw=math.radians(34))
         for k in range(4):
             _torus_bm(bm_rubber, (1.15 - k * 0.04, 1.82, 0.25 + k * 0.13), (0.08 * (k % 2), 0.06, 1.0), 0.27, 0.068, n_maj=14, n_min=7)
-        # Hanging spoked motorcycle wheel on the front veranda post!
         _torus_bm(bm_rubber, (0.14, 1.85, 1.85), (1.0, 0.0, 0.0), 0.26, 0.045, n_maj=14, n_min=7)
         _torus_bm(bm_iron, (0.14, 1.85, 1.85), (1.0, 0.0, 0.0), 0.21, 0.016, n_maj=14, n_min=6)
         for sp in range(6):
             a = sp / 6.0 * math.pi
             _cyl_bm(bm_iron, (0.14, 1.85 - math.cos(a) * 0.21, 1.85 - math.sin(a) * 0.21),
                     (0.14, 1.85 + math.cos(a) * 0.21, 1.85 + math.sin(a) * 0.21), 0.006, 0.006, segs=5)
-        # Twin weathered ribbed 200-liter oil drums (blue & red!) + mechanic workbench & wrench pegboard!
         for dx_d, dy_d, bm_d in [(1.02, -2.12, bm_blue), (0.45, -2.28, bm_red)]:
-            _cyl_bm(bm_d, (dx_d, dy_d, 0.17), (dx_d, dy_d, 1.06), 0.28, 0.28, segs=12)
+            _cyl_bm(bm_d, (dx_d, dy_d, 0.175), (dx_d, dy_d, 1.06), 0.28, 0.28, segs=12)
             for hz in (0.44, 0.78):
                 _cyl_bm(bm_d, (dx_d, dy_d, hz), (dx_d, dy_d, hz + 0.04), 0.295, 0.295, segs=12)
-        _box_bm(bm_posts, (-2.55, 0.0, 0.90), (0.82, 2.85, 0.07))
+        _box_bm(bm_table_wood, (-2.55, 0.0, 0.90), (0.82, 2.85, 0.07))
         _box_bm(bm_red, (-2.35, -0.62, 1.06), (0.34, 0.56, 0.24), bevel=0.01, segs=1)
         _box_bm(bm_blue, (-2.42, 0.65, 1.12), (0.28, 0.20, 0.36))
-        # Wall wrench pegboard behind workbench
         _box_bm(bm_posts, (-3.16, 0.0, 1.75), (0.04, 1.55, 0.76))
         for wk in range(8):
             wy = -0.60 + wk * 0.17
             _box_bm(bm_iron, (-3.12, wy, 1.72), (0.02, 0.032, 0.22 + (wk % 3) * 0.09))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.38, -0.05, 0.95), (0, 0.12, 0), 5, seed=401)
-        _add_stool(bm_red, bm_posts, (-0.95, 0.45, 0.18), red_plastic=True)
-        _add_galvanized_bucket(bm_iron, (1.42, 1.25, 0.17))
-        # Red cylindrical garage air compressor with coiled black hose + wooden roadside A-frame petrol sign!
         _add_air_compressor(bm_red, bm_iron, bm_rubber, (-1.28, -1.68, 0.18))
         _box_bm(bm_table_wood, (2.22, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(-14), 0.12)))
         _box_bm(bm_table_wood, (2.42, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(14), 0.12)))
-        # Vertical hand air-pump beside oil drum + weathered vintage bicycle parked at shop corner!
-        _cyl_bm(bm_red, (1.35, -1.78, 0.17), (1.35, -1.78, 0.72), 0.024, 0.024, segs=8)
+        _cyl_bm(bm_red, (1.35, -1.78, 0.175), (1.35, -1.78, 0.72), 0.024, 0.024, segs=8)
         _cyl_bm(bm_iron, (1.35, -1.90, 0.74), (1.35, -1.66, 0.74), 0.014, 0.014, segs=6)
         _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.15, 2.22, -0.25), yaw=math.radians(82))
+        ph_layout += [
+            ("oil_tin", (1.42, 1.25, 0.175), (0.0, 0.0, 0.35), 1.3),
+            ("oil_tin", (1.28, 1.12, 0.175), (0.0, 0.0, -0.6), 1.25),
+            ("oil_tin", (-2.32, 0.95, 0.935), (0.0, 0.0, 0.2), 1.2),
+            ("wooden_bucket_01", (1.58, 1.46, 0.175), (0.0, 0.0, 0.4), 0.85),
+            ("wooden_stool_01", (-0.95, 0.45, 0.18), (0.0, 0.0, 0.22), 0.95),
+            ("wooden_crate_01", (-0.85, 1.65, 0.18), (0.0, 0.0, -0.25), 0.85),
+        ]
 
     elif trade == "grocery":
         # SHOP 5: PONLEU THMEY WEDDING BAND & VILLAGE DRY-GOODS GENERAL STORE!
-        # Horizontal bamboo veranda pole with organic hanging banana bunches, reed brooms, coiled rope & natural snack strips!
         _cyl_bm(bm_bamboo, (1.58, -hw * 0.88, 2.26), (1.58, hw * 0.88, 2.26), 0.022, 0.022, segs=6)
-        _add_banana_bunch(bm_green, bm_amber, bm_bamboo, (1.58, -1.75, 2.22), seed=511)
-        _add_banana_bunch(bm_green, bm_amber, bm_bamboo, (1.58, 1.56, 2.22), seed=512)
         _add_hanging_brooms(bm_bamboo, bm_posts, (1.56, -0.96, 2.24))
-        # 4 organic asymmetrical hanging snack sachet clusters (varied lengths & angles, zero grid!)
         for hy, n_t, bm_pkt, tilt in [
             (-0.34, 3, bm_red, 0.24), (0.64, 4, bm_amber, -0.18), (0.94, 3, bm_white, 0.22), (1.20, 2, bm_blue, -0.14),
         ]:
             for tier in range(n_t):
                 _box_bm(bm_pkt, (1.58 + 0.02 * (tier % 2), hy, 2.12 - tier * 0.14), (0.03, 0.095, 0.105),
                         rot=Euler((0.06 * tier, 0.08 * (tier % 2), tilt)))
-        # TWO tall stacked twin-woofer Cambodian wedding-band PA loudspeaker cabinets + amplifier head!
+        # Detailed twin-woofer wedding-band PA loudspeaker cabinets + glowing amp head
         for ly, yaw_s in [(-1.38, 0.24), (-0.52, 0.12)]:
-            for lz_add in (0.0, 0.76):
-                _box_bm(bm_iron, (-1.62, ly, 0.56 + lz_add), (0.52, 0.62, 0.72), rot=Euler((0, 0, yaw_s)), bevel=0.015, segs=1)
-                _cyl_bm(bm_rubber, (-1.35, ly + 0.04, 0.56 + lz_add), (-1.33, ly + 0.04, 0.56 + lz_add), 0.21, 0.21, segs=12)
-        _box_bm(bm_iron, (-1.62, -0.52, 1.82), (0.44, 0.54, 0.22), rot=Euler((0, 0, 0.12)))  # PA Amp head
-        _box_bm(bm_crt, (-1.39, -0.52, 1.84), (0.02, 0.18, 0.06), rot=Euler((0, 0, 0.12)))  # Glowing VU meter!
-        # 3-tier stocked village grocery shelving + folding worn-wood veranda tea table + rolled kantel mats + soda crates!
+            for lz_add in (0.18, 0.92):
+                _add_pa_speaker(bm_iron, bm_rubber, (-1.62, ly, lz_add), yaw=yaw_s)
+        _box_bm(bm_iron, (-1.62, -0.52, 1.78), (0.44, 0.54, 0.22), rot=Euler((0, 0, 0.12)))
+        _box_bm(bm_crt, (-1.39, -0.52, 1.80), (0.02, 0.18, 0.06), rot=Euler((0, 0, 0.12)))
         _add_shelf_unit(bm_posts, bm_amber, bm_green, bm_red, (-2.88, 0.75, 0.18), width=2.35, height=1.95, depth=0.40, seed=501)
-        _box_bm(bm_table_wood, (1.05, 1.15, 0.76), (0.62, 0.88, 0.045))
         for k_m in range(3):
             _cyl_bm(bm_kantel, (0.32 + k_m * 0.11, -2.35, 0.18), (0.28 + k_m * 0.11, -2.35, 1.48), 0.055, 0.055, segs=10)
-        for lx in (0.78, 1.32):
-            for ly in (0.76, 1.54):
-                _box_bm(bm_posts, (lx, ly, 0.46), (0.048, 0.048, 0.58))
-        _add_bottles_row(bm_amber, bm_green, bm_white, (1.05, 0.90, 0.79), (0, 0.14, 0), 4, seed=530)
-        _add_plastic_crate(bm_red, bm_amber, bm_green, (1.08, -1.78, 0.17), rot_z=0.18, filled=True)
-        _add_plastic_crate(bm_blue, bm_amber, bm_green, (1.10, -1.74, 0.45), rot_z=-0.12, filled=True)
-        _add_galvanized_bucket(bm_iron, (1.52, 2.02, 0.17))
-        _add_stool(bm_red, bm_posts, (0.98, 0.45, 0.17), red_plastic=True)
-        _add_stool(bm_red, bm_posts, (1.28, 1.72, 0.17), red_plastic=True)
+        _add_plastic_crate(bm_red, bm_amber, bm_green, (1.08, -1.78, 0.175), rot_z=0.18, filled=True)
+        ph_layout += [
+            ("bananas", (1.58, -1.75, 2.04), (0.0, math.radians(78), 0.15), 0.95),
+            ("bananas", (1.58, 1.56, 2.04), (0.0, math.radians(78), -0.45), 0.92),
+            ("wooden_table_02", (1.05, 1.15, 0.175), (0.0, 0.0, math.pi * 0.5 - 0.04), 0.90),
+            ("tea_set_01", (1.05, 1.12, 0.175 + 0.72), (0.0, 0.0, -0.35), 0.68),
+            ("jug_01", (1.02, 1.44, 0.175 + 0.72), (0.0, 0.0, 0.4), 0.95),
+            ("painted_wooden_shelves", (-2.75, -1.95, 0.18), (0.0, 0.0, math.pi * 0.5), 1.06),
+            ("wicker_basket_01", (1.16, 0.25, 0.175), (0.0, 0.0, 0.25), 1.25),
+            ("wooden_crate_01", (1.08, -1.12, 0.175), (0.0, 0.0, -0.14), 0.85),
+            ("wooden_bucket_01", (1.52, 2.02, 0.175), (0.0, 0.0, 0.1), 0.82),
+            ("folding_wooden_stool", (0.98, 0.48, 0.175), (0.0, 0.0, 0.3), 0.95),
+            ("wooden_stool_01", (1.28, 1.72, 0.175), (0.0, 0.0, -0.4), 0.95),
+        ]
 
     elif trade == "salon":
         # SHOP 6: MALIN & CHANTRA BRIDAL TAILOR & STILT CORNER SALON!
@@ -1145,17 +1257,13 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
         _box_bm(bm_mirror, (-3.10, 0.0, 1.72), (0.02, 1.34, 0.94))
         _box_bm(bm_posts, (-2.88, 0.0, 0.96), (0.44, 1.65, 0.05))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.82, -0.65, 0.99), (0, 0.17, 0), 8, seed=601)
-        _add_shelf_unit(bm_posts, bm_amber, bm_green, bm_red, (-2.75, 1.68, 0.18), width=1.25, height=1.75, depth=0.34, seed=610)
-        # Vintage treadle sewing machine draped in real Khmer patterned hol silk + tailor's dress-form + kantel mats!
         _add_sewing_machine(bm_table_wood, bm_iron, bm_hol_silk, (-1.28, -1.42, 0.18))
         _add_dress_form(bm_posts, bm_hol_silk, (-1.12, 1.38, 0.18))
         for sb_k in range(3):
             _cyl_bm(bm_hol_silk, (-2.72, 1.25 + sb_k * 0.16, 1.44), (-2.72, 1.25 + sb_k * 0.16, 1.76), 0.058, 0.058, segs=10)
         _cyl_bm(bm_kantel, (0.48, 2.12, 0.18), (0.44, 2.12, 1.42), 0.056, 0.056, segs=10)
         _add_hair_dryer_stand(bm_iron, bm_white, (-1.75, 0.72, 0.18))
-        _box_bm(bm_white, (0.06, 0.74, 1.38), (0.05, 0.42, 2.34), rot=Euler((0, 0, 0.14)))  # Parted cream salon curtain
-        _add_stool(bm_red, bm_posts, (-1.85, -0.15, 0.18), red_plastic=True)
-        # Carved veranda spindle railing on left half + worn-wood bench + real checkered krama + crate + parked bicycle!
+        _box_bm(bm_linen, (0.06, 0.74, 1.38), (0.05, 0.42, 2.34), rot=Euler((0, 0, 0.14)))
         _box_bm(bm_posts, (1.75, 1.52, 0.88), (0.07, 1.85, 0.06))
         for ks in range(7):
             _box_bm(bm_posts, (1.75, 0.72 + ks * 0.26, 0.52), (0.036, 0.036, 0.68))
@@ -1163,32 +1271,29 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
         for by in (0.85, 1.98):
             _box_bm(bm_posts, (1.02, by, 0.33), (0.32, 0.07, 0.38))
         _box_bm(bm_krama, (1.04, 1.55, 0.575), (0.34, 0.44, 0.045))
-        _add_crate(bm_posts, (0.92, -1.78, 0.17), (0.46, 0.38, 0.32), rot_z=0.35)
         _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.10, -2.05, -0.25), yaw=math.radians(-78))
+        ph_layout += [
+            ("ornate_mirror_01", (-3.12, -1.45, 1.24), (0.0, 0.0, math.pi * 0.5), 1.05),
+            ("painted_wooden_shelves", (-2.75, 1.68, 0.18), (0.0, 0.0, math.pi * 0.5), 1.08),
+            ("wicker_basket_01", (1.08, -0.92, 0.175), (0.0, 0.0, 0.22), 1.2),
+            ("wooden_crate_01", (0.92, -1.78, 0.175), (0.0, 0.0, 0.35), 0.85),
+            ("folding_wooden_stool", (-1.85, -0.15, 0.18), (0.0, 0.0, 0.5), 0.95),
+            ("wooden_stool_01", (1.24, 0.55, 0.175), (0.0, 0.0, -0.3), 0.95),
+            ("pot_enamel_01", (-2.75, 1.65, 0.18 + 1.215), (0.0, 0.0, 0.4), 0.9),
+        ]
 
     else:
         # SHOP 7: LONELY HALF-SHUTTERED JUNGLE-EDGE OUTPOST!
-        # Warm glowing amber crack spilling through the slightly ajar storm doors + iron padlock hasp!
         _box_bm(bm_win_glow, (-0.02, 0.06, 1.38), (0.04, 0.28, 2.28))
         _box_bm(bm_iron, (0.12, -0.14, 1.32), (0.06, 0.09, 0.11))
-        # Veranda table with upturned red stool stacked for the storm + galvanized rain-drip bucket + leaning bamboo ladder!
-        _box_bm(bm_posts, (1.05, 1.35, 0.78), (0.68, 1.05, 0.05))
-        for lx in (0.76, 1.34):
-            for ly in (0.88, 1.82):
-                _box_bm(bm_posts, (lx, ly, 0.47), (0.055, 0.055, 0.62))
-        _box_bm(bm_red, (1.05, 1.25, 0.82), (0.28, 0.28, 0.032))
-        for dx in (-0.10, 0.10):
-            for dy in (-0.10, 0.10):
-                _cyl_bm(bm_red, (1.05 + dx, 1.25 + dy, 0.84), (1.05 + dx * 1.15, 1.25 + dy * 1.15, 1.20), 0.015, 0.014, segs=6)
-        _add_galvanized_bucket(bm_iron, (1.68, hw - 0.12, 0.17))
-        # Weathered bamboo ladder leaning against the shop's side roof eave!
-        lad_y = -hw - 0.18
-        for dx_l in (-0.22, 0.22):
-            _cyl_bm(bm_bamboo, (-1.15 + dx_l, lad_y - 0.55, -0.35), (-1.15 + dx_l, lad_y + 0.08, 3.05), 0.026, 0.024, segs=6)
-        for rg in range(8):
-            f = (rg + 1) / 9.0
-            _cyl_bm(bm_bamboo, (-1.37, lad_y - 0.55 + f * 0.63, -0.35 + f * 3.40), (-0.93, lad_y - 0.55 + f * 0.63, -0.35 + f * 3.40), 0.016, 0.016, segs=6)
-        _add_crate(bm_posts, (0.95, -1.65, 0.17), (0.50, 0.40, 0.34), rot_z=-0.28)
+        ph_layout += [
+            ("wooden_table_02", (1.05, 1.35, 0.175), (0.0, 0.0, math.pi * 0.5 + 0.08), 0.90),
+            ("wooden_stool_01", (1.05, 1.25, 0.175 + 0.72), (math.pi, 0.0, 0.35), 0.92),
+            ("vintage_oil_lamp", (1.08, 1.68, 0.175 + 0.72), (0.0, 0.0, 0.2), 0.45),
+            ("wooden_bucket_01", (1.68, hw - 0.18, 0.175), (0.0, 0.0, 0.5), 0.85),
+            ("wooden_crate_01", (0.95, -1.65, 0.175), (0.0, 0.0, -0.28), 0.88),
+            ("wooden_ladder_02", (-0.85, -hw - 0.42, -0.22), (0.0, 0.0, 0.08), 1.32),
+        ]
 
     # 5. LIGHTING FIXTURES (VERANDA PENDANT + INTERIOR LAMP/FLUORESCENT + GOOSENECK SIGN LAMP)
     # Main hanging enamel pendant lamp under front veranda awning + runtime PointLight anchor!
@@ -1293,10 +1398,14 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
         ("noodle_glow", bm_noodle_glow, mats["noodle_glow"], False),
         ("foliage", bm_foliage, mats["foliage"], False),
         ("shrine_glow", bm_shrine_glow, mats["shrine_glow"], True),
+        ("leather_barber", bm_leather, mats["leather_barber"], True),
+        ("linen_towel", bm_linen, mats["linen_towel"], True),
     ]
     uv_parts = {
         "posts", "walls", "plaster", "shutters", "tin", "brick", "deck", "concrete",
         "clay_tile", "thatch", "bamboo_wall", "table_wood", "krama", "hol_silk", "news", "kantel",
+        "iron", "shade", "red_props", "blue_props", "white_props", "rubber", "bamboo",
+        "leather_barber", "linen_towel",
     }
     for suffix, bm_d, mt, sm in parts:
         _bm_obj(
@@ -1306,6 +1415,11 @@ def _build_detailed_shop(coll, M_shop, mats, props, p_verts, p_faces, p_uvs, spe
             smooth=sm,
             M_world=M_shop,
         )
+
+    for phk, lp, prot, psc in ph_layout:
+        if ph_props.get(phk):
+            M_p = M_shop @ Matrix.Translation(lp) @ Euler(prot, "XYZ").to_matrix().to_4x4() @ Matrix.Scale(psc, 4)
+            _place_linked(ph_props[phk], coll, M_p, f"shop_{shop_idx}_ph_{phk}")
 
     # 7. SCANNED RURAL CAMBODIAN PROPS TUCKED NATURALLY ON THE VERANDA, COUNTERS & UNDER THE EAVES
     # Each tuple: (prop_key, local_pos, euler_xyz, uniform_scale)
@@ -1862,6 +1976,211 @@ def _upgrade_ep1_refine_jungle_and_paddies(
     )
 
 
+def _upgrade_road_surface_and_clutter(coll, rng, w, road_point, road_heading, shop_mats, mats_village, world_uvs_fn):
+    """Sculpt subtle organic rut meander and wet mud puddle halos via vertex colors (Col)
+    on taxi_laterite_track & taxi_muddy_track while keeping ny > 0.88 and road width unchanged,
+    then add weathered corduroy mud planks, paddy culverts, culvert posts, cobbles & verge litter."""
+    from mathutils.kdtree import KDTree
+
+    # 1. Gather all taxi_rut_water puddles in Blender XY space so every puddle paints a damp shoreline halo
+    puddle_info = []
+    for o in bpy.data.objects:
+        if o.type == "MESH" and o.name.startswith("taxi_rut_water") and len(o.data.vertices) >= 4:
+            mw_p = o.matrix_world
+            c = mw_p @ o.data.vertices[0].co
+            rad = max(((mw_p @ v.co) - c).length for v in o.data.vertices[1:])
+            puddle_info.append((c.copy(), max(0.30, rad)))
+
+    tree = None
+    if puddle_info:
+        tree = KDTree(len(puddle_info))
+        for idx, (c, _) in enumerate(puddle_info):
+            tree.insert(c, idx)
+        tree.balance()
+
+    def _road_lat_z_np(bx, by):
+        x, z = -bx, -by
+        t = z.copy()
+        for _ in range(5):
+            c = 3.8 * np.sin(t * 0.018) + 2.2 * np.sin(t * 0.037)
+            s = 3.8 * 0.018 * np.cos(t * 0.018) + 2.2 * 0.037 * np.cos(t * 0.037)
+            t += ((x - c) * s + z - t) / (1.0 + s * s)
+        ang = np.arctan(3.8 * 0.018 * np.cos(t * 0.018) + 2.2 * 0.037 * np.cos(t * 0.037))
+        lat = (x - 3.8 * np.sin(t * 0.018) - 2.2 * np.sin(t * 0.037)) * np.cos(ang) - (z - t) * np.sin(ang)
+        return lat, t
+
+    corduroy_zs = (74.0, 195.0, 318.0, 412.0)
+
+    def _wire_vertex_color_multiply(mat, layer_name="Col"):
+        if not mat or not mat.use_nodes or not mat.node_tree:
+            return
+        nt = mat.node_tree
+        if any(n.type == "VERTEX_COLOR" for n in nt.nodes):
+            return
+        bsdf = nt.nodes.get("Principled BSDF")
+        if not bsdf:
+            return
+        bc_in = bsdf.inputs["Base Color"]
+        vc = nt.nodes.new("ShaderNodeVertexColor")
+        vc.layer_name = layer_name
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0
+        if bc_in.links:
+            src_sock = bc_in.links[0].from_socket
+            nt.links.remove(bc_in.links[0])
+            nt.links.new(src_sock, mix.inputs[6])
+        else:
+            mix.inputs[6].default_value = tuple(bc_in.default_value)
+        nt.links.new(vc.outputs["Color"], mix.inputs[7])
+        nt.links.new(mix.outputs[2], bc_in)
+
+    for track_name in ("taxi_laterite_track", "taxi_muddy_track"):
+        obj = bpy.data.objects.get(track_name)
+        if not obj or obj.type != "MESH":
+            continue
+        me = obj.data
+        nv = len(me.vertices)
+        if nv == 0:
+            continue
+        co = np.empty(nv * 3, dtype=np.float64)
+        me.vertices.foreach_get("co", co)
+        pts = co.reshape(-1, 3)
+        mw_t = np.array(obj.matrix_world, dtype=np.float64)
+        wpts = pts @ mw_t[:3, :3].T + mw_t[:3, 3]
+        lat, z_along = _road_lat_z_np(wpts[:, 0], wpts[:, 1])
+
+        if not me.get("road_sculpt_v2"):
+            # Subtle organic Z undulation + meandering rut depth strictly away from boundary edges!
+            taper = np.clip((2.65 - np.abs(lat)) / 0.35, 0.0, 1.0)
+            meander = 0.08 * np.sin(z_along * 0.14) + 0.04 * np.cos(z_along * 0.31)
+            l_shift = lat - meander * np.exp(-((lat / 2.3) ** 2))
+            micro = 0.007 * np.sin(z_along * 0.85 + lat * 2.1) + 0.004 * np.cos(z_along * 2.3 - lat * 4.7)
+            rut_var = -0.010 * np.exp(-(((np.abs(l_shift) - 0.72) / 0.22) ** 2)) * (0.5 + 0.5 * np.sin(z_along * 0.19))
+            dz = (micro + rut_var) * taper
+            pts[:, 2] = np.minimum(-0.342, pts[:, 2] + dz)
+            me.vertices.foreach_set("co", pts.ravel())
+            me["road_sculpt_v2"] = True
+            me.update()
+            min_nz = min(v.normal.z for v in me.vertices)
+            print(f"TAXI_ROAD_SCULPT {track_name} min_nz={min_nz:.4f}")
+
+        # Bake vertex colors ("Col", BYTE_COLOR, CORNER) for wet wheel ruts, puddle halos & mossy shoulders
+        while "Col" in me.color_attributes:
+            me.color_attributes.remove(me.color_attributes["Col"])
+        col_attr = me.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
+        me.color_attributes.active_color = col_attr
+        me.color_attributes.render_color_index = list(me.color_attributes).index(col_attr)
+
+        # Base warm crown tint
+        vr = np.full(nv, 1.0, dtype=np.float32)
+        vg = np.full(nv, 0.96, dtype=np.float32)
+        vb = np.full(nv, 0.92, dtype=np.float32)
+
+        # Rain-soaked wheel rut darkening around |lat| ≈ 0.72 m
+        w_rut = np.exp(-(((np.abs(lat) - 0.72) / 0.28) ** 2)) * 0.85
+        vr = vr * (1.0 - w_rut) + 0.58 * w_rut
+        vg = vg * (1.0 - w_rut) + 0.55 * w_rut
+        vb = vb * (1.0 - w_rut) + 0.52 * w_rut
+
+        # Muddy corduroy churn zones
+        for cz in corduroy_zs:
+            wc = np.exp(-(((z_along - cz) / 1.8) ** 2)) * np.exp(-((lat / 1.4) ** 2)) * 0.75
+            vr = vr * (1.0 - wc) + 0.54 * wc
+            vg = vg * (1.0 - wc) + 0.51 * wc
+            vb = vb * (1.0 - wc) + 0.47 * wc
+
+        # Puddle wet shoreline halos (~0.75 m outside every puddle rim)
+        if tree is not None:
+            for vi in range(nv):
+                c_v = Vector((float(wpts[vi, 0]), float(wpts[vi, 1]), float(wpts[vi, 2])))
+                _, pidx, _ = tree.find(c_v)
+                pc, prad = puddle_info[pidx]
+                dist_xy = math.hypot(c_v.x - pc.x, c_v.y - pc.y)
+                d_edge = dist_xy - prad
+                if d_edge < 0.75:
+                    u = max(0.0, min(1.0, 1.0 - max(0.0, d_edge) / 0.75))
+                    w_wet = u * u * (3.0 - 2.0 * u) * 0.88
+                    vr[vi] = vr[vi] * (1.0 - w_wet) + 0.50 * w_wet
+                    vg[vi] = vg[vi] * (1.0 - w_wet) + 0.47 * w_wet
+                    vb[vi] = vb[vi] * (1.0 - w_wet) + 0.44 * w_wet
+
+        # Outer mossy verges (|lat| > 2.05)
+        w_sh = np.clip((np.abs(lat) - 2.05) / 0.70, 0.0, 1.0) * 0.82
+        vr = vr * (1.0 - w_sh) + 0.64 * w_sh
+        vg = vg * (1.0 - w_sh) + 0.69 * w_sh
+        vb = vb * (1.0 - w_sh) + 0.56 * w_sh
+
+        n_loops = len(me.loops)
+        loop_vi = np.empty(n_loops, dtype=np.int32)
+        me.loops.foreach_get("vertex_index", loop_vi)
+        rgba = np.column_stack((vr[loop_vi], vg[loop_vi], vb[loop_vi], np.ones(n_loops, dtype=np.float32))).ravel()
+        col_attr.data.foreach_set("color", rgba)
+        me.update()
+        if obj.data.materials:
+            _wire_vertex_color_multiply(obj.data.materials[0], "Col")
+
+    # 2. Corduroy timber mud-plank crossings at 4 swampy rut dips
+    for ci, cz in enumerate(corduroy_zs):
+        bm_cp = bmesh.new()
+        ang = -road_heading(cz)
+        for pi in range(6):
+            pz = cz - 0.90 + pi * 0.34 + float(rng.uniform(-0.05, 0.05))
+            for track_side in (-0.72, 0.72):
+                plat = track_side + float(rng.uniform(-0.08, 0.08))
+                pos_b = w(road_point(plat, -0.145, pz))
+                pw = float(rng.uniform(0.95, 1.25))
+                pd = float(rng.uniform(0.16, 0.22))
+                rot_p = Euler((float(rng.uniform(-0.03, 0.03)), float(rng.uniform(-0.03, 0.03)), ang + float(rng.uniform(-0.14, 0.14))))
+                _box_bm(bm_cp, pos_b, (pw, pd, 0.045), rot=rot_p, bevel=0.006, segs=1)
+        _bm_obj(f"taxi_road_corduroy_{ci}", bm_cp, shop_mats["deck"], coll, world_uvs_fn=world_uvs_fn, smooth=False)
+
+    # 3. Paddy drainage culverts & weathered white/red warning posts across the open paddy embankment
+    for ci, cz in enumerate((36.0, 94.0, 140.0)):
+        ang = -road_heading(cz)
+        bm_cw = bmesh.new()
+        bm_pw = bmesh.new()
+        bm_pr = bmesh.new()
+        for side in (-1.0, 1.0):
+            # Brick/concrete culvert headwall down the embankment edge + drainage pipe mouth
+            hw_pos = w(road_point(side * 3.55, -0.44, cz))
+            _box_bm(bm_cw, hw_pos, (0.28, 1.15, 0.64), rot=Euler((0, 0, ang)), bevel=0.012, segs=1)
+            # Weathered leaning culvert marker post at shoulder edge (catches headlights!)
+            mp_pos = w(road_point(side * 3.16, -0.02, cz))
+            tilt = Euler((float(rng.uniform(-0.04, 0.04)), float(rng.uniform(-0.05, 0.05)), ang))
+            _box_bm(bm_pw, mp_pos, (0.11, 0.11, 0.62), rot=tilt, bevel=0.008, segs=1)
+            _box_bm(bm_pr, mp_pos + Vector((0, 0, 0.16)), (0.116, 0.116, 0.11), rot=tilt)
+        _bm_obj(f"taxi_road_culvert_{ci}", bm_cw, shop_mats["concrete"], coll, world_uvs_fn=world_uvs_fn, smooth=False)
+        _bm_obj(f"taxi_road_culvert_post_{ci}_w", bm_pw, shop_mats["white_enamel"], coll, world_uvs_fn=world_uvs_fn, smooth=False)
+        _bm_obj(f"taxi_road_culvert_post_{ci}_r", bm_pr, shop_mats["red_plastic"], coll, world_uvs_fn=world_uvs_fn, smooth=False)
+
+    # 4. Dark mud-coated angular laterite cobbles & wet fallen verge leaf/twig litter (merged single meshes)
+    bm_cob = bmesh.new()
+    for _ in range(260):
+        zz = float(rng.uniform(-20.0, 502.0))
+        a = float(rng.choice([rng.uniform(0.0, 0.34), rng.uniform(1.06, 2.55), rng.uniform(0.48, 0.96)], p=[0.28, 0.54, 0.18]))
+        lx = float(rng.choice([-1.0, 1.0])) * a
+        crown_y = -0.13 + 0.055 * (1.0 - (lx / 2.8) ** 2) - math.exp(-((abs(lx) - 0.72) / 0.19) ** 2) * 0.07 + math.exp(-((abs(lx) - 1.0) / 0.12) ** 2) * 0.022
+        cb_p = w(road_point(lx, crown_y + 0.001, zz))
+        sx = float(rng.uniform(0.042, 0.095))
+        sy = float(rng.uniform(0.036, 0.085))
+        sz = float(rng.uniform(0.014, 0.026))
+        _box_bm(bm_cob, cb_p, (sx, sy, sz), rot=Euler((float(rng.uniform(-0.18, 0.18)), float(rng.uniform(-0.18, 0.18)), float(rng.uniform(0, math.tau)))), bevel=min(sx, sy, sz) * 0.32, segs=1)
+    _bm_obj("taxi_road_cobble", bm_cob, shop_mats["cobble"], coll, world_uvs_fn=world_uvs_fn, smooth=True)
+
+    floor_mat = mats_village.get("M_wet_forest_floor") or bpy.data.materials.get("M_wet_forest_floor") or shop_mats.get("dark_wood")
+    bm_lit = bmesh.new()
+    for _ in range(180):
+        zz = float(rng.uniform(146.0, 502.0))
+        lx = float(rng.choice([-1.0, 1.0])) * float(rng.uniform(2.22, 2.74))
+        edge_y = -0.13 + 0.055 * (1.0 - (lx / 2.8) ** 2) - 0.06 * min(1.0, max(0.0, (abs(lx) - 2.25) / 0.55)) ** 2
+        lp = w(road_point(lx, edge_y + 0.005, zz))
+        _box_bm(bm_lit, lp, (float(rng.uniform(0.10, 0.24)), float(rng.uniform(0.05, 0.14)), 0.008), rot=Euler((0, 0, float(rng.uniform(0, math.tau)))))
+    _bm_obj("taxi_road_verge_litter", bm_lit, floor_mat, coll, world_uvs_fn=world_uvs_fn, smooth=False)
+    print("TAXI_ROAD_SURFACE_AND_CLUTTER_UPGRADED puddles=", len(puddle_info))
+
+
 def apply_roadside_details(
     mats_village,
     rng,
@@ -1877,8 +2196,13 @@ def apply_roadside_details(
     plant_fn,
 ):
     """Build 8 bespoke ultra-detailed Cambodian roadside shops, 7 gooseneck-lit Khmer 90s poster boards,
-    overhead electrical drop wires, scarecrows, radial puddle UVs, and ep1-refine rice fields, palms & jungle."""
+    overhead electrical drop wires, scarecrows, radial puddle UVs, wet sculpted road detail, and remove Neak Ta."""
     coll = bpy.context.scene.collection
+
+    # Remove old Neak Ta objects cleanly in both direct build-taxi and standalone runs!
+    for o in list(bpy.data.objects):
+        if "neakta" in o.name.lower() or o.name == "taxi_road_shrine_tree":
+            bpy.data.objects.remove(o, do_unlink=True)
 
     _upgrade_puddles_and_median_grass()
 
@@ -1891,6 +2215,21 @@ def apply_roadside_details(
     tex.image = bpy.data.images.load(str(poster_path), check_existing=True)
     nt.links.new(tex.outputs["Color"], bs.inputs["Base Color"])
     poster_mat.use_backface_culling = False
+
+    def _pbr_prop(tex_id, mat_name, tint, tile, rough, metal=0.0, double_sided=False):
+        mt = library_material(tex_id, mat_name, tint=tint, tile=tile)
+        mt.use_backface_culling = not double_sided
+        pbs = mt.node_tree.nodes.get("Principled BSDF")
+        if pbs:
+            # Remove ORM roughness/metallic overrides if fixed finish is desired, or keep subtle texture variation
+            for l in list(pbs.inputs["Metallic"].links):
+                mt.node_tree.links.remove(l)
+            pbs.inputs["Metallic"].default_value = metal
+            if rough is not None:
+                for l in list(pbs.inputs["Roughness"].links):
+                    mt.node_tree.links.remove(l)
+                pbs.inputs["Roughness"].default_value = rough
+        return mt
 
     shop_mats = {
         "planks": library_material("weathered_planks", "M_taxi_shop_planks", tint=(0.36, 0.28, 0.21), tile=1.4),
@@ -1909,20 +2248,23 @@ def apply_roadside_details(
         "hol_silk": _image_tex_material("M_taxi_shop_hol_silk", TEX / "T_ep1_hol_silk_BC.png", rough=0.62, tile=0.48, double_sided=True),
         "news": _image_tex_material("M_taxi_shop_news", TEX / "T_ep1_paper_news_BC.png", rough=0.82, tile=0.36, double_sided=True),
         "kantel": _image_tex_material("M_taxi_shop_kantel", TEX / "T_ep1_kantel_mat_BC.png", rough=0.78, tile=0.85, double_sided=True),
-        "iron": plain("M_taxi_shop_iron", (0.06, 0.06, 0.065), 0.52, 0.78),
-        "enamel_green": plain("M_taxi_shop_enamel_green", (0.05, 0.16, 0.09), 0.28, 0.18),
+        "iron": _pbr_prop("rusty_metal", "M_taxi_shop_iron", (0.14, 0.14, 0.15), 0.7, 0.48, metal=0.78),
+        "enamel_green": _pbr_prop("painted_plaster_wall", "M_taxi_shop_enamel_green", (0.06, 0.18, 0.10), 0.9, 0.30, metal=0.18),
         "bulb": plain("M_taxi_shop_bulb", (1.0, 0.76, 0.38), 0.18, 0.0, emission=(1.0, 0.68, 0.28), strength=5.5),
         "fluoro": plain("M_taxi_shop_fluoro", (0.86, 0.94, 1.0), 0.15, 0.0, emission=(0.76, 0.90, 1.0), strength=4.2),
         "crt": plain("M_taxi_shop_crt", (0.35, 0.62, 0.78), 0.12, 0.0, emission=(0.36, 0.66, 0.88), strength=3.4),
-        "red_plastic": plain("M_taxi_shop_red_prop", (0.42, 0.055, 0.04), 0.36, 0.04),
-        "blue_tarp": plain("M_taxi_shop_blue_prop", (0.06, 0.18, 0.42), 0.42, 0.05),
+        "red_plastic": _pbr_prop("painted_plaster_wall", "M_taxi_shop_red_prop", (0.38, 0.065, 0.055), 0.8, 0.42, metal=0.04),
+        "blue_tarp": _pbr_prop("rough_linen", "M_taxi_shop_blue_prop", (0.07, 0.18, 0.36), 0.9, 0.46, metal=0.05, double_sided=True),
         "amber_glass": plain("M_taxi_shop_amber_glass", (0.68, 0.39, 0.06), 0.14, 0.06),
         "green_glass": plain("M_taxi_shop_green_glass", (0.05, 0.22, 0.08), 0.16, 0.06),
         "foliage": plain("M_taxi_shop_foliage", (0.032, 0.075, 0.028), 0.62, 0.0),
-        "white_enamel": plain("M_taxi_shop_white_enamel", (0.66, 0.64, 0.58), 0.34, 0.08),
+        "white_enamel": _pbr_prop("white_plaster_rough_01", "M_taxi_shop_white_enamel", (0.60, 0.58, 0.52), 0.9, 0.34, metal=0.08),
         "mirror": plain("M_taxi_shop_mirror", (0.78, 0.82, 0.84), 0.05, 0.96),
-        "rubber": plain("M_taxi_shop_rubber", (0.024, 0.024, 0.026), 0.76, 0.0),
-        "bamboo": plain("M_taxi_shop_bamboo", (0.38, 0.29, 0.15), 0.74, 0.0),
+        "rubber": _pbr_prop("concrete_floor_worn_001", "M_taxi_shop_rubber", (0.045, 0.045, 0.048), 0.5, 0.76),
+        "bamboo": _pbr_prop("bamboo_wall", "M_taxi_shop_bamboo", (0.40, 0.31, 0.18), 0.8, 0.72),
+        "leather_barber": library_material("brown_leather", "M_taxi_shop_leather", tint=(0.24, 0.07, 0.05), tile=0.45),
+        "linen_towel": _pbr_prop("rough_linen", "M_taxi_shop_linen_towel", (0.56, 0.53, 0.46), 0.35, 0.86),
+        "cobble": library_material("red_laterite_soil_stones", "M_taxi_road_cobble", tint=(0.13, 0.10, 0.085), tile=0.65),
         "wire": plain("M_taxi_shop_wire", (0.02, 0.02, 0.022), 0.68, 0.15),
         "win_glow": plain("M_taxi_shop_window_glow", (0.95, 0.68, 0.30), 0.22, 0.0, emission=(1.0, 0.64, 0.24), strength=2.6),
         "noodle_glow": plain("M_taxi_shop_noodle_glow", (0.98, 0.80, 0.44), 0.14, 0.0, emission=(1.0, 0.74, 0.34), strength=3.4),
@@ -1930,9 +2272,10 @@ def apply_roadside_details(
         "world_uvs": world_uvs_fn,
     }
     shop_mats["foliage"].use_backface_culling = False
-    shop_mats["blue_tarp"].use_backface_culling = False
 
-    # Tightly decimated rural shop props + roadside scarecrow (shared linked copies -> tiny triangle & byte budget!)
+    _upgrade_road_surface_and_clutter(coll, rng, w, road_point, road_heading, shop_mats, mats_village, world_uvs_fn)
+
+    # Tightly decimated rural shop scans + curated PolyHaven photorealistic shop props!
     props = {
         "rice_sack": _load_decimated_scan("rice_sack.glb", 0.20, full_gltf_group, import_glb),
         "water_jar": _load_decimated_scan("water_jar.glb", 0.10, full_gltf_group, import_glb),
@@ -1944,6 +2287,24 @@ def apply_roadside_details(
         "jar_handles": _load_decimated_scan("jar_handles.glb", 0.85, full_gltf_group, import_glb),
         "basket_round": _load_decimated_scan("basket_round.glb", 0.85, full_gltf_group, import_glb),
         "winnowing_tray": _load_decimated_scan("winnowing_tray.glb", 0.18, full_gltf_group, import_glb),
+    }
+    ph_props = {
+        "bananas": _load_decimated_polyhaven("bananas", 460, full_gltf_group, import_glb),
+        "wooden_table_02": _load_decimated_polyhaven("wooden_table_02", 260, full_gltf_group, import_glb),
+        "wooden_stool_01": _load_decimated_polyhaven("wooden_stool_01", 400, full_gltf_group, import_glb),
+        "folding_wooden_stool": _load_decimated_polyhaven("folding_wooden_stool", 400, full_gltf_group, import_glb),
+        "painted_wooden_shelves": _load_decimated_polyhaven("painted_wooden_shelves", 520, full_gltf_group, import_glb),
+        "vintage_cabinet_01": _load_decimated_polyhaven("vintage_cabinet_01", 600, full_gltf_group, import_glb),
+        "ornate_mirror_01": _load_decimated_polyhaven("ornate_mirror_01", 450, full_gltf_group, import_glb),
+        "wooden_crate_01": _load_decimated_polyhaven("wooden_crate_01", 400, full_gltf_group, import_glb),
+        "wicker_basket_01": _load_decimated_polyhaven("wicker_basket_01", 440, full_gltf_group, import_glb),
+        "wooden_bucket_01": _load_decimated_polyhaven("wooden_bucket_01", 420, full_gltf_group, import_glb),
+        "pot_enamel_01": _load_decimated_polyhaven("pot_enamel_01", 400, full_gltf_group, import_glb),
+        "jug_01": _load_decimated_polyhaven("jug_01", 380, full_gltf_group, import_glb),
+        "oil_tin": _load_decimated_polyhaven("oil_tin", 320, full_gltf_group, import_glb),
+        "tea_set_01": _load_decimated_polyhaven("tea_set_01", 480, full_gltf_group, import_glb),
+        "wooden_ladder_02": _load_decimated_polyhaven("wooden_ladder_02", 420, full_gltf_group, import_glb),
+        "vintage_oil_lamp": _load_decimated_polyhaven("vintage_oil_lamp", 420, full_gltf_group, import_glb),
     }
     scarecrow = _load_decimated_scan("scarecrow.glb", 0.38, full_gltf_group, import_glb)
 
@@ -1999,7 +2360,7 @@ def apply_roadside_details(
         pos_bl = w(road_point(lat, -0.16, z_pos))
         base_yaw = -road_heading(z_pos) if lat > 0 else (math.pi - road_heading(z_pos))
         M_shop = Matrix.Translation(pos_bl) @ Matrix.Rotation(base_yaw + eyaw, 4, "Z")
-        insulator = _build_detailed_shop(coll, M_shop, shop_mats, props, p_verts, p_faces, p_uvs, sp, idx)
+        insulator = _build_detailed_shop(coll, M_shop, shop_mats, props, ph_props, p_verts, p_faces, p_uvs, sp, idx)
 
         # Overhead sagging black electrical power drop cable from left-side telegraph line to each shop!
         pole_pt = w(road_point(-4.1, 5.2, z_pos - 2.0))
@@ -2065,8 +2426,8 @@ def apply_roadside_details(
         _bm_obj(f"taxi_road_poster_board_{b_idx}", bm_b, shop_mats["dark_wood"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
         _bm_obj(f"taxi_road_poster_board_{b_idx}_conc", bm_bconc, shop_mats["concrete"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
         _bm_obj(f"taxi_road_poster_board_{b_idx}_tin", bm_btin, shop_mats["tin"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_iron", bm_biron, shop_mats["iron"], coll, smooth=True, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_shade", bm_bsh, shop_mats["enamel_green"], coll, smooth=True, M_world=M_b)
+        _bm_obj(f"taxi_road_poster_board_{b_idx}_iron", bm_biron, shop_mats["iron"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
+        _bm_obj(f"taxi_road_poster_board_{b_idx}_shade", bm_bsh, shop_mats["enamel_green"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
         _bm_obj(f"taxi_road_poster_board_{b_idx}_bulb", bm_bbulb, shop_mats["bulb"], coll, smooth=True, M_world=M_b)
 
         def bw(p):
@@ -2146,7 +2507,7 @@ def apply_roadside_details(
     )
 
     # Clean up hidden prop template meshes before export
-    for grp in [*props.values(), scarecrow]:
+    for grp in [*props.values(), *ph_props.values(), scarecrow]:
         for o in grp:
             bpy.data.objects.remove(o, do_unlink=True)
     print("TAXI_ROADSIDE_DETAILS_APPLIED", "shops=", len(shop_specs), "boards=", len(board_specs), "poster_tris=", len(p_faces) * 2)
@@ -2205,7 +2566,7 @@ if __name__ == "__main__":
                 bpy.data.objects.remove(o)
         return meshes
 
-    # Remove previous detail pass objects cleanly so re-runs are 100% idempotent!
+    # Remove previous detail pass objects & old Neak Ta cleanly so re-runs are 100% idempotent!
     prefixes = (
         "taxi_road_shop_",
         "taxi_road_poster_board_",
@@ -2216,9 +2577,14 @@ if __name__ == "__main__":
         "taxi_road_scarecrow_",
         "taxi_road_paddy_verge_flora",
         "taxi_road_ep1_",
+        "taxi_road_corduroy_",
+        "taxi_road_culvert_",
+        "taxi_road_cobble",
+        "taxi_road_verge_litter",
+        "tpl_ph_",
     )
     for o in list(bpy.data.objects):
-        if o.name.startswith(prefixes):
+        if o.name.startswith(prefixes) or "neakta" in o.name.lower() or o.name == "taxi_road_shrine_tree":
             bpy.data.objects.remove(o, do_unlink=True)
     # Purge unused shop materials BEFORE creating fresh ones so zero `.001` duplicate materials accumulate!
     bpy.data.orphans_purge(do_recursive=True)

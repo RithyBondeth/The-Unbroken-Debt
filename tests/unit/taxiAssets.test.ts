@@ -407,8 +407,9 @@ describe("authored taxi assets", () => {
     expect(count(/^taxi_road_pebble/, roadNames)).toBeGreaterThan(500);
     expect(count(/^taxi_ditch_water/, roadNames)).toBeGreaterThan(20);
     expect(roadNames).toContain("taxi_median_grass");
-    // The roadside rite was taken out: nothing of it is left along the road.
-    expect(count(/(^|_)rite(_|$)|ritual/, roadNames)).toBe(0);
+    // The roadside rite & old Neak Ta were taken out: nothing of them is left along the road.
+    expect(count(/(^|_)rite(_|$)|ritual/i, roadNames)).toBe(0);
+    expect(count(/neakta/i, roadNames)).toBe(0);
     // Old growth, not bamboo: tall broadleaf giants far outnumber the odd clump.
     const giants = count(/^taxi_road_(far_)?tree_/, roadNames),
       bamboo = count(/^taxi_road_bamboo/, roadNames);

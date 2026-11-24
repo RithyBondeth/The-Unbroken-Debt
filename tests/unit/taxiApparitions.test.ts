@@ -39,7 +39,7 @@ function lateral(x: number, z: number): number {
   return best * side;
 }
 
-describe("the Neak Ta's two passes", () => {
+describe("the Preay's two passes", () => {
   it("runs two passes that never overlap", () => {
     expect(TAXI_PASSES.map((p) => p.kind)).toEqual(["crossing", "overtake"]);
     for (const [a, b] of TAXI_PASSES.slice(0, -1).map((p, i) => [p, TAXI_PASSES[i + 1]] as const))

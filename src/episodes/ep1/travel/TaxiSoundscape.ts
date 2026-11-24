@@ -344,21 +344,21 @@ export class TaxiSoundscape {
     this.cues.push({ at: crossBeat + 0.14, play: playAt(gasp, 0.95) });
     this.cues.push({ at: crossBeat + 0.42, play: () => this.score.ring() });
 
-    // BEAT 3 (46.6..48.9 s seated -> 52.04..52.68 s snap-lunge): Back-seat breath -> dead air -> 25 cm ear breath!
+    // BEAT 3 (46.0..49.2 s seated -> 52.02..54.15 s snap-lunge): Back-seat breath -> dead air -> 25 cm ear breath!
     const { seated, lean } = TAXI_MIRROR;
-    this.cues.push({ at: seated.from + 0.2, play: () => this.score.sting("swell", 0.52) });
-    this.cues.push({ at: seated.from + 0.85, play: playAt(breath, 0.58) });
-    this.cues.push({ at: lean.beat - 0.34, play: playAt(arcZap, 0.65) });
-    this.cues.push({ at: lean.from, play: playAt(neckBreath, 0.95) });
-    this.cues.push({ at: lean.from + 0.04, play: playAt(whisper, 0.68) });
+    this.cues.push({ at: seated.from + 0.25, play: () => this.score.sting("swell", 0.56) });
+    this.cues.push({ at: seated.from + 0.55, play: playAt(breath, 0.68) });
+    this.cues.push({ at: lean.beat - 0.32, play: playAt(arcZap, 0.72) });
+    this.cues.push({ at: lean.from, play: playAt(neckBreath, 1.0) });
+    this.cues.push({ at: lean.from + 0.04, play: playAt(whisper, 0.76) });
     this.cues.push({
       at: lean.beat - this.score.lead("shock"),
-      play: () => this.score.sting("shock", 0.95),
+      play: () => this.score.sting("shock", 0.98),
     });
-    this.cues.push({ at: lean.beat - 0.02, play: playAt(screechRear, 0.66) });
-    this.cues.push({ at: lean.beat + 0.02, play: playAt(crack, 0.86) });
+    this.cues.push({ at: lean.beat - 0.02, play: playAt(screechRear, 0.74) });
+    this.cues.push({ at: lean.beat + 0.02, play: playAt(crack, 0.88) });
     this.cues.push({ at: lean.beat + 0.36, play: () => this.score.ring() });
-    this.cues.push({ at: lean.beat + 0.55, play: () => whisper.stop() });
+    this.cues.push({ at: lean.to - 0.12, play: () => whisper.stop() });
 
     // BEAT 4a (57.30..57.88 s): Precursor crack -> real-time HRTF mud sprint -> violent right-glass SLAM #1!
     this.cues.push({ at: 55.64, play: playAt(crack, 0.66) });

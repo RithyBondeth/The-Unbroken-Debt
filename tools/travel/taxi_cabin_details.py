@@ -131,33 +131,38 @@ def _image_mat(name, path, plain_fn, rough=0.45, emission=0.0, double_sided=Fals
 
 
 def _materials(library_material, plain):
+    def get_or(mat_name, builder):
+        return bpy.data.materials.get(mat_name) or builder()
+
     m = {}
-    m["bakelite"] = plain("M_cab_bakelite", (0.015, 0.013, 0.012), 0.24, 0.0)
-    m["bakelite_matte"] = plain("M_cab_bakelite_matte", (0.02, 0.018, 0.016), 0.45, 0.0)
-    m["chrome"] = plain("M_cab_aged_chrome", (0.64, 0.62, 0.56), 0.24, 0.94)
-    m["brass"] = plain("M_cab_aged_brass", (0.48, 0.36, 0.16), 0.32, 0.90)
-    m["dark_iron"] = plain("M_cab_dark_iron", (0.04, 0.038, 0.036), 0.52, 0.78)
-    m["wrinkle_enamel"] = plain("M_cab_wrinkle_enamel", (0.022, 0.022, 0.024), 0.62, 0.15)
-    m["red_enamel"] = plain("M_cab_red_enamel", (0.34, 0.035, 0.025), 0.35, 0.08)
-    m["rubber"] = plain("M_cab_rubber", (0.016, 0.016, 0.017), 0.78, 0.0)
-    m["pillar_trim"] = plain("M_cab_pillar_leatherette", (0.016, 0.015, 0.014), 0.86, 0.0)
-    m["walnut"] = bpy.data.materials.get("M_taxi_dashboard_walnut") or library_material(
-        "rosewood_veneer1", "M_cab_walnut_polished", tint=(0.30, 0.19, 0.12), tile=0.26
+    m["bakelite"] = get_or("M_cab_bakelite", lambda: plain("M_cab_bakelite", (0.015, 0.013, 0.012), 0.24, 0.0))
+    m["bakelite_matte"] = get_or("M_cab_bakelite_matte", lambda: plain("M_cab_bakelite_matte", (0.02, 0.018, 0.016), 0.45, 0.0))
+    m["chrome"] = get_or("M_cab_aged_chrome", lambda: plain("M_cab_aged_chrome", (0.64, 0.62, 0.56), 0.24, 0.94))
+    m["brass"] = get_or("M_cab_aged_brass", lambda: plain("M_cab_aged_brass", (0.48, 0.36, 0.16), 0.32, 0.90))
+    m["dark_iron"] = get_or("M_cab_dark_iron", lambda: plain("M_cab_dark_iron", (0.04, 0.038, 0.036), 0.52, 0.78))
+    m["wrinkle_enamel"] = get_or("M_cab_wrinkle_enamel", lambda: plain("M_cab_wrinkle_enamel", (0.022, 0.022, 0.024), 0.62, 0.15))
+    m["red_enamel"] = get_or("M_cab_red_enamel", lambda: plain("M_cab_red_enamel", (0.34, 0.035, 0.025), 0.35, 0.08))
+    m["rubber"] = get_or("M_cab_rubber", lambda: plain("M_cab_rubber", (0.016, 0.016, 0.017), 0.78, 0.0))
+    m["pillar_trim"] = get_or("M_cab_pillar_leatherette", lambda: plain("M_cab_pillar_leatherette", (0.016, 0.015, 0.014), 0.86, 0.0))
+    m["walnut"] = bpy.data.materials.get("M_taxi_dashboard_walnut") or get_or(
+        "M_cab_walnut_polished", lambda: library_material("rosewood_veneer1", "M_cab_walnut_polished", tint=(0.30, 0.19, 0.12), tile=0.26)
     )
-    m["leather_door"] = library_material("brown_leather", "M_cab_door_leather", tint=(0.24, 0.11, 0.09), tile=0.35)
-    m["leather_strap"] = library_material("brown_leather", "M_cab_leather_strap", tint=(0.34, 0.21, 0.12), tile=0.22)
-    m["satchel_leather"] = library_material("brown_leather", "M_cab_satchel", tint=(0.28, 0.17, 0.10), tile=0.28)
-    m["mud"] = library_material("red_dirt_mud_01", "M_cab_tracked_mud", tint=(0.42, 0.28, 0.20), tile=0.5)
-    m["mud"].node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.14
-    m["rosewood_bead"] = library_material("dark_wood", "M_cab_prayer_bead", tint=(0.42, 0.20, 0.10), tile=0.06)
-    m["rosewood_bead"].node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.30
+    m["leather_door"] = get_or("M_cab_door_leather", lambda: library_material("brown_leather", "M_cab_door_leather", tint=(0.24, 0.11, 0.09), tile=0.35))
+    m["leather_strap"] = get_or("M_cab_leather_strap", lambda: library_material("brown_leather", "M_cab_leather_strap", tint=(0.34, 0.21, 0.12), tile=0.22))
+    m["satchel_leather"] = get_or("M_cab_satchel", lambda: library_material("brown_leather", "M_cab_satchel", tint=(0.28, 0.17, 0.10), tile=0.28))
+    m["mud"] = get_or("M_cab_tracked_mud", lambda: library_material("red_dirt_mud_01", "M_cab_tracked_mud", tint=(0.42, 0.28, 0.20), tile=0.5))
+    if "Principled BSDF" in m["mud"].node_tree.nodes:
+        m["mud"].node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.14
+    m["rosewood_bead"] = get_or("M_cab_prayer_bead", lambda: library_material("dark_wood", "M_cab_prayer_bead", tint=(0.42, 0.20, 0.10), tile=0.06))
+    if "Principled BSDF" in m["rosewood_bead"].node_tree.nodes:
+        m["rosewood_bead"].node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.30
 
     # Printed textures (radio dial & taximeter face; the 5 main gauges stay live-animated on taxi_instrument_face inside our 3D chrome bezels!)
-    m["radio_dial"] = _image_mat("M_cab_radio_dial", TEX / "T_taxi_radio_dial_BC.png", plain, rough=0.3, emission=0.85)
-    m["meter_face"] = _image_mat("M_cab_meter_face", TEX / "T_taxi_meter_face_BC.png", plain, rough=0.4, emission=0.08)
-    m["cord_white"] = plain("M_cab_sacred_white_cord", (0.50, 0.45, 0.36), 0.94, 0.0)
-    m["cord_red"] = plain("M_cab_sacred_red_cord", (0.24, 0.024, 0.020), 0.90, 0.0)
-    m["aged_bronze"] = plain("M_cab_takrut_bronze", (0.36, 0.25, 0.11), 0.34, 0.90)
+    m["radio_dial"] = get_or("M_cab_radio_dial", lambda: _image_mat("M_cab_radio_dial", TEX / "T_taxi_radio_dial_BC.png", plain, rough=0.3, emission=0.85))
+    m["meter_face"] = get_or("M_cab_meter_face", lambda: _image_mat("M_cab_meter_face", TEX / "T_taxi_meter_face_BC.png", plain, rough=0.4, emission=0.08))
+    m["cord_white"] = get_or("M_cab_sacred_white_cord", lambda: plain("M_cab_sacred_white_cord", (0.50, 0.45, 0.36), 0.94, 0.0))
+    m["cord_red"] = get_or("M_cab_sacred_red_cord", lambda: plain("M_cab_sacred_red_cord", (0.24, 0.024, 0.020), 0.90, 0.0))
+    m["aged_bronze"] = get_or("M_cab_takrut_bronze", lambda: plain("M_cab_takrut_bronze", (0.36, 0.25, 0.11), 0.34, 0.90))
     return m
 
 
@@ -942,9 +947,13 @@ def _krama_texture(plain):
         img.save()
         img.pack()
 
-    mat = plain("M_cab_driver_krama", (1, 1, 1), 0.92, 0.0)
+    mat = bpy.data.materials.get("M_cab_driver_krama") or plain("M_cab_driver_krama", (1, 1, 1), 0.90, 0.0)
     nt = mat.node_tree
-    bs = nt.nodes["Principled BSDF"]
+    nt.nodes.clear()
+    out_n = nt.nodes.new("ShaderNodeOutputMaterial")
+    bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bs.inputs["Metallic"].default_value = 0.0
+    bs.inputs["Roughness"].default_value = 0.90
     tex = nt.nodes.new("ShaderNodeTexImage")
     tex.image = img
     mix = nt.nodes.new("ShaderNodeMix")
@@ -960,9 +969,10 @@ def _krama_texture(plain):
         ntex.image = bpy.data.images.load(str(linen_n), check_existing=True)
         ntex.image.colorspace_settings.name = "Non-Color"
         nmap = nt.nodes.new("ShaderNodeNormalMap")
-        nmap.inputs["Strength"].default_value = 0.28
+        nmap.inputs["Strength"].default_value = 0.42
         nt.links.new(ntex.outputs["Color"], nmap.inputs["Color"])
         nt.links.new(nmap.outputs["Normal"], bs.inputs["Normal"])
+    nt.links.new(bs.outputs["BSDF"], out_n.inputs["Surface"])
     mat.use_backface_culling = False
     return mat
 
@@ -1210,31 +1220,84 @@ def _upgrade_pillars_and_cowl(coll, m, world_uvs_fn):
     )
     _bm_obj("taxi_dash_top_rail", bm_cap, m["walnut"], coll, world_uvs_fn, smooth=True)
 
-    # Exterior/header-mounted nickel vacuum wiper motor housings at x = +/-0.23
-    # + compact low-profile period 1933 chrome windscreen center latch on the walnut cowl rail
+    # Build header-mounted 1933 vacuum wiper motors, grommets & exterior drive shafts (refreshed idempotently)
+    _refresh_wiper_header_mounts(coll, m)
+
+
+def _refresh_wiper_header_mounts(coll, m):
+    """Sculpt authentic 1933 Trico-style header vacuum wiper motors, rubber header grommets,
+    and exterior chrome drive shafts extending right to the runtime wiper pivot at (±0.23, -0.449, 1.124)."""
+    for old_n in ("taxi_wiper_motor_bosses", "taxi_wiper_header_grommets"):
+        old = bpy.data.objects.get(old_n)
+        if old:
+            bpy.data.objects.remove(old, do_unlink=True)
+
     bm_wiper_boss = bmesh.new()
+    bm_grommet = bmesh.new()
     for side in (-1.0, 1.0):
-        # Interior vacuum motor casing mounted cleanly on header above windscreen
+        wx = side * 0.23
+        # Interior 1933 Trico vacuum motor canister housed neatly along upper windscreen header
         _box_bm(
-            bm_wiper_boss,
-            (side * 0.23, -0.432, 1.148),
-            (0.044, 0.030, 0.024),
-            bevel=0.005,
+            bm_grommet,
+            (wx, -0.430, 1.142),
+            (0.056, 0.030, 0.024),
+            bevel=0.008,
             segs=2,
         )
-        # Exterior shaft grommet & pivot nut right on the top windscreen rubber rail
+        # Satin-chrome motor end-plates, mounting bracket & control valve knob
+        _box_bm(
+            bm_wiper_boss,
+            (wx - side * 0.028, -0.430, 1.142),
+            (0.005, 0.026, 0.020),
+            bevel=0.001,
+            segs=1,
+        )
+        _box_bm(
+            bm_wiper_boss,
+            (wx + side * 0.028, -0.430, 1.142),
+            (0.005, 0.026, 0.020),
+            bevel=0.001,
+            segs=1,
+        )
         _cyl_bm(
             bm_wiper_boss,
-            (side * 0.23, -0.450, 1.146),
-            (side * 0.23, -0.472, 1.142),
-            0.0085,
+            (wx + side * 0.020, -0.415, 1.142),
+            (wx + side * 0.020, -0.402, 1.142),
+            0.0042,
+            0.0050,
+            segs=10,
+        )
+        # Molded black rubber bulkhead grommet & bezel collar seated into top windscreen frame
+        _cyl_bm(
+            bm_grommet,
+            (wx, -0.440, 1.132),
+            (wx, -0.4495, 1.1245),
+            0.0115,
+            0.0102,
+            segs=14,
+        )
+        # Exterior chrome drive spindle + hex locking nut reaching the runtime wiper pivot at (wx, -0.449, 1.124)
+        _cyl_bm(
+            bm_wiper_boss,
+            (wx, -0.442, 1.131),
+            (wx, -0.4495, 1.1235),
             0.0068,
-            segs=16,
+            0.0058,
+            segs=14,
+        )
+        _cyl_bm(
+            bm_wiper_boss,
+            (wx, -0.4495, 1.1235),
+            (wx, -0.4530, 1.1228),
+            0.0044,
+            0.0044,
+            segs=12,
         )
     # Sleek low-profile 1933 machined chrome windscreen toggle latch centered on top cowl rail
     _box_bm(bm_wiper_boss, (0.0, -0.486, 0.874), (0.038, 0.020, 0.010), bevel=0.002, segs=2)
     _cyl_bm(bm_wiper_boss, (0.0, -0.484, 0.878), (0.0, -0.474, 0.886), 0.0065, 0.0055, segs=12)
     _cyl_bm(bm_wiper_boss, (-0.018, -0.474, 0.886), (0.018, -0.474, 0.886), 0.0036, 0.0036, segs=10)
+    _bm_obj("taxi_wiper_header_grommets", bm_grommet, m["wrinkle_enamel"], coll, smooth=True)
     _bm_obj("taxi_wiper_motor_bosses", bm_wiper_boss, m["chrome"], coll, smooth=True)
 
 
@@ -1584,9 +1647,9 @@ def _add_tailored_cuff_ring(bm_cloth, bm_btn, ring_pts, axis_hint, length=0.034,
     up = Vector((0, 0, 1))
     u = (up - ax * up.dot(ax)).normalized()
     v = ax.cross(u).normalized()
-    # Estimate elliptical wrist cross-section from the cuff boundary ring
-    ru = max(0.024, min(0.052, float(np.percentile([abs((p - center).dot(u)) for p in ring_pts], 78)) + radius_pad))
-    rv = max(0.024, min(0.052, float(np.percentile([abs((p - center).dot(v)) for p in ring_pts], 78)) + radius_pad))
+    # Estimate outer wrist cross-section from the cuff boundary ring so skin/sleeve never pokes through!
+    ru = max(0.026, min(0.056, float(np.percentile([abs((p - center).dot(u)) for p in ring_pts], 96)) + radius_pad))
+    rv = max(0.026, min(0.056, float(np.percentile([abs((p - center).dot(v)) for p in ring_pts], 96)) + radius_pad))
     segs = 28
     # Closed smooth double-wall cuff tube (outer hem + rolled lip + inner lining so zero thin paper edge!)
     prof = [
@@ -1619,23 +1682,119 @@ def _add_tailored_cuff_ring(bm_cloth, bm_btn, ring_pts, axis_hint, length=0.034,
     )
 
 
+def _load_tiled_np(path, target_w, target_h, repeats, is_srgb=True):
+    """Load an image into numpy and tile it cleanly `repeats` times across (target_h, target_w)."""
+    img = bpy.data.images.load(str(path), check_existing=True)
+    img.colorspace_settings.name = "sRGB" if is_srgb else "Non-Color"
+    sw, sh = img.size
+    buf = np.empty(sw * sh * 4, np.float32)
+    img.pixels.foreach_get(buf)
+    arr = buf.reshape(sh, sw, 4)[..., :3]
+    yy = (np.arange(target_h, dtype=np.float32) * (sh * repeats / target_h)).astype(np.int32) % sh
+    xx = (np.arange(target_w, dtype=np.float32) * (sw * repeats / target_w)).astype(np.int32) % sw
+    return arr[np.ix_(yy, xx)]
+
+
+def _resize_np(img, target_w, target_h):
+    """Nearest/bilinear-block downsample/read of a Blender image into float32 (target_h, target_w, 4)."""
+    sw, sh = img.size
+    buf = np.empty(sw * sh * 4, np.float32)
+    img.pixels.foreach_get(buf)
+    arr = buf.reshape(sh, sw, 4)
+    if sw == target_w and sh == target_h:
+        return arr.copy()
+    yy = np.clip((np.arange(target_h) * (sh / target_h)).astype(np.int32), 0, sh - 1)
+    xx = np.clip((np.arange(target_w) * (sw / target_w)).astype(np.int32), 0, sw - 1)
+    return arr[np.ix_(yy, xx)].copy()
+
+
+def _box_blur_2d(a, r):
+    c = np.cumsum(np.pad(a, ((r + 1, r), (0, 0)), mode="edge"), 0)
+    a = (c[2 * r + 1 :] - c[: -2 * r - 1]) / (2 * r + 1)
+    c = np.cumsum(np.pad(a, ((0, 0), (r + 1, r)), mode="edge"), 1)
+    return (c[:, 2 * r + 1 :] - c[:, : -2 * r - 1]) / (2 * r + 1)
+
+
+def _blend_normals(scan_n, weave_n, scan_gain=0.55, weave_gain=0.45):
+    """Blend scan fold normals with fine micro-weave / skin-pore normal relief in tangent space."""
+    sn = scan_n[..., :3] * 2.0 - 1.0
+    wn = weave_n[..., :3] * 2.0 - 1.0
+    nx = sn[..., 0] * scan_gain + wn[..., 0] * weave_gain
+    ny = sn[..., 1] * scan_gain + wn[..., 1] * weave_gain
+    nz = np.clip(sn[..., 2], 0.25, 1.0)
+    inv_l = 1.0 / np.sqrt(nx * nx + ny * ny + nz * nz + 1e-8)
+    out = np.empty((*scan_n.shape[:2], 4), np.float32)
+    out[..., 0] = np.clip(nx * inv_l * 0.5 + 0.5, 0.0, 1.0)
+    out[..., 1] = np.clip(ny * inv_l * 0.5 + 0.5, 0.0, 1.0)
+    out[..., 2] = np.clip(nz * inv_l * 0.5 + 0.5, 0.0, 1.0)
+    out[..., 3] = 1.0
+    return out
+
+
+def _make_pbr_tex_mat(name, bc_img, n_img, rough=0.86, normal_strength=0.45, tint=None):
+    mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    mat.use_backface_culling = True
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out_n = nt.nodes.new("ShaderNodeOutputMaterial")
+    bs = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bs.inputs["Metallic"].default_value = 0.0
+    bs.inputs["Roughness"].default_value = rough
+    t_bc = nt.nodes.new("ShaderNodeTexImage")
+    t_bc.image = bc_img
+    if tint is not None:
+        mix = nt.nodes.new("ShaderNodeMix")
+        mix.data_type = "RGBA"
+        mix.blend_type = "MULTIPLY"
+        mix.inputs["Factor"].default_value = 1.0
+        mix.inputs[7].default_value = (*tint, 1.0)
+        nt.links.new(t_bc.outputs["Color"], mix.inputs[6])
+        nt.links.new(mix.outputs[2], bs.inputs["Base Color"])
+    else:
+        nt.links.new(t_bc.outputs["Color"], bs.inputs["Base Color"])
+    if n_img is not None:
+        t_n = nt.nodes.new("ShaderNodeTexImage")
+        t_n.image = n_img
+        t_n.image.colorspace_settings.name = "Non-Color"
+        nmap = nt.nodes.new("ShaderNodeNormalMap")
+        nmap.inputs["Strength"].default_value = normal_strength
+        nt.links.new(t_n.outputs["Color"], nmap.inputs["Color"])
+        nt.links.new(nmap.outputs["Normal"], bs.inputs["Normal"])
+    nt.links.new(bs.outputs["BSDF"], out_n.inputs["Surface"])
+    return mat
+
+
+def _pack_np_image(name, arr, is_srgb=True):
+    h, w = arr.shape[:2]
+    img = bpy.data.images.get(name)
+    if img and (img.size[0] != w or img.size[1] != h):
+        bpy.data.images.remove(img)
+        img = None
+    if img is None:
+        img = bpy.data.images.new(name, w, h, alpha=True)
+    img.colorspace_settings.name = "sRGB" if is_srgb else "Non-Color"
+    if arr.shape[-1] == 3:
+        rgba = np.concatenate([np.clip(arr, 0.0, 1.0), np.ones((h, w, 1), np.float32)], axis=-1)
+    else:
+        rgba = np.clip(arr, 0.0, 1.0)
+    img.pixels.foreach_set(rgba.astype(np.float32).ravel())
+    img.pack()
+    return img
+
+
 def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
     """Rebuild the driver cleanly from the UN-SAWED continuous RenderPeople scan (taxi_driver_scan.glb)
-    using Dual Quaternion skinning (zero flattened elbow/wrist pinches, zero sawtooth shoulder cut,
-    zero cloth-sim foil crumple, zero hollow torn wrist gaps!), welded + Catmull-Clark subdivided
-    with his exact 4K M_taxi_driver_clothes_scan material."""
+    using Dual Quaternion skinning, dedicated warm human hand skin (`M_taxi_driver_hands_scan`),
+    real woven linen/cotton cloth texture (`M_taxi_driver_clothes_scan` + `T_taxi_driver_clothes_N`),
+    clean anatomical wrist cuffs, and relaxed realistic wheel-grip fingers."""
     scan_path = ROOT / "art-source/library/scans/taxi_driver_scan.glb"
-    clothes_mat = bpy.data.materials.get("M_taxi_driver_clothes_scan")
-    if not scan_path.exists() or clothes_mat is None:
+    if not scan_path.exists():
         return False
 
-    # Preserve existing clothes material (4K recolored T_taxi_driver_clothes + normal map)
-    clothes_mat.use_fake_user = True
-    for old_n in ("taxi_driver_body_scan", "taxi_driver_sleeves_scan"):
+    for old_n in ("taxi_driver_body_scan", "taxi_driver_sleeves_scan", "taxi_driver_shirt_cuffs", "taxi_driver_cuff_buttons"):
         old = bpy.data.objects.get(old_n)
         if old:
             bpy.data.objects.remove(old, do_unlink=True)
-    bpy.data.orphans_purge(do_recursive=True)
 
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=str(scan_path))
@@ -1646,12 +1805,21 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         if o not in (arm, body) and o.type != "EMPTY":
             bpy.data.objects.remove(o, do_unlink=True)
 
-    # Enable Dual Quaternion skinning BEFORE posing so bent elbows, shoulders, wrists & hands stay plump!
+    # Enable Dual Quaternion skinning BEFORE posing so bent elbows, wrists & fingers stay plump!
     for mod in body.modifiers:
         if mod.type == "ARMATURE":
             mod.use_deform_preserve_volume = True
 
     rest = [(body.matrix_world @ v.co).copy() for v in body.data.vertices]
+    raw_mat = body.data.materials[0]
+    raw_bc_img = next(
+        (n.image for n in raw_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "sRGB"),
+        None,
+    )
+    raw_n_img = next(
+        (n.image for n in raw_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "Non-Color" and "normal" in n.image.name.lower()),
+        None,
+    )
 
     def bone(prefix):
         return next(b.name for b in arm.pose.bones if b.name.startswith(prefix))
@@ -1702,19 +1870,25 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         across, d = knuckles(side)
         return (across.cross(d) if side == "r" else d.cross(across)).normalized()
 
-    def curl(side, angle_main, angle_thumb):
+    def curl(side, angles_by_finger, angle_thumb):
         across, _ = knuckles(side)
         if side == "l":
             across = -across
-        for finger in ("index", "middle", "ring", "pinky"):
-            for seg in ("01", "02", "03"):
+        for finger, ang_m in angles_by_finger.items():
+            for seg, mult in (("01", 0.92), ("02", 1.05), ("03", 0.85)):
                 nm = next(b.name for b in arm.pose.bones if b.name.startswith(f"{finger}_{seg}_{side}"))
-                turn_bone(nm, across, angle_main)
+                turn_bone(nm, across, ang_m * mult)
         for seg in ("02", "03"):
             nm = next(b.name for b in arm.pose.bones if b.name.startswith(f"thumb_{seg}_{side}"))
             turn_bone(nm, across, angle_thumb)
 
-    # 1. Exact seated Rosalie driving posture (matching build-taxi.py)
+    # Measure rest wrist/elbow before posing so face classification into hands vs shirt is exact!
+    wrist_rest = {
+        "l": (joint(bone("lowerarm_l")), joint(bone("hand_l"))),
+        "r": (joint(bone("lowerarm_r")), joint(bone("hand_r"))),
+    }
+
+    # 1. Exact seated Rosalie driving posture
     hip_target = Vector((0.27, 0.07, 0.40))
     arm.location += hip_target - joint(bone("hip_"))
     for side, knee, ankle, ball in [
@@ -1730,12 +1904,11 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         j = joint(nm)
         aim(nm, ch, j + Vector((0, lean, 1)))
 
-    # Align posed neck to natural seated shoulder height (z ~ 0.905) directly under his head scan!
     if neck_target is not None:
         cur_neck = joint(neck_b)
         arm.location += (neck_target - Vector((0.0, 0.0, 0.010))) - cur_neck
 
-    # 2. Both hands gripping our exact 1933 steering wheel rim cleanly from outside at 9:30 and 2:30!
+    # 2. Both hands gripping the 1933 steering wheel rim naturally (9:30 and 2:30, slightly varied human finger curl)
     C = WHEEL_CENTER.copy()
     F = WHEEL_NORMAL.copy()
     R = Vector((1, 0, 0))
@@ -1745,8 +1918,7 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         U = -U
     for side, sign in [("l", 1.0), ("r", -1.0)]:
         grip = C + R * (sign * WHEEL_RADIUS * math.cos(0.18)) + U * (WHEEL_RADIUS * math.sin(0.18))
-        # Keep right wrist cleanly aligned to the rim edge (never puffy/pushed forward over knuckles!)
-        wrist = grip + F * (0.048 if side == "r" else 0.060) + R * (sign * (0.044 if side == "r" else 0.036)) - U * (0.016 if side == "r" else 0.0)
+        wrist = grip + F * (0.055 if side == "r" else 0.060) + R * (sign * (0.042 if side == "r" else 0.038)) - U * (0.006 if side == "r" else 0.0)
         reach(
             bone(f"upperarm_{side}"),
             bone(f"lowerarm_{side}"),
@@ -1764,17 +1936,47 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         have = (have - d * have.dot(d)).normalized()
         roll = math.atan2(have.cross(want).dot(d), have.dot(want))
         turn_bone(hand, d, roll)
-        curl(side, math.radians(58), math.radians(24))
+        curl(
+            side,
+            {"index": math.radians(54), "middle": math.radians(60), "ring": math.radians(64), "pinky": math.radians(68)},
+            math.radians(24),
+        )
 
-    # 3. Record rest head-face indices BEFORE baking: KEEP his entire real RenderPeople upper chest,
-    # clavicles, trapezius, and tailored shirt collar (rz <= 1.568) and strip ONLY his scan head & bare upper neck!
+    # Record wrist axes AFTER posing so cuffs hug the exact posed wrist joint cleanly
+    drv_wrists = {}
+    for side in ("l", "r"):
+        w_p = joint(bone(f"hand_{side}")).copy()
+        e_p = joint(bone(f"lowerarm_{side}")).copy()
+        arm_ax = (w_p - e_p).normalized()
+        drv_wrists[side] = (w_p, arm_ax)
+
+    # 3. Classify rest faces: head (>1.568 to delete), hands (beyond wrist joint -> skin mat), clothes (slot 0)
+    raw_px = None
+    if raw_bc_img is not None:
+        rw, rh = raw_bc_img.size
+        buf = np.empty(rw * rh * 4, np.float32)
+        raw_bc_img.pixels.foreach_get(buf)
+        raw_px = buf.reshape(rh, rw, 4)[..., :3]
+    uv_rest = body.data.uv_layers.active.data if body.data.uv_layers.active else None
+
     head_face_idx = set()
+    hand_face_idx = set()
     for p in body.data.polygons:
-        rz = sum(rest[vi].z for vi in p.vertices) / len(p.vertices)
-        if rz > 1.568:
+        rc = sum((rest[vi] for vi in p.vertices), Vector()) / len(p.vertices)
+        if rc.z > 1.568:
             head_face_idx.add(p.index)
+            continue
+        side_k = "l" if rc.x >= 0 else "r"
+        e_r, w_r = wrist_rest[side_k]
+        ax_r = w_r - e_r
+        len2 = max(1e-6, ax_r.length_squared)
+        u_arm = (rc - e_r).dot(ax_r) / len2
+        perp_dist = (rc - (e_r + ax_r * u_arm)).length
+        near_wrist = (rc - w_r).length < 0.23 and perp_dist < 0.12
+        if near_wrist and u_arm > 0.915:
+            hand_face_idx.add(p.index)
 
-    # 4. Bake Dual-Quaternion posed mesh into clean static geometry (ZERO sawed sleeves!)
+    # 4. Bake Dual-Quaternion posed mesh cleanly into world space
     bpy.context.view_layer.update()
     ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
     baked = bpy.data.meshes.new_from_object(ev)
@@ -1789,23 +1991,64 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         if o in new and o != body:
             bpy.data.objects.remove(o, do_unlink=True)
 
-    # Delete ONLY original scan head faces; weld internal UV seams (preserving per-loop UVs!)
-    bm = bmesh.new()
-    bm.from_mesh(body.data)
-    bm.faces.ensure_lookup_table()
-    kill = [bm.faces[i] for i in head_face_idx if i < len(bm.faces)]
-    if kill:
-        bmesh.ops.delete(bm, geom=kill, context="FACES")
-        loose = [v for v in bm.verts if not v.link_faces]
-        if loose:
-            bmesh.ops.delete(bm, geom=loose, context="VERTS")
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0008)
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-    bm.to_mesh(body.data)
-    bm.free()
-    body.data.update()
+    # Build photorealistic woven-linen T_taxi_driver_clothes (2048x2048) + T_taxi_driver_clothes_N (1024x1024)
+    # AND warm human hand skin T_taxi_driver_hands_BC (2048x2048) + T_taxi_driver_hands_N (1024x1024)
+    linen_bc_path = ROOT / "art-source/library/materials/rough_linen/rough_linen_BC.jpg"
+    linen_n_path = ROOT / "art-source/library/materials/rough_linen/rough_linen_N.jpg"
 
-    # Clear any stale custom split normals, assign existing 4K recolored M_taxi_driver_clothes_scan
+    w_c, h_c = 2048, 2048
+    rgb_scan = _resize_np(raw_bc_img, w_c, h_c)[..., :3] if raw_bc_img else np.full((h_c, w_c, 3), 0.5, np.float32)
+    lo = rgb_scan.min(-1)
+    hi = rgb_scan.max(-1)
+    # Softly remove baked high-frequency A-pose shirt noise while retaining natural garment shadow folds
+    lum = rgb_scan @ np.array([0.3, 0.59, 0.11], np.float32)
+    shade = _box_blur_2d(lum, 14)
+    white_shirt_mask = (lo > 0.5) & (hi - lo < 0.08)
+    mean_sh = float(np.median(shade[white_shirt_mask])) if white_shirt_mask.any() else 0.7
+    weave_rgb = _load_tiled_np(linen_bc_path, w_c, h_c, repeats=36, is_srgb=True) if linen_bc_path.exists() else np.full((h_c, w_c, 3), 0.55, np.float32)
+    weave_lum = weave_rgb @ np.array([0.3, 0.59, 0.11], np.float32)
+    weave_factor = np.clip(weave_lum / max(1e-3, float(np.mean(weave_lum))), 0.84, 1.16)
+
+    shirt_sel = np.clip((lo - 0.34) / 0.12, 0.0, 1.0) * np.clip((0.14 - (hi - lo)) / 0.05, 0.0, 1.0)
+    cream = np.array((0.46, 0.41, 0.33), np.float32) * np.clip(shade / mean_sh, 0.72, 1.14)[..., None] * weave_factor[..., None]
+    # Apply subtle wool/linen weave grain to waistcoat/trousers with lifted shadow floor so nothing crushes to flat black
+    suit = np.maximum(rgb_scan * np.array((0.64, 0.60, 0.56), np.float32), np.array((0.068, 0.060, 0.054), np.float32)) * (0.90 + 0.10 * weave_factor[..., None])
+    cloth_out = suit * (1.0 - shirt_sel[..., None]) + cream * shirt_sel[..., None]
+    drv_cloth_bc_img = _pack_np_image("T_taxi_driver_clothes", cloth_out, is_srgb=True)
+
+    # Hand albedo: uniform sun-browned warm Cambodian skin matched to jaw/neck (~[0.62, 0.40, 0.28] sRGB)
+    # with softened A-pose shading so wrists/knuckles have zero dark scan mud
+    hand_base = np.array((0.62, 0.40, 0.28), np.float32)
+    hand_blur = _box_blur_2d(lum, 12)
+    hand_mask = rgb_scan[..., 0] > rgb_scan[..., 2] * 1.15
+    hand_med = float(np.median(hand_blur[hand_mask])) if hand_mask.any() else 0.55
+    hand_shade = np.clip(0.78 + 0.22 * (hand_blur / max(1e-3, hand_med)), 0.82, 1.14)
+    rng_h = np.random.default_rng(193312)
+    skin_pore_lum = (1.0 + rng_h.normal(0.0, 0.012, (h_c, w_c)).astype(np.float32))
+    hand_rgb = np.clip(hand_base[None, None, :] * hand_shade[..., None] * skin_pore_lum[..., None], 0.04, 0.92)
+    drv_hand_bc_img = _pack_np_image("T_taxi_driver_hands_BC", hand_rgb, is_srgb=True)
+
+    # 1024x1024 blended normal maps (cloth weave + fold normal; hand pore/crease normal)
+    wn, hn = 1024, 1024
+    scan_n_arr = _resize_np(raw_n_img, wn, hn) if raw_n_img else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 2), np.float32)])
+    linen_n_arr = _load_tiled_np(linen_n_path, wn, hn, repeats=36, is_srgb=False) if linen_n_path.exists() else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 1), np.float32)])
+    cloth_n_arr = _blend_normals(scan_n_arr, linen_n_arr, scan_gain=0.45, weave_gain=0.46)
+    drv_cloth_n_img = _pack_np_image("T_taxi_driver_clothes_N", cloth_n_arr, is_srgb=False)
+
+    # Fine skin pore/knuckle normal for hands (softened scan fold normal + fine epidermal micro-relief)
+    h_n = rng_h.normal(0.0, 0.020, (hn, wn)).astype(np.float32)
+    h_n = (h_n + np.roll(h_n, 1, 0) + np.roll(h_n, -1, 0) + np.roll(h_n, 1, 1) + np.roll(h_n, -1, 1)) * 0.2
+    gx_h = (np.roll(h_n, -1, 1) - np.roll(h_n, 1, 1)) * 0.45
+    gy_h = (np.roll(h_n, -1, 0) - np.roll(h_n, 1, 0)) * 0.45
+    nz_h = np.sqrt(np.clip(1.0 - gx_h * gx_h - gy_h * gy_h, 0.1, 1.0))
+    pore_n = np.dstack([np.clip(-gx_h * 0.5 + 0.5, 0, 1), np.clip(-gy_h * 0.5 + 0.5, 0, 1), np.clip(nz_h * 0.5 + 0.5, 0, 1)])
+    hand_n_arr = _blend_normals(scan_n_arr, pore_n, scan_gain=0.58, weave_gain=0.42)
+    drv_hand_n_img = _pack_np_image("T_taxi_driver_hands_N", hand_n_arr, is_srgb=False)
+
+    clothes_mat = _make_pbr_tex_mat("M_taxi_driver_clothes_scan", drv_cloth_bc_img, drv_cloth_n_img, rough=0.88, normal_strength=0.48)
+    hands_mat = _make_pbr_tex_mat("M_taxi_driver_hands_scan", drv_hand_bc_img, drv_hand_n_img, rough=0.52, normal_strength=0.46)
+
+    # Assign per-face material slots cleanly (0: clothes, 1: hands) AFTER clearing/appending materials!
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
     bpy.context.view_layer.objects.active = body
@@ -1813,27 +2056,59 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
         bpy.ops.mesh.customdata_custom_splitnormals_clear()
     body.data.materials.clear()
     body.data.materials.append(clothes_mat)
+    body.data.materials.append(hands_mat)
     body.name = body.data.name = "taxi_driver_body_scan"
     for c_old in list(body.users_collection):
         c_old.objects.unlink(body)
     coll.objects.link(body)
 
-    # 5. Catmull-Clark Subdivision level 1 + smooth cloth relaxation (protects ONLY the fingers/palms
-    # tightly around the two rim grip points so both forearms & sleeves relax silky-smooth to the wrist!)
-    _subdivide_obj(body, levels=1)
-    grip_l = C + R * (WHEEL_RADIUS * math.cos(0.18)) + U * (WHEEL_RADIUS * math.sin(0.18))
-    grip_r = C - R * (WHEEL_RADIUS * math.cos(0.18)) + U * (WHEEL_RADIUS * math.sin(0.18))
     bm = bmesh.new()
     bm.from_mesh(body.data)
-    cloth_v = [
+    bm.faces.ensure_lookup_table()
+    for f in bm.faces:
+        f.material_index = 1 if f.index in hand_face_idx else 0
+    # Smooth sawtooth sleeve-to-wrist triangle boundaries by majority-vote neighbor cleanup
+    for _ in range(3):
+        flips = []
+        for f in bm.faces:
+            nbr_mis = [nf.material_index for e in f.edges for nf in e.link_faces if nf != f]
+            if len(nbr_mis) >= 2 and nbr_mis.count(1 - f.material_index) > nbr_mis.count(f.material_index):
+                flips.append((f, 1 - f.material_index))
+        for f, nmi in flips:
+            f.material_index = nmi
+    kill = [bm.faces[i] for i in head_face_idx if i < len(bm.faces)]
+    if kill:
+        bmesh.ops.delete(bm, geom=kill, context="FACES")
+        loose = [v for v in bm.verts if not v.link_faces]
+        if loose:
+            bmesh.ops.delete(bm, geom=loose, context="VERTS")
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0007)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(body.data)
+    bm.free()
+    body.data.update()
+
+    # 5. Catmull-Clark Subdivision level 1 + balanced cloth & anatomical hand relaxation (preserves realistic folds & sleek knuckles!)
+    _subdivide_obj(body, levels=1)
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    hand_v_idx = {v.index for f in bm.faces if f.material_index == 1 for v in f.verts}
+    cloth_v_idx = {v.index for f in bm.faces if f.material_index == 0 for v in f.verts}
+    seam_v_idx = hand_v_idx & cloth_v_idx
+    pure_cloth_v = [v for v in bm.verts if not v.is_boundary and v.index in cloth_v_idx and v.index not in hand_v_idx and v.co.z > 0.16]
+    # 6 light cloth passes remove raw scan facets while preserving real sleeve/shirt drape folds (never melted clay!)
+    for _ in range(6):
+        bmesh.ops.smooth_vert(bm, verts=pure_cloth_v, factor=0.34, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    # 3 gentle passes on wrist/knuckle scan vertices (avoiding finger tips near steering rim) keep hands natural & human
+    pure_hand_v = [
         v for v in bm.verts
-        if not v.is_boundary
-        and v.co.z > 0.16
-        and (v.co - grip_l).length > 0.095
-        and (v.co - grip_r).length > 0.095
+        if not v.is_boundary and v.index in hand_v_idx and v.index not in seam_v_idx
     ]
-    for _ in range(12):
-        bmesh.ops.smooth_vert(bm, verts=cloth_v, factor=0.46, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    for _ in range(3):
+        bmesh.ops.smooth_vert(bm, verts=pure_hand_v, factor=0.22, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    seam_v = [v for v in bm.verts if not v.is_boundary and v.index in seam_v_idx]
+    for _ in range(2):
+        bmesh.ops.smooth_vert(bm, verts=seam_v, factor=0.26, use_axis_x=True, use_axis_y=True, use_axis_z=True)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(body.data)
     bm.free()
@@ -1843,7 +2118,45 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
     body.data["cloth_smoothed_v3"] = True
     body.data["seamless_driver_v3"] = True
     body.data["seamless_driver_v7"] = True
+    body.data["seamless_driver_v8"] = True
+    body.data["seamless_driver_v9"] = True
+    body.data["seamless_driver_v10"] = True
+    body.data["seamless_driver_v11"] = True
     body.data.update()
+
+    # Build snug matching tailored cream-linen shirt cuffs around both driver wrists (identical woven linen color!)
+    me_d = body.data
+    wrist_pts = [me_d.vertices[vi].co.copy() for vi in seam_v_idx if me_d.vertices[vi].co.z > 0.58] if seam_v_idx else []
+    cuff_l = [p for p in wrist_pts if p.x > 0.27]
+    cuff_r = [p for p in wrist_pts if p.x <= 0.27]
+    cuff_w_arr = np.broadcast_to(weave_factor[:512, :512, None], (512, 512, 3)) * np.array((0.48, 0.43, 0.35), np.float32)
+    cuff_bc_img = _pack_np_image("T_cab_driver_cuff_BC", cuff_w_arr, is_srgb=True)
+    cuff_mat = _make_pbr_tex_mat(
+        "M_cab_driver_cuff_cotton",
+        cuff_bc_img,
+        bpy.data.images.load(str(linen_n_path), check_existing=True) if linen_n_path.exists() else drv_cloth_n_img,
+        rough=0.88,
+        normal_strength=0.45,
+    )
+    cuff_mat["tile"] = 0.27
+    m_pearl = bpy.data.materials.get("M_cab_pearl_button") or bpy.data.materials.new("M_cab_pearl_button")
+    if m_pearl.node_tree and "Principled BSDF" in m_pearl.node_tree.nodes:
+        bp = m_pearl.node_tree.nodes["Principled BSDF"]
+        bp.inputs["Base Color"].default_value = (0.76, 0.72, 0.64, 1.0)
+        bp.inputs["Roughness"].default_value = 0.22
+    bm_dc, bm_db = bmesh.new(), bmesh.new()
+    if cuff_l:
+        _add_tailored_cuff_ring(bm_dc, bm_db, cuff_l, drv_wrists["l"][1], length=0.036, radius_pad=0.0045, center_shift=-0.008)
+    if cuff_r:
+        _add_tailored_cuff_ring(bm_dc, bm_db, cuff_r, drv_wrists["r"][1], length=0.036, radius_pad=0.0045, center_shift=-0.008)
+    if bm_dc.faces:
+        _bm_obj("taxi_driver_shirt_cuffs", bm_dc, cuff_mat, coll, world_uvs_fn=world_uvs_fn, smooth=True)
+    else:
+        bm_dc.free()
+    if bm_db.faces:
+        _bm_obj("taxi_driver_cuff_buttons", bm_db, m_pearl, coll, smooth=True)
+    else:
+        bm_db.free()
 
     # 6. Build deep-charcoal inner neck seal tucked STRICTLY INSIDE his torso & collar
     # as `taxi_driver_sleeves_scan` (satisfies taxiAssets.test.ts with ZERO visible grey collar band!)
@@ -1868,8 +2181,14 @@ def _rebuild_seamless_driver(coll, neck_target, world_uvs_fn):
     col_obj = _bm_obj("taxi_driver_sleeves_scan", bm_col, m_inner_col, coll, smooth=True)
     _subdivide_obj(col_obj, levels=1)
 
-    clothes_mat.use_fake_user = False
-    print("TAXI_SEAMLESS_DRIVER_REBUILT", "body_verts=", len(body.data.vertices), "collar_verts=", len(col_obj.data.vertices))
+    hand_zs = [body.data.vertices[vi].co.z for p in body.data.polygons if p.material_index == 1 for vi in p.vertices]
+    print(
+        "TAXI_SEAMLESS_DRIVER_V11_REBUILT",
+        "body_verts=", len(body.data.vertices),
+        "hands_polys=", sum(1 for p in body.data.polygons if p.material_index == 1),
+        "hands_z_range=", (round(min(hand_zs), 3), round(max(hand_zs), 3)) if hand_zs else None,
+        "cloth_polys=", sum(1 for p in body.data.polygons if p.material_index == 0),
+    )
     return True
 
 
@@ -2425,89 +2744,732 @@ def _build_anatomical_driver_neck(coll):
     )
 
 
+def _refine_driver_head_and_neck_skin(coll):
+    """Idempotent driver face, cap & neck skin realism pass (NEVER re-shifts head Z):
+    - Welds UV-seam duplicate vertices and subdivides coarse low-poly cap crown facets
+      while preserving Basis + all 5 shape keys identically.
+    - Clears frozen custom split normals so jaw (`M_taxi_driver_head_scan`) and neck
+      (`M_taxi_driver_neck_skin`) interpolate ONE continuous smooth normal across the seam.
+    - Upgrades T_taxi_driver_neck_BC & T_taxi_driver_neck_N to 1024x1024 matching the lower jaw/ear
+      pixels of T_taxi_driver_head_BC with natural organic micro-pores and sternocleidomastoid shading.
+    - Calibrates head normal strength to 0.58 and neck normal strength to 0.26 for realistic supple skin.
+    """
+    head = bpy.data.objects.get("taxi_driver_head_scan")
+    if not head or head.type != "MESH" or head.data.get("driver_skin_realism_v5"):
+        return
+
+    _set_normal_strength("M_taxi_driver_head_scan", 0.58)
+
+    # Clear custom split normals so head, cap and neck vertices share smooth interpolated normals
+    bpy.ops.object.select_all(action="DESELECT")
+    head.select_set(True)
+    bpy.context.view_layer.objects.active = head
+    if head.data.has_custom_normals:
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+
+    mw = head.matrix_world
+    mat_names = [mt.name if mt else "" for mt in head.data.materials]
+    if "M_taxi_driver_head_scan" in mat_names and "M_taxi_driver_neck_skin" in mat_names:
+        head_mi = mat_names.index("M_taxi_driver_head_scan")
+        neck_mi = mat_names.index("M_taxi_driver_neck_skin")
+
+        # Weld coincident UV-seam splits, subdivide coarse cap crown polygons, and smooth cap + jaw-neck seam
+        # directly inside bmesh so all 5 shape keys (look_road, look_sora, nod, talk, blink) stay intact!
+        bm = bmesh.new()
+        bm.from_mesh(head.data)
+        # Weld ONLY the low-poly cap crown; never the dense photoscan face/cheek/neck micro-triangles!
+        cap_weld_verts = [v for v in bm.verts if (mw @ v.co).z > 1.095]
+        if cap_weld_verts:
+            bmesh.ops.remove_doubles(bm, verts=cap_weld_verts, dist=0.00025)
+        bm.faces.ensure_lookup_table()
+        cap_faces = [f for f in bm.faces if f.calc_area() > 0.00003 and (mw @ f.calc_center_median()).z > 1.095]
+        cap_edges = list({e for f in cap_faces for e in f.edges})
+        if cap_edges:
+            bmesh.ops.subdivide_edges(bm, edges=cap_edges, cuts=2, smooth=0.65, use_grid_fill=True)
+            ngons = [f for f in bm.faces if len(f.verts) > 4]
+            if ngons:
+                bmesh.ops.triangulate(bm, faces=ngons)
+        bm.verts.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+
+        seam_verts = {
+            v for v in bm.verts
+            if any(f.material_index == head_mi for f in v.link_faces)
+            and any(f.material_index == neck_mi for f in v.link_faces)
+        }
+        band_verts = set(seam_verts)
+        for v in list(seam_verts):
+            for e in v.link_edges:
+                nb = e.other_vert(v)
+                wp = mw @ nb.co
+                if 0.905 < wp.z < 0.990 and wp.y > -0.056:
+                    band_verts.add(nb)
+        cap_verts = {v for v in bm.verts if (mw @ v.co).z > 1.125 and (mw @ v.co).y > -0.095}
+
+        sk_layers = list(bm.verts.layers.shape)
+        for _ in range(6):
+            disp = {}
+            for v in band_verts:
+                wp = mw @ v.co
+                if wp.z > 0.990 or wp.z < 0.900 or wp.y < -0.056:
+                    continue
+                nbs = [e.other_vert(v) for e in v.link_edges]
+                if not nbs:
+                    continue
+                avg = sum((nb.co for nb in nbs), Vector()) / len(nbs)
+                wt = 0.36 if v in seam_verts else 0.20
+                disp[v] = v.co.lerp(avg, wt) - v.co
+            for v in cap_verts:
+                nbs = [e.other_vert(v) for e in v.link_edges]
+                if not nbs:
+                    continue
+                avg = sum((nb.co for nb in nbs), Vector()) / len(nbs)
+                disp[v] = v.co.lerp(avg, 0.32) - v.co
+            for v, d_local in disp.items():
+                v.co += d_local
+                for sk in sk_layers:
+                    v[sk] = v[sk] + d_local
+
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.to_mesh(head.data)
+        bm.free()
+        head.data.update()
+
+        head_v = {vi for p in head.data.polygons if p.material_index == head_mi for vi in p.vertices}
+        neck_v = {vi for p in head.data.polygons if p.material_index == neck_mi for vi in p.vertices}
+        seam_vi = head_v & neck_v
+
+        # Upgrade neck texture to 1024x1024 matching exact jaw-rim color without pale blotch spikes
+        head_mat = head.data.materials[head_mi]
+        bc_img = next(
+            (n.image for n in head_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "sRGB"),
+            None,
+        )
+        ax0 = Vector((0.258, 0.026, 0.0))
+        h_world = [mw @ v.co for v in head.data.vertices]
+        seam_z = sum(h_world[vi].z for vi in seam_vi) / max(1, len(seam_vi)) if seam_vi else 0.960
+        n_ang_tex = 128
+        base_skin_srgb = np.array([0.610, 0.382, 0.264], np.float32)
+        rim_rgb = np.tile(base_skin_srgb, (n_ang_tex, 1))
+        if bc_img is not None and head.data.uv_layers.active is not None:
+            wd, ht = bc_img.size
+            px = np.empty(wd * ht * 4, np.float32)
+            bc_img.pixels.foreach_get(px)
+            px = px.reshape(ht, wd, 4)
+            uvl = head.data.uv_layers.active.data
+            rgb_bins = [[] for _ in range(n_ang_tex)]
+            for p in head.data.polygons:
+                if p.material_index != head_mi:
+                    continue
+                c = sum((h_world[vi] for vi in p.vertices), Vector()) / len(p.vertices)
+                if 0.002 <= (c.z - seam_z) <= 0.024:
+                    ang = math.atan2(c.x - ax0.x, -(c.y - ax0.y))
+                    bi = int(((ang + math.pi) / math.tau) * n_ang_tex) % n_ang_tex
+                    uv = sum((uvl[li].uv for li in p.loop_indices), Vector((0, 0))) / len(p.loop_indices)
+                    col = px[int((uv.y % 1.0) * (ht - 1)), int((uv.x % 1.0) * (wd - 1)), :3]
+                    lum = float(0.3 * col[0] + 0.59 * col[1] + 0.11 * col[2])
+                    if (0.22 < lum < 0.68) or abs(ang) > math.radians(135):
+                        rgb_bins[bi].append(col)
+            valid_c = [bi for bi in range(n_ang_tex) if len(rgb_bins[bi]) >= 2]
+            for bi in valid_c:
+                rim_rgb[bi] = np.median(rgb_bins[bi], axis=0)
+            if valid_c:
+                vc = np.array(valid_c)
+                for bi in range(n_ang_tex):
+                    if len(rgb_bins[bi]) < 2:
+                        il = vc[int(np.argmin((bi - vc) % n_ang_tex))]
+                        ir = vc[int(np.argmin((vc - bi) % n_ang_tex))]
+                        dl = (bi - il) % n_ang_tex
+                        dr = (ir - bi) % n_ang_tex
+                        t = dl / max(1, dl + dr)
+                        rim_rgb[bi] = rim_rgb[il] * (1.0 - t) + rim_rgb[ir] * t
+            for _ in range(180):
+                rim_rgb = 0.25 * np.roll(rim_rgb, -1, axis=0) + 0.50 * rim_rgb + 0.25 * np.roll(rim_rgb, 1, axis=0)
+            rim_rgb = 0.10 * base_skin_srgb[None, :] + 0.90 * rim_rgb
+
+        tw, th = 1024, 1024
+        rng = np.random.default_rng(193310)
+        yy, xx = np.mgrid[0:th, 0:tw].astype(np.float32)
+        u_grid = xx / tw
+        v_grid = yy / (th - 1)
+        ang_grid = u_grid * math.tau - math.pi
+        idx_f = u_grid[0] * n_ang_tex
+        i0 = np.floor(idx_f).astype(np.int32) % n_ang_tex
+        i1 = (i0 + 1) % n_ang_tex
+        frac = (idx_f - np.floor(idx_f))[:, None]
+        top_rgb_row = rim_rgb[i0] * (1.0 - frac) + rim_rgb[i1] * frac
+
+        blend_top = np.clip((v_grid - 0.25) / 0.75, 0.0, 1.0)
+        blend_top = blend_top * blend_top * (3.0 - 2.0 * blend_top)
+        rgb = base_skin_srgb[None, None, :] * (1.0 - blend_top[..., None]) + top_rgb_row[None, :, :] * blend_top[..., None]
+
+        front_mask = np.clip(np.cos(ang_grid), 0.0, 1.0) ** 1.3
+        submental_ao = 1.0 - 0.13 * front_mask * np.exp(-(((v_grid - 0.84) / 0.10) ** 2))
+        collar_ao = 1.0 - 0.15 * np.clip((0.24 - v_grid) / 0.24, 0.0, 1.0) ** 1.5
+        # Subtle sternocleidomastoid warm shadow modulation + human pore grain
+        scm = 1.0 - 0.045 * np.exp(-(((np.abs(ang_grid) - 0.85) / 0.28) ** 2)) * np.sin(np.clip(v_grid, 0.1, 0.9) * math.pi)
+        pore = rng.normal(0.0, 0.0055, (th, tw)).astype(np.float32)
+        stubble_mask = (
+            np.clip((v_grid - 0.72) / 0.22, 0.0, 1.0)
+            * np.clip((0.99 - v_grid) / 0.05, 0.0, 1.0)
+            * np.clip((np.cos(ang_grid) + 0.20) / 0.50, 0.0, 1.0)
+        )
+        stubble = (rng.random((th, tw)).astype(np.float32) < 0.085).astype(np.float32) * -0.045 * stubble_mask
+        rgb = np.clip(rgb * (submental_ao * collar_ao * scm)[..., None] + pore[..., None] + stubble[..., None], 0.02, 0.98)
+        neck_bc_img = _pack_np_image("T_taxi_driver_neck_BC", rgb, is_srgb=True)
+
+        hf = rng.normal(0.0, 0.022, (th, tw)).astype(np.float32)
+        hf = (hf + np.roll(hf, 1, 0) + np.roll(hf, -1, 0) + np.roll(hf, 1, 1) + np.roll(hf, -1, 1)) * 0.2
+        gx = (np.roll(hf, -1, 1) - np.roll(hf, 1, 1)) * 0.48
+        gy = (np.roll(hf, -1, 0) - np.roll(hf, 1, 0)) * 0.48
+        nz = np.sqrt(np.clip(1.0 - gx * gx - gy * gy, 0.1, 1.0))
+        n_arr = np.dstack([np.clip(-gx * 0.5 + 0.5, 0, 1), np.clip(-gy * 0.5 + 0.5, 0, 1), np.clip(nz * 0.5 + 0.5, 0, 1)])
+        neck_n_img = _pack_np_image("T_taxi_driver_neck_N", n_arr, is_srgb=False)
+        _make_pbr_tex_mat("M_taxi_driver_neck_skin", neck_bc_img, neck_n_img, rough=0.52, normal_strength=0.26)
+
+    for p in head.data.polygons:
+        p.use_smooth = True
+    head.data["driver_skin_realism_v2"] = True
+    head.data["driver_skin_realism_v3"] = True
+    head.data["driver_skin_realism_v4"] = True
+    head.data["driver_skin_realism_v5"] = True
+    head.data.update()
+    print("TAXI_DRIVER_SKIN_REFINED_V5", "verts=", len(head.data.vertices), "has_custom_normals=", head.data.has_custom_normals)
+
+
+def _rebuild_seamless_sora(coll, world_uvs_fn):
+    """Rebuild Sora (`taxi_sora_legs_scan`) cleanly from Carla's photoscan (taxi_sora_scan.glb)
+    using Dual Quaternion skinning, asymmetrical resting fingers on thighs, woven linen blouse
+    & cotton-twill trousers (`T_taxi_sora_cloth_N`), natural warm Khmer hand skin (`T_taxi_sora_skin_BC/N`),
+    snug matching woven cuffs, and a wrist-conformed vintage tank watch."""
+    scan_path = ROOT / "art-source/library/scans/taxi_sora_scan.glb"
+    if not scan_path.exists():
+        return False
+
+    for old_n in (
+        "taxi_sora_legs_scan",
+        "taxi_sora_blouse_cuffs",
+        "taxi_sora_cuff_buttons",
+        "taxi_sora_watch_case",
+        "taxi_sora_watch_strap",
+        "taxi_sora_watch_dial",
+        "taxi_sora_watch_hands",
+    ):
+        old = bpy.data.objects.get(old_n)
+        if old:
+            bpy.data.objects.remove(old, do_unlink=True)
+
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=str(scan_path))
+    new = [o for o in bpy.data.objects if o not in before]
+    arm = next(o for o in new if o.type == "ARMATURE")
+    body = max((o for o in new if o.type == "MESH"), key=lambda o: len(o.data.polygons))
+    for o in new:
+        if o not in (arm, body) and o.type != "EMPTY":
+            bpy.data.objects.remove(o, do_unlink=True)
+
+    # Dual Quaternion skinning preserves wrist, elbow, finger & knee anatomical fullness!
+    for mod in body.modifiers:
+        if mod.type == "ARMATURE":
+            mod.use_deform_preserve_volume = True
+
+    rest = [(body.matrix_world @ v.co).copy() for v in body.data.vertices]
+    raw_mat = body.data.materials[0]
+    raw_bc_img = next(
+        (n.image for n in raw_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "sRGB"),
+        None,
+    )
+    raw_n_img = next(
+        (n.image for n in raw_mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "Non-Color" and "normal" in n.image.name.lower()),
+        None,
+    )
+
+    def bone(prefix):
+        return next(b.name for b in arm.pose.bones if b.name.startswith(prefix))
+
+    def joint(name):
+        bpy.context.view_layer.update()
+        return arm.matrix_world @ arm.pose.bones[name].head
+
+    def turn_bone(name, axis, angle):
+        bpy.context.view_layer.update()
+        pb = arm.pose.bones[name]
+        inv = arm.matrix_world.inverted().to_3x3()
+        R = Matrix.Rotation(angle, 4, (inv @ Vector(axis)).normalized())
+        pb.matrix = Matrix.Translation(pb.head) @ R @ Matrix.Translation(-pb.head) @ pb.matrix
+        bpy.context.view_layer.update()
+
+    def aim(name, child, target):
+        hd = joint(name)
+        cur = joint(child) - hd
+        want = Vector(target) - hd
+        if cur.length < 1e-6 or want.length < 1e-6:
+            return
+        axis, angle = cur.rotation_difference(want).to_axis_angle()
+        turn_bone(name, axis, angle)
+
+    def reach(upper, lower, hand, wrist, pole):
+        s = joint(upper)
+        a = (joint(lower) - s).length
+        b = (joint(hand) - joint(lower)).length
+        to = Vector(wrist) - s
+        d = min(to.length, (a + b) * 0.992)
+        f = to.normalized()
+        cosA = max(-1.0, min(1.0, (a * a + d * d - b * b) / (2 * a * d)))
+        p = Vector(pole) - s
+        perp = (p - f * p.dot(f)).normalized()
+        elbow = s + f * a * cosA + perp * a * math.sqrt(max(0.0, 1.0 - cosA * cosA))
+        aim(upper, lower, elbow)
+        aim(lower, hand, s + f * d)
+
+    def knuckles(side):
+        k1 = joint(bone(f"index_01_{side}"))
+        k4 = joint(bone(f"pinky_01_{side}"))
+        wrist = joint(bone(f"hand_{side}"))
+        mid = joint(bone(f"middle_01_{side}"))
+        return (k1 - k4).normalized(), (mid - wrist).normalized()
+
+    def palm_of(side):
+        across, d = knuckles(side)
+        return (across.cross(d) if side == "r" else d.cross(across)).normalized()
+
+    def curl(side, angles_by_finger, angle_thumb):
+        across, _ = knuckles(side)
+        if side == "l":
+            across = -across
+        for finger, ang_m in angles_by_finger.items():
+            for seg, mult in (("01", 0.90), ("02", 1.05), ("03", 0.85)):
+                nm = next(b.name for b in arm.pose.bones if b.name.startswith(f"{finger}_{seg}_{side}"))
+                turn_bone(nm, across, ang_m * mult)
+        for seg in ("02", "03"):
+            nm = next(b.name for b in arm.pose.bones if b.name.startswith(f"thumb_{seg}_{side}"))
+            turn_bone(nm, across, angle_thumb)
+
+    # Rest wrist bone positions before posing for accurate sleeve-to-hand classification
+    wrist_rest = {
+        "l": (joint(bone("lowerarm_l")), joint(bone("hand_l"))),
+        "r": (joint(bone("lowerarm_r")), joint(bone("hand_r"))),
+    }
+
+    # Seat height & back-set position measured directly from passenger cushion & floorboard
+    sora_hip = Vector((-0.27, 0.08, 0.39))
+    eye_anc = bpy.data.objects.get("taxi_anchor_sora_eye")
+    if eye_anc:
+        sora_hip = Vector((eye_anc.location.x, eye_anc.location.y + 0.02, eye_anc.location.z - 0.675))
+    arm.location += sora_hip - joint(bone("hip_"))
+    for sp, deg in [("spine_01", -4.0), ("spine_02", -4.0), ("spine_03", -3.0)]:
+        try:
+            turn_bone(bone(sp), Vector((1, 0, 0)), math.radians(deg))
+        except StopIteration:
+            pass
+
+    def _floor_ray(rx, ry, rz=0.40):
+        dep = bpy.context.evaluated_depsgraph_get()
+        best_z = None
+        origin = Vector((rx, ry, rz))
+        for _ in range(4):
+            hit, loc, _, _, obj, _ = bpy.context.scene.ray_cast(dep, origin, Vector((0, 0, -1)), distance=1.5)
+            if not hit:
+                break
+            if obj and "glass" not in obj.name.lower() and "sora" not in obj.name.lower():
+                best_z = loc.z
+                break
+            origin = loc + Vector((0, 0, -0.005))
+        return best_z
+
+    for side, knee, ankle, ball in [
+        ("l", (-0.19, -0.27, 0.405), (-0.18, -0.54, 0.155), (-0.18, -0.68, 0.098)),
+        ("r", (-0.35, -0.27, 0.405), (-0.37, -0.54, 0.155), (-0.38, -0.68, 0.098)),
+    ]:
+        fa = _floor_ray(ankle[0], ankle[1], 0.40)
+        fb = _floor_ray(ball[0], ball[1], 0.40)
+        fa_z = max(0.01, fa if fa is not None else 0.01)
+        fb_z = max(0.01, fb if fb is not None else 0.01)
+        ankle = (ankle[0], ankle[1], max(ankle[2], fa_z + 0.135))
+        ball = (ball[0], ball[1], max(ball[2], fb_z + 0.084))
+        aim(bone(f"upperleg_{side}"), bone(f"lowerleg_{side}"), knee)
+        aim(bone(f"lowerleg_{side}"), bone(f"foot_{side}"), ankle)
+        aim(bone(f"foot_{side}"), bone(f"ball_{side}"), ball)
+
+    # Natural feminine seated arm/hand pose resting gently palms-down on mid-thighs (clear of knees & shoes!)
+    reach(bone("upperarm_l"), bone("lowerarm_l"), bone("hand_l"), Vector((-0.185, -0.175, 0.520)), Vector((-0.05, 0.06, 0.47)))
+    reach(bone("upperarm_r"), bone("lowerarm_r"), bone("hand_r"), Vector((-0.355, -0.175, 0.514)), Vector((-0.48, 0.06, 0.47)))
+    for side, aim_pt, palm_dir, fg_ang, th_ang in [
+        ("l", Vector((-0.215, -0.285, 0.498)), Vector((-0.14, -0.06, -1.0)), {"index": 0.14, "middle": 0.19, "ring": 0.24, "pinky": 0.29}, 0.09),
+        ("r", Vector((-0.325, -0.285, 0.490)), Vector((0.14, -0.06, -1.0)), {"index": 0.16, "middle": 0.21, "ring": 0.26, "pinky": 0.31}, 0.10),
+    ]:
+        hand = bone(f"hand_{side}")
+        aim(hand, bone(f"middle_01_{side}"), aim_pt)
+        _, d = knuckles(side)
+        want = palm_dir.normalized()
+        want = (want - d * want.dot(d)).normalized()
+        have = palm_of(side)
+        have = (have - d * have.dot(d)).normalized()
+        roll = math.atan2(have.cross(want).dot(d), have.dot(want))
+        turn_bone(hand, d, roll)
+        curl(side, fg_ang, th_ang)
+
+    neck_pos = joint(bone("neck_")).copy()
+    wrists = {}
+    for side in ("l", "r"):
+        w_pos = joint(bone(f"hand_{side}")).copy()
+        e_pos = joint(bone(f"lowerarm_{side}")).copy()
+        arm_dir = (w_pos - e_pos).normalized()
+        up_dir = palm_of(side) * (-1.0)
+        up_dir = (up_dir - arm_dir * up_dir.dot(arm_dir)).normalized()
+        side_dir = up_dir.cross(arm_dir).normalized()
+        wrists[side] = (w_pos, arm_dir, side_dir, up_dir)
+
+    # Classify faces in rest pose BEFORE baking (clean geometric planes — zero pink ankle gap, zero waist zig-zag, zero sleeve spikes!)
+    kinds = []
+    for p in body.data.polygons:
+        rc = sum((rest[vi] for vi in p.vertices), Vector()) / len(p.vertices)
+        side_k = "l" if rc.x >= 0 else "r"
+        e_r, w_r = wrist_rest[side_k]
+        ax_r = w_r - e_r
+        u_arm = (rc - e_r).dot(ax_r) / max(1e-6, ax_r.length_squared)
+        perp_dist = (rc - (e_r + ax_r * u_arm)).length
+        near_wrist = (rc - w_r).length < 0.21 and perp_dist < 0.10
+        if rc.z < 0.135:
+            kinds.append(2)  # shoes — full coverage up to shoe collar, zero bare pink ankle gap
+        elif near_wrist and u_arm > 0.925:
+            kinds.append(1)  # hands/wrists only
+        elif rc.z > 0.965 or (abs(rc.x) > 0.19 and rc.z > 0.85):
+            kinds.append(3)  # linen blouse & sleeves
+        else:
+            kinds.append(0)  # tailored trousers
+
+    # Bake posed mesh
+    bpy.context.view_layer.update()
+    ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    baked = bpy.data.meshes.new_from_object(ev)
+    baked.transform(body.matrix_world)
+    body.modifiers.clear()
+    body.parent = None
+    body.matrix_world = Matrix.Identity(4)
+    body.data = baked
+    body.vertex_groups.clear()
+    bpy.data.objects.remove(arm, do_unlink=True)
+    for o in list(bpy.data.objects):
+        if o in new and o != body:
+            bpy.data.objects.remove(o, do_unlink=True)
+
+    # Generate high-realism Sora textures: 2K uniform woven linen blouse/trousers, dark espresso shoes, silky Khmer hands
+    linen_bc_path = ROOT / "art-source/library/materials/rough_linen/rough_linen_BC.jpg"
+    linen_n_path = ROOT / "art-source/library/materials/rough_linen/rough_linen_N.jpg"
+    w_s, h_s = 2048, 2048
+    rgb_scan = _resize_np(raw_bc_img, w_s, h_s)[..., :3] if raw_bc_img else np.full((h_s, w_s, 3), 0.5, np.float32)
+    lum = rgb_scan @ np.array([0.3, 0.59, 0.11], np.float32)
+    shade_tr = _box_blur_2d(lum, 20)
+    shade_bl = _box_blur_2d(lum, 24)
+    sk_blur = _box_blur_2d(lum, 10)
+    uvl_s = body.data.uv_layers.active.data
+
+    def _mean_grid(grid, kind_val):
+        vals = []
+        for p in body.data.polygons:
+            if kinds[p.index] == kind_val:
+                uv = sum((uvl_s[li].uv for li in p.loop_indices), Vector((0, 0))) / len(p.loop_indices)
+                vals.append(float(grid[int((uv.y % 1.0) * (h_s - 1)), int((uv.x % 1.0) * (w_s - 1))]))
+        return float(np.mean(vals)) if vals else 0.5
+
+    weave_rgb = _load_tiled_np(linen_bc_path, w_s, h_s, repeats=38, is_srgb=True) if linen_bc_path.exists() else np.full((h_s, w_s, 3), 0.55, np.float32)
+    weave_lum = weave_rgb @ np.array([0.3, 0.59, 0.11], np.float32)
+    weave_fac = np.clip(weave_lum / max(1e-3, float(np.mean(weave_lum))), 0.85, 1.15)[..., None]
+
+    # Uniform fine woven ivory-cream linen blouse across torso & sleeves + tailored charcoal-taupe trousers!
+    tr_k = np.clip(0.86 + 0.14 * (shade_tr / max(1e-3, _mean_grid(shade_tr, 0))), 0.74, 1.12)[..., None]
+    tr_rgb = np.array((0.24, 0.21, 0.18), np.float32) * tr_k * weave_fac
+    sora_tr_bc = _pack_np_image("T_taxi_sora_trousers", tr_rgb, is_srgb=True)
+
+    bl_k = np.clip(0.90 + 0.10 * (shade_bl / max(1e-3, _mean_grid(shade_bl, 3))), 0.80, 1.08)[..., None]
+    bl_rgb = np.array((0.54, 0.49, 0.41), np.float32) * bl_k * weave_fac
+    sora_bl_bc = _pack_np_image("T_taxi_sora_blouse", bl_rgb, is_srgb=True)
+
+    # Silky natural Khmer warm hand skin (blurred scan luminance removes A-pose wrist blotches!)
+    skin_base = np.array((0.66, 0.49, 0.39), np.float32)
+    skin_mean = _mean_grid(sk_blur, 1)
+    rng_s = np.random.default_rng(193314)
+    epiderm = 1.0 + rng_s.normal(0.0, 0.010, (h_s, w_s)).astype(np.float32)
+    sk_k = np.clip(0.78 + 0.22 * (sk_blur / max(1e-3, skin_mean)), 0.82, 1.12)
+    skin_out = np.clip(skin_base[None, None, :] * sk_k[..., None] * epiderm[..., None], 0.04, 0.94)
+    sora_sk_bc = _pack_np_image("T_taxi_sora_skin_BC", skin_out, is_srgb=True)
+
+    # Polished dark espresso-black 1933 leather shoes (zero reddish raw scan bleed!)
+    shoe_arr = np.clip(
+        np.array((0.055, 0.042, 0.036), np.float32)[None, None, :]
+        * (0.94 + 0.06 * rng_s.normal(0.0, 0.25, (512, 512, 1)).astype(np.float32)),
+        0.015,
+        0.14,
+    )
+    sora_shoe_bc = _pack_np_image("T_taxi_sora_shoes_BC", shoe_arr, is_srgb=True)
+
+    # 1K shared cloth weave normal (softened scan knit bumps) & skin pore normal
+    wn, hn = 1024, 1024
+    scan_n_s = _resize_np(raw_n_img, wn, hn) if raw_n_img else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 2), np.float32)])
+    linen_n_s = _load_tiled_np(linen_n_path, wn, hn, repeats=38, is_srgb=False) if linen_n_path.exists() else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 1), np.float32)])
+    sora_cloth_n = _pack_np_image("T_taxi_sora_cloth_N", _blend_normals(scan_n_s, linen_n_s, scan_gain=0.22, weave_gain=0.54), is_srgb=False)
+
+    hs_n = rng_s.normal(0.0, 0.018, (hn, wn)).astype(np.float32)
+    hs_n = (hs_n + np.roll(hs_n, 1, 0) + np.roll(hs_n, -1, 0) + np.roll(hs_n, 1, 1) + np.roll(hs_n, -1, 1)) * 0.2
+    gx_s = (np.roll(hs_n, -1, 1) - np.roll(hs_n, 1, 1)) * 0.42
+    gy_s = (np.roll(hs_n, -1, 0) - np.roll(hs_n, 1, 0)) * 0.42
+    nz_s = np.sqrt(np.clip(1.0 - gx_s * gx_s - gy_s * gy_s, 0.1, 1.0))
+    pore_s = np.dstack([np.clip(-gx_s * 0.5 + 0.5, 0, 1), np.clip(-gy_s * 0.5 + 0.5, 0, 1), np.clip(nz_s * 0.5 + 0.5, 0, 1)])
+    sora_skin_n = _pack_np_image("T_taxi_sora_skin_N", _blend_normals(scan_n_s, pore_s, scan_gain=0.44, weave_gain=0.40), is_srgb=False)
+
+    for stale_m in ("M_taxi_sora_shoes_scan.001", "M_cab_driver_krama.001"):
+        sm = bpy.data.materials.get(stale_m)
+        if sm and sm.users == 0:
+            bpy.data.materials.remove(sm)
+
+    trousers_mat = _make_pbr_tex_mat("M_taxi_sora_trousers_scan", sora_tr_bc, sora_cloth_n, rough=0.88, normal_strength=0.46)
+    blouse_mat = _make_pbr_tex_mat("M_taxi_sora_blouse_scan", sora_bl_bc, sora_cloth_n, rough=0.88, normal_strength=0.44)
+    skin_mat = _make_pbr_tex_mat("M_taxi_sora_skin_scan", sora_sk_bc, sora_skin_n, rough=0.48, normal_strength=0.38)
+    shoes_mat = _make_pbr_tex_mat("M_taxi_sora_shoes_scan", sora_shoe_bc, sora_cloth_n, rough=0.34, normal_strength=0.28)
+    neck_cap = bpy.data.materials.get("M_taxi_sora_neck_cap") or bpy.data.materials.new("M_taxi_sora_neck_cap")
+    if neck_cap.node_tree and "Principled BSDF" in neck_cap.node_tree.nodes:
+        neck_cap.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.38, 0.27, 0.21, 1.0)
+        neck_cap.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.94
+
+    body.data.materials.clear()
+    for mt in (trousers_mat, skin_mat, shoes_mat, blouse_mat, neck_cap):
+        body.data.materials.append(mt)
+
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    bm.faces.ensure_lookup_table()
+    for f in bm.faces:
+        f.material_index = kinds[f.index]
+    # Smooth waist & wrist material boundaries via edge-neighbor majority cleanup
+    for _ in range(3):
+        flips = []
+        for f in bm.faces:
+            if f.material_index in (2, 4):
+                continue
+            nbrs = [nf.material_index for e in f.edges for nf in e.link_faces if nf != f and nf.material_index not in (2, 4)]
+            if len(nbrs) >= 2:
+                maj = max(set(nbrs), key=nbrs.count)
+                if maj != f.material_index and nbrs.count(maj) > nbrs.count(f.material_index):
+                    flips.append((f, maj))
+        for f, nmi in flips:
+            f.material_index = nmi
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0006)
+    cut_co = neck_pos + Vector((0.0, 0.0, 0.025))
+    cut_no = Vector((0.0, 0.0, 1.0))
+    res = bmesh.ops.bisect_plane(
+        bm,
+        geom=list(bm.verts) + list(bm.edges) + list(bm.faces),
+        plane_co=cut_co,
+        plane_no=cut_no,
+        clear_outer=True,
+        use_snap_center=False,
+    )
+    cut_edges = [g for g in res["geom_cut"] if isinstance(g, bmesh.types.BMEdge)]
+    if cut_edges:
+        filled = bmesh.ops.holes_fill(bm, edges=cut_edges, sides=0)["faces"]
+        for f in filled:
+            f.material_index = 4
+        bmesh.ops.triangulate(bm, faces=filled)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(body.data)
+    bm.free()
+
+    bpy.ops.object.select_all(action="DESELECT")
+    body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    if body.data.has_custom_normals:
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    body.name = body.data.name = "taxi_sora_legs_scan"
+    for c_old in list(body.users_collection):
+        c_old.objects.unlink(body)
+    coll.objects.link(body)
+
+    # Subdivide + targeted smoothing: silky trouser knees, crisp garment drape, sleek slender hands!
+    _subdivide_obj(body, levels=1)
+    bm = bmesh.new()
+    bm.from_mesh(body.data)
+    cloth_v_idx = {v.index for f in bm.faces if f.material_index in (0, 3) for v in f.verts}
+    skin_v_idx = {v.index for f in bm.faces if f.material_index == 1 for v in f.verts}
+    shoe_v_idx = {v.index for f in bm.faces if f.material_index == 2 for v in f.verts}
+    seam_v_idx = (cloth_v_idx & skin_v_idx)
+    pure_cloth = [v for v in bm.verts if not v.is_boundary and v.index in cloth_v_idx and v.index not in skin_v_idx and v.index not in shoe_v_idx]
+    for _ in range(5):
+        bmesh.ops.smooth_vert(bm, verts=pure_cloth, factor=0.32, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    knee_cloth = [
+        v for v in bm.verts
+        if not v.is_boundary and v.index in cloth_v_idx and v.index not in skin_v_idx and v.index not in shoe_v_idx
+        and -0.42 < v.co.y < -0.18 and 0.26 < v.co.z < 0.50
+    ]
+    for _ in range(6):
+        bmesh.ops.smooth_vert(bm, verts=knee_cloth, factor=0.36, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    # Smooth palms/wrists/knuckles + gently refine distal fingertips
+    pure_hand_skin = [
+        v for v in bm.verts
+        if not v.is_boundary and v.index in skin_v_idx and v.index not in seam_v_idx and v.index not in shoe_v_idx
+        and (v.co.y > -0.365 or v.co.z < 0.40)
+    ]
+    for _ in range(4):
+        bmesh.ops.smooth_vert(bm, verts=pure_hand_skin, factor=0.26, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    distal_fingers = [
+        v for v in bm.verts
+        if not v.is_boundary and v.index in skin_v_idx and v.index not in seam_v_idx and v.index not in shoe_v_idx
+        and v.co.y <= -0.365
+    ]
+    for _ in range(2):
+        bmesh.ops.smooth_vert(bm, verts=distal_fingers, factor=0.14, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    seam_vs = [v for v in bm.verts if not v.is_boundary and v.index in seam_v_idx]
+    for _ in range(2):
+        bmesh.ops.smooth_vert(bm, verts=seam_vs, factor=0.26, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(body.data)
+    bm.free()
+    for p in body.data.polygons:
+        p.use_smooth = True
+    body.data["cloth_smoothed_v2"] = True
+    body.data["cloth_smoothed_v3"] = True
+    body.data["sora_realism_v4"] = True
+    body.data["sora_realism_v5"] = True
+    body.data["sora_realism_v6"] = True
+    body.data["sora_realism_v7"] = True
+    body.data["sora_realism_v8"] = True
+    body.data.update()
+
+    # Snug matching woven ivory-cream linen blouse cuffs clear of wristwatch + mother-of-pearl buttons
+    me_s = body.data
+    wrist_pts = [me_s.vertices[vi].co.copy() for vi in seam_v_idx if me_s.vertices[vi].co.z > 0.45]
+    sl = [p for p in wrist_pts if p.x > -0.27]
+    sr = [p for p in wrist_pts if p.x <= -0.27]
+    sora_cuff_arr = weave_fac[:512, :512, :] * np.array((0.54, 0.49, 0.41), np.float32)
+    sora_cuff_bc_img = _pack_np_image("T_cab_sora_cuff_BC", sora_cuff_arr, is_srgb=True)
+    m_sora_cuff = _make_pbr_tex_mat(
+        "M_cab_sora_cuff_linen",
+        sora_cuff_bc_img,
+        bpy.data.images.load(str(linen_n_path), check_existing=True) if linen_n_path.exists() else sora_cloth_n,
+        rough=0.88,
+        normal_strength=0.44,
+    )
+    m_sora_cuff["tile"] = 0.27
+    m_pearl = bpy.data.materials.get("M_cab_pearl_button") or bpy.data.materials.new("M_cab_pearl_button")
+    if m_pearl.node_tree and "Principled BSDF" in m_pearl.node_tree.nodes:
+        bp = m_pearl.node_tree.nodes["Principled BSDF"]
+        bp.inputs["Base Color"].default_value = (0.76, 0.72, 0.64, 1.0)
+        bp.inputs["Roughness"].default_value = 0.20
+    bm_sc, bm_sb = bmesh.new(), bmesh.new()
+    if sl:
+        _add_tailored_cuff_ring(bm_sc, bm_sb, sl, wrists["l"][1], length=0.036, radius_pad=0.0040, center_shift=-0.016)
+    if sr:
+        _add_tailored_cuff_ring(bm_sc, bm_sb, sr, wrists["r"][1], length=0.036, radius_pad=0.0040, center_shift=-0.010)
+    if bm_sc.faces:
+        _bm_obj("taxi_sora_blouse_cuffs", bm_sc, m_sora_cuff, coll, world_uvs_fn=world_uvs_fn, smooth=True)
+    else:
+        bm_sc.free()
+    if bm_sb.faces:
+        _bm_obj("taxi_sora_cuff_buttons", bm_sb, m_pearl, coll, smooth=True)
+    else:
+        bm_sb.free()
+
+    # Rebuild wrist-conformed 1930s antique-gold tank wristwatch fitted via KDTree onto left wrist skin!
+    left_skin = [me_s.vertices[p_i].co.copy() for p in me_s.polygons if p.material_index == 1 for p_i in p.vertices if me_s.vertices[p_i].co.z > 0.45 and me_s.vertices[p_i].co.x > -0.27]
+    w_pos, arm_dir, side_dir, up_dir = wrists["l"]
+    w_ctr = w_pos + arm_dir * 0.016 + up_dir * 0.0025
+    M_w = Matrix.Translation(w_ctr) @ Matrix((side_dir, arm_dir, up_dir)).transposed().to_4x4()
+    w_inv = M_w.inverted()
+    ru_m, rv_m = 0.027, 0.022
+    if left_skin:
+        local_sk = [w_inv @ p for p in left_skin if abs((w_inv @ p).y) < 0.018]
+        if local_sk:
+            ru_m = max(0.022, min(0.033, float(np.percentile([abs(p.x) for p in local_sk], 85)) + 0.0015))
+            rv_m = max(0.018, min(0.028, float(np.percentile([abs(p.z) for p in local_sk], 85)) + 0.0015))
+
+    def _pmat(nm, col, rgh, met=0.0):
+        mt = bpy.data.materials.get(nm) or bpy.data.materials.new(nm)
+        mt.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (*col, 1.0)
+        mt.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = rgh
+        mt.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = met
+        return mt
+
+    watch_gold = _pmat("M_taxi_sora_watch_gold", (0.58, 0.44, 0.18), 0.24, 0.92)
+    watch_strap = _pmat("M_taxi_sora_watch_strap", (0.14, 0.07, 0.04), 0.62, 0.0)
+    watch_dial = _pmat("M_taxi_sora_watch_dial", (0.78, 0.72, 0.58), 0.22, 0.0)
+    watch_hands = _pmat("M_taxi_sora_watch_hands", (0.04, 0.05, 0.09), 0.28, 0.85)
+    bm_wgold, bm_wstrap, bm_wdial, bm_whands = bmesh.new(), bmesh.new(), bmesh.new(), bmesh.new()
+    segs = 24
+    s_rings = []
+    for dy, sc_r in [(-0.0052, 1.06), (0.0052, 1.06), (0.0052, 0.94), (-0.0052, 0.94)]:
+        s_rings.append([
+            bm_wstrap.verts.new(M_w @ Vector((math.cos(k / segs * math.tau) * ru_m * sc_r, dy, math.sin(k / segs * math.tau) * rv_m * sc_r)))
+            for k in range(segs)
+        ])
+    for r_idx in range(4):
+        rA, rB = s_rings[r_idx], s_rings[(r_idx + 1) % 4]
+        for k in range(segs):
+            bm_wstrap.faces.new((rA[k], rA[(k + 1) % segs], rB[(k + 1) % segs], rB[k]))
+
+    def _wbox(bm_t, loc, sz, rot_z=0.0):
+        M = M_w @ Matrix.Translation(loc) @ Matrix.Rotation(rot_z, 4, "Z") @ Matrix.Diagonal((*sz, 1.0))
+        ret = bmesh.ops.create_cube(bm_t, size=1.0, matrix=M)
+        edges = list({e for v in ret["verts"] for e in v.link_edges})
+        bmesh.ops.bevel(bm_t, geom=edges, offset=0.0007, segments=1, affect="EDGES", clamp_overlap=True)
+
+    _wbox(bm_wgold, (0.0, 0.0, rv_m + 0.0022), (0.0152, 0.0205, 0.0044))
+    _wbox(bm_wgold, (0.0, 0.0114, rv_m + 0.0020), (0.0030, 0.0026, 0.0028))
+    _wbox(bm_wdial, (0.0, 0.0, rv_m + 0.0044), (0.0114, 0.0158, 0.0014))
+    _wbox(bm_whands, (-0.0018, 0.0012, rv_m + 0.0052), (0.0009, 0.0046, 0.0005), rot_z=0.65)
+    _wbox(bm_whands, (-0.0026, -0.0004, rv_m + 0.0054), (0.0007, 0.0062, 0.0005), rot_z=1.57)
+    for nm, bm_x, mt in [
+        ("taxi_sora_watch_case", bm_wgold, watch_gold),
+        ("taxi_sora_watch_strap", bm_wstrap, watch_strap),
+        ("taxi_sora_watch_dial", bm_wdial, watch_dial),
+        ("taxi_sora_watch_hands", bm_whands, watch_hands),
+    ]:
+        _bm_obj(nm, bm_x, mt, coll, smooth=True)
+
+    slot_stats = [
+        (
+            i,
+            body.data.materials[i].name if i < len(body.data.materials) and body.data.materials[i] else None,
+            sum(1 for p in body.data.polygons if p.material_index == i),
+        )
+        for i in range(len(body.data.materials))
+    ]
+    zs_s = [v.co.z for v in body.data.vertices]
+    cap_xs = [body.data.vertices[vi].co.x for p in body.data.polygons if p.material_index == 4 for vi in p.vertices]
+    neck_cap_x_span = round(max(cap_xs) - min(cap_xs), 4) if cap_xs else 0.0
+    print(
+        "TAXI_SEAMLESS_SORA_V8_REBUILT",
+        "verts=", len(body.data.vertices),
+        "polys=", len(body.data.polygons),
+        "min_z=", round(min(zs_s), 4),
+        "max_z=", round(max(zs_s), 4),
+        "neck_cap_x_span=", neck_cap_x_span,
+        "slots=", slot_stats,
+    )
+    return True
+
+
 def _smooth_people_and_cabin_polish(coll, m, plain, world_uvs_fn):
-    """Smooth both driver & Sora clothes (eliminating faceted scans, sawtooth cuff pinches & harsh normal crinkles)
-    and polish every cabin interior surface (leather seats, door armrests, steering chevron, dial crystals & props)."""
-    # 1. Soften harsh baked normal maps on driver clothes, Sora blouse/trousers, and interior leather!
-    _set_normal_strength("M_taxi_driver_clothes_scan", 0.14)
-    _set_normal_strength("M_taxi_sora_blouse_scan", 0.14)
-    _set_normal_strength("M_taxi_sora_trousers_scan", 0.16)
-    _set_normal_strength("M_taxi_sora_skin_scan", 0.36)
+    """Rebuild driver & Sora with Dual Quaternion skinning, warm translucent human skin,
+    real woven linen/cotton clothing textures, snug cuffs, and polish interior cabin trim."""
     _set_normal_strength("M_cab_door_leather", 0.36)
     _set_normal_strength("M_cab_leather_strap", 0.34)
     _set_normal_strength("M_cab_satchel", 0.34)
     _set_normal_strength("M_taxi_seat", 0.36)
 
-    # Remove bulky separate driver cuff rings (his seamless RenderPeople sleeve & wrist sit naturally!)
-    for old_n in ("taxi_driver_shirt_cuffs", "taxi_driver_cuff_buttons"):
-        old = bpy.data.objects.get(old_n)
-        if old:
-            bpy.data.objects.remove(old, do_unlink=True)
-
-    # 2 & 3. SCULPT ANATOMICAL HUMAN NECK + REBUILD SEAMLESS UN-SAWED DRIVER WITH REAL SHIRT COLLAR!
+    # 1. SCULPT ANATOMICAL NECK (if needed) + REFINE DRIVER HEAD/NECK SKIN CONTINUITY
     _build_anatomical_driver_neck(coll)
+    _refine_driver_head_and_neck_skin(coll)
+
+    # 2. REBUILD SEAMLESS DRIVER (separated human hand skin + woven linen clothes + cuffs)
     neck_target = Vector((0.268, 0.056, 0.922))
     drv_body = bpy.data.objects.get("taxi_driver_body_scan")
-    if drv_body is None or not drv_body.data.get("seamless_driver_v7"):
+    if drv_body is None or not drv_body.data.get("seamless_driver_v11"):
         _rebuild_seamless_driver(coll, neck_target, world_uvs_fn)
-        if bpy.data.objects.get("taxi_driver_body_scan"):
-            bpy.data.objects["taxi_driver_body_scan"].data["seamless_driver_v7"] = True
 
-    # 4. SORA CLOTHES (BLOUSE/BLAZER + TAILORED TROUSERS): Catmull-Clark Subsurf + cloth smooth + fitted wrist cuffs!
+    # 3. REBUILD SORA (Dual Quaternion skinning + natural Khmer hands + woven linen clothes + watch)
     sora = bpy.data.objects.get("taxi_sora_legs_scan")
-    if sora and sora.type == "MESH" and not sora.data.get("cloth_smoothed_v3"):
-        if not sora.data.get("cloth_smoothed_v2"):
-            _subdivide_obj(sora, levels=1)
-        bm = bmesh.new()
-        bm.from_mesh(sora.data)
-        mat_names = [mt.name if mt else "" for mt in sora.data.materials]
-        cloth_mi = {i for i, mn in enumerate(mat_names) if mn in ("M_taxi_sora_blouse_scan", "M_taxi_sora_trousers_scan")}
-        other_mi = {i for i in range(len(mat_names)) if i not in cloth_mi}
-        protected_v = {v.index for f in bm.faces if f.material_index in other_mi for v in f.verts}
-        cloth_verts = [v for v in bm.verts if not v.is_boundary and v.index not in protected_v]
-        for _ in range(14 if not sora.data.get("cloth_smoothed_v2") else 6):
-            bmesh.ops.smooth_vert(bm, verts=cloth_verts, factor=0.46, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        skin_mi = {i for i, mn in enumerate(mat_names) if mn == "M_taxi_sora_skin_scan"}
-        blouse_mi = {i for i, mn in enumerate(mat_names) if mn == "M_taxi_sora_blouse_scan"}
-        skin_v = {v.index for f in bm.faces if f.material_index in skin_mi for v in f.verts}
-        blouse_v = {v.index for f in bm.faces if f.material_index in blouse_mi for v in f.verts}
-        cuff_seam = [v for v in bm.verts if v.index in (skin_v & blouse_v)]
-        for _ in range(3):
-            bmesh.ops.smooth_vert(bm, verts=cuff_seam, factor=0.32, use_axis_x=True, use_axis_y=True, use_axis_z=True)
-        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
-        bm.to_mesh(sora.data)
-        bm.free()
-        for p in sora.data.polygons:
-            p.use_smooth = True
-        sora.data["cloth_smoothed_v2"] = True
-        sora.data["cloth_smoothed_v3"] = True
-        sora.data.update()
-
-    # Delicate tailored folded 1930s blouse cuffs + pearl buttons hugging Sora's wrists symmetrically!
-    for old_n in ("taxi_sora_blouse_cuffs", "taxi_sora_cuff_buttons"):
-        old = bpy.data.objects.get(old_n)
-        if old:
-            bpy.data.objects.remove(old, do_unlink=True)
-    if sora and sora.type == "MESH":
-        me_s = sora.data
-        mat_names = [mt.name if mt else "" for mt in me_s.materials]
-        if "M_taxi_sora_skin_scan" in mat_names and "M_taxi_sora_blouse_scan" in mat_names:
-            si = mat_names.index("M_taxi_sora_skin_scan")
-            bi = mat_names.index("M_taxi_sora_blouse_scan")
-            sv = {vi for p in me_s.polygons if p.material_index == si for vi in p.vertices}
-            bv = {vi for p in me_s.polygons if p.material_index == bi for vi in p.vertices}
-            seam_pts = [me_s.vertices[vi].co.copy() for vi in (sv & bv)]
-            sl = [p for p in seam_pts if p.x > -0.27]
-            sr = [p for p in seam_pts if p.x <= -0.27]
-            m_sora_cuff = plain("M_cab_sora_cuff_linen", (0.27, 0.24, 0.19), 0.92, 0.0)
-            m_pearl = bpy.data.materials.get("M_cab_pearl_button") or plain("M_cab_pearl_button", (0.76, 0.72, 0.64), 0.18, 0.05)
-            bm_sc, bm_sb = bmesh.new(), bmesh.new()
-            if sl:
-                _add_tailored_cuff_ring(bm_sc, bm_sb, sl, Vector((-0.08, -0.96, -0.24)), length=0.030, radius_pad=0.0018, center_shift=-0.004)
-            if sr:
-                _add_tailored_cuff_ring(bm_sc, bm_sb, sr, Vector((0.08, -0.96, -0.24)), length=0.030, radius_pad=0.0012, center_shift=-0.013)
-            _bm_obj("taxi_sora_blouse_cuffs", bm_sc, m_sora_cuff, coll, world_uvs_fn=world_uvs_fn, smooth=True)
-            _bm_obj("taxi_sora_cuff_buttons", bm_sb, m_pearl, coll, smooth=True)
+    if sora is None or not sora.data.get("sora_realism_v8"):
+        _rebuild_seamless_sora(coll, world_uvs_fn)
 
     # 5. POLISH EVERY CABIN INTERIOR DETAIL TO SILKY MUSEUM-GRADE SMOOTHNESS!
     for obj_name in (
@@ -2636,8 +3598,13 @@ if __name__ == "__main__":
     from kit import library_material, plain, world_uvs
 
     coll = bpy.context.scene.collection
+    for stale_m in ("M_taxi_sora_shoes_scan.001", "M_cab_driver_krama.001"):
+        sm = bpy.data.materials.get(stale_m)
+        if sm and sm.users == 0:
+            bpy.data.materials.remove(sm)
     m = _materials(library_material, plain)
-    # Repair head normal map, rebuild seamless driver FIRST, then drape smooth krama around his neck cylinder!
+    # Refresh wiper header mounts + repair head normal + rebuild driver & Sora + drape krama
+    _refresh_wiper_header_mounts(coll, m)
     _repair_driver_head_normal()
     _smooth_people_and_cabin_polish(coll, m, plain, world_uvs)
     neck_pos = Vector((0.268, 0.056, 0.922))

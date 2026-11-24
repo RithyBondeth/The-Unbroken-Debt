@@ -73,6 +73,13 @@ const FOLIAGE_IN_THE_LAMPS =
   /^(M_forest_leaf|fern_02|shrub_02|M_bamboo_leaves|M_palm_fan|M_forest_grass|M_taxi_rice|banana_leef|M_ep1_flora_|M_flora_|M_paddy_rice_)/;
 const HEADLAMP_LEAF_TINT = new Color3(0.42, 0.5, 0.34);
 
+function wrapAngle(angle: number): number {
+  let a = angle;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
 /**
  * Whether a cabin mesh is visible behind the rear-view mirror (excludes exterior bodywork,
  * fenders, front dashboard/footwell, driver, and Sora to cut mirror RTT cost by ~80%).
@@ -192,6 +199,64 @@ function makeRainRippleNormals(scene: Scene): RawTexture {
 }
 
 /**
+ * Tileable 256x256 Babylon PBR detailMap (R=albedo, G=normalY, B=roughness, A=normalX)
+ * adding crisp close-range laterite gravel grit, mud lumps, and longitudinal tire-tread striations.
+ */
+function makeRoadDetailTexture(scene: Scene): RawTexture {
+  const size = 256;
+  const height = new Float32Array(size * size);
+  const grit = new Float32Array(size * size);
+  const hash = (ix: number, iy: number, seed: number) => {
+    const n = Math.sin(ix * 127.1 + iy * 311.7 + seed * 74.7) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const v = y / size;
+      // Longitudinal tire tread & rain runoff rills + multi-octave gravel bumps
+      const rills =
+        Math.sin((u * 14 + Math.sin(v * Math.PI * 4) * 0.35) * Math.PI * 2) * 0.28 +
+        Math.sin((u * 29 - Math.cos(v * Math.PI * 6) * 0.2) * Math.PI * 2) * 0.14;
+      const pebble =
+        (hash(x >> 2, y >> 2, 1) - 0.5) * 0.45 +
+        (hash(x >> 1, y >> 1, 2) - 0.5) * 0.35 +
+        (hash(x, y, 3) - 0.5) * 0.2;
+      height[y * size + x] = rills * 0.45 + pebble * 0.85;
+      grit[y * size + x] = pebble;
+    }
+  }
+  const rgba = new Uint8Array(size * size * 4);
+  const strength = 1.65;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const xm = (x - 1 + size) % size;
+      const xp = (x + 1) % size;
+      const ym = (y - 1 + size) % size;
+      const yp = (y + 1) % size;
+      const nx = -(height[y * size + xp] - height[y * size + xm]) * strength;
+      const ny = -(height[yp * size + x] - height[ym * size + x]) * strength;
+      const len = Math.hypot(nx, ny, 1);
+      const h = height[y * size + x];
+      const g = grit[y * size + x];
+      const i = (y * size + x) * 4;
+      // R: subtle stone/grit albedo variation around neutral 128
+      rgba[i] = Math.max(48, Math.min(208, Math.round(128 + g * 58)));
+      // G: normal Y (Babylon detailColor.y)
+      rgba[i + 1] = Math.max(0, Math.min(255, Math.round(127.5 + (ny / len) * 127.5)));
+      // B: micro-roughness (darker/smoother in wet rills, higher on grit peaks) around neutral 128
+      rgba[i + 2] = Math.max(40, Math.min(220, Math.round(128 - h * 42 + g * 34)));
+      // A: normal X (Babylon detailColor.w)
+      rgba[i + 3] = Math.max(0, Math.min(255, Math.round(127.5 + (nx / len) * 127.5)));
+    }
+  }
+  const tex = RawTexture.CreateRGBATexture(rgba, size, size, scene, true, false);
+  tex.name = "taxi_road_detail_micro";
+  tex.uScale = tex.vScale = 22;
+  return tex;
+}
+
+/**
  * A position the cabin GLB marks with an empty (build-taxi.py `anchor`): lamps, glass,
  * wipers, mirror, dials and Sora's eyes, measured from the Rosalie itself.
  */
@@ -245,8 +310,6 @@ export class TaxiVisuals {
   private headlampShadow: ShadowGenerator | null = null;
   private shadowCasters: AbstractMesh[] = [];
   private shadowStretch = Number.NaN;
-  /** The candle at the Neak Ta's shrine. */
-  private readonly shrineCandle: PointLight | null = null;
   private readonly tallGrass: TaxiTallGrass;
   private readonly mist: TaxiMist;
   private readonly headlamps: { light: SpotLight; power: number }[] = [];
@@ -268,7 +331,7 @@ export class TaxiVisuals {
   private readonly wheelBase: Quaternion | null = null;
   private wheelAngle = 0;
   /** The form that stands by the road, and later runs at Sora's window. */
-  /** The black Neak Ta on the road, moving on motion capture. */
+  /** The Preay on the road, moving on motion capture. */
   private readonly spirit: MocapFigure;
   /** Frames left to draw it out of sight below the road, so it compiles before it is needed. */
   private spiritWarm = 4;
@@ -277,7 +340,7 @@ export class TaxiVisuals {
    * the car: the storm's own light comes from above and behind it and leaves only a hole.
    */
   private readonly spiritFill: PointLight;
-  /** What sits behind Sora: the same Neak Ta, drawn into the rear-view mirror only, never into the cabin. */
+  /** What sits behind Sora: the Preay, drawn into the rear-view mirror and cabin during her lunge. */
   private readonly rider: MocapFigure;
   private readonly riderLights: PointLight[] = [];
   private readonly riderEyes: StandardMaterial;
@@ -294,12 +357,18 @@ export class TaxiVisuals {
   private paddyReflectionActive = true;
   private readonly waterRipples: Texture;
   private puddleRipples: Texture | null = null;
+  private roadSheenRipples: Texture | null = null;
   private bonnetBeads: Texture | null = null;
   private readonly charm: TransformNode | null;
   private readonly charmSwing = { side: 0, sideRate: 0, pitch: 0, pitchRate: 0 };
   private readonly driver: TransformNode | null = null;
   private lastYaw = 0;
   private lastSpeed = 6.8;
+  private lastT = -1;
+  private mirrorCharmTriggered = false;
+  private rearGlanceState: "idle" | "active" | "done" = "idle";
+  private rearGlanceReturnYaw = -0.12;
+  private rearGlanceLastYaw = -0.12;
   private readonly blinkTargets: MorphTarget[] = [];
   /** The driver's other baked shapes by name, eased towards taxiDriverFace each frame. */
   private readonly faceTargets = new Map<keyof DriverFace, MorphTarget[]>();
@@ -465,30 +534,53 @@ export class TaxiVisuals {
     ];
     this.paddyReflection = paddyReflection;
     this.waterRipples = makeRainRippleNormals(scene);
+    const roadDetail = makeRoadDetailTexture(scene);
+    const roadSheenRipples = this.waterRipples.clone();
+    roadSheenRipples.uScale = roadSheenRipples.vScale = 8.5;
+    roadSheenRipples.level = 0.38;
+    this.roadSheenRipples = roadSheenRipples;
     const puddleMask = makePuddleEdgeMask(scene);
     const puddleRipples = this.waterRipples.clone();
-    puddleRipples.uScale = puddleRipples.vScale = 4.2;
-    puddleRipples.level = 0.52;
+    puddleRipples.uScale = puddleRipples.vScale = 4.6;
+    puddleRipples.level = 0.72;
     this.puddleRipples = puddleRipples;
+    const dressedRoadMats = new Set<string>();
     for (const mesh of landscape) {
       if (!(mesh.material instanceof PBRMaterial)) continue;
-      if (mesh.material.name === "M_puddle") {
+      const mat = mesh.material;
+      if (mat.name === "M_puddle") {
         // Deep dark rainwater reflecting storm sky & headlamp glints with soft feathered mud edges!
         // Disable radiance/specular-over-alpha & depth write so shorelines blend seamlessly into wet mud!
-        mesh.material.reflectionTexture = roadReflection;
-        mesh.material.bumpTexture = puddleRipples;
-        mesh.material.opacityTexture = puddleMask;
-        mesh.material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
-        mesh.material.useRadianceOverAlpha = false;
-        mesh.material.useSpecularOverAlpha = false;
-        mesh.material.forceDepthWrite = false;
-        mesh.material.needDepthPrePass = false;
-        mesh.material.albedoColor.set(0.006, 0.008, 0.01);
-        mesh.material.roughness = 0.036;
-        mesh.material.specularIntensity = 0.88;
-        mesh.material.directIntensity = 0.42;
-        mesh.material.alpha = 0.94;
-      } else if (mesh.material.name === "M_ditch_water") {
+        mat.reflectionTexture = roadReflection;
+        mat.bumpTexture = puddleRipples;
+        mat.opacityTexture = puddleMask;
+        mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+        mat.useRadianceOverAlpha = false;
+        mat.useSpecularOverAlpha = false;
+        mat.forceDepthWrite = false;
+        mat.needDepthPrePass = false;
+        mat.albedoColor.set(0.005, 0.007, 0.009);
+        mat.roughness = 0.024;
+        mat.specularIntensity = 1.0;
+        mat.directIntensity = 0.85;
+        mat.alpha = 0.94;
+      } else if (mat.name === "M_taxi_laterite" || mat.name === "M_wet_mud") {
+        if (!dressedRoadMats.has(mat.name)) {
+          dressedRoadMats.add(mat.name);
+          const isMud = mat.name === "M_wet_mud";
+          mat.detailMap.isEnabled = true;
+          mat.detailMap.texture = roadDetail;
+          mat.detailMap.diffuseBlendLevel = 0.38;
+          mat.detailMap.bumpLevel = 0.65;
+          mat.detailMap.roughnessBlendLevel = 0.4;
+          mat.clearCoat.isEnabled = true;
+          mat.clearCoat.intensity = isMud ? 0.46 : 0.34;
+          mat.clearCoat.roughness = isMud ? 0.22 : 0.26;
+          mat.clearCoat.bumpTexture = roadSheenRipples;
+          mat.roughness = isMud ? 0.44 : 0.52;
+          mat.specularIntensity = isMud ? 0.48 : 0.4;
+        }
+      } else if (mat.name === "M_ditch_water") {
         mesh.material.reflectionTexture = roadReflection;
         mesh.material.bumpTexture = this.waterRipples;
         mesh.material.albedoColor.set(0.008, 0.01, 0.011);
@@ -512,23 +604,6 @@ export class TaxiVisuals {
         if (material.transparencyMode === PBRMaterial.PBRMATERIAL_ALPHABLEND)
           material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
       }
-    // One guttering candle stub left burning at the Neak Ta's shrine where the trees begin.
-    const shrine = scene.getMeshByName("taxi_road_roadside_neakta_shrine");
-    if (shrine) {
-      shrine.computeWorldMatrix(true);
-      const at = shrine.getBoundingInfo().boundingBox;
-      const candle = new PointLight(
-        "taxi_shrine_candle",
-        new Vector3(at.centerWorld.x - 0.25, at.minimumWorld.y + 0.55, at.centerWorld.z - 0.2),
-        scene,
-      );
-      candle.parent = route;
-      candle.diffuse.set(1, 0.6, 0.28);
-      candle.range = 4.5;
-      candle.includedOnlyMeshes = within(forest, candle.position, candle.range);
-      candle.intensity = 1.6;
-      this.shrineCandle = candle;
-    }
     // The oil lamp behind the stilt house's shutters, glowing softly out across the flooded paddies.
     const lampAt = scene.getTransformNodeByName("taxi_road_anchor_house_lamp");
     if (lampAt) {
@@ -603,16 +678,25 @@ export class TaxiVisuals {
       this.bonnetBeads = beads;
     }
     this.eyeHeight = anchorAt(scene, "sora_eye", new Vector3(0.27, 1.065, -0.06)).y;
-    const wiperPivots = ["l", "r"].map((side) =>
-      anchorAt(scene, `wiper_${side}`, new Vector3(side === "l" ? -0.23 : 0.23, 1.112, 0.455)).add(
-        new Vector3(0, 0.032, 0),
-      ),
-    );
+    const winMin = anchorAt(scene, "windscreen_min", new Vector3(-0.485, 0.875, 0.49));
+    const winMax = anchorAt(scene, "windscreen_max", new Vector3(0.485, 1.115, 0.45));
+    // Mount top-hung wiper pivots squarely on the header chrome shafts just above the upper glass rim
+    const glassSlopeZ = (winMin.z - winMax.z) / Math.max(1e-4, winMax.y - winMin.y);
+    const pivotY = winMax.y + 0.009; // 1.124 m, visibly below interior header rail & flush on shaft
+    const wiperPivots = ["l", "r"].map((side) => {
+      const a = anchorAt(
+        scene,
+        `wiper_${side}`,
+        new Vector3(side === "l" ? -0.23 : 0.23, 1.112, 0.455),
+      );
+      const glassZ = winMax.z - (pivotY - winMax.y) * glassSlopeZ;
+      return new Vector3(a.x, pivotY, glassZ + 0.0014);
+    });
     this.glass = new TaxiRain(scene, {
-      min: anchorAt(scene, "windscreen_min", new Vector3(-0.485, 0.875, 0.49)),
-      max: anchorAt(scene, "windscreen_max", new Vector3(0.485, 1.115, 0.45)),
+      min: winMin,
+      max: winMax,
       wipers: wiperPivots,
-      blade: 0.242,
+      blade: 0.23,
     });
     const sideGlass = scene.materials.find((m) => m.name === "M_taxi_window_glass");
     if (sideGlass instanceof PBRMaterial) {
@@ -751,72 +835,64 @@ export class TaxiVisuals {
       scene.materials.find((m) => m.name === "M_taxi_aged_nickel") ??
       new PBRMaterial("taxi_wiper_nickel", scene);
     const rubber = scene.materials.find((m) => m.name === "M_taxi_rubber") ?? metal;
-    // Authentic 1933 Citroën Rosalie header-mounted vacuum wipers: slender stamped-nickel
-    // spring arm bolted into the top windscreen frame, hinged saddle bridge with claws, and
-    // a razor-thin black rubber squeegee blade pressed flush against the exterior glass.
+    // Authentic 1933 Citroën Rosalie header-mounted vacuum wipers: build metal parts in pivot-local
+    // space with NO parent before MergeMeshes (prevents double-applying the pivot transform), then
+    // attach the merged nickel arm + squeegee blade to the pivot flush on the windscreen plane.
+    const glassSlopeAngle = -Math.atan2(winMin.z - winMax.z, winMax.y - winMin.y);
     for (const [i, at] of wiperPivots.entries()) {
       const pivot = new TransformNode(`taxi_wiper_pivot_${i}`, scene);
-      pivot.position.set(at.x, at.y, at.z + 0.014);
-      pivot.rotation.x = -0.166;
-      const part = (mesh: Mesh, mat: typeof metal) => {
-        mesh.parent = pivot;
-        mesh.material = mat;
-        mesh.isPickable = false;
-      };
-      // Chrome pivot cap & spring-tension hinge mounted cleanly on the header shaft
+      pivot.position.set(at.x, at.y, at.z);
+      pivot.rotation.x = glassSlopeAngle;
+
+      // Chrome acorn nut & pivot socket gripping the exterior header shaft (at local origin y=0, z=0)
       const cap = CreateCylinder(
         `taxi_wiper_pivot_cap_${i}`,
         { diameter: 0.014, height: 0.011, tessellation: 14 },
         scene,
       );
       cap.rotation.x = Math.PI / 2;
-      cap.position.set(0, 0, 0.002);
-      part(cap, metal);
+      cap.position.set(0, 0, 0.0028);
 
       const collar = CreateBox(
         `taxi_wiper_collar_${i}`,
-        { width: 0.0075, height: 0.026, depth: 0.0055 },
+        { width: 0.0072, height: 0.022, depth: 0.0052 },
         scene,
       );
-      collar.position.set(0, -0.014, 0.006);
-      part(collar, metal);
+      collar.position.set(0, -0.01, 0.0058);
 
-      // Slender flat stamped-nickel spring arm (not a bulky rod)
+      // Slender flat stamped-nickel spring arm sloping gently inward toward the blade saddle
       const arm = CreateBox(
         `taxi_wiper_sprung_arm_${i}`,
-        { width: 0.0036, height: 0.146, depth: 0.0022 },
+        { width: 0.0038, height: 0.138, depth: 0.0024 },
         scene,
       );
-      arm.position.set(0, -0.088, 0.0085);
-      part(arm, metal);
+      arm.rotation.x = 0.018;
+      arm.position.set(0, -0.076, 0.0052);
 
       // Centre hinged saddle clip connecting arm to wiper blade spine
       const saddle = CreateBox(
         `taxi_wiper_saddle_${i}`,
-        { width: 0.0062, height: 0.016, depth: 0.0055 },
+        { width: 0.0064, height: 0.016, depth: 0.0046 },
         scene,
       );
-      saddle.position.set(0, -0.156, 0.0065);
-      part(saddle, metal);
+      saddle.position.set(0, -0.142, 0.004);
 
       // Sleek tapered nickel spine + upper/lower claw clips gripping the rubber blade
       const spine = CreateBox(
         `taxi_wiper_spine_${i}`,
-        { width: 0.0028, height: 0.172, depth: 0.0032 },
+        { width: 0.0032, height: 0.168, depth: 0.0034 },
         scene,
       );
-      spine.position.set(0, -0.156, 0.0055);
-      part(spine, metal);
+      spine.position.set(0, -0.142, 0.003);
 
-      const metalParts = [cap, collar, arm, saddle, spine];
-      for (const cy of [-0.086, -0.226]) {
+      const metalParts: Mesh[] = [cap, collar, arm, saddle, spine];
+      for (const cy of [-0.078, -0.206]) {
         const claw = CreateBox(
           `taxi_wiper_claw_${i}_${cy}`,
-          { width: 0.0046, height: 0.007, depth: 0.0048 },
+          { width: 0.0048, height: 0.007, depth: 0.0042 },
           scene,
         );
-        claw.position.set(0, cy, 0.0042);
-        part(claw, metal);
+        claw.position.set(0, cy, 0.0026);
         metalParts.push(claw);
       }
       const mergedMetal = Mesh.MergeMeshes(metalParts, true, true);
@@ -827,14 +903,16 @@ export class TaxiVisuals {
         mergedMetal.isPickable = false;
       }
 
-      // Razor-thin black rubber squeegee blade pressed cleanly against the wet glass
+      // Razor-thin black rubber squeegee blade pressed cleanly against the wet exterior glass
       const blade = CreateBox(
         `taxi_wiper_rubber_blade_${i}`,
-        { width: 0.0017, height: 0.184, depth: 0.0048 },
+        { width: 0.002, height: 0.174, depth: 0.0038 },
         scene,
       );
-      blade.position.set(0, -0.156, 0.0026);
-      part(blade, rubber);
+      blade.parent = pivot;
+      blade.material = rubber;
+      blade.isPickable = false;
+      blade.position.set(0, -0.142, 0.0012);
       this.wipers.push(pivot);
     }
     this.dialTexture = new DynamicTexture(
@@ -915,9 +993,9 @@ export class TaxiVisuals {
         // mirror.level is already 2.85x to keep the dark rear cabin legible, so tame the
         // mirror-pass face key to preserve eerie pale facial sculpting with zero white blowout!
         savedRiderIntensities = this.riderLights.map((l) => l.intensity);
-        this.riderLights[0].intensity *= 0.42;
-        this.riderLights[1].intensity *= 0.78;
-        this.riderLights[2].intensity *= 0.45;
+        this.riderLights[0].intensity *= 0.38;
+        this.riderLights[1].intensity *= 0.75;
+        this.riderLights[2].intensity *= 0.42;
       } else {
         savedRiderIntensities = [];
       }
@@ -967,9 +1045,9 @@ export class TaxiVisuals {
     // Three dedicated cold-moonlight horror lights sculpting her pale gaunt face, staring eyes &
     // white dress while keeping her long wet black hair deeply jet-black (zero orange nose-glare!).
     for (const [name, at, colour, range] of [
-      ["taxi_mirror_rider_face", new Vector3(0.06, 0.96, -0.18), new Color3(0.84, 0.9, 1), 2.8],
-      ["taxi_mirror_rider_rim", new Vector3(0.55, 1.12, -0.92), new Color3(0.62, 0.76, 1), 2.8],
-      ["taxi_mirror_rider_dash", new Vector3(-0.22, 0.9, -0.18), new Color3(0.76, 0.82, 0.92), 2.4],
+      ["taxi_mirror_rider_face", new Vector3(0.06, 0.96, -0.18), new Color3(0.76, 0.88, 1), 2.8],
+      ["taxi_mirror_rider_rim", new Vector3(0.55, 1.12, -0.92), new Color3(0.58, 0.74, 1), 2.8],
+      ["taxi_mirror_rider_dash", new Vector3(-0.22, 0.9, -0.18), new Color3(0.7, 0.8, 0.94), 2.4],
     ] as const) {
       const light = new PointLight(name, at, scene);
       light.diffuse = colour;
@@ -1078,30 +1156,30 @@ export class TaxiVisuals {
           material.name,
         )
       ) {
-        // Subtle natural subsurface warmth (restrained on driver head/neck & Sora hands so skin never glows orange).
+        // Living human subsurface scattering & supple skin oil/specular matching face -> neck -> hands
         material.subSurface.isTranslucencyEnabled = true;
         material.subSurface.translucencyIntensity =
           material.name === "M_taxi_driver_head_scan" || material.name === "M_taxi_driver_neck_skin"
-            ? 0.14
+            ? 0.2
             : material.name === "M_taxi_sora_skin_scan"
-              ? 0.2
-              : 0.28;
+              ? 0.24
+              : 0.22;
         material.subSurface.tintColor =
           material.name === "M_taxi_sora_skin_scan"
-            ? new Color3(0.84, 0.56, 0.44)
-            : new Color3(0.9, 0.48, 0.34);
-        // The scanned face carries its own roughness map (wet eyes, lips, oily nose, cotton cap);
-        // match driver neck roughness & specular identically so the jaw-to-neck lighting is seamless!
+            ? new Color3(0.86, 0.46, 0.34)
+            : new Color3(0.88, 0.42, 0.28);
         if (material.name === "M_taxi_driver_head_scan") {
-          material.specularIntensity = 0.24;
+          material.specularIntensity = 0.26;
         } else if (material.name === "M_taxi_driver_neck_skin") {
-          material.roughness = 0.56;
-          material.specularIntensity = 0.24;
+          material.roughness = 0.52;
+          material.specularIntensity = 0.26;
+        } else if (material.name === "M_taxi_sora_skin_scan") {
+          material.roughness = 0.48;
+          material.specularIntensity = 0.28;
         } else {
-          material.roughness = 0.64;
-          material.specularIntensity = 0.2;
+          material.roughness = 0.52;
+          material.specularIntensity = 0.26;
         }
-
         material.metallic = 0;
       }
       if (
@@ -1110,10 +1188,14 @@ export class TaxiVisuals {
         ) ||
         /^M_cab_(driver_krama|driver_cuff_cotton|sora_cuff_linen)$/.test(material.name)
       ) {
-        // Woven cotton and linen: deeply matte and silky-smooth so close cabin practicals never cause harsh creases.
+        // Woven cotton & linen fabric: micro-sheen grazing highlights with soft matte weave body
         material.metallic = 0;
-        material.roughness = 0.94;
-        material.specularIntensity = 0.03;
+        material.roughness = 0.88;
+        material.specularIntensity = 0.06;
+        material.sheen.isEnabled = true;
+        material.sheen.intensity = 0.24;
+        material.sheen.roughness = 0.7;
+        material.sheen.color.set(0.85, 0.82, 0.76);
       }
       if (material.name === "M_cab_gauge_crystal") {
         material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
@@ -1182,13 +1264,13 @@ export class TaxiVisuals {
       if (material instanceof PBRMaterial) {
         material.maxSimultaneousLights = 8;
         if (material.name === "M_taxi_khmer_posters") {
-          // Real hand-painted Khmer 90s shop signs & posters: crisp saturation with damp night sheen (never white-clipped!).
-          material.albedoColor.set(0.76, 0.74, 0.7);
+          // Real hand-painted Khmer 90s shop signs & posters: weathered rain-soaked patina with subtle damp sheen!
+          material.albedoColor.set(0.58, 0.56, 0.52);
           material.metallic = 0;
-          material.roughness = 0.56;
+          material.roughness = 0.6;
           material.clearCoat.isEnabled = true;
-          material.clearCoat.intensity = 0.22;
-          material.clearCoat.roughness = 0.26;
+          material.clearCoat.intensity = 0.16;
+          material.clearCoat.roughness = 0.3;
         } else if (
           /^M_taxi_shop_(bulb|fluoro|crt|mirror|window_glow|noodle_glow|shrine_glow|foliage)$/.test(
             material.name,
@@ -1196,6 +1278,14 @@ export class TaxiVisuals {
         ) {
           // Preserve authored emissive shop bulbs, fluorescent tubes, CRT glow, amber windows, shrines & deep wet planters.
           material.metallic = material.name === "M_taxi_shop_mirror" ? 0.96 : material.metallic;
+        } else if (material.name.startsWith("M_taxi_shop_ph_")) {
+          // PolyHaven studio props: darken daytime albedo & add damp monsoon surface sheen
+          material.albedoColor.scaleInPlace(0.66);
+          material.roughness = Math.max(0.42, (material.roughness ?? 0.8) * 0.9);
+          material.specularIntensity = Math.min(0.45, material.specularIntensity ?? 0.35);
+        } else if (material.name.startsWith("M_taxi_shop_")) {
+          material.albedoColor.scaleInPlace(0.94);
+          material.roughness = Math.max(0.32, (material.roughness ?? 0.8) * 0.94);
         } else {
           applyRainWetness(material);
         }
@@ -1247,7 +1337,12 @@ export class TaxiVisuals {
     const g = this.game,
       angle = taxiWiperAngle(t),
       distance = taxiDistance(t),
-      speed = taxiSpeed(t);
+      speed = taxiSpeed(t),
+      livePlay = dt > 0 && this.lastT >= 0 && t > this.lastT && t - this.lastT < 0.35;
+    if (t < TAXI_MIRROR.seated.from - 0.5) {
+      this.mirrorCharmTriggered = false;
+      this.rearGlanceState = "idle";
+    }
     for (const chunk of this.routeChunks) {
       const active = taxiRouteChunkVisible(chunk.minZ, chunk.maxZ, distance, chunk.ahead);
       if (active !== chunk.active) {
@@ -1297,9 +1392,6 @@ export class TaxiVisuals {
     this.route.position.set(pose.x * c + pose.z * s, 0, -pose.x * s + pose.z * c);
     // Storm lightning tuned for high-contrast moody silver-blue highlights (never washes foliage to flat pastel).
     this.flash.intensity = flash * 2.15;
-    if (this.shrineCandle)
-      this.shrineCandle.intensity =
-        1.6 * (0.7 + 0.18 * Math.sin(t * 13.3) + 0.12 * Math.sin(t * 31.1 + 2)) * (1 - flash * 0.5);
     if (this.houseLamp)
       this.houseLamp.intensity =
         6 * (0.82 + 0.1 * Math.sin(t * 9.1) + 0.08 * Math.sin(t * 23.7 + 1.3));
@@ -1336,15 +1428,17 @@ export class TaxiVisuals {
       this.puddleRipples.uOffset = t * 0.032;
       this.puddleRipples.vOffset = -t * 0.024;
     }
+    if (this.roadSheenRipples) {
+      this.roadSheenRipples.uOffset = t * 0.015;
+      this.roadSheenRipples.vOffset = -t * 0.012;
+    }
     // Rain running back along the bonnet in the wind of the car's speed.
     if (this.bonnetBeads) this.bonnetBeads.vOffset = -t * 0.05 * (speed / 6.8);
     this.rain.update(t, speed, flash);
-    this.updateSpirit(t, flash);
-    this.updateMirrorRider(t, flash);
-    this.glassMarks?.update(t, flash);
     for (const lamp of this.headlamps) lamp.light.intensity = lamp.power * power;
     this.dash.intensity = 0.18 * (0.12 + 0.88 * power);
     this.domeLight.intensity = 0.42 * (0.06 + 0.94 * power);
+    this.domeLight.diffuse.set(1, 0.78, 0.46);
     this.mirrorFillTarget = 2.8 * (0.12 + 0.88 * power) + flash * 1.6;
     this.mirrorCabinFill.intensity = 0;
     this.soraFill.intensity = 0.11 * (0.14 + 0.86 * power) + flash * 0.12;
@@ -1359,9 +1453,13 @@ export class TaxiVisuals {
     if (this.radioDialMat) this.radioDialMat.emissiveIntensity = 0.15 + 1.55 * power;
     if (this.domeGlassMat) this.domeGlassMat.emissiveIntensity = 0.08 + 1.35 * power;
     if (this.footwellBulbMat) this.footwellBulbMat.emissiveIntensity = 0.1 + 2.1 * power;
+    this.updateSpirit(t, flash);
+    this.updateMirrorRider(dt, t, flash, livePlay);
+    this.glassMarks?.update(t, flash);
     this.tallGrass.update(distance);
     this.mist.update(dt, t, distance, power, flash);
     this.updateCabinLife(dt, t, speed, flash);
+    this.lastT = t;
     // Small suspension movement + visceral shock micro-jolt on haunt impacts.
     const bump = (Math.sin(t * 5.6) * 0.0028 + Math.sin(t * 9.9 + 0.7) * 0.0012) * (speed / 6.8);
     const flinch = taxiFlinch(t);
@@ -1388,7 +1486,7 @@ export class TaxiVisuals {
   }
 
   /**
-   * The Neak Ta where the ride clock puts it, on the frame of its motion capture the clock
+   * The Preay where the ride clock puts it, on the frame of its motion capture the clock
    * gives, its head turning to keep Sora in view. Between the flickers that show it, it is
    * switched off: it is somewhere in the dark, and only the sound says where.
    */
@@ -1442,8 +1540,9 @@ export class TaxiVisuals {
    * the driver warns her, then lunges forward between the front seats—filling the entire mirror
    * frame AND manifesting physically inside the cabin if Sora turns her head!
    */
-  private updateMirrorRider(t: number, flash: number): void {
-    const pose = taxiMirrorRiderAt(t),
+  private updateMirrorRider(dt: number, t: number, flash: number, livePlay: boolean): void {
+    const g = this.game,
+      pose = taxiMirrorRiderAt(t),
       form = this.rider;
     form.setEnabled(pose !== null);
     this.mirror.refreshRate = pose ? 1 : 3;
@@ -1458,6 +1557,74 @@ export class TaxiVisuals {
       faceKey.intensity = p * (1.85 * lungeBoost + flash * 1.9);
       rim.intensity = p * (1.25 * lungeBoost + flash * 1.45);
       dash.intensity = p * (0.65 * taxiElectrics(t) + 0.35);
+
+      if (pose.kind === "seated") {
+        // Unmistakable subtle cue: charm twitches once, mirror fills cleanly, and gaze gently drifts toward the mirror.
+        this.mirrorFillTarget += p * 1.4;
+        if (livePlay) {
+          if (!this.mirrorCharmTriggered) {
+            this.charmSwing.sideRate += 4.2;
+            this.charmSwing.pitchRate -= 2.4;
+            this.mirrorCharmTriggered = true;
+          }
+          if (g.player.yaw > -0.25 && g.player.yaw < 0.35) {
+            const pull = 1 - Math.exp(-dt * 1.4);
+            g.player.yaw += wrapAngle(-0.36 - g.player.yaw) * pull * 0.45;
+            g.player.pitch += (-0.1 - g.player.pitch) * pull * 0.45;
+          }
+        }
+      } else {
+        // Violent overhead cabin dome strobe spilling cold light onto the dash + involuntary startle glance-back!
+        if (t < 53.65) {
+          const pulse = Math.sin(t * 53) * Math.sin(t * 21.7) > -0.25;
+          if (pulse) {
+            this.domeLight.diffuse.set(0.84, 0.9, 1);
+            this.domeLight.intensity = 2.2;
+            if (this.domeGlassMat) this.domeGlassMat.emissiveIntensity = 3.6;
+          } else {
+            this.domeLight.diffuse.set(1, 0.78, 0.46);
+            this.domeLight.intensity = 0.15;
+            if (this.domeGlassMat) this.domeGlassMat.emissiveIntensity = 0.2;
+          }
+        } else {
+          this.domeLight.intensity = 0;
+          if (this.domeGlassMat) this.domeGlassMat.emissiveIntensity = 0.05;
+        }
+        if (livePlay) {
+          if (this.rearGlanceState === "idle") {
+            if (Math.abs(wrapAngle(g.player.yaw - Math.PI)) > 1.15) {
+              this.rearGlanceReturnYaw = g.player.yaw;
+              this.rearGlanceLastYaw = g.player.yaw;
+              this.rearGlanceState = "active";
+            } else {
+              this.rearGlanceState = "done";
+            }
+          }
+          if (this.rearGlanceState === "active") {
+            if (Math.abs(wrapAngle(g.player.yaw - this.rearGlanceLastYaw)) > 0.14) {
+              this.rearGlanceState = "done";
+            } else {
+              let targetYaw = this.rearGlanceReturnYaw,
+                targetPitch = 0.025,
+                rate = 9;
+              if (t < 52.34) {
+                targetYaw = -0.46;
+                targetPitch = -0.14;
+                rate = 14;
+              } else if (t < 53.55) {
+                targetYaw = -2.71 + Math.sin(t * 36) * 0.015;
+                targetPitch = 0.06;
+                rate = 11;
+              }
+              const step = 1 - Math.exp(-dt * rate);
+              g.player.yaw = wrapAngle(g.player.yaw + wrapAngle(targetYaw - g.player.yaw) * step);
+              g.player.pitch += (targetPitch - g.player.pitch) * step;
+              this.rearGlanceLastYaw = g.player.yaw;
+              if (t >= 54.12) this.rearGlanceState = "done";
+            }
+          }
+        }
+      }
     } else {
       this.mirrorRiderBoost = 0;
       faceKey.intensity = 0;
