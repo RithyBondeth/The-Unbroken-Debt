@@ -10,14 +10,17 @@ import type { Area } from "@/core/areaLoader";
 import { seededRandom } from "@/audio/synth";
 import { TENT_FLAME_MESH } from "../data/arrival";
 import { HALL, WREATH_INCENSE } from "../data/funeral";
+import type { Draught } from "../data/draught";
 
 /**
  * The candle and lamp flames that waver: the funeral's (under the house; its many
  * candles drawn as one instanced mesh, below), the hall altar's lamp, the rooms' candles.
  */
 const FLAMES = new RegExp(
-  `${TENT_FLAME_MESH.source}|^hall_altar_lamp_flame$|^house_flame_[\\d_]+$`,
+  `${TENT_FLAME_MESH.source}|^hall_altar_lamp_flame$|^house_flame_[\\d_]+$|^(neakta|spirit)_flame_\\d+$`,
 );
+/** Incense the house and the shrine burn (tools/areas/house_review.py, village_review.py). */
+const SMOKE_MARKER = /^incense_smoke_/;
 /** The funeral's candle flames under the house: about seventy, drawn in one call. */
 const FUNERAL_CANDLE = /^fu_flame_\d+$/;
 
@@ -29,6 +32,7 @@ interface Wick {
   foot: Vector3;
   phase: number;
   rate: number;
+  gust: number;
 }
 
 interface Flame {
@@ -37,6 +41,18 @@ interface Flame {
   turn: Quaternion;
   phase: number;
   rate: number;
+  /** The flame's foot in world space (where the draught is measured). */
+  foot: Vector3;
+  /** How hard Sora's draught bends it now (eased, 0-1). */
+  gust: number;
+  /** World to the flame's own axes (its lean is turned in them). */
+  inv: Quaternion;
+}
+
+interface Column {
+  ps: ParticleSystem;
+  at: Vector3;
+  gust: number;
 }
 
 /**
@@ -61,7 +77,7 @@ export class FuneralRoom {
   private wickMatrices: Float32Array | null = null;
   private sourceWorld = Matrix.Identity();
   private sourceInverse = Matrix.Identity();
-  private readonly columns: ParticleSystem[] = [];
+  private readonly columns: Column[] = [];
   private readonly haze: ParticleSystem;
   private readonly texture: DynamicTexture;
   private time = 0;
@@ -82,12 +98,17 @@ export class FuneralRoom {
       );
       const turn = mesh.rotationQuaternion?.clone() ?? Quaternion.FromEulerVector(mesh.rotation);
       mesh.rotationQuaternion = turn.clone();
+      mesh.computeWorldMatrix(true);
+      const world = mesh.getBoundingInfo().boundingBox;
       this.flames.push({
         mesh,
         base: mesh.scaling.clone(),
         turn,
         phase: random() * 100,
         rate: 0.8 + random() * 0.5,
+        foot: new Vector3(world.centerWorld.x, world.minimumWorld.y, world.centerWorld.z),
+        gust: 0,
+        inv: (mesh.absoluteRotationQuaternion ?? Quaternion.Identity()).clone().conjugate(),
       });
     }
 
@@ -97,8 +118,12 @@ export class FuneralRoom {
     const burner = area.level.markers.get("main_burner");
     if (burner) sources.push(burner.position.add(new Vector3(0, 0.12, 0)));
     sources.push(...WREATH_INCENSE.map((p) => p.clone()));
+    // The altar's sticks before Sok's photograph, the side table's, the washing room's and
+    // the Neak Ta's (their markers stand where the smoke leaves the sticks).
+    for (const [id, m] of area.level.markers)
+      if (SMOKE_MARKER.test(id)) sources.push(m.position.clone());
     for (const [i, at] of sources.entries())
-      this.columns.push(this.column(scene, `hall_incense_${i}`, at, low));
+      this.columns.push({ ps: this.column(scene, `hall_incense_${i}`, at, low), at, gust: 0 });
     this.haze = this.ceilingHaze(scene, low);
   }
 
@@ -207,6 +232,7 @@ export class FuneralRoom {
         foot: new Vector3(box.centerWorld.x, box.minimumWorld.y, box.centerWorld.z),
         phase: random() * 100,
         rate: 0.8 + random() * 0.5,
+        gust: 0,
       });
     }
     this.wickMatrices = new Float32Array(16 * this.wicks.length);
@@ -228,7 +254,7 @@ export class FuneralRoom {
   private readonly wickScale = new Vector3();
 
   /** Each candle wavers on its wick as the hall's flames do, out of step with the rest. */
-  private updateCandles(t: number): void {
+  private updateCandles(t: number, dt: number, draught: Draught | null): void {
     const buffer = this.wickMatrices;
     if (!this.candles || !buffer || !this.candles.isEnabled()) return;
     const a = this.wickA,
@@ -236,17 +262,14 @@ export class FuneralRoom {
     this.wicks.forEach((w, i) => {
       const p = w.phase,
         r = w.rate;
+      w.gust = ease(w.gust, draught ? draught.at(w.foot.x, w.foot.y, w.foot.z) : 0, dt);
+      const g = w.gust;
       const swell = 0.5 * Math.sin(t * 2.1 * r + p) + 0.3 * Math.sin(t * 4.7 * r + p * 1.7);
-      const tremor = 0.12 * Math.sin(t * 23 * r + p * 3.1) * Math.sin(t * 7.3 + p);
-      const gutter = Math.max(0, Math.sin(t * 0.37 * r + p * 0.5) - 0.92) * 6;
-      const stretch = Math.max(0.45, 1 + 0.16 * swell + tremor - 0.35 * gutter);
+      const tremor = (0.12 + 0.5 * g) * Math.sin(t * 23 * r + p * 3.1) * Math.sin(t * 7.3 + p);
+      const gutter = Math.max(0, Math.sin(t * 0.37 * r + p * 0.5) - 0.92) * 6 + 1.4 * g;
+      const stretch = Math.max(0.35, 1 + 0.16 * swell + tremor - 0.35 * gutter);
       this.wickScale.set(1 - 0.07 * swell, stretch, 1 - 0.07 * swell);
-      Quaternion.RotationYawPitchRollToRef(
-        0,
-        0.04 * Math.sin(t * 1.1 * r + p * 2.3),
-        0.06 * Math.sin(t * 1.3 * r + p) + 0.1 * gutter,
-        this.wickTurn,
-      );
+      lean(t, r, p, gutter, g, draught, w.foot, null, this.wickTurn);
       // About the foot, in world axes: base, then shift to the foot, turn and stretch, back.
       Matrix.ComposeToRef(this.wickScale, this.wickTurn, Vector3.ZeroReadOnly, a);
       Matrix.TranslationToRef(-w.foot.x, -w.foot.y, -w.foot.z, b);
@@ -262,43 +285,111 @@ export class FuneralRoom {
     this.candles.thinInstanceBufferUpdated("matrix");
   }
 
-  /** `level` is the room's light (1 full, falling as the corner incense burns down). */
-  update(dt: number, level: number): void {
+  private readonly leanTurn = new Quaternion();
+
+  /**
+   * `level` is the room's light (1 full, falling as the corner incense burns down);
+   * `draught` the air Sora stirs: flames near her lean away and gutter, smoke near her is
+   * pushed aside.
+   */
+  update(dt: number, level: number, draught: Draught | null = null): void {
     this.time += dt;
     const t = this.time;
-    this.updateCandles(t);
+    this.updateCandles(t, dt, draught);
     for (const f of this.flames) {
       if (!f.mesh.isEnabled()) continue;
       const p = f.phase,
         r = f.rate;
-      // Two slow swells, a quick tremor and, now and then, a gutter.
+      f.gust = ease(f.gust, draught ? draught.at(f.foot.x, f.foot.y, f.foot.z) : 0, dt);
+      const g = f.gust;
+      // Two slow swells, a quick tremor and, now and then, a gutter; all of it harder in
+      // the draught Sora makes passing it.
       const swell = 0.5 * Math.sin(t * 2.1 * r + p) + 0.3 * Math.sin(t * 4.7 * r + p * 1.7);
-      const tremor = 0.12 * Math.sin(t * 23 * r + p * 3.1) * Math.sin(t * 7.3 + p);
-      const gutter = Math.max(0, Math.sin(t * 0.37 * r + p * 0.5) - 0.92) * 6;
+      const tremor = (0.12 + 0.5 * g) * Math.sin(t * 23 * r + p * 3.1) * Math.sin(t * 7.3 + p);
+      const gutter = Math.max(0, Math.sin(t * 0.37 * r + p * 0.5) - 0.92) * 6 + 1.4 * g;
       const stretch = 1 + 0.16 * swell + tremor - 0.35 * gutter;
       f.mesh.scaling.set(
         f.base.x * (1 - 0.07 * swell),
-        f.base.y * Math.max(0.45, stretch),
+        f.base.y * Math.max(0.35, stretch),
         f.base.z * (1 - 0.07 * swell),
       );
       // The draught from the door and the windows leans it this way and that.
-      const lean = Quaternion.RotationYawPitchRoll(
-        0,
-        0.04 * Math.sin(t * 1.1 * r + p * 2.3),
-        0.06 * Math.sin(t * 1.3 * r + p) + 0.1 * gutter,
-      );
-      f.turn.multiplyToRef(lean, f.mesh.rotationQuaternion!);
+      lean(t, r, p, gutter, g, draught, f.foot, f.inv, this.leanTurn);
+      f.turn.multiplyToRef(this.leanTurn, f.mesh.rotationQuaternion!);
     }
     const smoke = Math.max(0.25, level);
-    for (const ps of this.columns) ps.emitRate = (ps.getCapacity() > 60 ? 16 : 8) * smoke;
+    for (const c of this.columns) {
+      const ps = c.ps;
+      ps.emitRate = (ps.getCapacity() > 60 ? 16 : 8) * smoke;
+      // Pushed aside and torn when she passes; it climbs straight again once she has gone.
+      c.gust = ease(c.gust, draught ? draught.at(c.at.x, c.at.y - 0.3, c.at.z) : 0, dt);
+      if (draught && c.gust > 0.01) {
+        const push = draught.push(c.at.x, c.at.z);
+        ps.gravity.set(push.x * 0.9 * c.gust, 0, push.z * 0.9 * c.gust);
+        ps.direction1.set(
+          -0.07 + push.x * 0.6 * c.gust,
+          1 - 0.5 * c.gust,
+          -0.07 + push.z * 0.6 * c.gust,
+        );
+        ps.direction2.set(
+          0.07 + push.x * 0.6 * c.gust,
+          1 - 0.3 * c.gust,
+          0.07 + push.z * 0.6 * c.gust,
+        );
+      } else {
+        ps.gravity.set(0, 0, 0);
+        ps.direction1.set(-0.07, 1, -0.07);
+        ps.direction2.set(0.07, 1, 0.07);
+      }
+    }
   }
 
   dispose(): void {
-    for (const ps of this.columns) ps.dispose();
+    for (const c of this.columns) c.ps.dispose();
     this.haze.dispose();
     this.texture.dispose();
   }
 }
+
+/** Eases a gust in quickly and lets it die away slowly (a flame steadies after a draught). */
+function ease(current: number, target: number, dt: number): number {
+  const k = target > current ? Math.min(1, dt * 9) : Math.min(1, dt * 1.6);
+  return current + (target - current) * k;
+}
+
+/**
+ * A flame's lean: the room's slow draught, its gutter, and Sora's gust bending it away
+ * from her along the way she pushes the air (a turn about the axis across that push).
+ */
+function lean(
+  t: number,
+  r: number,
+  p: number,
+  gutter: number,
+  gust: number,
+  draught: Draught | null,
+  foot: Vector3,
+  inv: Quaternion | null,
+  out: Quaternion,
+): void {
+  Quaternion.RotationYawPitchRollToRef(
+    0,
+    0.04 * Math.sin(t * 1.1 * r + p * 2.3),
+    0.06 * Math.sin(t * 1.3 * r + p) + 0.1 * gutter,
+    out,
+  );
+  if (!draught || gust < 0.01) return;
+  const push = draught.push(foot.x, foot.z);
+  const angle = gust * (0.55 + 0.15 * Math.sin(t * 17 * r + p));
+  // Tipping the flame's up (+y) toward the push: about the axis up x push.
+  AXIS.set(push.z, 0, -push.x);
+  if (inv) AXIS.rotateByQuaternionToRef(inv, AXIS);
+  Quaternion.RotationAxisToRef(AXIS, angle, GUST);
+  GUST.multiplyToRef(out, out);
+}
+
+const AXIS = new Vector3();
+const GUST = new Quaternion();
 
 /** A soft, ragged wisp: smoke, not a ball. */
 function wisp(scene: Scene): DynamicTexture {

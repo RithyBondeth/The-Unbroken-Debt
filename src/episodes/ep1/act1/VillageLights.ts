@@ -4,6 +4,7 @@ import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered/clusteredLightContainer";
+import type { Draught } from "../data/draught";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -235,9 +236,14 @@ export class VillageLights {
     return this.storm.flashing;
   }
 
+  /** The air Sora stirs (data/draught.ts): a candle she sweeps past gutters and dims. */
+  draught: Draught | null = null;
+  private readonly gusts: number[] = [];
+
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
+    const draught = this.draught;
     // Flames are never steady (Art Bible); each one out of step with the others. The
     // funeral's (under the house now: fu_) dim as the corner incense burns down and go
     // out in A2-01's gust, but for the fire pot, which sinks to its embers. The bulb
@@ -251,10 +257,18 @@ export class VillageLights {
         : light.name === "fu_fire"
           ? 0.3 + 0.7 * this.hangingLevel
           : this.hangingLevel;
-      const flicker =
+      let flicker =
         light.name === "fu_bulb"
           ? 0.97 + 0.03 * Math.sin(t * 50 + p) * (Math.sin(t * 0.7 + p) > 0.97 ? 8 : 0)
           : 0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2);
+      if (draught && light.name !== "fu_bulb" && light.name !== "fu_fire") {
+        const at = light.position;
+        const target = draught.at(at.x, at.y, at.z);
+        const g0 = this.gusts[i] ?? 0;
+        const g = g0 + (target - g0) * Math.min(1, dt * (target > g0 ? 9 : 1.6));
+        this.gusts[i] = g;
+        flicker *= 1 - g * (0.4 + 0.2 * Math.sin(t * 31 + p * 3));
+      }
       light.intensity =
         base *
         (this.practicalLevels.get(light.name) ?? 1) *
