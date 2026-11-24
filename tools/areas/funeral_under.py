@@ -1126,8 +1126,11 @@ def dread(coll, m, ground, rng):
 
     # The seep: a wet pool spreading from under the stand's front, runs down its cloth,
     # and a clay bowl someone set under the worst of it.
-    decal(coll, "fu_dread_seep_pool", d["seep"], ground, cx + 0.15, stand_front - 0.12, 1.1, 0.75, 0.08, lift=0.004)
-    decal(coll, "fu_dread_seep_run", d["seep"], ground, cx - 0.35, stand_front - 0.45, 0.45, 0.55, 0.4, lift=0.005)
+    # (Half the size the Nov 23 previews hid under the mats: in the game the full pool
+    # and its run read as two black holes in the mats, Nov 24. Now it creeps out from
+    # under the stand's front, its run a hand's length further.)
+    decal(coll, "fu_dread_seep_pool", d["seep"], ground, cx + 0.25, stand_front - 0.04, 0.62, 0.42, 0.08, lift=0.004)
+    decal(coll, "fu_dread_seep_run", d["seep"], ground, cx + 0.02, stand_front - 0.36, 0.26, 0.32, 0.4, lift=0.005)
     wall_decal(coll, "fu_dread_stand_drips", d["drips"], cx - 0.2, cx + 0.55, g0 + 0.02, g0 + STAND_H - 0.01, stand_front - 0.012)
     bb = Batch("fu_dread_bowl")
     bx, by = cx + 0.55, stand_front - 0.18
@@ -1138,7 +1141,9 @@ def dread(coll, m, ground, rng):
     bb.build(coll)
 
     # Long black hair caught in the lid's seam at the head end, hanging down its side.
-    hb = Batch("fu_dread_hair")
+    # Named coffin_lid_*: Act III's CorpseModels.ts lifts every coffin_lid mesh with the
+    # lid, so the hair rises with it.
+    hb = Batch("coffin_lid_hair")
     head = cx - L / 2
     for k in range(70):
         x = head + 0.06 + rng.uniform(0, 0.38) ** 1.3

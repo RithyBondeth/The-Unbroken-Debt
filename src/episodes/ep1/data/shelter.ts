@@ -49,4 +49,10 @@ export const HOUSE_SHELTER: readonly ShelterBox[] = [
   // The ground under the house: the funeral's (front block) and the jars' (back block).
   blender(-5.0, 5.0, 11.0, 21.0, -2.0, FLOOR - 0.08, 0.08, 2.5, 0.05),
   blender(-7.0, 7.0, 23.0, 33.0, -2.0, FLOOR - 0.08, 0.08, 2.5, 0.05),
+  // The kitchen house on its stilts (farmstead.KITCHEN, floor at the house's, walls 2.1 m
+  // under a thatch) and the rice barn (farmstead.BARN, floor 1.2 m, walls 2.5 m, its loft
+  // under a 38-degree roof): the J1 and J5 previews (Nov 24, 2026) are dark inside but
+  // for Sora's lantern, where the game's sky lit the walls a grey-blue.
+  blender(-27.95, -20.05, 15.7, 22.6, FLOOR - 0.06, 7.4, 0.05, 0.02),
+  blender(21.05, 28.95, 19.55, 25.45, 1.14, 6.1, 0.05, 0.02),
 ];

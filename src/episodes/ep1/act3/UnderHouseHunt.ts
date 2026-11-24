@@ -10,7 +10,7 @@ import { StalkerVoice } from "../audio/StalkerVoice";
 import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, HOUSE_ARENA, JARS, arenaAt, inHunt } from "../data/hunt";
 import { HuntProgress } from "./HuntProgress";
 import { RoamerBrain } from "./RoamerBrain";
-import type { HuntModels } from "./HuntModels";
+import type { HuntModels, SearchJar } from "./HuntModels";
 import "@/ui/html/walker.css";
 
 const after = (seconds: number) => new Promise<void>((done) => setTimeout(done, seconds * 1000));
@@ -20,6 +20,8 @@ export class UnderHouseHunt {
   readonly progress: HuntProgress;
   readonly brain = new RoamerBrain();
   restarts = 0;
+  /** Told when Sora lifts a jar's lid (the J4 jump scare is in one of them). */
+  onJarOpened: ((jar: SearchJar) => void) | null = null;
   private checkpoint: SaveData | null = null;
   private recovering = false;
   private intro = 0;
@@ -264,6 +266,7 @@ export class UnderHouseHunt {
         this.lidSound.play();
       }
       g.hints.show("hint.jarTake", 4);
+      this.onJarOpened?.(jar);
     } else {
       if (jar.opening < 0.9 || !this.progress.take(jar.id)) return;
       this.models.jarState(jar.id, true, true);

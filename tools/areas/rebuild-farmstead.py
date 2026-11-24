@@ -1116,6 +1116,17 @@ def under_house_funeral(props):
         # (No smoke threads: they are the Cycles previews'; the game makes its own smoke.)
         m, flames, glows, smokes = FU.build(coll, ground, rng, portrait)
         FU.loudspeaker_pole(coll, m, ground, rng, *FU.SPEAKER_POLE)
+        # The dread pass the user approved on Nov 24 (Cycles previews of Nov 23): the
+        # funeral after three nights. Its own generator, the previews' seed, so it lays
+        # out as they did and nothing else moves.
+        FU.dread(coll, m, ground, np.random.default_rng(2311))
+        # The torn cloths hang to between 0.8 and 1.4 m: Sora bumps them, not walks
+        # through them (a body's width round each, up to the joists).
+        for o in [o for o in coll.objects if o.name.startswith("fu_dread_rag_")]:
+            xs = [(o.matrix_world @ v.co) for v in o.data.vertices]
+            x0, x1 = min(p.x for p in xs) - 0.08, max(p.x for p in xs) + 0.08
+            y0, y1 = min(p.y for p in xs) - 0.08, max(p.y for p in xs) + 0.08
+            collider(o.name, coll, x0, x1, y0, y1, min(p.z for p in xs) - 0.05, FU.JOISTS, surface="dirt")
         # The guttering candle on the earth behind the monks' table, where the previews'
         # watcher stands (preview_v2.py), drawn from its own generator so nothing else moves.
         import offerings_kit as ok
@@ -1131,12 +1142,15 @@ def under_house_funeral(props):
         if o.name.startswith("coffin_body"):
             o["hollow"] = True          # CorpseModels.ts opens the authored coffin, lined inside
     # A flame on every lit wick, and the previews' lights: every candle 0.6 W, the fire pot
-    # 9 W, the bulb 10 W.
+    # 9 W. The previews' 10 W bulb light sat inside the bulb's own solid glass, so Cycles
+    # blocked it and only the glowing glass lit the funeral: matched by eye in the game
+    # (Nov 24, 2026), that is about 0.4 W. At 10 W the game's shadowless light lit the
+    # canopy flags, the wreath and the coffin's lacquer twice as bright as the previews.
     flames_at(coll, flames, "fu_flame")
     for k, tip in enumerate(flames):
         light_marker(coll, f"fu_candle_{k:03d}", Vector(tuple(tip)) + Vector((0, 0, 0.03)), 0.6, CANDLE)
     light_marker(coll, "fu_fire", glows[0], 9.0, (1.0, 0.45, 0.12))
-    light_marker(coll, "fu_bulb", glows[1], 10.0, (1.0, 0.72, 0.45))
+    light_marker(coll, "fu_bulb", glows[1], 0.4, (1.0, 0.72, 0.45))
     print("[rebuild] funeral flames", len(flames), flush=True)
     # The game's portrait: the wreath's photograph, under a portrait_sok node with the
     # wreath's frame counted as its authored surround (DeskModels.ts animates the eyes).

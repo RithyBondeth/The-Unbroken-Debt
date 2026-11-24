@@ -37,6 +37,26 @@ export function inFuneralRoom(feet: { x: number; y: number; z: number }): boolea
   );
 }
 
+/**
+ * The ground under the whole front block (Blender x -6..6, y 10..22), where its floor
+ * shelters the funeral from the sky: the funeral's candlelit look holds out to the
+ * block's edge, where the approved funeral_wide preview stands (Blender y 11.4).
+ */
+export const UNDER_FRONT_BLOCK = { minX: -6, maxX: 6, minZ: -22, maxZ: -10 } as const;
+
+/** Is Sora on the ground under the front block, where the funeral's light rules? */
+export function underFuneralFloor(feet: { x: number; y: number; z: number }): boolean {
+  const b = UNDER_FRONT_BLOCK;
+  return (
+    feet.x > b.minX &&
+    feet.x < b.maxX &&
+    feet.z > b.minZ &&
+    feet.z < b.maxZ &&
+    feet.y > HALL.floor - 0.6 &&
+    feet.y < HALL.floor + 1.5
+  );
+}
+
 /** The coffin's centre on its stand, at the ground. */
 export const COFFIN = inHall(0, 0, -5.9);
 

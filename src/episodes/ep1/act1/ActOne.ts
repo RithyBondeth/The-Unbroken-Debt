@@ -20,7 +20,8 @@ import { blendPathGround } from "./pathGround";
 import { GROW_FOREST, PLAY } from "../data/forestBorder";
 import { ROOFS } from "../data/farmLayout";
 import { DAWN_LOOK } from "@/render/nightLook";
-import { VILLAGE_NIGHT } from "../data/villageLook";
+import { FUNERAL_LOOK, VILLAGE_NIGHT } from "../data/villageLook";
+import { NIGHT_GRADE } from "@/render/nightGrade";
 import { GROUND_MIST } from "../data/forestAtmosphere";
 import { forestMistField, spawnForestWisp } from "./forestMist";
 import { ForestAtmosphere } from "./ForestAtmosphere";
@@ -41,7 +42,7 @@ import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
 import { TENT_FLAME_MESH } from "../data/arrival";
-import { inFuneralRoom } from "../data/funeral";
+import { underFuneralFloor } from "../data/funeral";
 import { OfferingModels } from "./OfferingModels";
 import { SokRoomModels } from "../act2/SokRoomModels";
 import { SokInvestigation } from "../act2/SokInvestigation";
@@ -69,6 +70,7 @@ import { KrasueFlyer } from "../entities/KrasueFlyer";
 import { DEV_SPOTS } from "../data/devSpots";
 import { FuneralRoom } from "./FuneralRoom";
 import { FuneralWatcher } from "./FuneralWatcher";
+import { JumpScares } from "./JumpScares";
 import { applySkyShelter } from "@/render/skyShelter";
 import { HOUSE_SHELTER } from "../data/shelter";
 import { BarnGate, BARN_GATE_MESH } from "../act3/BarnGate";
@@ -132,6 +134,7 @@ export class ActOne {
   barnGate!: BarnGate;
   trapdoor!: Trapdoor;
   watcher!: FuneralWatcher;
+  scares!: JumpScares;
   private resolutionDelay = 0;
   private running = false;
   forest!: ForestAtmosphere;
@@ -167,6 +170,10 @@ export class ActOne {
         BARN_GATE_MESH,
         // The hall trapdoor's lid (O6: Trapdoor lifts it).
         TRAPDOOR_MESH,
+        // What the jump scares change (JumpScares): the sheet on the washing board (it
+        // sits up, J2) and the nailed back door (smashed through, J3).
+        /^wash_room_sheet(\.|_|$)/,
+        /^door_back_(leaf|nail)/,
         /^sok_desk(?:$|_|\.)/,
         "portrait_sok",
         /^floor_board_(10|11|12|13)(\.|$)/,
@@ -358,6 +365,11 @@ export class ActOne {
       () => this.beats.captureProgress(),
       () => this.beats.saveProgress(),
     );
+    // The five jump scares (J1-J5 of the approved gameplay map); J4 is a jar the hunt opens.
+    this.scares = new JumpScares(game, this.area, preay, this.lights.storm);
+    await this.scares.load();
+    game.scene.onDisposeObservable.addOnce(() => this.scares.dispose());
+    this.hunt.onJarOpened = (jar) => this.scares.jarOpened(jar.id, jar.root, jar.contents);
     this.chest = new ChestInvestigation(game, chestModels, corpseModels, () => {
       this.hunt.refreshCheckpoint();
       return this.beats.saveProgress();
@@ -401,20 +413,28 @@ export class ActOne {
   }
 
   /**
-   * In the funeral room the dark round Sora is candlelit, not moonlit: night sight
-   * turns warm and drops back so the shroud stays the colour of old cotton and the
-   * candles carry the room (Nov 20, 2026, against the approved previews).
+   * Under the house at the funeral the dark round Sora is candlelit, not moonlit
+   * (FUNERAL_LOOK, against the approved previews, Nov 20 and 24, 2026): night sight
+   * turns warm and all but goes, the blue mist light and the sky fall away, the
+   * shadows warm, and the eye stays near the previews' exposure. It eases in and out
+   * over about a second as she crosses the front block's edge.
    */
   private candlelitSight(dt: number): void {
     // Dawn sets its own night sight (DawnResolution); leave it be then.
     if (this.resolution?.active) return;
-    const sight = this.game.atmosphere.nightSight;
-    const inside = inFuneralRoom(this.game.player.feet) ? 1 : 0;
+    const atmosphere = this.game.atmosphere;
+    const sight = atmosphere.nightSight;
+    const inside = underFuneralFloor(this.game.player.feet) ? 1 : 0;
     this.candlelit += (inside - this.candlelit) * Math.min(1, dt * 1.5);
     const k = this.candlelit;
+    const mix = (night: number, funeral: number) => night + (funeral - night) * k;
     this.lights.indoors = k;
     sight.diffuse.set(0.55 + 0.27 * k, 0.62 + 0.02 * k, 0.75 - 0.3 * k);
-    this.game.atmosphere.nightSightIntensity = VILLAGE_NIGHT.nightSightIntensity * (1 - 0.45 * k);
+    atmosphere.nightSightIntensity =
+      VILLAGE_NIGHT.nightSightIntensity * mix(1, FUNERAL_LOOK.nightSight);
+    atmosphere.baseExposure = mix(VILLAGE_NIGHT.baseExposure, FUNERAL_LOOK.baseExposure);
+    atmosphere.maxExposure = mix(VILLAGE_NIGHT.maxExposure, FUNERAL_LOOK.maxExposure);
+    atmosphere.blendGrade(NIGHT_GRADE, FUNERAL_LOOK.grade, k);
   }
 
   /**
@@ -600,6 +620,7 @@ export class ActOne {
       this.chest.update(dt);
       this.ritual.update(dt);
     }
+    this.scares.update(dt, this.early.active || this.apparitions.active);
     this.krasue.update(dt, this.early.active || this.apparitions.active);
     this.watcher.update(dt, !this.early.active && !this.apparitions.active);
     // Story scripts get first refusal on the soundscape every frame.
@@ -643,11 +664,18 @@ export class ActOne {
     // lightning); at a quarter of this they were never seen.
     this.rain.light(this.lights.storm.level, this.lights.lampFlame * 0.25, 0.55);
     // The lightning lights the mist: the whole night goes a pale blue-grey for the flash.
+    // Under the funeral the mist's own blue-grey falls away (FUNERAL_LOOK.mist); the
+    // flash still shows between the stilts.
     const mist = game.pipeline.fog;
     if (mist && !this.resolution.active) {
       const f = this.lights.storm.level;
+      const own = 1 + (FUNERAL_LOOK.mist - 1) * this.candlelit;
       const [r, g, b] = VILLAGE_NIGHT.fogAmbient;
-      mist.ambient.set(r + f * FLASH_MIST[0], g + f * FLASH_MIST[1], b + f * FLASH_MIST[2]);
+      mist.ambient.set(
+        r * own + f * FLASH_MIST[0],
+        g * own + f * FLASH_MIST[1],
+        b * own + f * FLASH_MIST[2],
+      );
     }
     this.drips.light(this.lights.storm.level);
     this.sky.update(this.lights.storm.level, game.pipeline.main.imageProcessing.exposure, dt);
@@ -760,6 +788,7 @@ export class ActOne {
     await this.score.load();
     this.apparitions.score = this.score;
     this.saveShrine.score = this.score;
+    this.scares.score = this.score;
     await this.night.makeSounds();
     await this.soundscape.makeSounds();
     await this.forest.makeSounds();
