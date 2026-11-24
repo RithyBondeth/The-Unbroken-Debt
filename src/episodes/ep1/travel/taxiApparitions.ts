@@ -328,12 +328,13 @@ export function taxiMistLevel(t: number): number {
 }
 
 /**
- * Beat 3: The back seat, seen only in the rear-view mirror. Sits motionless behind Sora
- * while the driver warns her — then snaps forward in 0.18 s right behind her shoulder!
+ * Beat 3: The back seat haunt — appears behind Sora in the rear-view mirror while
+ * the driver warns her, then lunges forward right between the front seats so both the
+ * mirror and Sora's panicked glance-back reveal her inside the cabin!
  */
 export const TAXI_MIRROR = {
-  seated: { from: 46.6, to: 49.1 },
-  lean: { from: 52.04, beat: 52.22, to: 53.05 },
+  seated: { from: 46.0, to: 49.2 },
+  lean: { from: 52.02, beat: 52.24, to: 54.15 },
 } as const;
 
 export interface MirrorRiderPose {
@@ -355,7 +356,7 @@ export interface MirrorRiderPose {
 export function taxiMirrorRiderAt(t: number): MirrorRiderPose | null {
   const { seated, lean } = TAXI_MIRROR;
   if (t >= seated.from && t <= seated.to) {
-    const presence = clamp01(Math.min((t - seated.from) / 0.6, (seated.to - t) / 0.35));
+    const presence = clamp01(Math.min((t - seated.from) / 0.45, (seated.to - t) / 0.35));
     return {
       kind: "seated",
       x: 0.14,
@@ -368,15 +369,15 @@ export function taxiMirrorRiderAt(t: number): MirrorRiderPose | null {
     };
   }
   if (t >= lean.from && t <= lean.to) {
-    // Explosive snap-lunge ease-out curve framing her pale gaunt face & white shoulders cleanly in mirror & rear cabin!
+    // Explosive snap-lunge ease-out framing her pale gaunt face & shoulders right between the front headrests!
     const raw = clamp01((t - lean.from) / (lean.beat - lean.from));
     const p = 1 - (1 - raw) ** 3;
-    const fadeOut = clamp01((lean.to - t) / 0.18);
+    const fadeOut = clamp01((lean.to - t) / 0.16);
     return {
       kind: "lean",
-      x: 0.14 - 0.08 * p,
-      y: -0.49 + 0.05 * p,
-      z: -1.14 + 0.48 * p,
+      x: 0.14 - 0.1 * p,
+      y: -0.49 + 0.06 * p,
+      z: -1.14 + 0.58 * p,
       lean: 0.02 + 0.03 * p,
       presence: fadeOut,
       attention: 1,

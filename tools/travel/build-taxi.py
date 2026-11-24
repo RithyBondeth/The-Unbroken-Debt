@@ -1065,9 +1065,6 @@ PADDY_END=140.0
 FOREST_START=150.0
 PADDY_WATER=-.88
 PADDY_FLOOR=-.98
-# Where the Neak Ta's shrine stands at the forest's edge, on Sora's side (the roadside
-# figure waits beside it: taxiApparitions.ts TAXI_STANDER).
-SHRINE=(6.6,157.5)
 
 def open_land(z):
     """1 across the paddies, 0 under the forest, eased between."""
@@ -1108,7 +1105,7 @@ def roadside():
     small=['shrub_02_a','shrub_02_b','shrub_02_c','fern_02_a.001','fern_02_b','fern_02_c','shrub_02_a.001','forest_grass_-1_-1']
     rite=['spirit_house','tingmong_0','tingmong_1','old_flag_0','old_flag_1','old_flag_2','old_flag_3','ground_offering_0','ground_offering_1','path_threads_0','path_threads_1','milestone']
     rite+=family(r'step_candle_\d+',3)+family(r'altar_incense_\d+',3)
-    names=giants+dead+mounds+understory+litter+sedge+small+rite+['bamboo_0','coco_0','coco_2','palm_0','neakta_shrine','neakta_stone_watch']
+    names=giants+dead+mounds+understory+litter+sedge+small+rite+['bamboo_0','coco_0','coco_2','palm_0']
     templates={name:objects.get(name) for name in names}
     missing=[name for name,obj in templates.items() if obj is None]
     if missing: print('TAXI_MISSING_TEMPLATES',missing)
@@ -1209,21 +1206,6 @@ def roadside():
     telegraph_line(mats,rng)
     paddies(mats,rng)
     countryside(mats,rng,plant)
-    # The Neak Ta's shrine where the trees begin, under a giant, with the village's own
-    # stone watcher, offerings and incense (all advisor review).
-    sx,sz=SHRINE
-    plant(tallest[-1],sx+5.5,sz+2.5,1.25,anywhere=True,clear=None,label='shrine_tree')
-    shrine=[plant('neakta_shrine',sx,sz,1,yaw=-math.pi/2,clear=None,label='roadside_neakta_shrine',ground=True,lift=-.22,anywhere=True),
-            plant('neakta_stone_watch',sx-1.2,sz-1.9,1,yaw=-math.pi/2+.3,clear=None,label='roadside_neakta_stone',ground=True,lift=-.22,anywhere=True)]
-    # The village's shrine and stone are sculpted for its yard; by the road they are seen
-    # for a few seconds in a candle's light: a third of their faces is plenty (applied on export).
-    for obj in shrine:
-        if obj:
-            obj.data=obj.data.copy()
-            mod=obj.modifiers.new('roadside LOD','DECIMATE'); mod.ratio=.33; mod.use_collapse_triangulate=True
-    plant('ground_offering_0',sx-1.5,sz+.6,1,yaw=0,clear=None,label='roadside_neakta_offering',ground=True,lift=-.2,anywhere=True)
-    plant(family_pick(templates,'altar_incense'),sx-1.6,sz-.4,1,yaw=0,clear=None,label='roadside_neakta_incense',ground=True,lift=-.18,anywhere=True)
-    plant('old_flag_2',sx-1.0,sz+2.4,1,yaw=.2,clear=None,label='roadside_neakta_flag',ground=True,lift=-.25,anywhere=True)
     # Roadside omens in the forest: rotting funeral flags, threads strung through the
     # trees, incense left at the foot of trunks and the Ting Mong guarding the village approach.
     for z,side,flag in [(171,1,'old_flag_2'),(302,1,'old_flag_1'),(418,-1,'old_flag_3'),(461,1,'old_flag_0')]:
@@ -1276,10 +1258,14 @@ def road_surface(mats,rng):
     vs=[];fs=[];rows=1080;steps=32;span=ROAD_HALF_WIDTH
     for i in range(rows+1):
         z=-28+i*.5
+        meander=.08*math.sin(z*.14)+.04*math.cos(z*.31)
         for j in range(steps+1):
             x=-span+2*span*j/steps; a=abs(x)
-            rut=math.exp(-((a-.72)/.19)**2)*.07
-            berm=math.exp(-((a-1.0)/.12)**2)*.022+math.exp(-((a-.44)/.1)**2)*.018
+            l_shift=x-meander*math.exp(-((x/2.3)**2))
+            ash=abs(l_shift)
+            taper=min(1.,max(0.,(2.65-a)/.35))
+            rut=math.exp(-((ash-.72)/.19)**2)*.07*(1+.14*math.sin(z*.19)*taper)
+            berm=math.exp(-((ash-1.0)/.12)**2)*.022+math.exp(-((ash-.44)/.1)**2)*.018
             edge=.06*min(1,max(0,(a-2.25)/.55))**2
             grain=.008*math.sin(z*1.8+x*3)+.005*math.sin(z*4.3-x*7.1)+.003*math.sin(z*11.7+x*5.3)
             y=-.13+.055*(1-(x/span)**2)-rut+berm-edge+grain
