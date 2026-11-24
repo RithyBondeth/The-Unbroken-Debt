@@ -19,7 +19,7 @@ it("puts every light out at once, stutters them back and holds them on", () => {
   expect(powerAt(10)).toBe(1);
 });
 
-it("comes back from where a held blackout hands over", () => {
+it("starts coming back at POWER_RETURN, where the lights' catching sound is played from", () => {
   expect(powerAt(POWER_RETURN - 0.01)).toBe(0);
   expect(POWER_RETURN_LENGTH).toBeCloseTo(POWER_CUT.length - POWER_RETURN);
   expect(powerAt(POWER_RETURN + POWER_RETURN_LENGTH)).toBe(1);

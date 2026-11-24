@@ -3,7 +3,6 @@ import { Prologue } from "@/episodes/ep1/prologue/Prologue";
 import { DreadScore } from "@/audio/DreadScore";
 import { PhoneBell } from "@/episodes/ep1/audio/PhoneBell";
 import { Flags } from "@/core/Flags";
-import { POWER_RETURN_LENGTH } from "@/episodes/ep1/data/powerCut";
 
 it.each([
   ["satchel", "hint.packSatchel"],
@@ -26,7 +25,7 @@ it.each([
   expect(state.game.flags.get("ep1.phone.answered", false)).toBe(false);
 });
 
-it("rings the phone once the dancer has gone and the lights are back, without opening the notebook", async () => {
+it("rings the phone once the altar has fallen and the lights are back, without opening the notebook", async () => {
   let bookOpen = false;
   let satchelOpen = true;
   const order: string[] = [];
@@ -71,10 +70,10 @@ it("rings the phone once the dancer has gone and the lights are back, without op
     objectives: { show: vi.fn(), hide: vi.fn() },
     packingList: () => [],
     showObjectives: Reflect.get(Prologue.prototype, "showObjectives") as () => void,
-    // The headless dancer in the back room is what sets the telephone ringing.
-    dancer: {
-      seen: vi.fn(() => {
-        order.push("dancer");
+    // The altar torn down in the back room is what sets the telephone ringing.
+    scares: {
+      altarFallen: vi.fn(() => {
+        order.push("altar");
         return Promise.resolve();
       }),
     },
@@ -95,11 +94,8 @@ it("rings the phone once the dancer has gone and the lights are back, without op
         expect(sting).not.toHaveBeenCalled();
         expect(bookOpen).toBe(false);
         expect(satchelOpen).toBe(false);
-        // The lights come back from the power cut, a breath, then the bell.
-        expect(state.wait).toHaveBeenNthCalledWith(1, POWER_RETURN_LENGTH + 0.25);
-        // Held still through the dark, Sora can move again once the lights are back.
-        expect(state.game.player.inputEnabled).toBe(true);
-        expect(state.wait).toHaveBeenNthCalledWith(2, 1.1);
+        // The lights are back from the power cut (altarFallen): a breath, then the bell.
+        expect(state.wait).toHaveBeenNthCalledWith(1, 1.1);
         expect(state.game.hints.show).toHaveBeenCalledWith("hint.phone", 12);
         order.push("phone");
       }
@@ -111,7 +107,7 @@ it("rings the phone once the dancer has gone and the lights are back, without op
   try {
     const run = Reflect.get(Prologue.prototype, "run") as (this: typeof state) => Promise<void>;
     await run.call(state);
-    expect(order).toEqual(["dancer", "restore", "close", "phone"]);
+    expect(order).toEqual(["altar", "restore", "close", "phone"]);
     expect(state.game.sketchbook.written.has("SB-01")).toBe(true);
     expect(state.phoneCall).toHaveBeenCalledOnce();
     expect(state.leave).toHaveBeenCalledOnce();

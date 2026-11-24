@@ -20,10 +20,9 @@ import { InkMarks } from "./InkMarks";
 import { t, type StringKey } from "@/data/strings";
 import { Objectives, type Objective } from "@/ui/html/StoryUi";
 import { StudioDetails } from "./StudioDetails";
-import { DancerGhost } from "./DancerGhost";
+import { StudioScares } from "./StudioScares";
 import { shufflePosters } from "./posterShuffle";
-import { creak, knock, powerDown, powerUp, whisper } from "../audio/dancerSounds";
-import { POWER_RETURN_LENGTH } from "../data/powerCut";
+import { creak, knock, whisper } from "../audio/studioSounds";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { SavePoint } from "@/systems/saves/SavePoint";
@@ -81,7 +80,7 @@ export class Prologue {
   private readonly taking = new Set<string>();
   private readonly objectives = new Objectives();
   details!: StudioDetails;
-  dancer!: DancerGhost;
+  scares!: StudioScares;
   /** When the house next makes a sound of its own (play time, s). */
   private nextScare = 24;
 
@@ -112,6 +111,8 @@ export class Prologue {
         /^poster90_[pl]_\d+$/,
         // Sora's diary is the save point: it stays itself to be picked and hinted.
         /^save_journal/,
+        // What falls in the scares (StudioScares.ts).
+        /^fall_/,
       ],
     });
     this.details = new StudioDetails(game.scene, this.area);
@@ -125,37 +126,14 @@ export class Prologue {
         material.disableDepthWrite = true;
         material.backFaceCulling = true;
       }
-    // The dancer ghost in the back room, against the far wall, facing the doorway.
-    this.dancer = new DancerGhost(
-      game,
-      this.area.level.markers.get("dancer_ghost")?.position.clone() ?? new Vector3(-3.0, 0, -13.4),
-      new Vector3(-0.6, 0, -9.27),
-    );
-    await this.dancer.load();
-    if (
-      game.flags.get("ep1.studio.dancerSeen", false) ||
-      game.flags.get("ep1.phone.answered", false)
-    )
-      this.dancer.skip();
-    // She comes with the dark: every lamp in the house dies as Sora steps into the
-    // doorway, she can only stand and look, and the lights stutter back when she is gone.
-    this.dancer.onBlackout = () => {
-      this.lights.lightsOut();
-      this.play("powerDown", game.camera.globalPosition);
-      game.cutscene = true;
-      game.player.inputEnabled = false;
-      game.satchel.close();
-    };
-    this.dancer.onAppear = () => this.score.pressure(1);
-    this.dancer.onVanish = () => {
-      this.lights.lightsBack();
-      this.play("powerUp", game.camera.globalPosition);
-    };
     // Every press of E counts here: with nothing quite under the eye, the nearest thing
     // within 14 degrees is taken.
     game.interaction.pressAssistDegrees = 14;
     const lightmap = await loadStudioLightmap(game.scene, game.preset);
     this.lights = new StudioLights(game.scene, this.area, game.preset, lightmap);
+    // The picture off the wall, the shadow in the lightning, the altar torn down.
+    this.scares = new StudioScares(game, this.lights, () => this.score);
+    await this.scares.load();
     // Rain runs down the glass of both balcony doors.
     for (const glass of game.scene.meshes.filter((m) => /^window_glass/.test(m.name)))
       this.rain.push(new Rain(game.scene, glass));
@@ -236,11 +214,11 @@ export class Prologue {
   }
 
   /**
-   * Draws every room of the floor once behind the black opening screen, the dancer in
-   * her corner among them: built the first time they came into view, the airwell's and
-   * the back room's shaders and pipelines stalled the frame for most of a second, the
-   * second of them just as the dancer was revealed (November 2026). Runtime coordinates
-   * (x = -Blender x, z = -Blender y).
+   * Draws every room of the floor once behind the black opening screen, with what the
+   * scares will show for the first time (the vase's shards, broken glass, the figure in
+   * the lightning's shadows): built the first time they came into view, the airwell's
+   * and the back room's shaders and pipelines stalled the frame for most of a second
+   * (November 2026). Runtime coordinates (x = -Blender x, z = -Blender y).
    */
   async warmup(): Promise<void> {
     const game = this.game;
@@ -248,12 +226,19 @@ export class Prologue {
       eye: new Vector3(eye[0], 1.58, eye[1]),
       target: new Vector3(...target),
     });
-    const hide = this.dancer.prepareWarm();
+    // TAA off before the rooms are drawn, not after (begin): switching it off changes every
+    // material's shaders, so views warmed with it on were built again the first time Sora
+    // looked at them: a second's stall turning to the airwell's doorway (November 24, 2026).
+    if (game.pipeline.taa) game.pipeline.taa.isEnabled = false;
+    const hide = this.scares.prepareWarm();
     try {
       await warmSceneViews(game.scene, game.camera, [
         view([-2.3, -0.6], [-2.3, 1.3, -5.5]),
         view([-2.5, -3.0], [-0.3, 1.0, -2.7]),
         view([-2.3, -5.0], [-2.3, 1.4, 0.5]),
+        // Up to the doorway onto the airwell, where the shadow scare happens: seen for the
+        // first time it stalled for a second (November 24, 2026).
+        view([-0.8, -4.9], [-0.9, 1.4, -7.5]),
         view([-1.2, -6.6], [-2.5, 1.0, -8.5]),
         view([-2.3, -6.8], [-1.0, 1.2, -9.4]),
         view([-3.5, -8.5], [-0.5, 1.0, -7.5]),
@@ -291,12 +276,9 @@ export class Prologue {
     this.ink.update(dt);
     this.score.update(dt);
     this.bell.update(dt);
-    this.dancer.update(dt);
+    this.scares.update(dt);
     // In the power cut the dark is total: no eyes adjusting, no night sight.
-    const power = this.lights.power;
-    // Held down for the dancer, the dark is not total: Sora's eyes stay open to the glow
-    // that is left, and the room reads round her (the user found it too dark).
-    const eyes = this.lights.dimmed ? 0.8 : power;
+    const eyes = this.lights.power;
     game.atmosphere.baseExposure = 1.25 * (0.3 + 0.7 * eyes);
     game.atmosphere.nightSightIntensity = 1.8 * eyes;
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
@@ -333,18 +315,13 @@ export class Prologue {
     if (!game.resumedSave) await this.saveProgress("Studio · Drafting table");
 
     // P03–P04: the drawer, the letters and the kit, in any order (see onUse). The
-    // satchel is on the bed in the back room, and the back room is where the dancer
-    // waits: the moment Sora sees her, the storm breaks and the telephone rings, packed
-    // or not; whatever is still unpacked is packed after the call.
+    // satchel is on the bed in the back room, under the family altar: once Sora has it
+    // and turns away, the altar tears out of the wall behind her (StudioScares), and when
+    // the lights come back the storm breaks and the telephone rings, packed or not;
+    // whatever is still unpacked is packed after the call.
     this.showObjectives();
     if (!game.flags.get("ep1.phone.answered", false)) {
-      if (!game.flags.get("ep1.studio.dancerSeen", false)) {
-        await this.dancer.seen();
-        // The lights come back first; then she can move again.
-        await this.wait(POWER_RETURN_LENGTH + 0.25);
-        game.cutscene = false;
-        game.player.inputEnabled = true;
-      }
+      await this.scares.altarFallen();
       // P05: lightning, the candle dies, the ink spills across the drawing, the clock stops.
       game.satchel.close();
       if (!game.flags.has("ep1.clock.stopped")) {
@@ -387,7 +364,7 @@ export class Prologue {
   private async phoneCall(): Promise<void> {
     const game = this.game;
     this.ringing = false;
-    this.dancer.heartbeat(false);
+    this.scares.heartbeat(false);
     game.hints.performed("hint.phone");
     this.bell.stop();
     game.cutscene = true;
@@ -571,15 +548,15 @@ export class Prologue {
 
   /**
    * The house between the scares, while Sora packs and until she leaves: a board
-   * taking a weight overhead, three slow knocks in the back room (until the dancer has
-   * been seen), and once she has, something breathing words just behind Sora.
+   * taking a weight overhead, three slow knocks in the back room (until the altar has
+   * fallen), and once it has, something breathing words just behind Sora.
    */
   private houseSounds(): void {
     const game = this.game;
     if (this.playTime < this.nextScare || game.cutscene || !this.sfx.has("creak")) return;
     const eye = game.camera.globalPosition;
     const forward = game.camera.getDirection(Vector3.Forward());
-    const seen = game.flags.get("ep1.studio.dancerSeen", false);
+    const seen = this.scares.altarDone;
     const roll = Math.random();
     if (!seen && roll < 0.4) this.play("knock", new Vector3(-2.6, 1.0, -13.7));
     else if (seen && roll < 0.45 && !this.ringing)
@@ -725,8 +702,6 @@ export class Prologue {
       ["knock", knock, "sfx", desk, { minDistance: 2, volume: 0.7 }],
       ["creak", creak, "sfx", desk, { minDistance: 2, volume: 0.8 }],
       ["whisper", whisper, "threat", desk, { minDistance: 0.6, volume: 0.45 }],
-      ["powerDown", powerDown, "threat", desk, { minDistance: 3, volume: 1 }],
-      ["powerUp", powerUp, "threat", desk, { minDistance: 3, volume: 0.9 }],
     ];
     // A small plastered room: Sora's own steps and the telephone ring in it.
     audio.setSpace("studio", 0);
@@ -743,7 +718,7 @@ export class Prologue {
     this.loops.push(room);
     this.score = new DreadScore(audio);
     await this.score.load();
-    await this.dancer.makeSounds();
+    await this.scares.makeSounds();
     const made = await Promise.all(
       list.map(([name, make, bus, position, options], i) =>
         audio.spatialSound(

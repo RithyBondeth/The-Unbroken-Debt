@@ -4,7 +4,7 @@ tools/areas/ep1_area_studio.py):
     blender -b art-source/blender/ep1/ep1_area_studio.blend -P tools/areas/bake_studio_lightmap.py
     blender -b art-source/blender/ep1/ep1_area_studio.blend -P tools/areas/bake_studio_lightmap.py -- preview OUTDIR
 
-What is baked: the banker's lamp, the writing sconce, the oil lamp on the altar, the
+What is baked: the banker's lamp, the writing sconce, the
 bulb at the foot of the stairs and the storm-dark night sky, with Cycles' soft
 shadows and bounce light, times a grime pass (contact darkening, water stains running
 down from the ceiling, scuffs along the skirting). What is not: the shelf candle (it
@@ -72,7 +72,8 @@ def setup_lights():
     lamp = obj("marker_desk_lamp").location
     point("bake_desk_lamp", lamp, 24.0, (1.0, 0.82, 0.56), 0.02)
     point("bake_writing_sconce", obj("marker_writing_sconce").location, 14.0, (1.0, 0.8, 0.52), 0.015)
-    point("bake_altar_lamp", obj("marker_altar_lamp").location, 7.0, (1.0, 0.55, 0.22), 0.01)
+    # Not the oil lamp on the altar: it falls and goes out (StudioScares.ts), so it is a
+    # runtime light with a shadow map of its own (Studio.ts).
     point("bake_stair_glow", obj("marker_stair_glow").location, 90.0, (1.0, 0.7, 0.4), 0.05)
     point("bake_airwell_bulb", obj("marker_airwell_bulb").location, 55.0, (1.0, 0.78, 0.5), 0.02)
     point("bake_tea_lamp", obj("marker_tea_lamp").location, 9.0, (1.0, 0.58, 0.26), 0.012)
@@ -101,11 +102,31 @@ def taken(o):
     return False
 
 
+# What falls in the scares (StudioScares.ts) and still throws its shadow into the bake: the
+# altar's shelf and print, which stay on the wall, knocked crooked. Everything else that falls
+# is left out altogether, like what Sora takes: the picture's baked shadow, left on the wall
+# once the picture was on the floor, read as a dark blot.
+FALLS_CASTING = ("fall_altar_shelf", "fall_altar_print")
+
+
+def falls(o):
+    """The `fall_` empty this object is under, or None."""
+    while o:
+        if o.name.startswith("fall_") and o.type == "EMPTY":
+            return o.name
+        o = o.parent
+    return None
+
+
 def hide_helpers():
     """Colliders and interaction volumes are invisible in the game: hide them from Cycles.
-    So are the things Sora takes, and the crack decals (blended over walls in the game)."""
+    So are the things Sora takes, the crack decals (blended over walls in the game), the
+    vase's shards and what falls without leaving a mark."""
     for o in bpy.data.objects:
+        group = falls(o)
         if o.name.startswith("col_") or "pickup_volume" in o.name or "crack" in o.name or taken(o):
+            o.hide_render = True
+        if "_shard_" in o.name or (group and group not in FALLS_CASTING):
             o.hide_render = True
         # Bulbs and flames are opaque meshes round their point lights: in the bake they
         # would swallow the light (the shades and chimneys around them stay).
@@ -188,7 +209,7 @@ SKIP_MATERIALS = ("glass", "net", "water", "bulb", "flame", "opal", "neighbour",
 
 def under_dynamic(o):
     while o:
-        if o.name.startswith(("interact_", "marker_", "spawn_", "col_", "light_flame_")):
+        if o.name.startswith(("interact_", "marker_", "spawn_", "col_", "light_flame_", "fall_")):
             return True
         o = o.parent
     return False

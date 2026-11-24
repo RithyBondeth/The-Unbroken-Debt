@@ -62,6 +62,8 @@ DADO = 1.05
 rng = np.random.default_rng(1932)
 area = None
 m = {}
+# The altar's offerings as they are made in back_room(), for scare_props().
+ALTAR = {}
 
 
 # =============================================================== helpers
@@ -2659,12 +2661,6 @@ def back_room():
     # Built standing (front -y), laid on its back on the folded krama: the flap faces up.
     satchel = empty("interact_satchel", area, (3.8, y1 - 1.68, 0.58 + 0.054), (-math.pi / 2, 0, math.radians(-14)), action="pickup", item="satchel")
     build_satchel(satchel)
-    # Where the dancer ghost stands, facing the doorway (DancerGhost.ts).
-    door = ((P2_DOOR[0] + P2_DOOR[1]) / 2, y0)
-    # Against the far wall between the suitcase and the bed, as far from the doorway as the
-    # room allows (the user, November 19: Sora and the dancer a little farther apart).
-    gx, gy = 3.0, y1 - 0.6
-    empty("marker_dancer_ghost", area, (gx, gy, 0.0), (0, 0, math.atan2(door[1] - gy, door[0] - gx) + math.pi / 2))
     frame_print("framed_princess", "colour", "A36107", (W - 0.013, y0 + 0.95, 1.7), (0, -1, 0), (0, 0, 1), 0.34)
     # A wardrobe on the west wall: teak, two panelled doors, a cornice.
     wardrobe(0.0, y0 + 1.6)
@@ -2695,14 +2691,16 @@ def back_room():
     for x in (ax0 + 0.1, ax1 - 0.1):
         box(f"altar_bracket_{x:.2f}", area, x - 0.02, x + 0.02, y1 - 0.28, y1 - 0.015, az - 0.25, az, m["rosewood"], edge=0.004)
     frame_print("altar_buddha_print", "posters", "A35913", ((ax0 + ax1) / 2, y1 - 0.013, az + 0.42), (1, 0, 0), (0, 0, 1), 0.3)
-    lib("brass_candleholders", (ax0 + 0.25, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.3, budget=3000)
-    lib("wooden_bowl_01", ((ax0 + ax1) / 2, y1 - 0.18, az + 0.04), 0, collide=False, scale=0.6, budget=1500)
+    ALTAR["candles"] = lib("brass_candleholders", (ax0 + 0.25, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.3, budget=3000)
+    ALTAR["bowl"] = lib("wooden_bowl_01", ((ax0 + ax1) / 2, y1 - 0.18, az + 0.04), 0, collide=False, scale=0.6, budget=1500)
+    ALTAR["incense"] = []
     for k in range(5):
         stick = cylinder(f"altar_incense_{k}", area, (ax0 + ax1) / 2 + (k - 2) * 0.012, y1 - 0.18 + (k % 2) * 0.01, az + 0.08, az + 0.28, 0.0015, m["incense"], verts=4)
         stick.rotation_euler = (0.05 * (k - 2), 0.08 * (k % 3 - 1), 0)
-    lamp = lib("vintage_oil_lamp", (ax1 - 0.22, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.45, budget=3000)
+        ALTAR["incense"].append(stick)
+    lamp = ALTAR["lamp"] = lib("vintage_oil_lamp", (ax1 - 0.22, y1 - 0.17, az + 0.04), 0, collide=False, scale=0.45, budget=3000)
     empty("marker_altar_lamp", area, flame_point(lamp))
-    lib("ceramic_vase_02", (ax0 + 0.08, y1 - 0.15, az + 0.04), 0, collide=False, scale=0.5, budget=1500)
+    ALTAR["vase"] = lib("ceramic_vase_02", (ax0 + 0.08, y1 - 0.15, az + 0.04), 0, collide=False, scale=0.5, budget=1500)
     # A lacquered folding screen half-open beside the bed.
     lib("chinese_screen_panels", (2.7, y0 + 1.2, 0), 205, budget=2500)
     # A bare bulb with an enamel shade hanging from the ceiling (off).
@@ -2771,6 +2769,179 @@ def gathered_net(cx, cy):
     tube("mosquito_net_ceiling_hook", area, [(cx, cy, H), (cx, cy, top - 0.01)], .004, m["brass"], sides=8)
 
 
+# =============================================================== the scares
+
+
+def gather(name, objs, at):
+    """Parents `objs` under a new empty `name` at `at`, each staying where it is. The game
+    keeps whatever is under a `fall_` empty apart (not merged) and moves it as one
+    (src/episodes/ep1/prologue/StudioScares.ts); the bake leaves it out
+    (tools/areas/bake_studio_lightmap.py)."""
+    parent = empty(name, area, at)
+    bpy.context.view_layer.update()
+    for o in objs:
+        world = o.matrix_world.copy()
+        o.parent = parent
+        o.matrix_world = world
+    return parent
+
+
+def world_bounds(objs):
+    """World-space corners (lo, hi) round every mesh in `objs` and under them."""
+    bpy.context.view_layer.update()
+    corners = [d.matrix_world @ mathutils.Vector(c) for o in objs for d in [o, *o.children_recursive] if d.type == "MESH" for c in d.bound_box]
+    lo =mathutils.Vector([min(c[i] for c in corners) for i in range(3)])
+    hi = mathutils.Vector([max(c[i] for c in corners) for i in range(3)])
+    return lo, hi
+
+
+def shatter(obj, name, cells, seed, thickness=0.0035):
+    """Breaks a thin glazed vessel (one mesh, `obj`) into about `cells` shards: patches of
+    its outer skin cut along straight breaks (Voronoi cells round random points, each
+    cut leaning a little), each thickened inward, the broken edges the bare body
+    (M_studio_biscuit). The shards sit where the vessel is, in one piece; the game shows
+    them when it breaks. Returns them."""
+    import bmesh
+    src = bmesh.new()
+    src.from_mesh(obj.data)
+    src.transform(obj.matrix_world)
+    # The importer splits vertices at UV seams: joined again, a shard is one piece of skin.
+    bmesh.ops.remove_doubles(src, verts=src.verts, dist=1e-5)
+    src.normal_update()
+    lo = [min(v.co[i] for v in src.verts) for i in range(3)]
+    hi = [max(v.co[i] for v in src.verts) for i in range(3)]
+    cx, cy, top = (lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, hi[2]
+    # Only the outer skin: the walls facing out, the foot, the lip (the inside is the
+    # shards' thickness).
+    inner = []
+    for f in src.faces:
+        c, n = f.calc_center_median(), f.normal
+        radial = mathutils.Vector((c.x - cx, c.y - cy, 0))
+        outside = n.z < -0.6 or (n.z > 0.6 and c.z > top - 0.004) or (
+            abs(n.z) <= 0.6 and radial.length > 1e-6 and n.dot(radial.normalized()) > 0)
+        if not outside:
+            inner.append(f)
+    bmesh.ops.delete(src, geom=inner, context="FACES")
+    bmesh.ops.delete(src, geom=[v for v in src.verts if not v.link_faces], context="VERTS")
+    rgen = np.random.default_rng(seed)
+    faces = list(src.faces)
+    areas = np.array([f.calc_area() for f in faces])
+    seeds = [mathutils.Vector(faces[i].calc_center_median()) for i in rgen.choice(len(faces), size=cells, replace=False, p=areas / areas.sum())]
+    glaze = obj.material_slots[0].material
+    shards = []
+    for k, s_k in enumerate(seeds):
+        bm = src.copy()
+        for j, s_j in enumerate(seeds):
+            if j == k:
+                continue
+            normal = (s_j - s_k)
+            # Pottery breaks more round the throwing rings than up them.
+            normal.z *= 1.4
+            normal = normal.normalized()
+            # Each break leans a little, so the edges are not a perfect cell pattern.
+            normal = (normal + mathutils.Vector(rgen.normal(0, 0.12, 3))).normalized()
+            mid = (s_k + s_j) / 2
+            geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+            bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=mid, plane_no=normal, clear_outer=True)
+            if not bm.faces:
+                break
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        if len(bm.faces) < 4:
+            bm.free()
+            continue
+        centre = sum((v.co for v in bm.verts), mathutils.Vector()) / len(bm.verts)
+        bmesh.ops.translate(bm, verts=bm.verts, vec=-centre)
+        mesh = bpy.data.meshes.new(f"{name}_{k}")
+        bm.to_mesh(mesh)
+        bm.free()
+        shard = bpy.data.objects.new(f"{name}_{k}", mesh)
+        shard.location = centre
+        area.objects.link(shard)
+        mesh.materials.append(glaze)
+        mesh.materials.append(m["biscuit"])
+        solid = shard.modifiers.new("thickness", "SOLIDIFY")
+        solid.thickness = thickness
+        solid.offset = -1.0          # inward: the glaze stays where it was
+        solid.use_rim = True
+        solid.material_offset_rim = 1
+        solid.use_even_offset = True
+        bpy.context.view_layer.update()
+        evaluated = shard.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        baked = bpy.data.meshes.new_from_object(evaluated)
+        shard.modifiers.clear()
+        shard.data = baked
+        bpy.data.meshes.remove(mesh)
+        for poly in baked.polygons:
+            poly.use_smooth = poly.material_index == 0
+        shards.append(shard)
+    src.free()
+    return shards
+
+
+def scare_props():
+    """What the studio's scares move (StudioScares.ts, the user's picks on November 24, 2026:
+    the picture that falls, the altar that crashes; the shadow needs nothing here).
+
+    - fall_picture: the framed picture on the east wall by the balcony doors, now behind
+      glass with a backing board, hanging on a nail that stays in the wall when it falls.
+    - fall_altar_*: the family altar in the back room. Its west bracket tears out of the
+      wall (fall_altar_bracket), the shelf swings down on the east one (fall_altar_shelf,
+      empty at the hinge) and the offerings slide off: the vase (fall_altar_vase, its
+      shards inside it, hidden), the three brass candleholders, the incense bowl with its
+      sticks, the oil lamp; the Buddha print above is knocked crooked on its nail
+      (fall_altar_print, empty at the nail).
+    """
+    m["biscuit"] = plain("M_studio_biscuit", (0.8, 0.75, 0.66), rough=0.95)
+    m["picture_glass"] = plain("M_studio_picture_glass", (0.9, 0.92, 0.92), rough=0.04, alpha=0.1)
+    m["picture_glass"].surface_render_method = "BLENDED"
+    m["backing"] = plain("M_studio_backing_board", (0.2, 0.13, 0.08), rough=0.9)
+
+    # ---- the picture: frame_print's sheet and mouldings, glass and backing added.
+    sheet = bpy.data.objects["poster90_l_1"]
+    bars = [bpy.data.objects[f"poster90_l_1_frame_{k}"] for k in ("bottom", "left", "right", "top")]
+    lo, hi = world_bounds(bars)
+    slo, shi = world_bounds([sheet])
+    glass = box("fall_picture_glass", area, slo.x - 0.012, slo.x - 0.0105, slo.y - 0.005, shi.y + 0.005, slo.z - 0.005, shi.z + 0.005, m["picture_glass"])
+    # Inside the moulding, so a picture lying on its face still shows its frame round it.
+    backing = box("fall_picture_backing", area, shi.x + 0.0004, shi.x + 0.0016, lo.y + 0.03, hi.y - 0.03, lo.z + 0.03, hi.z - 0.03, m["backing"])
+    gather("fall_picture", [sheet, *bars, glass, backing], ((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2))
+    # The nail it hung on, hidden by the frame until the frame is gone.
+    ny, nz = (lo.y + hi.y) / 2, hi.z - 0.025
+    tube("picture_nail", area, [(W - 0.004, ny, nz - 0.004), (hi.x - 0.008, ny, nz)], 0.0016, m["iron"], sides=6)
+    turned("picture_nail_head", [(0.0, 0.0), (0.0045, 0.0), (0.0045, 0.0015), (0.0, 0.0015)], 0, 0, 0, m["iron"], segments=10)
+    head = bpy.data.objects["picture_nail_head"]
+    head.location = (hi.x - 0.008, ny, nz)
+    head.rotation_euler = (0, -math.pi / 2, 0)
+
+    # ---- the altar.
+    shelf = [bpy.data.objects["altar_shelf"], bpy.data.objects["altar_shelf_valance"]]
+    lo, hi = world_bounds(shelf)
+    east = bpy.data.objects["altar_bracket_1.65"]
+    elo, ehi = world_bounds([east])
+    gather("fall_altar_shelf", shelf, ((elo.x + ehi.x) / 2, (lo.y + hi.y) / 2, ehi.z))
+    west = bpy.data.objects["altar_bracket_0.60"]
+    wlo, whi = world_bounds([west])
+    gather("fall_altar_bracket", [west], (wlo + whi) / 2)
+    vase = ALTAR["vase"]
+    vlo, vhi = world_bounds([vase])
+    body = next(o for o in vase.children_recursive if o.type == "MESH")
+    shards = shatter(body, "fall_altar_vase_shard", 16, seed=1932)
+    gather("fall_altar_vase", [vase, *shards], ((vlo.x + vhi.x) / 2, (vlo.y + vhi.y) / 2, vlo.z))
+    holders = sorted((o for o in ALTAR["candles"].children_recursive if o.type == "MESH"), key=lambda o: o.name)
+    for k, holder in enumerate(holders):
+        hlo, hhi = world_bounds([holder])
+        gather(f"fall_altar_candle_{k}", [holder], ((hlo.x + hhi.x) / 2, (hlo.y + hhi.y) / 2, hlo.z))
+    bowl = ALTAR["bowl"]
+    blo, bhi = world_bounds([bowl])
+    gather("fall_altar_bowl", [bowl, *ALTAR["incense"]], ((blo.x + bhi.x) / 2, (blo.y + bhi.y) / 2, blo.z))
+    lamp = ALTAR["lamp"]
+    llo, lhi = world_bounds([lamp])
+    gather("fall_altar_lamp", [lamp], ((llo.x + lhi.x) / 2, (llo.y + lhi.y) / 2, llo.z))
+    prints = [bpy.data.objects["altar_buddha_print"], *(bpy.data.objects[f"altar_buddha_print_frame_{k}"] for k in ("bottom", "left", "right", "top"))]
+    plo, phi = world_bounds(prints)
+    gather("fall_altar_print", prints, ((plo.x + phi.x) / 2, (plo.y + phi.y) / 2, phi.z - 0.012))
+
+
 # =============================================================== build
 
 
@@ -2792,6 +2963,7 @@ def build():
     shell()
     front_studio()
     back_room()
+    scare_props()
     empty("marker_save_studio", area, (0.42, 2.62, 0.8))
     shrink_prop_textures()
     os.makedirs(os.path.dirname(BLEND), exist_ok=True)
