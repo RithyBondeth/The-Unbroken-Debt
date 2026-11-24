@@ -74,3 +74,15 @@ export const WREATH_INCENSE: readonly Vector3[] = [
   new Vector3(-0.95, 0.36, -15.85),
   new Vector3(-2.05, 0.36, -15.85),
 ];
+
+/**
+ * The house's rooms up on their floor (Blender: the front block's rooms x -6..6,
+ * y 11.5..22, and the back block x -8..8, y 22..34; the floor 2.5 m up), not the
+ * veranda, the galleries or the attic: where the house's dark look holds (HOUSE_LOOK).
+ */
+export function inHouseRooms(feet: { x: number; y: number; z: number }): boolean {
+  if (feet.y < 2.1 || feet.y > 4.9) return false;
+  const front = feet.x > -6 && feet.x < 6 && feet.z > -22 && feet.z < -11.5;
+  const back = feet.x > -8 && feet.x < 8 && feet.z > -34 && feet.z <= -22;
+  return front || back;
+}

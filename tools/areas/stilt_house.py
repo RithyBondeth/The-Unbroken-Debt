@@ -498,7 +498,12 @@ def ladder(name, coll, mat, foot, top, width=0.42, rung=0.28):
 
 
 def stairs(name, coll, m, top, bottom, width=0.9):
-    """A plain teak stair: two stringers, treads, and a handrail on its open side."""
+    """A teak stair, made as a carpenter would (redesigned Nov 24, 2026, after the user's
+    screenshot: "the stairs are not good at all"): two closed stringers, treads with a
+    rounded nosing over a riser board under each, newel posts at the head of each side
+    (where the stair well's rails end) and at the foot, a handrail down each side on
+    square balusters, two to a tread, and a lining round the well's cut edges."""
+    from shrine_craft import Batch
     top, bottom = Vector(top), Vector(bottom)
     run = Vector((bottom.x - top.x, bottom.y - top.y, 0))
     length = run.length
@@ -506,25 +511,75 @@ def stairs(name, coll, m, top, bottom, width=0.9):
     side = Vector((-d.y, d.x, 0))
     rise = top.z - bottom.z
     n = max(2, round(rise / 0.19))
-    parts = []
-    for s in (-1, 1):
-        a = top + side * s * (width / 2) + Vector((0, 0, -0.12))
-        b = bottom + side * s * (width / 2) + Vector((0, 0, 0.1))
-        parts.append(tube(f"{name}_stringer", coll, [tuple(a), tuple(b)], 0.06, m["cl_trim"], sides=4))
+    going, riser = length / n, rise / n
+    pitch = math.atan2(rise, length)
+    tread_mat = library_material("stair_planks", "M_sh_stair_treads", tint=(0.62, 0.48, 0.38), tile=1.0)
+    trim = m["cl_trim"]
+    b = Batch(name)
+    yaw = math.atan2(d.y, d.x)
+
+    def frame(p):
+        """Local axes: x along the run (down the stair), y across, z up."""
+        return Matrix.Translation(p) @ Matrix.Rotation(yaw, 4, "Z")
+
+    # Treads (nosing 3 cm over the riser below) and risers.
     for k in range(1, n):
-        f = k / n
-        c = top + run * f + Vector((0, 0, -rise * f))
-        lo, hi = c - d * 0.02, c + d * (length / n + 0.02)
-        xs = [p.x for p in (lo + side * width / 2, lo - side * width / 2, hi + side * width / 2, hi - side * width / 2)]
-        ys = [p.y for p in (lo + side * width / 2, lo - side * width / 2, hi + side * width / 2, hi - side * width / 2)]
-        parts.append(box(f"{name}_tread", coll, min(xs), max(xs), min(ys), max(ys), c.z - 0.035, c.z, m["floor"]))
-    rail = [top + side * (width / 2 + 0.03) + Vector((0, 0, 0.9)), bottom + side * (width / 2 + 0.03) + Vector((0, 0, 0.9))]
-    parts.append(tube(f"{name}_handrail", coll, [tuple(p) for p in rail], 0.025, m["cl_trim"], sides=6))
-    for k in range(4):
-        f = (k + 0.5) / 4
-        p = top + run * f + Vector((0, 0, -rise * f)) + side * (width / 2 + 0.03)
-        parts.append(tube(f"{name}_baluster", coll, [tuple(p), tuple(p + Vector((0, 0, 0.9)))], 0.02, m["cl_trim"], sides=6))
-    return join(parts, name)
+        zt = top.z - riser * k
+        c = top + d * (going * (k + 0.5) - 0.015) + Vector((0, 0, 0))
+        c.z = zt - 0.017
+        b.box(tread_mat, (going + 0.03, width - 0.01, 0.034), (0, 0, 0), xf=frame(c), chamfer=0.009)
+    for k in range(1, n + 1):
+        zr = top.z - riser * k
+        c = top + d * (going * k + 0.012)
+        c.z = zr + (riser - 0.034) / 2
+        b.box(trim, (0.02, width - 0.012, riser - 0.034), (0, 0, 0), xf=frame(c), chamfer=0.002)
+    # Closed stringers: a 28 cm board on edge each side, from under the floor to the ground.
+    L = math.hypot(length + 0.1, rise)
+    for s_ in (-1, 1):
+        mid = (top + bottom) / 2 + side * s_ * (width / 2 + 0.018)
+        mid.z = (top.z + bottom.z) / 2 - 0.06
+        M = frame(mid) @ Matrix.Rotation(pitch, 4, "Y")
+        b.box(trim, (L, 0.036, 0.28), (0, 0, 0), xf=M, chamfer=0.006)
+    # Newels: at the head of each side (the well's rails end there) and at the foot.
+    head = top + d * 0.9
+    hz = top.z - riser * round(0.9 / going)
+    feet = bottom - d * 0.02
+    posts = []
+    for s_ in (-1, 1):
+        for p, z0, z1 in ((head + side * s_ * (width / 2 + 0.07), hz - 0.06, top.z + 1.02), (feet + side * s_ * (width / 2 + 0.03), bottom.z, bottom.z + 1.0)):
+            posts.append((p, z0, z1, s_))
+            c = Vector((p.x, p.y, (z0 + z1) / 2))
+            b.box(trim, (0.085, 0.085, z1 - z0), (0, 0, 0), xf=frame(c), chamfer=0.008)
+            b.box(trim, (0.11, 0.11, 0.03), (0, 0, 0), xf=frame(Vector((p.x, p.y, z1 + 0.015))), chamfer=0.008)
+            b.lathe(trim, [(0, 0), (0.035, 0), (0.042, 0.03), (0.03, 0.06), (0.012, 0.075), (0, 0.078)],
+                    xf=Matrix.Translation((p.x, p.y, z1 + 0.03)), segments=16, tile=0.2)
+    # Handrails down the rake, 0.9 m over the nosings, and the balusters under them.
+    for s_ in (-1, 1):
+        a = head + side * s_ * (width / 2 + 0.07)
+        c_ = feet + side * s_ * (width / 2 + 0.03)
+        za = hz + 0.9
+        zc = bottom.z + 0.9
+        pa, pc = Vector((a.x, a.y, za)), Vector((c_.x, c_.y, zc))
+        rail = pc - pa
+        M = frame((pa + pc) / 2) @ Matrix.Rotation(math.atan2(-rail.z, rail.xy.length), 4, "Y")
+        b.box(trim, (rail.length, 0.06, 0.05), (0, 0, 0), xf=M, chamfer=0.012)
+        k0 = round(0.9 / going)
+        for k in range(k0 + 1, n):
+            for half in (0.25, 0.75):
+                t = (going * (k + half) - (pa - top).dot(d)) / max(1e-3, (pc - pa).dot(d))
+                if not 0.02 < t < 0.98:
+                    continue
+                base = top + d * (going * (k + half))
+                base += side * s_ * (width / 2 + 0.035)
+                zb = top.z - riser * k
+                ztop = za + (zc - za) * t - 0.025
+                b.box(trim, (0.032, 0.032, ztop - zb), (0, 0, 0), xf=frame(Vector((base.x, base.y, (zb + ztop) / 2))), chamfer=0.004)
+    # The well's cut edges lined with boards.
+    sx0, sx1, sy0, sy1 = STAIR_HOLE
+    for x0_, x1_, y0_, y1_ in ((sx0 - 0.02, sx0, sy0, sy1), (sx1, sx1 + 0.02, sy0, sy1), (sx0, sx1, sy0 - 0.02, sy0)):
+        b.box(trim, (x1_ - x0_, y1_ - y0_, 0.2), ((x0_ + x1_) / 2, (y0_ + y1_) / 2, FLOOR - 0.12), chamfer=0.002)
+    objs = b.build(coll)
+    return list(objs.values())
 
 
 def _locks(coll, m):

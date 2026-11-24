@@ -100,12 +100,18 @@ export class SokRoomModels {
     this.gramophoneMeshes.push(...this.meshes);
 
     // A wall hiding place beside the desk, separate from the later chest's floor planks.
+    // The re-planned house (Nov 2026) marks its board on the study wall by the desk
+    // (`marker_sok_wall_plank`); offsets from the gramophone, laid out for the old house,
+    // stood it in the middle of the bedroom next door.
     this.journal = new TransformNode("interact_sok_wall_plank", scene);
-    this.journal.position.set(
-      marker.position.x - 0.47,
-      marker.position.y + 0.25,
-      marker.position.z - 1.12,
-    );
+    const plankSpot = area.level.markers.get("sok_wall_plank");
+    if (plankSpot) this.journal.position.copyFrom(plankSpot.position);
+    else
+      this.journal.position.set(
+        marker.position.x - 0.47,
+        marker.position.y + 0.25,
+        marker.position.z - 1.12,
+      );
     this.journal.rotation.y = Math.PI / 2;
     this.box(this.journal, "recess", [0.29, 0.62, 0.012], [0, 0, -0.025], this.dark);
     for (const x of [-0.153, 0.153])
