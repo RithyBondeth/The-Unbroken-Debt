@@ -15,6 +15,7 @@ import { VillageLights } from "./VillageLights";
 import { StormSky } from "@/render/weather/StormSky";
 import { ForestBorder } from "./ForestBorder";
 import { TallGrass } from "./TallGrass";
+import { Draught } from "../data/draught";
 import { TreeOmens } from "./TreeOmens";
 import { blendPathGround } from "./pathGround";
 import { GROW_FOREST, PLAY } from "../data/forestBorder";
@@ -97,6 +98,9 @@ const PLANT_DISTANCE: Record<string, number> = { low: 62, medium: 86, high: 120 
  */
 const FLASH_MIST: readonly [number, number, number] = [0.15, 0.19, 0.29];
 
+/** The farm's generated tall grass (TallGrass.ts): off since the user's review of Nov 24, 2026. */
+const FARM_GRASS = false;
+
 /** Materials of the scattered plants (painted and library), batched coarsely. */
 const PLANTS =
   /^(M_(banana|palm|tree_leaves|bamboo|grass|forest_|coconut|wet_bark|flora_|paddy_)|shrub_|fern_|pachira_|grass_medium|moss_01|island_tree)/;
@@ -114,6 +118,8 @@ export class ActOne {
   border!: ForestBorder;
   funeralRoom!: FuneralRoom;
   grass: TallGrass | null = null;
+  /** The air Sora stirs: candles near her lean and gutter, incense smoke is pushed aside. */
+  readonly draught = new Draught();
   omens: TreeOmens | null = null;
   private drips!: EaveDrips;
   vigil!: Vigil;
@@ -212,16 +218,19 @@ export class ActOne {
       },
     });
     this.border.build();
-    // The farmstead (Nov 22, 2026) is overgrown: tall grass wherever nobody walks
-    // (data/grass.ts). The threads and rags tied round trunks stay with GROW_FOREST.
-    this.grass = new TallGrass(
-      game.scene,
-      game.preset,
-      game.wind,
-      (x, z) => this.border.groundAt(x, z),
-      (x, z, r) => this.border.clear(x, z, r),
-      this.border.grassClump,
-    );
+    // The farmstead's tall grass (Nov 22, 2026) is gone: the user, Nov 24, 2026, "remove
+    // all kind of this grass and leaf from the whole village scene, make the ground
+    // around the house clean" (the weeds left the village file too: village_review.py).
+    this.grass = FARM_GRASS
+      ? new TallGrass(
+          game.scene,
+          game.preset,
+          game.wind,
+          (x, z) => this.border.groundAt(x, z),
+          (x, z, r) => this.border.clear(x, z, r),
+          this.border.grassClump,
+        )
+      : null;
     if (GROW_FOREST) {
       this.omens = new TreeOmens(game.scene, game.wind, (x, z) => this.border.groundAt(x, z));
       this.omens.build(this.plantSites);
@@ -254,6 +263,7 @@ export class ActOne {
       game.camera,
       game.preset.clusteredLights,
     );
+    this.lights.draught = this.draught;
     gradeJungle(game.scene.materials);
     sheerNets(game.scene.materials);
     blendPathGround(game.scene);
@@ -618,7 +628,8 @@ export class ActOne {
     const game = this.game;
     const eye = game.camera.globalPosition;
     this.windAudio.update(dt);
-    this.funeralRoom.update(dt, this.lights.tentLevel);
+    this.draught.update(dt, game.player.feet);
+    this.funeralRoom.update(dt, this.lights.tentLevel, this.draught);
     this.candlelitSight(dt);
     this.grass?.update(dt, eye);
     if (this.resolution.active) {

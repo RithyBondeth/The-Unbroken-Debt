@@ -55,7 +55,8 @@ interface Run {
  *
  * - kitchen (Act I): the betel leaves taken, Sora turns to the kitchen house's east
  *   door and the Preay is coming through it, arms out, onto her face.
- * - washing (Act II): the sheet on the washing board has sat up over her; it lunges.
+ * - washing (Act II): the dust cloth over the stools in the store room behind the altar has
+ *   sat up over her; it lunges.
  * - backdoor (Act II): at the long corridor's nailed door her hands smash through the
  *   planks, her face in the hole; the door stays broken, and shut.
  * - jar (Act III): the jar with the first key piece is black water; Sok's face rises

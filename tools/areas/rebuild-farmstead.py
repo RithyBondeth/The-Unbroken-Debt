@@ -1750,6 +1750,14 @@ def main():
     import village_fields as VF
     with Excluded("farmstead", "_protos"):
         VF.build(fc, ground, np.random.default_rng(2411), game=True)
+    # The user's second review of Nov 24 (ten screenshots): the house's offerings, Sok's
+    # photograph, the washing room, the bathroom and the funeral (house_review.py); the
+    # weeds out, the wells, the funeral's front, the shrines, the rice and more banyans
+    # (village_review.py). Each its own generator; nothing before them moves.
+    import house_review as HV
+    import village_review as VR
+    HV.review(hc, HR.materials(m2), ground)
+    VR.review(fc, ground)
     # Nothing left hanging in the air: the old house's stored trap that hung past the
     # veranda's edge goes under its floor; what stood on things that are gone is set down.
     hang_under("house_decay_stored_trap_2", 0.8)

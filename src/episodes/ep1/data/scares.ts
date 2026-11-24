@@ -65,7 +65,8 @@ export function kitchenTrigger(
 // ------------------------------------------------------------------ the washing room
 /** Behind the hall's altar (Blender x -3..3, y 17.5..22). */
 export const WASHING_ROOM: Box = { minX: -3.0, maxX: 3.0, minZ: -22.0, maxZ: -17.5 };
-/** The sheet thrown over the washing board's foot (house_new_rooms: Blender (-0.17, 19.85)). */
+/** The white dust cloth over the stools stacked on a table in the funeral's store room behind
+ * the altar (house_review.store_room: Blender (0.72, 19.45); the old washing board's sheet). */
 export const WASHING_SHEET = new Vector3(0.17, HOUSE_FLOOR + 0.46, -19.85);
 /** Where the sheeted figure sits up, as in the J2 preview (Blender (0.75, 19.0), feet 9 cm under the floor). */
 export const WASHING_FIGURE = new Vector3(-0.75, HOUSE_FLOOR - 0.09, -19.0);
