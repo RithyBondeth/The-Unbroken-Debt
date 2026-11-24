@@ -9,6 +9,10 @@ export const ITEMS: Record<string, ItemInfo> = {
   oil: { name: "Lamp oil", note: "{n} bottles of kerosene" },
   incense: { name: "Incense", note: "A bundle of four sticks" },
   shed_key: { name: "Storage shed key", note: "From Yay Mey's sewing box." },
+  barn_gate_key: {
+    name: "Barn gate key",
+    note: "Iron, from a jar beneath the house. The rice barn's padlock.",
+  },
   sok_journal: { name: "Sok’s journal pages", note: "A bargain in 1910. Four lives. Five seals." },
   drawer_key: {
     name: "Sok’s desk key",
@@ -16,7 +20,7 @@ export const ITEMS: Record<string, ItemInfo> = {
   },
   sok_journal_b: {
     name: "Sok’s final instructions",
-    note: "Three key pieces. The jars beneath the house. Do not turn around.",
+    note: "Three key pieces. Two in the jars beneath the house, one in the rice barn. Do not turn around.",
   },
   brass_key_bow: { name: "Brass key · broken bow", note: "A worn ring and the first fracture." },
   brass_key_shaft: {

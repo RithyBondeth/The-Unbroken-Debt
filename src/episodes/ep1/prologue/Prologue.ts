@@ -185,6 +185,7 @@ export class Prologue {
     // P01: fade in at the drafting table, looking down at the illustration.
     const spawn = this.area.level.spawns.get("player");
     game.spawnPlayer(spawn?.position, spawn?.yaw ?? Math.PI);
+    for (const ladder of this.area.level.ladders) game.player.addLadder(ladder);
     game.player.pitch = 0.6;
 
     // Studio checkpoints restore the collected props and drawer, not just inventory.

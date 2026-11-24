@@ -17,7 +17,7 @@ import { seededRandom } from "@/audio/synth";
 import { FoliageWind, type FoliageKind } from "@/render/FoliageWind";
 import { trunkRadius, type PlantSite, type TrunkProfile } from "@/render/plantHeights";
 import type { WindState } from "@/render/wind";
-import { pathDistance } from "../data/forestBorder";
+import { oldRoadDistance } from "../data/forestBorder";
 import { CORD_WEB, DRESSED_TRUNKS, type DressedTrunk, type ThreadColour } from "../data/treeOmens";
 import { paintBlood, paintCloth, paintThread } from "./omenTextures";
 
@@ -428,7 +428,7 @@ export class TreeOmens {
     let facing = 0,
       best = Infinity;
     for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) {
-      const d = pathDistance(trunk.x + Math.cos(a) * 2, trunk.z + Math.sin(a) * 2);
+      const d = oldRoadDistance(trunk.x + Math.cos(a) * 2, trunk.z + Math.sin(a) * 2);
       if (d < best) {
         best = d;
         facing = a;

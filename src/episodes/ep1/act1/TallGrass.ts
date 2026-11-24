@@ -3,6 +3,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { BoundingInfo } from "@babylonjs/core/Culling/boundingInfo";
 import { seededRandom } from "@/audio/synth";
 import { FoliageWind } from "@/render/FoliageWind";
 import type { QualityPreset } from "@/render/qualityPresets";
@@ -12,6 +13,8 @@ import type { Part } from "./ForestBorder";
 
 /** Grass is batched in square cells this wide (m), each one draw call. */
 const CELL = 12;
+/** Within this of Sora (m, to a cell's middle) the scanned clump is drawn, past it the drawn blades. */
+const NEAR = 12;
 
 /** Linear colours up a blade: wet earth-dark at the root, green, a paler tip; straw when dry. */
 const ROOT = [0.026, 0.028, 0.012];
@@ -93,6 +96,9 @@ function scannedClumpData(part: Part): VertexData {
  */
 export class TallGrass {
   readonly meshes: Mesh[] = [];
+  /** Each cell's drawn-blade stand-in, shown past NEAR. */
+  private readonly farMeshes = new Map<Mesh, Mesh>();
+  private farMaterial: PBRMaterial | null = null;
   readonly material: PBRMaterial;
   readonly count: number;
   private readonly range: number;
@@ -141,6 +147,22 @@ export class TallGrass {
 
     const shape =
       scan && scanned ? scannedClumpData(scanned) : grassClumpData(seededRandom(6242071));
+    // Past NEAR, the scanned clump (2,400 triangles) gives way to drawn blades (72): the
+    // farm is grown over as the previews are (19,000 clumps on Medium, Nov 22, 2026), and
+    // only what is round Sora's feet pays for the scan.
+    const far = scan ? grassClumpData(seededRandom(6242072), 12, 3) : null;
+    const farMaterial = far ? new PBRMaterial("M_grass_tall_far", scene) : null;
+    if (farMaterial) {
+      farMaterial.metallic = 0;
+      farMaterial.roughness = 0.6;
+      farMaterial.backFaceCulling = false;
+      farMaterial.twoSidedLighting = true;
+      farMaterial.maxSimultaneousLights = 8;
+      farMaterial.environmentIntensity = material.environmentIntensity;
+      farMaterial.directIntensity = material.directIntensity;
+      new FoliageWind(farMaterial, wind, "grass", true);
+      this.farMaterial = farMaterial;
+    }
     const cells = new Map<string, typeof clumps>();
     for (const clump of clumps) {
       const key = `${Math.floor(clump.x / CELL)},${Math.floor(clump.z / CELL)}`;
@@ -158,8 +180,20 @@ export class TallGrass {
       mesh.material = material;
       mesh.isPickable = false;
       mesh.receiveShadows = true;
+      // The cell's own box (the clumps' feet and a metre and a half over them): the
+      // thin instances' bounds were not kept, and every cell sat at the world's origin
+      // for the frustum and the distance cull.
+      const lo = new Vector3(Infinity, Infinity, Infinity),
+        hi = new Vector3(-Infinity, -Infinity, -Infinity);
+      for (const clump of list) {
+        const y = groundAt(clump.x, clump.z);
+        lo.minimizeInPlace(new Vector3(clump.x - 1, y - 0.1, clump.z - 1));
+        hi.maximizeInPlace(new Vector3(clump.x + 1, y + 1.6, clump.z + 1));
+      }
+      const bounds = new BoundingInfo(lo, hi);
       const matrices = new Float32Array(list.length * 16);
       const tints = new Float32Array(list.length * 4);
+      const farTints = new Float32Array(list.length * 4);
       list.forEach((clump, i) => {
         Quaternion.RotationYawPitchRollToRef(clump.yaw, 0, 0, q);
         s.set(clump.scale * (0.9 + 0.2 * ((i * 0.618) % 1)), clump.scale, clump.scale);
@@ -171,12 +205,28 @@ export class TallGrass {
         const shade = clump.variant === 1 ? 0.85 : 1;
         if (scan) tints.set(dry ? [1.35, 1.12, 0.72, 1] : [shade, shade, shade * 0.96, 1], i * 4);
         else tints.set(dry ? [2.1, 1.55, 1.45, 1] : [shade, shade, shade * 0.95, 1], i * 4);
+        farTints.set(dry ? [2.1, 1.55, 1.45, 1] : [shade, shade, shade * 0.95, 1], i * 4);
       });
       mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);
       mesh.thinInstanceSetBuffer("color", tints, 4, true);
-      mesh.thinInstanceRefreshBoundingInfo();
+      mesh.setBoundingInfo(bounds);
+      mesh.doNotSyncBoundingInfo = true;
       mesh.freezeWorldMatrix();
       this.meshes.push(mesh);
+      if (far && farMaterial) {
+        const lod = new Mesh(`grass_tall_far_${key}`, scene);
+        far.applyToMesh(lod, false);
+        lod.material = farMaterial;
+        lod.isPickable = false;
+        lod.receiveShadows = true;
+        lod.thinInstanceSetBuffer("matrix", matrices, 16, true);
+        lod.thinInstanceSetBuffer("color", farTints, 4, true);
+        lod.setBoundingInfo(new BoundingInfo(lo, hi));
+        lod.doNotSyncBoundingInfo = true;
+        lod.freezeWorldMatrix();
+        lod.setEnabled(false);
+        this.farMeshes.set(mesh, lod);
+      }
     }
     console.info(`[TallGrass] ${clumps.length} clumps in ${this.meshes.length} cells`);
   }
@@ -188,13 +238,20 @@ export class TallGrass {
     this.nextCull = 0.3;
     for (const mesh of this.meshes) {
       const c = mesh.getBoundingInfo().boundingSphere.centerWorld;
-      const near = Math.hypot(c.x - eye.x, c.z - eye.z) < this.range + CELL * 0.7;
-      if (near !== mesh.isEnabled()) mesh.setEnabled(near);
+      const d = Math.hypot(c.x - eye.x, c.z - eye.z);
+      const lod = this.farMeshes.get(mesh);
+      const shown = d < this.range + CELL * 0.7;
+      const scanned = shown && (!lod || d < NEAR + CELL * 0.7);
+      if (scanned !== mesh.isEnabled()) mesh.setEnabled(scanned);
+      const blades = shown && !scanned;
+      if (lod && blades !== lod.isEnabled()) lod.setEnabled(blades);
     }
   }
 
   dispose(): void {
     for (const mesh of this.meshes) mesh.dispose();
+    for (const lod of this.farMeshes.values()) lod.dispose();
     this.material.dispose();
+    this.farMaterial?.dispose();
   }
 }

@@ -5,7 +5,7 @@ import { boardCreak, seededRandom } from "@/audio/synth";
 import { drawerOpen } from "../audio/prologueSounds";
 import { coffinKnock } from "../audio/actThreeSounds";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { inHall } from "../data/funeral";
+import { COFFIN, inHall } from "../data/funeral";
 
 export class CoffinEncounter {
   readonly progress: CoffinProgress;
@@ -53,8 +53,10 @@ export class CoffinEncounter {
       !!g.sketchbook?.isOpen ||
       !!g.sketchbook?.isBusy ||
       g.threatActive;
+    // Beside the coffin on the bare ground under the house (no dais to climb now).
     const near =
-      Math.hypot(g.player.feet.x, g.player.feet.z + 5.9) < 1.85 && g.player.feet.y > 0.35;
+      Math.hypot(g.player.feet.x - COFFIN.x, g.player.feet.z - COFFIN.z) < 1.85 &&
+      Math.abs(g.player.feet.y - COFFIN.y) < 0.6;
     const focused = g.interaction.focus === "interact_coffin_close";
     const before = p.phase;
     const revealedBefore = g.flags.get("ep1.coffin.revealed", false);

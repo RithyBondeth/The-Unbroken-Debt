@@ -3,11 +3,14 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { Game } from "@/core/Game";
 import type { Vigil } from "@/episodes/ep1/act1/Vigil";
 
-vi.mock("@/shared/entities/KrasueModel", () => ({
-  KrasueModel: class {
+vi.mock("@/episodes/ep1/entities/KrasueFlyer", () => ({
+  KrasueFlyer: class {
     ready = true;
+    meshes = [];
     root = { setEnabled: vi.fn() };
     pose = vi.fn();
+    lightAround = vi.fn();
+    keepOutside = vi.fn();
   },
 }));
 import { KrasueEncounter } from "@/episodes/ep1/entities/KrasueEncounter";

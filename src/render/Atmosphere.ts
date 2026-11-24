@@ -8,7 +8,7 @@ import { RawTexture3D } from "@babylonjs/core/Materials/Textures/rawTexture3D";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import type { ColorCurves } from "@babylonjs/core/Materials/colorCurves";
 import type { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
-import { buildLut, type GradeParams } from "./grade";
+import { buildLut, lerpGrade, type GradeParams } from "./grade";
 import {
   decayScare,
   EyeAdaptation,
@@ -84,6 +84,22 @@ export class Atmosphere {
     this.lut.dispose();
     this.lut = this.makeLut(grade);
     this.gradeMode = this.mode;
+    this.blend = null;
+  }
+
+  private blend: { from: GradeParams; to: GradeParams; at: number } | null = null;
+
+  /**
+   * The grade part-way from `from` to `to` (0-1), as Sora walks from one light into
+   * another. The table is rebaked in place, and only in twentieths: a smaller step
+   * than the eye sees, and at most twenty bakes over a crossing.
+   */
+  blendGrade(from: GradeParams, to: GradeParams, t: number): void {
+    const at = Math.round(Math.min(1, Math.max(0, t)) * 20) / 20;
+    const b = this.blend;
+    if (b && b.from === from && b.to === to && b.at === at) return;
+    this.blend = { from, to, at };
+    this.lut.update(buildLut(lerpGrade(from, to, at), LUT_SIZE));
   }
 
   /** A scare: the aberration jolts, then fades in about a second. */

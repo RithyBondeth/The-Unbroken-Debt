@@ -3,6 +3,7 @@ import type { Camera } from "@babylonjs/core/Cameras/camera";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
+import { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered/clusteredLightContainer";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
@@ -10,7 +11,7 @@ import type { Area } from "@/core/areaLoader";
 import { FLAME_COLOR, limitLightToRange } from "@/render/renderSetup";
 import { softFalloff, useSoftFalloff } from "@/render/softLampFalloff";
 import { applyRainWetness } from "@/render/surfaceDetail";
-import { Lightning } from "@/render/weather/Lightning";
+import { FARM_STORM_GAP, Lightning } from "@/render/weather/Lightning";
 import { DAWN_LOOK } from "@/render/nightLook";
 import { VILLAGE_NIGHT } from "../data/villageLook";
 
@@ -37,6 +38,64 @@ const LAMP_INTENSITY = PHYSICAL_INTENSITY / (16 * softFalloff(4, LAMP_RANGE));
 const SHADE_FROM = 1.3;
 const SHADE_FLOOR = 0.5;
 
+/**
+ * The game's light intensity for one watt of a preview's Cycles point light, calibrated
+ * by eye adaptation against the approved funeral_wide preview (Nov 22, 2026): at this
+ * strength its candle pools, mats and ceiling measure within a few levels of the
+ * preview's. Sora's lamp is the game's own hero light and stays as tuned.
+ */
+export const WATT = 0.4;
+/** The funeral's lights: the old tent's and altar's, and those under the house (fu_). */
+export const FUNERAL_LIGHT = /^(tent|altar|coffin|fu_)/;
+/** Of a practical light's strength, the share the rain mist scatters back as its halo. */
+export const FOG_SCATTER = 0.3;
+/** Flames given a halo in the fog besides Sora's lamp (VolumetricFog's five lights). */
+const FOG_FLAMES = 4;
+/** Lights of a kind (candle by candle) are merged no further apart than this (m): never through a wall. */
+const MERGE_REACH = 2.0;
+
+function flameColour(extra: unknown): Color3 {
+  if (Array.isArray(extra) && extra.length === 3 && extra.every((c) => Number.isFinite(Number(c))))
+    return new Color3(Number(extra[0]), Number(extra[1]), Number(extra[2]));
+  return FLAME_COLOR.clone();
+}
+
+/**
+ * Merges the nearest lights of a kind (fu_candle_012 into fu_candle_013, never a candle
+ * into the bulb) until `budget` remain or none of a kind stand within MERGE_REACH: the
+ * merged light sits at their strength-weighted middle with their summed strength.
+ */
+export function mergeLights(lights: readonly PointLight[], budget: number): PointLight[] {
+  const live = [...lights];
+  const kind = (light: PointLight) => light.name.replace(/_\d+$/, "");
+  const strength = (light: PointLight) => (light.metadata as { base: number }).base;
+  while (live.length > budget) {
+    let bi = -1,
+      bj = -1,
+      best = MERGE_REACH;
+    for (let i = 0; i < live.length; i++)
+      for (let j = i + 1; j < live.length; j++) {
+        if (kind(live[i]) !== kind(live[j])) continue;
+        const d = Vector3.Distance(live[i].position, live[j].position);
+        if (d < best) [bi, bj, best] = [i, j, d];
+      }
+    if (bi < 0) break;
+    const a = live[bi],
+      b = live[bj];
+    const wa = strength(a),
+      wb = strength(b),
+      w = wa + wb;
+    a.position = a.position.scale(wa / w).addInPlace(b.position.scale(wb / w));
+    a.diffuse = a.diffuse.scale(wa / w).add(b.diffuse.scale(wb / w));
+    a.range = Math.min(12, Math.max(a.range, b.range) + best / 2);
+    a.intensity = w;
+    a.metadata = { ...(a.metadata as object), base: w };
+    b.dispose();
+    live.splice(bj, 1);
+  }
+  return live;
+}
+
 export class VillageLights {
   /** A2-01 snuffs the hanging lamps independently of incense dimming. */
   hangingLevel = 1;
@@ -44,7 +103,7 @@ export class VillageLights {
   readonly practicalLevels = new Map<string, number>();
   readonly flames: PointLight[] = [];
   readonly lamp: PointLight;
-  readonly storm = new Lightning();
+  readonly storm = new Lightning(Math.random, FARM_STORM_GAP);
   /** Sora's lamp flame, 0 (out) to 1 (full), from the vigil's Lamp. */
   lampFlame = 0;
   /** The pavilion's lamps and candles, dimmed as the incense dies (A1-10). */
@@ -58,7 +117,16 @@ export class VillageLights {
   private time = 0;
   private readonly phases: number[] = [];
 
-  constructor(scene: Scene, area: Area, camera: Camera) {
+  /** The previews' practical lights, merged to the preset's budget, in one clustered container. */
+  readonly clustered: PointLight[] = [];
+  private readonly practicals: ClusteredLightContainer | null;
+  /** The volumetric fog's light list, refilled each frame with the lamp and the flames that matter most to Sora. */
+  fogLights: PointLight[] | null = null;
+  private readonly camera: Camera;
+
+  /** `budget`: how many clustered lights the quality preset allows (QualityPreset.clusteredLights). */
+  constructor(scene: Scene, area: Area, camera: Camera, budget = 32) {
+    this.camera = camera;
     // Rain-heavy sky with the moon somewhere behind the clouds: near black, the
     // storm dome and fog just light enough that roofs, palms and the flag read as
     // silhouettes (Art Bible 1, 3).
@@ -82,17 +150,37 @@ export class VillageLights {
 
     // Include authored runtime props at their actual world positions.
     for (const mesh of scene.meshes) mesh.computeWorldMatrix(true);
+    // The approved previews' lights (Nov 22, 2026) carry their Cycles strength in watts
+    // (tools/areas/rebuild-farmstead.py): they all go into one clustered container, which
+    // takes a single light slot in every material however many candles burn. The older
+    // markers keep their own intensity and a light of their own.
+    const practicals: PointLight[] = [];
     for (const [id, marker] of area.level.flames) {
+      const watts = Number(marker.extras.watts) || 0;
       const light = new PointLight(id, marker.position.clone(), scene);
-      light.diffuse = FLAME_COLOR.clone();
+      light.diffuse = flameColour(marker.extras.color);
       light.range = Number(marker.extras.radius) || 4;
-      light.intensity = Number(marker.extras.intensity) || 2;
-      light.metadata = { base: light.intensity };
+      light.intensity = watts > 0 ? watts * WATT : Number(marker.extras.intensity) || 2;
+      light.metadata = { base: light.intensity, fogScatter: watts > 0 ? FOG_SCATTER : 1 };
+      if (watts > 0) {
+        practicals.push(light);
+        continue;
+      }
       // Each flame lights only what it reaches, so a mesh's light slots go to the
       // flames near it rather than the first ones in the list.
       limitLightToRange(light, scene.meshes);
       this.flames.push(light);
-      this.phases.push(Math.random() * 10);
+    }
+    this.clustered.push(...mergeLights(practicals, Math.max(4, budget)));
+    this.flames.push(...this.clustered);
+    for (let i = 0; i < this.flames.length; i++) this.phases.push(Math.random() * 10);
+    this.practicals = this.clustered.length
+      ? new ClusteredLightContainer("village_practicals", this.clustered, scene)
+      : null;
+    if (this.practicals) {
+      this.practicals.maxRange = 12;
+      // After the lamp, the lightning, the moon and the sky: always given a slot.
+      this.practicals.renderPriority = 2;
     }
 
     // Sora's hurricane lamp; the vigil places it just below her eyes. It casts no
@@ -126,7 +214,16 @@ export class VillageLights {
       }
   }
 
+  /**
+   * 0-1: how far Sora is inside the funeral room. The sky's and the moon's cool fill
+   * reach in through no roof in this light model; indoors they fall back and the
+   * candles carry the room (ActOne.candlelitSight, Nov 20, 2026).
+   */
+  indoors = 0;
+  private atDawn = false;
+
   dawn(): void {
+    this.atDawn = true;
     this.sky.intensity = DAWN_LOOK.skyIntensity;
     this.sky.diffuse.set(0.65, 0.72, 0.8);
     this.moon.intensity = DAWN_LOOK.moonIntensity;
@@ -141,18 +238,31 @@ export class VillageLights {
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
-    // Flames are never steady (Art Bible); each one out of step with the others.
+    // Flames are never steady (Art Bible); each one out of step with the others. The
+    // funeral's (under the house now: fu_) dim as the corner incense burns down and go
+    // out in A2-01's gust, but for the fire pot, which sinks to its embers. The bulb
+    // holds steady but for a stutter in the wire.
     this.flames.forEach((light, i) => {
       const p = this.phases[i];
       const base = (light.metadata as { base: number }).base;
-      const tent = /^(tent|altar|coffin)/.test(light.name) ? this.tentLevel : 1;
+      const funeral = FUNERAL_LIGHT.test(light.name);
+      const hanging = !funeral
+        ? 1
+        : light.name === "fu_fire"
+          ? 0.3 + 0.7 * this.hangingLevel
+          : this.hangingLevel;
+      const flicker =
+        light.name === "fu_bulb"
+          ? 0.97 + 0.03 * Math.sin(t * 50 + p) * (Math.sin(t * 0.7 + p) > 0.97 ? 8 : 0)
+          : 0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2);
       light.intensity =
         base *
         (this.practicalLevels.get(light.name) ?? 1) *
-        tent *
-        (/^(tent|altar|coffin)/.test(light.name) ? this.hangingLevel : 1) *
-        (0.88 + 0.07 * Math.sin(t * 8.3 + p) + 0.05 * Math.sin(t * 15.1 + p * 2));
+        (funeral ? this.tentLevel : 1) *
+        hanging *
+        Math.max(0, flicker);
     });
+    this.chooseFogLights();
     // Strong enough for a warm pool round Sora that the dark eats a few metres out.
     const shade = Math.max(SHADE_FLOOR, Math.min(1, (this.lookingAt / SHADE_FROM) ** 2));
     this.shade += (shade - this.shade) * Math.min(1, dt * 5);
@@ -162,6 +272,43 @@ export class VillageLights {
       this.shade *
       (0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1));
     this.flash.intensity = this.storm.update(dt) * 3;
+    if (!this.atDawn) {
+      this.sky.intensity = VILLAGE_NIGHT.skyIntensity * (1 - 0.75 * this.indoors);
+      this.moon.intensity = VILLAGE_NIGHT.moonIntensity * (1 - 0.8 * this.indoors);
+    }
+  }
+
+  private readonly fogPick: PointLight[] = [];
+  private readonly fogScore: number[] = [];
+
+  /**
+   * The volumetric fog lights five lights' halos: Sora's lamp and the four flames that
+   * reach her eye most strongly (a strong light far off beats a candle near by), so the
+   * funeral's glow hangs in the rain between the stilts from the yard.
+   */
+  private chooseFogLights(): void {
+    const fog = this.fogLights;
+    if (!fog) return;
+    const eye = this.camera.globalPosition;
+    const pick = this.fogPick,
+      score = this.fogScore;
+    pick.length = 0;
+    score.length = 0;
+    for (const light of this.flames) {
+      if (light.intensity < 0.02) continue;
+      const s = light.intensity / Math.max(4, Vector3.DistanceSquared(eye, light.position));
+      let at = pick.length;
+      while (at > 0 && score[at - 1] < s) at--;
+      if (at >= FOG_FLAMES) continue;
+      pick.splice(at, 0, light);
+      score.splice(at, 0, s);
+      if (pick.length > FOG_FLAMES) {
+        pick.length = FOG_FLAMES;
+        score.length = FOG_FLAMES;
+      }
+    }
+    fog.length = 0;
+    fog.push(this.lamp, ...pick);
   }
 
   /** Light reaching Sora's eyes, for eye adaptation (1 = her lamp at arm's length). */

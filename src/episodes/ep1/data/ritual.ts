@@ -1,6 +1,11 @@
-import { inHall } from "./funeral";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
-/** Clear aisle in front of the main burner in the hall; Babylon's north is negative Z. */
-export const CP6_FEET = inHall(0, 0, -2.5);
+/**
+ * The ritual at the burner on the offering table under the house (marker_main_burner at
+ * Blender (1.25, 15.1)): Sora kneels a metre in front of it, between the candle rows,
+ * facing north to the coffin (Babylon's north is negative Z).
+ */
+export const CP6_FEET = new Vector3(-1.25, 0, -14.05);
 export const CP6_YAW = Math.PI;
-export const RITUAL_BURNER = inHall(0, 0.57, -3.55);
+/** The burner's rim (marker_main_burner, at Blender (1.25, 15.1, 0.63)): where the token burns. */
+export const RITUAL_BURNER = new Vector3(-1.25, 0.6, -15.1);

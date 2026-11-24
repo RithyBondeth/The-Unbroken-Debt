@@ -1,6 +1,10 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
-/** Blender's west/south kitchen openings, converted to the game's coordinates. */
+/**
+ * The two windows of the room at the house's south-west corner (the old house's kitchen,
+ * Yay Mey's room in the farmstead's house), converted to the game's coordinates: west
+ * at Blender (-6, 13), south at Blender (-4.5, 11.5), as the walls' openings stand.
+ */
 export const KRASUE_WINDOWS = [
   {
     id: "west",
@@ -10,7 +14,7 @@ export const KRASUE_WINDOWS = [
   },
   {
     id: "south",
-    center: new Vector3(4.2, 3.86, -11.44),
+    center: new Vector3(4.5, 3.86, -11.44),
     normal: new Vector3(0, 0, 1),
     tangent: new Vector3(1, 0, 0),
   },
@@ -28,6 +32,6 @@ export function throughKrasueWindow(from: Vector3, to: Vector3, window: KrasueWi
 
 export function inKrasueKitchen(eye: Vector3): boolean {
   return (
-    eye.x > 3.05 && eye.x < 5.96 && eye.z > -14.46 && eye.z < -11.5 && eye.y > 3.05 && eye.y < 4.7
+    eye.x > 3.05 && eye.x < 5.96 && eye.z > -15.95 && eye.z < -11.5 && eye.y > 3.05 && eye.y < 4.7
   );
 }

@@ -1,4 +1,5 @@
 import { seededRandom } from "@/audio/synth";
+import { FARM_PATHS } from "./farmLayout";
 import { inSaveShrineClearing } from "./saveShrine";
 import { LANE_WIDTH, inClearing, inNewGround, laneDistance } from "./villageAreas";
 
@@ -21,7 +22,19 @@ export interface Rect {
 }
 
 export const TERRAIN: Rect = { minX: -65, maxX: 65, minZ: -62, maxZ: 92 };
-export const PLAY: Rect = { minX: -60, maxX: 60, minZ: -57, maxZ: 88 };
+/**
+ * The farmstead (the user, Nov 21-22 2026: "a big tangled farmstead"): its outer fence
+ * (tools/areas/farmstead.py FARM, Blender x -46..44, y -40..58) and the stretch of road
+ * outside its gate where the taxi leaves Sora. The fence has its own colliders in the
+ * area; these walls only back them up.
+ */
+export const PLAY: Rect = { minX: -44.5, maxX: 46.5, minZ: -58.5, maxZ: 46.7 };
+/**
+ * Whether ForestBorder grows its forest round PLAY. The farm's wall of old trees is
+ * authored in the area itself (compound.tree_wall round farmstead.FARM), so nothing
+ * more is grown.
+ */
+export const GROW_FOREST = false;
 /** Centre of the road along the paddies (A1-01). */
 export const ROAD_Z = 63.5;
 /** The flooded rice fields between the road bank and the far bank. */
@@ -31,15 +44,13 @@ const BUND_X = 53.5;
 /** The compound inside its fence; the back fence stands behind the porch stairs (colonial_house.py). */
 export const YARD: Rect = { minX: -13, maxX: 13, minZ: -32, maxZ: 3 };
 /**
- * The earth road from the road bank to the compound's gate: dead straight between the
- * fields, a sugar palm row along each side (the user, Nov 19: "The road should be
- * straight to the house but long along with the rice field and palm trees also
- * scarecrow"; tools/areas/countryside.py ROAD_LINE).
+ * The cart track from the farm's gate to the house's yard gate, winding between the
+ * fields and the groves (the user, Nov 22, 2026: "don't make the road feel like just a
+ * straight line"; tools/areas/farmstead.py TRACK, exported to farmLayout.ts last of
+ * FARM_PATHS).
  */
-export const PATH: readonly (readonly [number, number])[] = [
-  [0, 60],
-  [0, 3],
-];
+export const PATH: readonly (readonly [number, number])[] =
+  FARM_PATHS[FARM_PATHS.length - 1].points;
 const POND = { x: 20, z: -19, rx: 4, rz: 3 };
 const WELLS: readonly (readonly [number, number])[] = [
   [17, -7.5],
@@ -73,7 +84,26 @@ export function inside(rect: Rect, x: number, z: number, margin = 0): boolean {
   return outside(rect, x, z) < -margin;
 }
 
+/**
+ * The Nov 19 village's straight road, which the tree omens (data/treeOmens.ts, grown only
+ * with GROW_FOREST) were set out along.
+ */
+export const OLD_ROAD: readonly (readonly [number, number])[] = [
+  [0, 46.5],
+  [0, 3],
+];
+
+/** Metres from (x, z) to the old straight road (the tree omens' reference). */
+export function oldRoadDistance(x: number, z: number): number {
+  return lineDistance(OLD_ROAD, x, z);
+}
+
+/** Metres from (x, z) to the cart track's centre line. */
 export function pathDistance(x: number, z: number): number {
+  return lineDistance(PATH, x, z);
+}
+
+function lineDistance(PATH: readonly (readonly [number, number])[], x: number, z: number): number {
   let best = Infinity;
   for (let i = 0; i + 1 < PATH.length; i++) {
     const [ax, az] = PATH[i];

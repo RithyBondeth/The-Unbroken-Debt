@@ -13,13 +13,16 @@ import type { DreadScore } from "@/audio/DreadScore";
 import { branchSnap } from "@/audio/sounds/nightSounds";
 import type { VillageLights } from "./VillageLights";
 import { Preay, PREAY_WALK_SPEED } from "../entities/Preay";
-import { HALL, inFuneralRoom } from "../data/funeral";
+import { HALL, inFuneralRoom, COFFIN } from "../data/funeral";
 
 /** Blender (x east, y north, z up) to Babylon. */
 const at = (x: number, y: number, z = 0) => new Vector3(-x, z, -y);
 
 /** Height of Sora's eyes above her feet (m), to find the ground under her. */
 const EYE = 1.58;
+
+/** Just in front of the banner hung behind the coffin (funeral_under: y1 - 0.15 = 20.85). */
+const BEHIND_COFFIN_BANNER = -20.8;
 
 /** Where her materials are compiled during loading: by the Neak Ta shrine. */
 const WARMUP_SPOT = at(-5.0, -37.2);
@@ -322,12 +325,12 @@ export class Apparitions {
   }
 
   private startCloth(): void {
-    // Pressed flat against the hall's back wall, walking along it behind the family altar
-    // while the flash lasts.
+    // Pressed flat against the parinirvana banner behind the coffin (Blender y 20.85, the
+    // funeral under the house), walking along it while the flash lasts.
     const side = Math.random() < 0.5 ? -1 : 1;
-    this.shadeLayer.position.set(0, HALL.floor, HALL.minZ + 0.06);
-    const from = new Vector3(side * 1.6, 0, 0),
-      to = new Vector3(-side * 1.6, 0, 0);
+    this.shadeLayer.position.set(COFFIN.x, HALL.floor, BEHIND_COFFIN_BANNER);
+    const from = new Vector3(side * 1.3, 0, 0),
+      to = new Vector3(-side * 1.3, 0, 0);
     this.shade.place(from, Math.atan2(to.x - from.x, 0));
     this.shadeLayer.setEnabled(true);
     this.shadow = { to, until: this.time + 4.2 };

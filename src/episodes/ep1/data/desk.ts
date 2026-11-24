@@ -12,7 +12,7 @@ export const JOURNAL_B = [
   },
   {
     title: "The jars beneath the house",
-    text: "I broke the chest key into three and gave the pieces to the water jars beneath the house, where only family would look. Burn the token in the incense at the coffin, with matches blessed at our altar, before the third hour. Do not turn around while it burns. Whatever stands behind you, do not turn around.",
+    text: "I broke the chest key into three and gave the pieces to the water jars beneath the house, where only family would look; one jar I carried to the rice barn. Burn the token in the incense at the coffin, with matches blessed at our altar, before the third hour. Do not turn around while it burns. Whatever stands behind you, do not turn around.",
   },
   {
     title: "Then the pagoda",

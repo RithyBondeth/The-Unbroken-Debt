@@ -67,28 +67,40 @@ describe("hallway walker", () => {
   it("investigates side-room sounds through the doorway, then rejoins its route", () => {
     const walker = new WalkerBrain();
     walker.start();
+    // In the hall; a sound in the parlour, east of it, behind the partition.
     walker.position.set(-1, 2.5, -13.45);
-    expect(walker.hear(new Vector3(-4.5, 2.5, -15.2), 0.35, false)).toBe(true);
+    expect(walker.hear(new Vector3(-4.5, 2.5, -12.4), 0.35, false)).toBe(true);
+    // Through the parlour's door (z -15.5 .. -14.6), not the wall.
+    const into = doorwayPath(new Vector3(-1, 2.5, -13.45), new Vector3(-4.5, 2.5, -12.4));
+    expect(into[0].z).toBeCloseTo(-15.05);
+    expect(into[into.length - 1].equalsWithEpsilon(new Vector3(-4.5, 2.5, -12.4), 1e-6)).toBe(true);
     walker.update(1, distant, false);
-    expect(walker.position.z).toBeCloseTo(-13.45);
-    expect(doorwayPath(new Vector3(-4.5, 2.5, -15.2), new Vector3(-1, 2.5, -15))[0].z).toBe(-13.45);
-    walker.update(90, distant, false);
+    expect(walker.position.z).toBeLessThan(-13.45);
+    walker.update(120, distant, false);
     expect(walker.state).toBe("complete");
   });
   it("does not catch through a solid partition", () => {
-    expect(throughDoorways(new Vector3(-2.7, 2.5, -15), new Vector3(-3.5, 2.5, -15))).toBe(false);
-    expect(throughDoorways(new Vector3(-2.7, 2.5, -13.45), new Vector3(-3.5, 2.5, -13.45))).toBe(
+    // The hall-parlour partition (x = -2.97): solid but for its door at z -15.5 .. -14.6.
+    expect(throughDoorways(new Vector3(-2.7, 2.5, -13), new Vector3(-3.5, 2.5, -13))).toBe(false);
+    expect(throughDoorways(new Vector3(-2.7, 2.5, -15.05), new Vector3(-3.5, 2.5, -15.05))).toBe(
       true,
     );
-    // Vuthy's open door at the back, and the wall between his room and Sok's.
-    expect(throughDoorways(new Vector3(-2.7, 2.5, -19.45), new Vector3(-3.5, 2.5, -19.45))).toBe(
-      true,
-    );
-    expect(throughDoorways(new Vector3(-4.5, 2.5, -17), new Vector3(-4.5, 2.5, -19))).toBe(false);
+    // The long corridor and Sok's study through its door; his bedroom through the wall.
+    expect(throughDoorways(new Vector3(0, 2.5, -25.05), new Vector3(2.5, 2.5, -25.05))).toBe(true);
+    expect(throughDoorways(new Vector3(0, 2.5, -27), new Vector3(2.5, 2.5, -27))).toBe(false);
+    // The nailed back door and the padlocked logs room are walls.
+    expect(throughDoorways(new Vector3(0, 2.5, -33.5), new Vector3(0, 2.5, -34.5))).toBe(false);
+    expect(throughDoorways(new Vector3(0, 2.5, -32.25), new Vector3(2.5, 2.5, -32.25))).toBe(false);
+    // Floors don't see each other.
+    expect(throughDoorways(new Vector3(0, 2.5, -15), new Vector3(0, 0, -15))).toBe(false);
   });
-  it("reaches Vuthy's room through its own door, and Sok's room from it by the hall", () => {
-    expect(doorwayPath(new Vector3(-1, 2.5, -20), new Vector3(-4.5, 2.5, -20.5))[0].z).toBe(-19.45);
-    const across = doorwayPath(new Vector3(-4.5, 2.5, -20.5), new Vector3(-4.5, 2.5, -15.2));
-    expect(across.map((p) => p.z)).toEqual([-19.45, -19.45, -13.45, -13.45, -15.2]);
+  it("reaches Kanha's room from Sok's study by the long corridor", () => {
+    const across = doorwayPath(new Vector3(4, 2.5, -25.5), new Vector3(-4, 2.5, -25.5));
+    expect(across.length).toBeGreaterThanOrEqual(2);
+    for (let k = 1; k < across.length; k++)
+      expect(throughDoorways(across[k - 1], across[k])).toBe(true);
+    // By the corridor's doorways (its walls at x = +-0.7).
+    expect(across.some((p) => Math.abs(p.x) < 1.2)).toBe(true);
+    expect(throughDoorways(new Vector3(4, 2.5, -25.5), new Vector3(-4, 2.5, -25.5))).toBe(false);
   });
 });

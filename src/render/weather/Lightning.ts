@@ -1,6 +1,9 @@
 /** Seconds between lightning flashes (Episode 1 Beat Sheet, section 4.1: every 20–40 s). */
 const GAP = { min: 20, max: 40 };
 
+/** The farmstead's storm (the user, Nov 21, 2026: rain and lightning, darker): closer together. */
+export const FARM_STORM_GAP = { min: 8, max: 20 } as const;
+
 /**
  * The storm's rhythm: one to three quick pulses, then darkness for 20–40 s.
  * `level` (0–1) drives whatever each area lights with it.
@@ -11,7 +14,10 @@ export class Lightning {
   private nextFlash: number;
   private flash: { start: number; pulses: number[] } | null = null;
 
-  constructor(private readonly random: () => number = Math.random) {
+  constructor(
+    private readonly random: () => number = Math.random,
+    private readonly gap: { min: number; max: number } = GAP,
+  ) {
     this.nextFlash = 6 + random() * 6;
   }
 
@@ -31,7 +37,7 @@ export class Lightning {
     if (!this.flash && this.time >= this.nextFlash) {
       const pulses = [0, 0.09 + r() * 0.08, 0.25 + r() * 0.2].slice(0, 1 + Math.floor(r() * 3));
       this.flash = { start: this.time, pulses };
-      this.nextFlash = this.time + GAP.min + r() * (GAP.max - GAP.min);
+      this.nextFlash = this.time + this.gap.min + r() * (this.gap.max - this.gap.min);
     }
     let level = 0;
     if (this.flash) {

@@ -73,7 +73,7 @@ export class NightLife {
 
   constructor(
     private readonly game: Game,
-    private readonly area: Area,
+    area: Area,
     private readonly localSilence: () => number = () => 0,
   ) {
     const scene = game.scene;
@@ -81,8 +81,9 @@ export class NightLife {
     const markers = area.level.markers;
     for (const [id, marker] of markers)
       if (id.startsWith("flies")) this.flies(scene, marker.position);
+    // Moths round the funeral's bare bulb under the house (and the old tent's lamps).
     for (const [id, flame] of area.level.flames)
-      if (id.startsWith("tent_")) this.moths(scene, flame.position);
+      if (id.startsWith("tent_") || id === "fu_bulb") this.moths(scene, flame.position);
   }
 
   async makeSounds(): Promise<void> {
@@ -148,10 +149,11 @@ export class NightLife {
       pos(-18, 6, 0.2),
       pos(16, 2, 0.2),
     ]);
-    // The recitation from the pavilion, the whole night through: the real smot if
-    // supplied, else the placeholder. Full within the courtyard, still there at the
-    // gate, faint from the road (about -34 LUFS at 50 m).
-    const tent = this.area.level.flames.get("altar_0")?.position.clone() ?? pos(0, 4, 1);
+    // The recitation out of the loudspeaker horns on the pole in the yard (funeral_under:
+    // Blender (4.2, 3.6), 8.5 m up), the whole night through: the real smot if supplied,
+    // else the placeholder. Full within the yard, still there at the gate, faint from the
+    // road (about -34 LUFS at 50 m).
+    const tent = new Vector3(-4.24, 8.7, -3.62);
     const options = { loop: true, minDistance: 10, maxDistance: 120 };
     this.chant = (await this.hasSmot())
       ? await audio.spatialStream("smot", SMOT_URLS.map(asset), "ambience", tent, {

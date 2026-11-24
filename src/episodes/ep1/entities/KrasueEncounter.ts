@@ -11,7 +11,7 @@ import { setControlText } from "@/ui/html/controlText";
 import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "../data/krasue";
 import { krasueLament, krasueShriek, krasueSting } from "@/audio/sounds/krasueSounds";
 import { KrasueBrain } from "./KrasueBrain";
-import { KrasueModel } from "@/shared/entities/KrasueModel";
+import { KrasueFlyer } from "./KrasueFlyer";
 import "@/ui/html/krasue.css";
 
 /**
@@ -22,7 +22,7 @@ import "@/ui/html/krasue.css";
  */
 export class KrasueEncounter {
   readonly brain = new KrasueBrain();
-  readonly model: KrasueModel;
+  readonly model: KrasueFlyer;
   private readonly warning = document.createElement("div");
   private readonly forward = new Vector3();
   private readonly sightHit = new PhysicsRaycastResult();
@@ -54,7 +54,17 @@ export class KrasueEncounter {
     private readonly vigil: Vigil,
     private readonly capture: () => SaveData,
   ) {
-    this.model = new KrasueModel(game.scene);
+    this.model = new KrasueFlyer(game.scene);
+    // Its glow reaches the walls, frames and ground round the kitchen windows.
+    this.model.lightAround(
+      (game.scene?.meshes ?? []).filter((m) => {
+        if (m.getTotalVertices() === 0 || this.model.meshes.includes(m)) return false;
+        const sphere = m.getBoundingInfo().boundingSphere;
+        return KRASUE_WINDOWS.some(
+          (w) => Vector3.Distance(sphere.centerWorld, w.center) - sphere.radiusWorld < 6,
+        );
+      }),
+    );
     this.warning.className = "krasue-warning";
     this.warning.setAttribute("role", "status");
     this.warning.hidden = true;
@@ -164,6 +174,7 @@ export class KrasueEncounter {
       this.shriek?.play();
       this.lastSighting = this.brain.sightings;
     }
+    this.model.keepOutside(this.brain.window.center, this.brain.window.normal);
     this.model.pose(
       this.brain.position,
       this.brain.active ? eye : this.brain.window.center,

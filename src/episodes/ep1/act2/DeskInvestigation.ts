@@ -1,5 +1,6 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { inHall } from "../data/funeral";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import type { Game } from "@/core/Game";
@@ -83,7 +84,7 @@ export class DeskInvestigation {
       ["drawer", drawerOpen(rate, seededRandom(1041)), this.models.desk.position, 0.65],
       ["key", pickUp(rate, seededRandom(1042)), this.models.compartment.position, 0.55],
       ["portrait", breathOut(rate, seededRandom(1043)), this.models.portrait.position, 0.65],
-      ["snap", branchSnap(rate, seededRandom(1044)), new Vector3(0, 2.3, -7), 0.85],
+      ["snap", branchSnap(rate, seededRandom(1044)), inHall(0, 2.3, -7), 0.85],
     ] as const)
       this.sounds.set(
         name,

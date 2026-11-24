@@ -6,7 +6,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { GROUNDED, clearance, snapToGround } from "@/render/groundSnap";
-import { inWalk, layoutBorder } from "@/episodes/ep1/data/forestBorder";
+import { GROW_FOREST, inWalk, layoutBorder } from "@/episodes/ep1/data/forestBorder";
 
 describe("ground snap", () => {
   it("measures the smallest gap between points and the ground under each", () => {
@@ -84,8 +84,16 @@ describe("the walk between the paddies", () => {
     expect(inWalk(-12, 62)).toBe(false); // the road
   });
 
-  it("grows no runtime forest there: the countryside is authored in the village file", () => {
-    const layout = layoutBorder({ nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true });
-    expect(layout.plants.filter((p) => inWalk(p.x, p.z))).toHaveLength(0);
-  });
+  it.skipIf(!GROW_FOREST)(
+    "grows no runtime forest there: the countryside is authored in the village file",
+    () => {
+      const layout = layoutBorder({
+        nearDepth: 14,
+        farDepth: 44,
+        density: 0.85,
+        clear: () => true,
+      });
+      expect(layout.plants.filter((p) => inWalk(p.x, p.z))).toHaveLength(0);
+    },
+  );
 });

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { EarlyStealthBrain, RoadNavigation } from "@/episodes/ep1/act1/EarlyStealthBrain";
+import {
+  EarlyStealthBrain,
+  RoadNavigation,
+  YARD_FENCE,
+} from "@/episodes/ep1/act1/EarlyStealthBrain";
 describe("listening presence and navigation", () => {
   it("requires both real line of sight and sustained exposure; cover blocks a catch", () => {
     const b = new EarlyStealthBrain(),
@@ -53,7 +57,7 @@ describe("listening presence and navigation", () => {
     }
     expect(last.equals(to)).toBe(true);
   });
-  it("walks the gate path to the foot of the front stairs without phantom cart colliders", () => {
+  it("walks the track into the yard through its gate, never through the yard fence", () => {
     // Sora keeps the vigil in the hall upstairs, out of its sight behind the walls.
     const b = new EarlyStealthBrain();
     let nearest = Infinity;
@@ -62,9 +66,11 @@ describe("listening presence and navigation", () => {
       expect(b.position.z).toBeGreaterThanOrEqual(-7);
       expect(b.position.z).toBeLessThanOrEqual(24.3);
       expect(b.state).toBe("patrol");
+      // The yard fence runs at z -3, its gate between x -1.9 and 1.9.
+      if (Math.abs(b.position.z + 3) < 0.3) expect(Math.abs(b.position.x)).toBeLessThan(1.9);
       nearest = Math.min(nearest, b.position.z);
     }
     expect(nearest).toBeLessThan(-6);
-    expect(b.navigation.obstacles).toHaveLength(0);
+    expect(b.navigation.obstacles).toEqual(YARD_FENCE);
   });
 });
