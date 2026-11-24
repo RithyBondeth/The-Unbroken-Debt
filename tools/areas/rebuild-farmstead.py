@@ -1008,21 +1008,21 @@ def house_fixes(hm):
 
 
 def house_lights(hc, room_flames, dress_lights):
-    """The house lit as the room previews lit it (house_preview.py): the rooms' candles
-    (0.9 W, the corridor lamp 3 W) with a flame on each wick, the dressing's lamps (2.5 W),
-    Vuthy's hurricane lamp (2 W), Sok's desk lamp (3 W) and every other flame in the house
-    (1.2 W)."""
+    """The house lit by its own few flames (turned down Nov 24, 2026, the user: "the whole
+    house ... more scary, darkness"): the rooms' candles (0.6 W, the corridor lamp 1.8 W)
+    with a flame on each wick, the dressing's lamps (1.4 W), Vuthy's hurricane lamp
+    (1.2 W), Sok's desk lamp (1.8 W) and every other flame in the house (0.8 W)."""
     for k, tip in enumerate(room_flames):
         if k > 0:   # the first is the corridor lamp's light, its flame inside the model's globe
             flames_at(hc, [tip], f"house_flame_{k:02d}")
-        light_marker(hc, f"house_room_{k:02d}", Vector(tuple(tip)) + Vector((0, 0, 0.03)), 3.0 if k == 0 else 0.9, CANDLE)
+        light_marker(hc, f"house_room_{k:02d}", Vector(tuple(tip)) + Vector((0, 0, 0.03)), 1.8 if k == 0 else 0.6, CANDLE)
     for k, p in enumerate(dress_lights):
-        light_marker(hc, f"house_dress_{k}", p, 2.5, LAMP)
+        light_marker(hc, f"house_dress_{k}", p, 1.4, LAMP)
     vl.update()
     lamp = bpy.data.objects.get("vuthy_hurricane_lamp")
     lb = world_box(list(lamp.children_recursive)) if lamp else None
     if lb:
-        light_marker(hc, "house_vuthy_lamp", (lb[0] + lb[1]) / 2 + Vector((0.12, 0.0, -0.06)), 2.0, LAMP)
+        light_marker(hc, "house_vuthy_lamp", (lb[0] + lb[1]) / 2 + Vector((0.12, 0.0, -0.06)), 1.2, LAMP)
     # Sok's study: his desk lamp left burning, the only light in there.
     desk = bpy.data.objects.get("sok_desk")
     if desk is not None:
@@ -1033,7 +1033,7 @@ def house_lights(hc, room_flames, dress_lights):
         lb = world_box(list(lamp.children_recursive))
         if lb:
             light_marker(hc, "house_study_lamp", ((lb[0].x + lb[1].x) / 2 + 0.1, (lb[0].y + lb[1].y) / 2, lb[0].z + (lb[1].z - lb[0].z) * 0.55),
-                         3.0, LAMP)
+                         1.8, LAMP)
     # The lamps and candles that came into the house with its furniture. The hall altar's
     # lamp and the veranda's lantern keep their lights' names (Act III's failing lamps).
     named = {"hall_altar_lamp_flame": "hall", "veranda_lantern_flame": "veranda"}
@@ -1048,7 +1048,7 @@ def house_lights(hc, room_flames, dress_lights):
         p = (bb[0] + bb[1]) / 2
         if -8.5 < p.x < 8.5 and 9.0 < p.y < 35 and p.z > 2.5:
             key = named.get(o.name) or "house_" + re.sub(r"[^a-z0-9]+", "_", o.name.lower()).strip("_")
-            light_marker(hc, key, p + Vector((0, 0, 0.04)), 1.2, LAMP)
+            light_marker(hc, key, p + Vector((0, 0, 0.04)), 0.8, LAMP)
             n += 1
     print("[rebuild] house lights", len(room_flames), len(dress_lights), n, flush=True)
 
@@ -1715,6 +1715,10 @@ def main():
             lamp.location.z += hb[0].z - 0.02 - lb[1].z
     house_fixes(hm)
     tidy_house(hm)
+    # The user's review of Nov 24 (five screenshots): the floating lamp, the board in the
+    # bedroom, the store's shelves, the tea table, the bathroom and the altar (house_refine.py).
+    import house_refine as HR
+    room_flames = list(room_flames) + HR.refine(hc, m2, np.random.default_rng(2411))
     house_lights(hc, room_flames, HD.LIGHTS)
     bath_krama(hc, m2)
     print("[rebuild] rooms dressed", len(hc.objects), flush=True)
@@ -1741,6 +1745,11 @@ def main():
     # The old ox cart's prop post, standing alone 4 m from its cart in front of the barn gate.
     print("[rebuild] stray post out", delete([o for o in (bpy.data.objects.get("yard_cart_04"),) if o]), flush=True)
     yard_cart()
+    # The user's environment pass (Nov 24): paddies over the south half, palms, big trees
+    # and bananas, the yard before the house (village_fields.py), from its own generator.
+    import village_fields as VF
+    with Excluded("farmstead", "_protos"):
+        VF.build(fc, ground, np.random.default_rng(2411), game=True)
     # Nothing left hanging in the air: the old house's stored trap that hung past the
     # veranda's edge goes under its floor; what stood on things that are gone is set down.
     hang_under("house_decay_stored_trap_2", 0.8)

@@ -130,7 +130,7 @@ def _flame_lamp(b, m, x, y, z):
 # ------------------------------------------------------------------ the washing room
 
 
-def drape_sheet(coll, mat, name, centre, size_x, size_y, boxes, frames=48):
+def drape_sheet(coll, mat, name, centre, size_x, size_y, boxes, frames=48, bending=0.25):
     """A cloth sheet dropped from `centre` over boxes ((x0, x1), (y0, y1), (z0, z1)) and
     left to settle (Blender's cloth solver), then kept as a plain smooth mesh."""
     sc = bpy.context.scene
@@ -154,7 +154,7 @@ def drape_sheet(coll, mat, name, centre, size_x, size_y, boxes, frames=48):
     cl.settings.quality = 8
     cl.settings.mass = 0.25
     cl.settings.tension_stiffness = cl.settings.compression_stiffness = 12
-    cl.settings.bending_stiffness = 0.25
+    cl.settings.bending_stiffness = bending
     cl.collision_settings.distance_min = 0.006
     cl.collision_settings.use_self_collision = False
     start = sc.frame_current
@@ -180,64 +180,89 @@ def drape_sheet(coll, mat, name, centre, size_x, size_y, boxes, frames=48):
 
 
 def washing_room(coll, m, rng):
-    """Behind the altar: the slatted board Sok was washed on, wet still."""
+    """Behind the altar: the board Sok was washed on (redesigned Nov 24, 2026, after the
+    user's screenshot: "a floating box ... redesign that room to make it clean but scary").
+    The room is swept and bare now: the heavy washing board on its legs with the white
+    sheet settled over the shape of a body that is no longer there, the enamel basin
+    still under the slats, the lamp and the incense at its head, two lidded jars by the
+    north door, long black hair over the head block, and wet bare footprints going from
+    the board to the north door."""
     b = Batch("wash_room")
     x0, x1, yc, w = -1.75, 0.25, 19.85, 0.66
     top = FLOOR + 0.46
+    # Seven heavy slats on two bearers, a finger's gap between them, wet and dark.
     for k in range(7):
-        y = yc - w / 2 + k * w / 7
-        b.box(m["wet_wood"], (x1 - x0, w / 7 - 0.018, 0.035), ((x0 + x1) / 2, y + (w / 7) / 2, top - 0.0175), chamfer=0.004)
-    for xt in (x0 + 0.28, x1 - 0.28):
-        b.box(m["wet_wood"], (0.08, w + 0.12, 0.06), (xt, yc, top - 0.065))
-        for s in (-1, 1):
-            b.tube(m["wet_wood"], [(xt + 0.02 * s, yc + s * 0.34, FLOOR), (xt, yc + s * 0.27, top - 0.09)], 0.03, sides=5)
-    b.box(m["wet_wood"], (0.22, 0.24, 0.07), (x0 + 0.13, yc, top + 0.035), chamfer=0.01)    # the head block
-    # The basin under it, and the water that ran through the slats into the boards.
-    b.lathe(m["clay_lamp"], [(0, 0), (0.2, 0), (0.3, 0.06), (0.36, 0.16), (0.37, 0.18), (0.34, 0.175), (0, 0.04)],
-            xf=place(-0.75, yc, FLOOR), segments=40, tile=0.4)
-    _stain("wash_stain", coll, m["wet_stain"], -0.7, yc + 0.05, FLOOR + 0.003, 1.25, 0.62, rng)
-    _stain("wash_stain_drip", coll, m["wet_stain"], 0.9, yc - 0.55, FLOOR + 0.003, 0.18, 0.1, rng)
-    # Two glazed water jars by the north door, a coconut-shell dipper on one.
+        y = yc - w / 2 + (k + 0.5) * w / 7
+        b.box(m["wet_wood"], (x1 - x0, w / 7 - 0.014, 0.038), ((x0 + x1) / 2, y, top - 0.019), chamfer=0.005, jitter=0.0012, rng=rng)
+    for xt in (x0 + 0.22, x1 - 0.22):
+        b.box(m["wet_wood"], (0.085, w + 0.06, 0.07), (xt, yc, top - 0.073), chamfer=0.006)
+        for s_ in (-1, 1):
+            # Square legs, a little splayed, a stretcher between each pair.
+            b.box(m["wet_wood"], (0.065, 0.065, top - 0.1 - FLOOR), (xt, yc + s_ * (w / 2 - 0.03), (FLOOR + top - 0.1) / 2), chamfer=0.006)
+        b.box(m["wet_wood"], (0.045, w - 0.08, 0.05), (xt, yc, FLOOR + 0.12), chamfer=0.004)
+    b.box(m["wet_wood"], (x1 - x0 - 0.5, 0.045, 0.05), ((x0 + x1) / 2, yc, FLOOR + 0.12), chamfer=0.004)
+    # The head block, a hollow worn in it.
+    b.box(m["wet_wood"], (0.2, 0.26, 0.075), (x0 + 0.12, yc, top + 0.0375), chamfer=0.012)
+    # The enamel basin under the slats, dark water in it, and the stain where it ran over.
+    bp = [(0, 0), (0.15, 0), (0.19, 0.012), (0.29, 0.09), (0.31, 0.12), (0.305, 0.126), (0.285, 0.1), (0.18, 0.02), (0, 0.012)]
+    b.lathe(m["enamel"] if "enamel" in m else m["linen"], bp, xf=place(-0.75, yc, FLOOR), segments=40, tile=0.3)
+    if "enamel_rim" in m:
+        b.lathe(m["enamel_rim"], [(0.3, 0.118), (0.312, 0.124), (0.305, 0.129)], xf=place(-0.75, yc, FLOOR), segments=40, tile=0.3, cap=False)
+    b.lathe(m["wet_stain"], [(0.26, 0.085), (0, 0.085)], xf=place(-0.75, yc, FLOOR), segments=32, tile=0.2, cap=False)
+    _stain("wash_stain", coll, m["wet_stain"], -0.75, yc + 0.03, FLOOR + 0.003, 0.95, 0.5, rng)
+    # Two glazed water jars by the north door under wooden lids, a coconut dipper on one.
     for k, (x, y) in enumerate(((2.45, 21.45), (1.85, 21.55))):
         b.lathe(m["jar"], [(0, 0), (0.17, 0), (0.24, 0.06), (0.29, 0.25), (0.27, 0.45), (0.2, 0.56), (0.13, 0.6), (0.145, 0.64),
-                           (0.125, 0.655), (0, 0.62)], xf=place(x, y, FLOOR), segments=32, tile=0.5)
+                           (0.125, 0.655), (0, 0.62)], xf=place(x, y, FLOOR), segments=40, tile=0.5)
+        b.lathe(m["wet_wood"], [(0, 0.655), (0.165, 0.655), (0.17, 0.675), (0, 0.68)], xf=place(x, y, FLOOR), segments=28, tile=0.3)
+        b.box(m["wet_wood"], (0.03, 0.2, 0.025), (x, y, FLOOR + 0.69), chamfer=0.004)
     b.lathe(m["coconut"], [(0, -0.06), (0.05, -0.055), (0.068, -0.03), (0.07, 0.0), (0.064, 0.0), (0, -0.05)],
-            xf=place(2.4, 21.42, FLOOR + 0.71), segments=16, tile=0.1)
-    b.tube(m["wet_wood"], [(2.46, 21.42, FLOOR + 0.69), (2.62, 21.3, FLOOR + 0.8)], 0.008, sides=5)
-    # Young coconuts by the head (their water washed him), one split open in a tray.
-    for k, (x, y) in enumerate(((-2.35, 20.6), (-2.1, 20.85))):
-        ok.coconut(b, m, place(x, y, FLOOR, rz=rng.uniform(0, 6)), rng)
-    b.lathe(m["wet_wood"], [(0, 0), (0.22, 0), (0.23, 0.03), (0.21, 0.035), (0, 0.01)], xf=place(-2.3, 19.2, FLOOR), segments=24, tile=0.3)
-    for k in range(2):
-        xf = place(-2.36 + 0.13 * k, 19.2, FLOOR + 0.07) @ Matrix.Rotation(0.4 * (1 - 2 * k), 4, "X")
-        b.lathe(m["coconut"], [(0, -0.07), (0.06, -0.06), (0.085, -0.03), (0.088, 0.0), (0, 0.0)], xf=xf, segments=20, tile=0.1)
-        b.lathe(m["jasmine"], [(0, -0.055), (0.07, -0.02), (0.075, -0.002), (0, -0.002)], xf=xf, segments=20, tile=0.1)
-    # The clothes for the coffin folded on a stool, a comb on them.
-    b.box(m["wet_wood"], (0.42, 0.32, 0.03), (2.2, 18.56, FLOOR + 0.36), chamfer=0.004)
-    for dx in (-0.17, 0.17):
-        for dy in (-0.12, 0.12):
-            b.box(m["wet_wood"], (0.035, 0.035, 0.34), (2.2 + dx, 18.56 + dy, FLOOR + 0.17))
-    for k in range(4):
-        b.box(m["linen"], (0.34 - 0.02 * k, 0.26, 0.035), (2.2 + rng.normal(0, 0.01), 18.56 + rng.normal(0, 0.01), FLOOR + 0.395 + 0.036 * k),
-              chamfer=0.012)
-    b.box(m["wet_wood"], (0.12, 0.03, 0.01), (2.22, 18.54, FLOOR + 0.55))
-    # A white sheet thrown over the foot of the board and the folded cloths left on it,
-    # settled by a cloth simulation into real folds down both sides (two flat grids read
-    # as a stiff white box).
-    drape_sheet(coll, m["linen"], "wash_room_sheet", (x1 - 0.42, yc, top + 0.3), 1.05, 1.25,
-                [((x0, x1), (yc - w / 2, yc + w / 2), (top - 0.07, top)),
-                 ((x1 - 0.75, x1 - 0.2), (yc - 0.2, yc + 0.18), (top, top + 0.11))])
-    # The white thread still looped round the board, marigold petals on the wet boards.
+            xf=place(2.38, 21.38, FLOOR + 0.745), segments=18, tile=0.1)
+    b.tube(m["wet_wood"], [(2.44, 21.38, FLOOR + 0.725), (2.62, 21.26, FLOOR + 0.82)], 0.008, sides=6)
+    # The thread (sai sin) still looped round the board and running off to the floor,
+    # a few dead marigold heads where the board drips.
     loop = [(x0 + 0.5, yc - w / 2 - 0.01, top + 0.002), (x0 + 0.5, yc + w / 2 + 0.01, top + 0.002),
             (x0 + 0.52, yc + w / 2 + 0.01, top - 0.04), (x0 + 0.55, yc + 0.4, FLOOR + 0.1), (x0 + 0.9, yc + 0.6, FLOOR + 0.004)]
     b.tube(m["linen"], loop, 0.0015, sides=4)
-    for k in range(34):
-        x, y = rng.uniform(-2.2, 1.0), yc + rng.normal(0, 0.7)
-        ok.marigold(b, m, (x, y, FLOOR + 0.004), rng, radius=rng.uniform(0.008, 0.013), dead=rng.random() < 0.6)
-    ok.incense_bowl(b, m, place(x0 - 0.3, yc + 0.32, FLOOR), rng, radius=0.07, height=0.06, sticks=9, lit=3)
-    flames = [_flame_lamp(b, m, x0 - 0.35, yc - 0.2, FLOOR)]
+    for k in range(7):
+        x, y = rng.uniform(-1.3, -0.2), yc + rng.normal(0, 0.25)
+        ok.marigold(b, m, (x, y, FLOOR + 0.004), rng, radius=rng.uniform(0.009, 0.012), dead=True)
+    # The lamp and the incense at the head of the board, as they were for him.
+    ok.incense_bowl(b, m, place(x0 - 0.3, yc + 0.22, FLOOR), rng, radius=0.07, height=0.06, sticks=9, lit=3)
+    flames = [_flame_lamp(b, m, x0 - 0.32, yc - 0.18, FLOOR)]
+    # Long black hair over the head block, down its end to the boards.
+    for k in range(80):
+        r0 = Vector((x0 + 0.17 + rng.normal(0, 0.03), yc + rng.normal(0, 0.06), top + 0.077))
+        L = rng.uniform(0.35, 0.62)
+        pts = [r0]
+        for j in range(1, 7):
+            f = j / 6
+            px = r0.x - 0.12 * min(1.0, f * 3) - 0.04 * f
+            pz = top + 0.077 - L * max(0.0, f - 0.2) * 1.25
+            pts.append(Vector((px + rng.normal(0, 0.006), r0.y + rng.normal(0, 0.01) * f, max(FLOOR + 0.003, pz))))
+        b.tube(m["hair"], [tuple(p) for p in pts], [0.0011] * 6 + [0.0006], sides=3)
     b.build(coll)
-    import_model(coll, "pot_enamel_01", (-0.85, 21.45, FLOOR), rot_deg=30, name="wash_pot", collide=False)   # clear of the north door
+    # The sheet, settled by a cloth simulation over the board and over the shape of a body
+    # lying on it (head, chest, hands, legs, feet up): the shape only; no one is under it.
+    yb = yc
+    body = [((x0 + 0.06, x0 + 0.27), (yb - 0.095, yb + 0.095), (top + 0.07, top + 0.27)),   # head on the block
+            ((x0 + 0.27, x0 + 0.38), (yb - 0.07, yb + 0.07), (top, top + 0.13)),           # neck
+            ((x0 + 0.38, x0 + 0.95), (yb - 0.22, yb + 0.22), (top, top + 0.22)),           # chest
+            ((x0 + 0.76, x0 + 0.95), (yb - 0.1, yb + 0.1), (top + 0.22, top + 0.27)),      # hands folded
+            ((x0 + 0.95, x0 + 1.25), (yb - 0.19, yb + 0.19), (top, top + 0.17)),           # hips
+            ((x0 + 1.25, x0 + 1.74), (yb - 0.15, yb - 0.02), (top, top + 0.12)),           # legs
+            ((x0 + 1.25, x0 + 1.74), (yb + 0.02, yb + 0.15), (top, top + 0.12)),
+            ((x0 + 1.72, x0 + 1.8), (yb - 0.14, yb - 0.04), (top, top + 0.24)),            # feet, toes up
+            ((x0 + 1.72, x0 + 1.8), (yb + 0.04, yb + 0.14), (top, top + 0.24))]
+    # The board, its bearers' ends and legs under the sheet too (a bearer end through the
+    # sheet showed as a dark square: the user's screenshot of Nov 24).
+    under = [((x0, x1), (yc - w / 2 - 0.04, yc + w / 2 + 0.04), (top - 0.12, top))]
+    under += [((xt - 0.05, xt + 0.05), (yc - w / 2 - 0.04, yc + w / 2 + 0.04), (FLOOR, top - 0.03)) for xt in (x0 + 0.22, x1 - 0.22)]
+    drape_sheet(coll, m["linen"], "wash_room_sheet", ((x0 + x1) / 2 + 0.02, yc, top + 0.42), 2.15, 1.3,
+                under + body, frames=80, bending=0.06)
+    # Wet bare feet from the foot of the board to the north door.
+    import house_refine as HR
+    HR._footprints(coll, HR.materials(m), "wash_wet_feet", [(x1 + 0.1, yc + 0.15), (0.6, 20.6), (0.85, 21.4), (0.85, 22.3)], FLOOR, rng)
     return flames
 
 

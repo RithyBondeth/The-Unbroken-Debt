@@ -20,7 +20,7 @@ import { blendPathGround } from "./pathGround";
 import { GROW_FOREST, PLAY } from "../data/forestBorder";
 import { ROOFS } from "../data/farmLayout";
 import { DAWN_LOOK } from "@/render/nightLook";
-import { FUNERAL_LOOK, VILLAGE_NIGHT } from "../data/villageLook";
+import { FUNERAL_LOOK, HOUSE_LOOK, VILLAGE_NIGHT } from "../data/villageLook";
 import { NIGHT_GRADE } from "@/render/nightGrade";
 import { GROUND_MIST } from "../data/forestAtmosphere";
 import { forestMistField, spawnForestWisp } from "./forestMist";
@@ -42,7 +42,7 @@ import { BetelOffering } from "./BetelOffering";
 import { ArrivalModels } from "./ArrivalModels";
 import { ActOneBeats, CP2_FEET } from "./ActOneBeats";
 import { TENT_FLAME_MESH } from "../data/arrival";
-import { underFuneralFloor } from "../data/funeral";
+import { inHouseRooms, underFuneralFloor } from "../data/funeral";
 import { OfferingModels } from "./OfferingModels";
 import { SokRoomModels } from "../act2/SokRoomModels";
 import { SokInvestigation } from "../act2/SokInvestigation";
@@ -149,6 +149,8 @@ export class ActOne {
   private wasFlashing = false;
   /** 0-1: how far night sight has turned to candlelight (the funeral room). */
   private candlelit = 0;
+  /** 0 outside, 1 up in the house's rooms (HOUSE_LOOK), eased. */
+  private housebound = 0;
 
   constructor(private readonly game: Game) {}
 
@@ -410,6 +412,13 @@ export class ActOne {
     // candles, the lamps and Sora's lantern.
     const sheltered = applySkyShelter(game.scene.materials, HOUSE_SHELTER);
     console.info(`[ActOne] ${sheltered} materials sheltered from the sky in the house`);
+    // The paddies' ripe rice (tools/areas/village_fields.py, Nov 24, 2026): its thin stalks
+    // fell out of the smaller mip levels at the default 0.5 cut-off and the fields went
+    // patchy past a few metres. The atlas's colour is bled into its clear pixels
+    // (tools/areas/bleed-alpha.py), so a lower cut keeps them full without dark fringes.
+    for (const material of game.scene.materials)
+      if (/^M_paddy_rice_/.test(material.name) && "alphaCutOff" in material)
+        (material as { alphaCutOff: number }).alphaCutOff = 0.34;
   }
 
   /**
@@ -424,27 +433,45 @@ export class ActOne {
     if (this.resolution?.active) return;
     const atmosphere = this.game.atmosphere;
     const sight = atmosphere.nightSight;
-    const inside = underFuneralFloor(this.game.player.feet) ? 1 : 0;
+    const feet = this.game.player.feet;
+    const inside = underFuneralFloor(feet) ? 1 : 0;
     this.candlelit += (inside - this.candlelit) * Math.min(1, dt * 1.5);
+    const rooms = inHouseRooms(feet) ? 1 : 0;
+    this.housebound += (rooms - this.housebound) * Math.min(1, dt * 1.2);
     const k = this.candlelit;
-    const mix = (night: number, funeral: number) => night + (funeral - night) * k;
-    this.lights.indoors = k;
+    // Up in the rooms the house's own dark look (HOUSE_LOOK, Nov 24, 2026); the two never
+    // hold at once (one is under the floor, the other on it).
+    const h = this.housebound * (1 - k);
+    const mix = (night: number, funeral: number, house: number) =>
+      night + (funeral - night) * k + (house - night) * h;
+    this.lights.indoors = Math.max(k, h);
     sight.diffuse.set(0.55 + 0.27 * k, 0.62 + 0.02 * k, 0.75 - 0.3 * k);
     atmosphere.nightSightIntensity =
-      VILLAGE_NIGHT.nightSightIntensity * mix(1, FUNERAL_LOOK.nightSight);
-    atmosphere.baseExposure = mix(VILLAGE_NIGHT.baseExposure, FUNERAL_LOOK.baseExposure);
-    atmosphere.maxExposure = mix(VILLAGE_NIGHT.maxExposure, FUNERAL_LOOK.maxExposure);
-    atmosphere.blendGrade(NIGHT_GRADE, FUNERAL_LOOK.grade, k);
+      VILLAGE_NIGHT.nightSightIntensity * mix(1, FUNERAL_LOOK.nightSight, HOUSE_LOOK.nightSight);
+    atmosphere.baseExposure = mix(
+      VILLAGE_NIGHT.baseExposure,
+      FUNERAL_LOOK.baseExposure,
+      HOUSE_LOOK.baseExposure,
+    );
+    atmosphere.maxExposure = mix(
+      VILLAGE_NIGHT.maxExposure,
+      FUNERAL_LOOK.maxExposure,
+      HOUSE_LOOK.maxExposure,
+    );
+    if (h > k) atmosphere.blendGrade(NIGHT_GRADE, HOUSE_LOOK.grade, h);
+    else atmosphere.blendGrade(NIGHT_GRADE, FUNERAL_LOOK.grade, k);
   }
 
   /**
    * Decoration does not stop the interaction ray: the offerings, candles, cloth, fences
    * and plants are dense merged meshes, and testing the ray against their triangles
    * every frame cost 40 ms at the altar. What hangs under an `interact_` node stays.
+   * The house's Nov 24 dressing (`M_hr_`: Sok's photograph on the altar, the bathroom)
+   * is decoration too.
    */
   private unpickDecor(): void {
     const decor =
-      /(offering|phra_phum_|^M_fo_|shroud|^M_cp_|^M_rk_|^M_flora_|incense|flame|marigold|jasmine|beeswax|^M_funeral_petal|^M_rice$)/i;
+      /(offering|phra_phum_|^M_fo_|^M_hr_|shroud|^M_cp_|^M_rk_|^M_flora_|incense|flame|marigold|jasmine|beeswax|^M_funeral_petal|^M_rice$)/i;
     let n = 0;
     for (const mesh of this.game.scene.meshes) {
       if (!mesh.isPickable || !decor.test(mesh.material?.name ?? "")) continue;
@@ -669,7 +696,10 @@ export class ActOne {
     const mist = game.pipeline.fog;
     if (mist && !this.resolution.active) {
       const f = this.lights.storm.level;
-      const own = 1 + (FUNERAL_LOOK.mist - 1) * this.candlelit;
+      const own =
+        1 +
+        (FUNERAL_LOOK.mist - 1) * this.candlelit +
+        (HOUSE_LOOK.mist - 1) * this.housebound * (1 - this.candlelit);
       const [r, g, b] = VILLAGE_NIGHT.fogAmbient;
       mist.ambient.set(
         r * own + f * FLASH_MIST[0],

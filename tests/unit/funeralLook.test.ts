@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { gradeColor, lerpGrade, NEUTRAL_GRADE } from "@/render/grade";
 import { NIGHT_GRADE } from "@/render/nightGrade";
-import { FUNERAL_GRADE, FUNERAL_LOOK, VILLAGE_NIGHT } from "@/episodes/ep1/data/villageLook";
-import { inFuneralRoom, underFuneralFloor } from "@/episodes/ep1/data/funeral";
+import {
+  FUNERAL_GRADE,
+  FUNERAL_LOOK,
+  HOUSE_LOOK,
+  VILLAGE_NIGHT,
+} from "@/episodes/ep1/data/villageLook";
+import { inFuneralRoom, inHouseRooms, underFuneralFloor } from "@/episodes/ep1/data/funeral";
 
 describe("lerpGrade", () => {
   it("is the first grade at 0 and the second at 1", () => {
@@ -48,5 +53,31 @@ describe("the funeral's look under the house", () => {
     expect(underFuneralFloor({ x: 0, y: 2.5, z: -15 })).toBe(false);
     // Under the back block, where the jars are.
     expect(underFuneralFloor({ x: 0, y: 0, z: -26 })).toBe(false);
+  });
+});
+
+describe("the house's dark look up in its rooms", () => {
+  it("holds the eye well under the village's, with room left for night sight's maths", () => {
+    expect(HOUSE_LOOK.maxExposure).toBeLessThan(VILLAGE_NIGHT.maxExposure * 0.7);
+    expect(HOUSE_LOOK.baseExposure).toBeLessThan(VILLAGE_NIGHT.baseExposure);
+    expect(HOUSE_LOOK.maxExposure).toBeGreaterThan(HOUSE_LOOK.baseExposure);
+    expect(HOUSE_LOOK.nightSight).toBeLessThan(1);
+  });
+
+  it("holds in the rooms on the floor, not under it, on the veranda or in the attic", () => {
+    // The hall (Blender (0, 14)), the long corridor (0, 30) and Sok's study (-4, 25).
+    expect(inHouseRooms({ x: 0, y: 2.5, z: -14 })).toBe(true);
+    expect(inHouseRooms({ x: 0, y: 2.5, z: -30 })).toBe(true);
+    expect(inHouseRooms({ x: 4, y: 2.5, z: -25 })).toBe(true);
+    // Under the floor at the funeral, the veranda (Blender y 10.5), the attic over the hall.
+    expect(inHouseRooms({ x: 0, y: 0, z: -14 })).toBe(false);
+    expect(inHouseRooms({ x: 0, y: 2.5, z: -10.5 })).toBe(false);
+    expect(inHouseRooms({ x: 0, y: 5.3, z: -14 })).toBe(false);
+    // Never both: the funeral's look and the house's.
+    for (const p of [
+      { x: 0, y: 2.5, z: -14 },
+      { x: 0, y: 0, z: -14 },
+    ])
+      expect(inHouseRooms(p) && underFuneralFloor(p)).toBe(false);
   });
 });

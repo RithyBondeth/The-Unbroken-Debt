@@ -52,3 +52,31 @@ export const FUNERAL_LOOK = {
   mist: 0,
   grade: FUNERAL_GRADE,
 } as const;
+
+/**
+ * In the house's rooms (the user, Nov 24, 2026: "make the whole house clean but more
+ * scary, darkness and horribles"): shadows pressed down and a little cold against the
+ * lamps' amber, the colour drained a step further than the night outside.
+ */
+export const HOUSE_GRADE: GradeParams = {
+  ...NIGHT_GRADE,
+  saturation: -0.2,
+  shadows: { tint: tintFromHex("#5E6B73"), strength: 0.34 },
+  blackPoint: 0.012,
+};
+
+/**
+ * Up in the rooms the eye stays low, so past Sora's lantern and the house's few lamps the
+ * rooms go black: the village's exposure (1.65 to 2.4) lit the boards grey-green from
+ * wall to wall. Night sight mostly goes too (it rides with Sora, so the far end of a
+ * corridor stayed readable).
+ */
+export const HOUSE_LOOK = {
+  baseExposure: 1.08,
+  maxExposure: 1.4,
+  /** Of the village's night sight, the share left in the rooms. */
+  nightSight: 0.3,
+  /** Of the village's blue-grey mist light, the share left (the lightning's stays). */
+  mist: 0.35,
+  grade: HOUSE_GRADE,
+} as const;
