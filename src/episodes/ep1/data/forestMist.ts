@@ -1,5 +1,5 @@
 import { fbm } from "./pathGround";
-import { PLAY, ROAD_Z, TERRAIN, outside } from "./forestBorder";
+import { PLAY, ROAD_Z, TERRAIN, VILLAGE_ROAD, outside } from "./forestBorder";
 import { BUILDINGS } from "./farmLayout";
 import { farmPathDistance, rectDistance } from "./farmGround";
 
@@ -14,6 +14,7 @@ import { farmPathDistance, rectDistance } from "./farmGround";
  *   they go on into the mist.
  * - The paths, the cart track and the ground round the buildings keep only a thin
  *   ground mist, so the way stays readable and the house and the funeral stand clear.
+ * - The village road outside the gate lies under a low mist between its fallen trees.
  */
 
 /** Map texels per metre, and the margin (m) the map runs past the authored terrain. */
@@ -64,6 +65,14 @@ export function mistAt(x: number, z: number): MistAt {
   const road = 1 - smoothstep(2.5, 5, Math.abs(z - ROAD_Z));
   density *= 1 - 0.55 * road;
   height = height * (1 - road) + (0.9 / MIST_HEIGHT) * road;
+
+  // The village road outside the gate and the shop fronts along it (Nov 25, 2026): thin
+  // and low where Sora walks, so the shops' lamps and posters read from the gate; past
+  // the fallen trees at its ends the mist closes over it again.
+  const along = 1 - smoothstep(VILLAGE_ROAD.walkX - 4, VILLAGE_ROAD.walkX + 8, Math.abs(x));
+  const village = (1 - smoothstep(6, 11, Math.abs(z - VILLAGE_ROAD.z))) * along;
+  density *= 1 - 0.5 * village;
+  height = height * (1 - village) + (1.1 / MIST_HEIGHT) * village;
 
   // The farm's paths, its cart track and round its buildings: a thin ground mist only.
   const path = 1 - smoothstep(1.2, 4.5, farmPathDistance(x, z));

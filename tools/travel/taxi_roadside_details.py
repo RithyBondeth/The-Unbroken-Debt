@@ -2181,31 +2181,9 @@ def _upgrade_road_surface_and_clutter(coll, rng, w, road_point, road_heading, sh
     print("TAXI_ROAD_SURFACE_AND_CLUTTER_UPGRADED puddles=", len(puddle_info))
 
 
-def apply_roadside_details(
-    mats_village,
-    rng,
-    w,
-    road_point,
-    road_heading,
-    PADDY_WATER,
-    library_material,
-    plain,
-    world_uvs_fn,
-    full_gltf_group,
-    import_glb,
-    plant_fn,
-):
-    """Build 8 bespoke ultra-detailed Cambodian roadside shops, 7 gooseneck-lit Khmer 90s poster boards,
-    overhead electrical drop wires, scarecrows, radial puddle UVs, wet sculpted road detail, and remove Neak Ta."""
-    coll = bpy.context.scene.collection
-
-    # Remove old Neak Ta objects cleanly in both direct build-taxi and standalone runs!
-    for o in list(bpy.data.objects):
-        if "neakta" in o.name.lower() or o.name == "taxi_road_shrine_tree":
-            bpy.data.objects.remove(o, do_unlink=True)
-
-    _upgrade_puddles_and_median_grass()
-
+def shop_materials(library_material, plain, world_uvs_fn):
+    """The roadside shops' materials and the one Khmer 90s poster atlas material (shared by
+    the driving scene and the village road, tools/areas/village_road.py)."""
     # Shared shop & real Khmer 90s poster atlas materials (1 draw call for all posters!)
     poster_path = TEX / "T_taxi_khmer_posters_BC.png"
     poster_mat = plain("M_taxi_khmer_posters", (1, 1, 1), 0.48, 0.0)
@@ -2273,8 +2251,12 @@ def apply_roadside_details(
     }
     shop_mats["foliage"].use_backface_culling = False
 
-    _upgrade_road_surface_and_clutter(coll, rng, w, road_point, road_heading, shop_mats, mats_village, world_uvs_fn)
+    return shop_mats, poster_mat
 
+
+def shop_props(full_gltf_group, import_glb):
+    """The decimated scan and Poly Haven prop templates the shops place (hidden; remove them
+    after building)."""
     # Tightly decimated rural shop scans + curated PolyHaven photorealistic shop props!
     props = {
         "rice_sack": _load_decimated_scan("rice_sack.glb", 0.20, full_gltf_group, import_glb),
@@ -2306,6 +2288,135 @@ def apply_roadside_details(
         "wooden_ladder_02": _load_decimated_polyhaven("wooden_ladder_02", 420, full_gltf_group, import_glb),
         "vintage_oil_lamp": _load_decimated_polyhaven("vintage_oil_lamp", 420, full_gltf_group, import_glb),
     }
+    return props, ph_props
+
+
+def build_poster_board(coll, shop_mats, M_b, b_idx, p_a, p_b, p_verts, p_faces, p_uvs, world_uvs_fn):
+    """One gooseneck-lit roadside board carrying two atlas posters (p_a, p_b), placed by M_b;
+    its posters are appended to the shared poster lists."""
+    bm_b = bmesh.new()
+    bm_btin = bmesh.new()
+    bm_biron = bmesh.new()
+    bm_bconc = bmesh.new()
+    bm_bsh = bmesh.new()
+    bm_bbulb = bmesh.new()
+
+    # Sturdy timber posts anchored into weathered concrete footings + diagonal rear timber support struts + iron L-brackets!
+    for px_b in (-0.70, 0.70):
+        _box_bm(bm_bconc, (px_b, 0.0, 0.08), (0.24, 0.24, 0.46), bevel=0.014, segs=1)
+        _box_bm(bm_b, (px_b, 0.0, 1.05), (0.10, 0.10, 2.55))
+        _box_bm(bm_b, (px_b, -0.34, 0.72), (0.075, 0.075, 1.55), rot=Euler((math.radians(-24), 0, 0)))
+        # Rusted steel corner reinforcement brackets & bolt heads
+        for bz_k in (1.02, 2.14):
+            _box_bm(bm_biron, (px_b, 0.056, bz_k), (0.12, 0.018, 0.065))
+    # Plank backing panel + mitered outer picture frame border + lower directional timber slat & notice stub!
+    _box_bm(bm_b, (0.0, 0.0, 1.58), (1.56, 0.055, 1.16))
+    _box_bm(bm_b, (0.0, 0.036, 2.16), (1.64, 0.044, 0.068))
+    _box_bm(bm_b, (0.0, 0.036, 1.00), (1.64, 0.044, 0.068))
+    _box_bm(bm_b, (-0.79, 0.036, 1.58), (0.065, 0.044, 1.22))
+    _box_bm(bm_b, (0.79, 0.036, 1.58), (0.065, 0.044, 1.22))
+    _box_bm(bm_b, (0.0, 0.036, 1.58), (0.045, 0.038, 1.12))  # Center vertical divider
+    _box_bm(bm_b, (0.0, 0.03, 0.74), (1.28, 0.035, 0.14), rot=Euler((0, 0.025 if b_idx % 2 == 0 else -0.025, 0)))
+    # Sculpted corrugated rusty tin rain-hood overhang + side timber bargeboards & iron brackets!
+    _corrugated_sheet_bm(bm_btin, -0.86, 0.86, -0.08, 0.44, 2.25, 2.12, waves=12, amp=0.014, thick=0.010)
+    for bx_s in (-0.84, 0.84):
+        _box_bm(bm_b, (bx_s, 0.18, 2.16), (0.032, 0.50, 0.065), rot=Euler((math.radians(-14), 0, 0)))
+    for bx_s in (-0.72, 0.72):
+        _box_bm(bm_biron, (bx_s, 0.20, 2.10), (0.025, 0.40, 0.03), rot=Euler((math.radians(-16), 0, 0)))
+    # Curved black conduit gooseneck lamp with green enamel reflector shade shining down on posters!
+    _add_gooseneck_lamp(bm_biron, bm_bsh, bm_bbulb, (0.0, 0.05, 2.26), (0, 1, 0), drop_z=-0.10, reach=0.44)
+    # Conduit wire running neatly down back of left post
+    _cyl_bm(bm_biron, (-0.64, -0.05, 0.35), (-0.64, -0.05, 2.24), 0.011, 0.011, segs=5)
+
+    _bm_obj(f"taxi_road_poster_board_{b_idx}", bm_b, shop_mats["dark_wood"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
+    _bm_obj(f"taxi_road_poster_board_{b_idx}_conc", bm_bconc, shop_mats["concrete"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
+    _bm_obj(f"taxi_road_poster_board_{b_idx}_tin", bm_btin, shop_mats["tin"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
+    _bm_obj(f"taxi_road_poster_board_{b_idx}_iron", bm_biron, shop_mats["iron"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
+    _bm_obj(f"taxi_road_poster_board_{b_idx}_shade", bm_bsh, shop_mats["enamel_green"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
+    _bm_obj(f"taxi_road_poster_board_{b_idx}_bulb", bm_bbulb, shop_mats["bulb"], coll, smooth=True, M_world=M_b)
+
+    def bw(p):
+        return M_b @ Vector(p)
+
+    def bdir(v):
+        return (M_b.to_3x3() @ Vector(v)).normalized()
+
+    # Front face (+Y in local -> faces back toward approaching car!): viewer's right is (-1, 0, 0)
+    _add_poster_to_lists(p_verts, p_faces, p_uvs, bw((0.37, 0.042, 1.58)), bdir((-1, 0, 0)), bdir((0, 0, 1)), 0.68, 1.00, p_a, seed=700 + b_idx * 4)
+    _add_poster_to_lists(p_verts, p_faces, p_uvs, bw((-0.37, 0.042, 1.58)), bdir((-1, 0, 0)), bdir((0, 0, 1)), 0.68, 1.00, p_b, seed=701 + b_idx * 4)
+
+    # Anchor for calibrated warm signboard bulb right beneath the gooseneck shade!
+    anc = bpy.data.objects.new(f"taxi_road_anchor_poster_lamp_{b_idx}", None)
+    coll.objects.link(anc)
+    anc.location = bw((0.0, 0.56, 2.06))
+
+
+def full_gltf_group():
+    """Give the glTF settings node group every input the exporter reads (imported glTFs
+    otherwise lose their occlusion and other sockets)."""
+    from io_scene_gltf2.blender.com.material_helpers import create_settings_group, get_gltf_node_name
+    name = get_gltf_node_name()
+    group = bpy.data.node_groups.get(name)
+    if group is None:
+        create_settings_group(name)
+        return
+    full = create_settings_group("glTF full sockets")
+    have = {item.name for item in group.interface.items_tree}
+    for item in full.interface.items_tree:
+        if item.item_type == "SOCKET" and item.in_out == "INPUT" and item.name not in have:
+            group.interface.new_socket(item.name, in_out="INPUT", socket_type=item.socket_type)
+    bpy.data.node_groups.remove(full)
+
+
+def import_glb(path):
+    """Import a glTF/GLB, keep only its meshes with transforms applied, and return them."""
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=str(path))
+    new = [o for o in bpy.data.objects if o not in before]
+    meshes = [o for o in new if o.type == "MESH"]
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in meshes:
+        o.select_set(True)
+    if meshes:
+        bpy.context.view_layer.objects.active = meshes[0]
+        bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for o in new:
+        if o.type != "MESH":
+            bpy.data.objects.remove(o)
+    return meshes
+
+
+def apply_roadside_details(
+    mats_village,
+    rng,
+    w,
+    road_point,
+    road_heading,
+    PADDY_WATER,
+    library_material,
+    plain,
+    world_uvs_fn,
+    full_gltf_group,
+    import_glb,
+    plant_fn,
+):
+    """Build 8 bespoke ultra-detailed Cambodian roadside shops, 7 gooseneck-lit Khmer 90s poster boards,
+    overhead electrical drop wires, scarecrows, radial puddle UVs, wet sculpted road detail, and remove Neak Ta."""
+    coll = bpy.context.scene.collection
+
+    # Remove old Neak Ta objects cleanly in both direct build-taxi and standalone runs!
+    for o in list(bpy.data.objects):
+        if "neakta" in o.name.lower() or o.name == "taxi_road_shrine_tree":
+            bpy.data.objects.remove(o, do_unlink=True)
+
+    _upgrade_puddles_and_median_grass()
+
+    shop_mats, poster_mat = shop_materials(library_material, plain, world_uvs_fn)
+
+    _upgrade_road_surface_and_clutter(coll, rng, w, road_point, road_heading, shop_mats, mats_village, world_uvs_fn)
+
+    props, ph_props = shop_props(full_gltf_group, import_glb)
     scarecrow = _load_decimated_scan("scarecrow.glb", 0.38, full_gltf_group, import_glb)
 
     p_verts, p_faces, p_uvs = [], [], []
@@ -2389,61 +2500,7 @@ def apply_roadside_details(
         lean = math.radians(1.4 if b_idx % 2 == 0 else -1.2)
         M_b = Matrix.Translation(pos_bl) @ Matrix.Rotation(ang, 4, "Z") @ Matrix.Rotation(lean, 4, "Y")
 
-        bm_b = bmesh.new()
-        bm_btin = bmesh.new()
-        bm_biron = bmesh.new()
-        bm_bconc = bmesh.new()
-        bm_bsh = bmesh.new()
-        bm_bbulb = bmesh.new()
-
-        # Sturdy timber posts anchored into weathered concrete footings + diagonal rear timber support struts + iron L-brackets!
-        for px_b in (-0.70, 0.70):
-            _box_bm(bm_bconc, (px_b, 0.0, 0.08), (0.24, 0.24, 0.46), bevel=0.014, segs=1)
-            _box_bm(bm_b, (px_b, 0.0, 1.05), (0.10, 0.10, 2.55))
-            _box_bm(bm_b, (px_b, -0.34, 0.72), (0.075, 0.075, 1.55), rot=Euler((math.radians(-24), 0, 0)))
-            # Rusted steel corner reinforcement brackets & bolt heads
-            for bz_k in (1.02, 2.14):
-                _box_bm(bm_biron, (px_b, 0.056, bz_k), (0.12, 0.018, 0.065))
-        # Plank backing panel + mitered outer picture frame border + lower directional timber slat & notice stub!
-        _box_bm(bm_b, (0.0, 0.0, 1.58), (1.56, 0.055, 1.16))
-        _box_bm(bm_b, (0.0, 0.036, 2.16), (1.64, 0.044, 0.068))
-        _box_bm(bm_b, (0.0, 0.036, 1.00), (1.64, 0.044, 0.068))
-        _box_bm(bm_b, (-0.79, 0.036, 1.58), (0.065, 0.044, 1.22))
-        _box_bm(bm_b, (0.79, 0.036, 1.58), (0.065, 0.044, 1.22))
-        _box_bm(bm_b, (0.0, 0.036, 1.58), (0.045, 0.038, 1.12))  # Center vertical divider
-        _box_bm(bm_b, (0.0, 0.03, 0.74), (1.28, 0.035, 0.14), rot=Euler((0, 0.025 if b_idx % 2 == 0 else -0.025, 0)))
-        # Sculpted corrugated rusty tin rain-hood overhang + side timber bargeboards & iron brackets!
-        _corrugated_sheet_bm(bm_btin, -0.86, 0.86, -0.08, 0.44, 2.25, 2.12, waves=12, amp=0.014, thick=0.010)
-        for bx_s in (-0.84, 0.84):
-            _box_bm(bm_b, (bx_s, 0.18, 2.16), (0.032, 0.50, 0.065), rot=Euler((math.radians(-14), 0, 0)))
-        for bx_s in (-0.72, 0.72):
-            _box_bm(bm_biron, (bx_s, 0.20, 2.10), (0.025, 0.40, 0.03), rot=Euler((math.radians(-16), 0, 0)))
-        # Curved black conduit gooseneck lamp with green enamel reflector shade shining down on posters!
-        _add_gooseneck_lamp(bm_biron, bm_bsh, bm_bbulb, (0.0, 0.05, 2.26), (0, 1, 0), drop_z=-0.10, reach=0.44)
-        # Conduit wire running neatly down back of left post
-        _cyl_bm(bm_biron, (-0.64, -0.05, 0.35), (-0.64, -0.05, 2.24), 0.011, 0.011, segs=5)
-
-        _bm_obj(f"taxi_road_poster_board_{b_idx}", bm_b, shop_mats["dark_wood"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_conc", bm_bconc, shop_mats["concrete"], coll, world_uvs_fn=world_uvs_fn, smooth=False, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_tin", bm_btin, shop_mats["tin"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_iron", bm_biron, shop_mats["iron"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_shade", bm_bsh, shop_mats["enamel_green"], coll, world_uvs_fn=world_uvs_fn, smooth=True, M_world=M_b)
-        _bm_obj(f"taxi_road_poster_board_{b_idx}_bulb", bm_bbulb, shop_mats["bulb"], coll, smooth=True, M_world=M_b)
-
-        def bw(p):
-            return M_b @ Vector(p)
-
-        def bdir(v):
-            return (M_b.to_3x3() @ Vector(v)).normalized()
-
-        # Front face (+Y in local -> faces back toward approaching car!): viewer's right is (-1, 0, 0)
-        _add_poster_to_lists(p_verts, p_faces, p_uvs, bw((0.37, 0.042, 1.58)), bdir((-1, 0, 0)), bdir((0, 0, 1)), 0.68, 1.00, p_a, seed=700 + b_idx * 4)
-        _add_poster_to_lists(p_verts, p_faces, p_uvs, bw((-0.37, 0.042, 1.58)), bdir((-1, 0, 0)), bdir((0, 0, 1)), 0.68, 1.00, p_b, seed=701 + b_idx * 4)
-
-        # Anchor for calibrated warm signboard bulb right beneath the gooseneck shade!
-        anc = bpy.data.objects.new(f"taxi_road_anchor_poster_lamp_{b_idx}", None)
-        coll.objects.link(anc)
-        anc.location = bw((0.0, 0.56, 2.06))
+        build_poster_board(coll, shop_mats, M_b, b_idx, p_a, p_b, p_verts, p_faces, p_uvs, world_uvs_fn)
 
     # Build ONE combined mesh for all real Khmer 90s color posters (1 draw call, UV-mapped to T_taxi_khmer_posters_BC.png!)
     if p_verts:
@@ -2534,37 +2591,6 @@ if __name__ == "__main__":
     def road_point(x, y, z):
         a = road_heading(z)
         return (road_x(z) + x * math.cos(a), y + ROAD_DROP, z - x * math.sin(a))
-
-    def full_gltf_group():
-        from io_scene_gltf2.blender.com.material_helpers import create_settings_group, get_gltf_node_name
-        name = get_gltf_node_name()
-        group = bpy.data.node_groups.get(name)
-        if group is None:
-            create_settings_group(name)
-            return
-        full = create_settings_group("glTF full sockets")
-        have = {item.name for item in group.interface.items_tree}
-        for item in full.interface.items_tree:
-            if item.item_type == "SOCKET" and item.in_out == "INPUT" and item.name not in have:
-                group.interface.new_socket(item.name, in_out="INPUT", socket_type=item.socket_type)
-        bpy.data.node_groups.remove(full)
-
-    def import_glb(path):
-        before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=str(path))
-        new = [o for o in bpy.data.objects if o not in before]
-        meshes = [o for o in new if o.type == "MESH"]
-        bpy.ops.object.select_all(action="DESELECT")
-        for o in meshes:
-            o.select_set(True)
-        if meshes:
-            bpy.context.view_layer.objects.active = meshes[0]
-            bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-        for o in new:
-            if o.type != "MESH":
-                bpy.data.objects.remove(o)
-        return meshes
 
     # Remove previous detail pass objects & old Neak Ta cleanly so re-runs are 100% idempotent!
     prefixes = (

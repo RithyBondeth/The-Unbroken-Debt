@@ -24,11 +24,19 @@ export interface Rect {
 export const TERRAIN: Rect = { minX: -65, maxX: 65, minZ: -62, maxZ: 92 };
 /**
  * The farmstead (the user, Nov 21-22 2026: "a big tangled farmstead"): its outer fence
- * (tools/areas/farmstead.py FARM, Blender x -46..44, y -40..58) and the stretch of road
- * outside its gate where the taxi leaves Sora. The fence has its own colliders in the
- * area; these walls only back them up.
+ * (tools/areas/farmstead.py FARM, Blender x -46..44, y -40..58) and, outside its gate, the
+ * village road where the taxi leaves Sora (VILLAGE_ROAD) with the shops along it. The fence,
+ * the road's ditches, its fallen trees and the shops have their own colliders in the area;
+ * these walls only back them up, well behind the shops on the road's far side.
  */
-export const PLAY: Rect = { minX: -44.5, maxX: 46.5, minZ: -58.5, maxZ: 46.7 };
+export const PLAY: Rect = { minX: -44.5, maxX: 46.5, minZ: -58.5, maxZ: 70 };
+/**
+ * The village road outside the gate (tools/areas/village_road.py, the user, Nov 25, 2026:
+ * "road along with the shop and shop's poster for each shop just like driving scene"): its
+ * centre line's z (Blender ROAD_Y0, mirrored; it drifts under a metre either way), and how
+ * far along it either way Sora can walk before the fallen trees across it.
+ */
+export const VILLAGE_ROAD = { z: 51.8, walkX: 30.5 } as const;
 /**
  * Whether ForestBorder grows its forest round PLAY. The farm's wall of old trees is
  * authored in the area itself (compound.tree_wall round farmstead.FARM), so nothing
