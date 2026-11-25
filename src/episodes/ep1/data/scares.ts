@@ -1,12 +1,13 @@
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 
 /**
- * Episode 1's five jump scares (the user approved them from Cycles previews, Nov 24,
- * 2026; the approved gameplay map's J1-J5, named here by place because the hunt's jars
- * are J1-J6 in data/hunt.ts). Each fires once per playthrough. Babylon space, metres
+ * Episode 1's jump scares (the user approved them from Cycles previews, Nov 24, 2026; the
+ * approved gameplay map's J1-J5, named here by place because the hunt's jars are J1-J6 in
+ * data/hunt.ts). J2, the sheeted figure sitting up in the store room behind the altar, the
+ * user had out on Nov 25, 2026. Each fires once per playthrough. Babylon space, metres
  * (Babylon x = -Blender x, y = Blender z, z = -Blender y).
  */
-export const SCARES = ["kitchen", "washing", "backdoor", "jar", "loft"] as const;
+export const SCARES = ["kitchen", "backdoor", "jar", "loft"] as const;
 export type ScareId = (typeof SCARES)[number];
 
 /** The flag that remembers a scare has happened (it is saved with the others). */
@@ -59,30 +60,6 @@ export function kitchenTrigger(
     onFloor(feet, HOUSE_FLOOR) &&
     Math.hypot(feet.x - KITCHEN_DOOR.x, feet.z - KITCHEN_DOOR.z) > 1.6 &&
     facing(forward, feet, KITCHEN_DOOR) > 0.85
-  );
-}
-
-// ------------------------------------------------------------------ the washing room
-/** Behind the hall's altar (Blender x -3..3, y 17.5..22). */
-export const WASHING_ROOM: Box = { minX: -3.0, maxX: 3.0, minZ: -22.0, maxZ: -17.5 };
-/** The white dust cloth over the stools stacked on a table in the funeral's store room behind
- * the altar (house_review.store_room: Blender (0.72, 19.45); the old washing board's sheet). */
-export const WASHING_SHEET = new Vector3(0.17, HOUSE_FLOOR + 0.46, -19.85);
-/** Where the sheeted figure sits up, as in the J2 preview (Blender (0.75, 19.0), feet 9 cm under the floor). */
-export const WASHING_FIGURE = new Vector3(-0.75, HOUSE_FLOOR - 0.09, -19.0);
-
-/** Act II: Sora is in the washing room, near the board and looking at it. */
-export function washingTrigger(
-  feet: Vector3,
-  forward: { x: number; z: number },
-  actTwo: boolean,
-): boolean {
-  return (
-    actTwo &&
-    inside(WASHING_ROOM, feet) &&
-    onFloor(feet, HOUSE_FLOOR) &&
-    Math.hypot(feet.x - WASHING_FIGURE.x, feet.z - WASHING_FIGURE.z) < 2.2 &&
-    facing(forward, feet, WASHING_FIGURE) > 0.55
   );
 }
 

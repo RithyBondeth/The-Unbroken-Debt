@@ -19,12 +19,10 @@ import {
   JAR_WATER_RADIUS,
   KITCHEN_DOOR,
   SCARE_JAR,
-  WASHING_FIGURE,
   backDoorTrigger,
   kitchenTrigger,
   loftTrigger,
   scareFlag,
-  washingTrigger,
   type ScareId,
 } from "../data/scares";
 import { Preay } from "../entities/Preay";
@@ -48,15 +46,13 @@ interface Run {
 }
 
 /**
- * Episode 1's five jump scares (data/scares.ts; the user approved them from Cycles
- * previews, Nov 24, 2026). Each fires once per playthrough and lasts under a second at
+ * Episode 1's jump scares (data/scares.ts; the user approved them from Cycles previews,
+ * Nov 24, 2026; J2, the store room's sheeted figure, they had out on Nov 25). Each fires once per playthrough and lasts under a second at
  * its hit: the score's shock, a lightning flash and the picture's jolt. None hurts Sora
  * or takes her control.
  *
  * - kitchen (Act I): the betel leaves taken, Sora turns to the kitchen house's east
  *   door and the Preay is coming through it, arms out, onto her face.
- * - washing (Act II): the dust cloth over the stools in the store room behind the altar has
- *   sat up over her; it lunges.
  * - backdoor (Act II): at the long corridor's nailed door her hands smash through the
  *   planks, her face in the hole; the door stays broken, and shut.
  * - jar (Act III): the jar with the first key piece is black water; Sok's face rises
@@ -67,13 +63,11 @@ export class JumpScares {
   score: DreadScore | null = null;
   private preay!: Preay;
   private props: AssetContainer | null = null;
-  private sheet: TransformNode | null = null;
   private brokenDoor: TransformNode | null = null;
   private corpse: TransformNode | null = null;
   private water: Mesh | null = null;
   private waterMaterial: PBRMaterial | null = null;
   private run: Run | null = null;
-  private readonly washSheet: AbstractMesh[];
   private readonly wholeDoor: AbstractMesh[];
   private readonly forward = new Vector3();
 
@@ -84,7 +78,6 @@ export class JumpScares {
     private readonly storm: Lightning,
   ) {
     const meshes = area.container.meshes;
-    this.washSheet = meshes.filter((m) => /^wash_room_sheet(\.|_|$)/.test(m.name));
     this.wholeDoor = meshes.filter((m) => /^door_back_(leaf|nail)/.test(m.name));
   }
 
@@ -109,14 +102,6 @@ export class JumpScares {
     for (const m of [...props.materials, ...corpse.materials])
       if (m instanceof PBRMaterial) m.maxSimultaneousLights = 8;
     const node = (name: string) => props.transformNodes.find((n) => n.name === name) ?? null;
-    // The sheet sits at the glTF's origin; hang it from a node of its own to move it,
-    // keeping its world placement (and the importer's mirror).
-    const sheet = node("scare_sheet");
-    if (sheet) {
-      this.sheet = new TransformNode("scare_sheet_anchor", scene);
-      sheet.setParent(this.sheet, true);
-      this.sheet.setEnabled(false);
-    }
     this.brokenDoor = node("scare_door_broken");
     this.brokenDoor?.setEnabled(false);
     for (const m of props.meshes) m.isPickable = false;
@@ -150,8 +135,7 @@ export class JumpScares {
     this.water.material = this.waterMaterial = water;
     this.water.setEnabled(false);
 
-    // A scare already had stays had: the sheet gone from the board, the door broken.
-    if (this.done("washing")) for (const m of this.washSheet) m.setEnabled(false);
+    // A scare already had stays had: the door broken.
     if (this.done("backdoor")) this.breakDoor();
 
     if (import.meta.env.DEV) (window as unknown as { scares: JumpScares }).scares = this;
@@ -183,8 +167,6 @@ export class JumpScares {
       kitchenTrigger(feet, this.forward, flags.get("ep1.pickup.interact_betel_leaves", false))
     )
       this.fire("kitchen");
-    else if (!this.done("washing") && washingTrigger(feet, this.forward, actTwo))
-      this.fire("washing");
     else if (!this.done("backdoor") && backDoorTrigger(feet, this.forward, actTwo))
       this.fire("backdoor");
     else if (
@@ -204,7 +186,6 @@ export class JumpScares {
   fire(id: ScareId): void {
     if (this.run) return;
     if (id === "kitchen") this.startKitchen();
-    else if (id === "washing") this.startWashing();
     else if (id === "backdoor") this.startBackDoor();
     else if (id === "loft") this.startLoft();
   }
@@ -297,42 +278,6 @@ export class JumpScares {
     const to = eye.add(ahead.scale(0.62));
     from.y = to.y = eye.y - 1.47;
     this.lunge("loft", from, to, 0.2, 0.7);
-  }
-
-  /** J2: the sheet sits up off the board, over her, and lunges. */
-  private startWashing(): void {
-    const sheet = this.sheet;
-    if (!sheet) return;
-    for (const m of this.washSheet) m.setEnabled(false);
-    const eye = this.eye();
-    const rest = WASHING_FIGURE.clone();
-    const way = eye.subtract(rest);
-    way.y = 0;
-    way.normalize();
-    const yaw = Math.atan2(way.x, way.z);
-    // It lunges a step's length: the hit is the J2 preview's frame, sat up about 1.2 m away.
-    const end = rest.add(way.scale(0.25));
-    const RISE = 0.22,
-      LUNGE = 0.2;
-    sheet.position.copyFrom(rest);
-    sheet.rotation.set(-1.0, yaw, 0);
-    sheet.setEnabled(true);
-    this.run = {
-      id: "washing",
-      time: 0,
-      cues: this.hit(RISE + LUNGE),
-      step: (t) => {
-        const up = Math.min(1, t / RISE);
-        // Sitting up: from lying back low on the board to upright, quick at the end.
-        sheet.rotation.x = -1.0 * (1 - up * up);
-        const k = Math.max(0, Math.min(1, (t - RISE) / LUNGE));
-        Vector3.LerpToRef(rest, end, k * k, sheet.position);
-        sheet.position.y = rest.y - 0.45 * (1 - up);
-        if (t < RISE + LUNGE + HOLD) return false;
-        sheet.setEnabled(false);
-        return true;
-      },
-    };
   }
 
   /** J4: black water in the jar; Sok's face rises out of it, looks up at her, and sinks. */

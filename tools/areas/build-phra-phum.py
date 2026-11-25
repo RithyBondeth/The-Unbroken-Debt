@@ -102,7 +102,7 @@ def webs_to_mesh(coll, webs):
     by_mat = {}
     for o in meshes:
         by_mat.setdefault(o.data.materials[0].name, []).append(o)
-    return [join(group, f"phra_phum_cobweb_{'sheet' if 'dusty' in name else 'thread'}") for name, group in by_mat.items()]
+    return [join(group, f"phra_phum_cobweb_{'sheet' if ('dusty' in name or 'veil' in name) else 'thread'}") for name, group in by_mat.items()]
 
 
 def main():

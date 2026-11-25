@@ -18,8 +18,9 @@ cartoon".
   ("I don't really like this room redesign"), the user chose the funeral's store room:
   shelves of folded mourning whites and incense, rolled mats, spare coffin planks and a
   lacquered lid, the guests' folding tables, crates of candles and kerosene tins, the
-  rolled canopy, and stools on a table under a white dust cloth (the J2 sheet,
-  `wash_room_sheet`). The "floating white box" there was the game's blessed matchbox
+  rolled canopy, and stools on a table (under a white dust cloth, the J2 sheet, until the
+  user's third review, Nov 25: bare now, rice sacks by them; the J2 ghost taken out).
+  The "floating white box" there was the game's blessed matchbox
   (ArrivalModels.ts, at the old altar's step): now on the hall altar's step, with the spare
   candle, incense bundle and sla thor that stood inside the altar's closed case; Kanha's
   drawing ("beside the upstairs altar") pinned flat on the hall wall beside it.
@@ -362,8 +363,8 @@ def store_room(coll, m, scans, rng):
     in the dark. Shelves of folded white mourning clothes and bundled incense, reed mats
     rolled and stood in the corner, spare coffin planks and a red-lacquered lid against the
     wall, the guests' folding tables stacked one on another, crates of candles and tins of
-    kerosene, the canopy rolled along the floor, the stools stacked under a white cloth (the
-    J2 sheet: it is the cloth that sits up). One candle left burning on a crate."""
+    kerosene, the canopy rolled in a mat along the floor, the stools turned up on a table
+    and the rice in sacks on the floor. One candle left burning on a crate."""
     RK.delete(RK.roots(re.compile(r"^(wash_room|wash_stain|wash_wet_feet|wash_pot|dress_wash_)")))
     RK.flames_out(Vector((-3.0, 17.6, 2.4)), Vector((3.0, 21.9, 3.6)))
     X0, X1, Y0, Y1 = -2.93, 2.93, 17.57, 21.93
@@ -473,12 +474,20 @@ def store_room(coll, m, scans, rng):
     t2, tb2 = put("wooden_table_02", "wash_room_table_1", (tb1[0].x + tb1[1].x) / 2 - 0.02, 19.58, tb1[1].z, turn=math.pi / 2 + 0.04,
                   flip=True, tris=2000)
     collider("wash_room_tables", coll, tb1[0].x, X1, tb1[0].y, tb1[1].y, F, tb2[1].z)
-    # The canopy rolled along the floor against the altar's back, its poles beside it.
-    b.tube(m["linen_dry"], [(-1.6, Y0 + 0.14, F + 0.1), (0.9, Y0 + 0.15, F + 0.1)], 0.1, sides=18, cap_end=True)
+    # The canopy rolled up in a reed mat along the floor against the altar's back, tied with
+    # rope, its poles beside it. (Nov 25: the bare white roll read as a white tube.)
+    b.tube(reed, [(-1.6, Y0 + 0.14, F + 0.1), (0.9, Y0 + 0.15, F + 0.1)], 0.1, sides=18, cap_end=True)
+    rope = bpy.data.materials.get("M_rope") or m.get("cord") or m["bed_wood"]
+    for xr in (-1.15, -0.25, 0.55):
+        yc = Y0 + 0.14 + 0.01 * (xr + 1.6) / 2.5
+        b.tube(rope, [(xr + 0.006 * math.sin(a), yc + 0.104 * math.cos(a), F + 0.1 + 0.104 * math.sin(a))
+                      for a in np.linspace(0, math.tau, 19)], 0.007, sides=6)
     for k in range(4):
         b.tube(m["bamboo"], [(-1.7 + 0.03 * k, Y0 + 0.32 + 0.05 * k, F + 0.03), (1.0 - 0.05 * k, Y0 + 0.34 + 0.04 * k, F + 0.03)], 0.022, sides=8)
     collider("wash_room_canopy", coll, -1.75, 1.05, Y0, Y0 + 0.55, F, F + 0.22)
-    # Stools turned up on a low table under a white dust cloth to the floor (J2: it sits up).
+    # Stools turned up on a low table, put away bare after the last funeral. (Nov 25: the
+    # white dust cloth over them read as a white box under a sheet; the user had it out,
+    # and the J2 ghost that sat up from it.)
     sx, sy = 0.72, 19.45
     pile = []
     t, tb = put("small_wooden_table_01", "wash_room_stool_table", sx, sy, F, turn=0.25, tris=3000)
@@ -489,12 +498,22 @@ def store_room(coll, m, scans, rng):
         pile.append(o)
     stack = RK.box_of(pile)
     b.build(coll)
-    over = stack[1].z - F + 0.25
-    RK.box_drape("wash_room_sheet", coll, m["linen_wet"], (stack[0].x, stack[1].x, stack[0].y, stack[1].y), stack[1].z, F,
-                 ((stack[0].x + stack[1].x) / 2 + 0.05, (stack[0].y + stack[1].y) / 2 - 0.03),
-                 (stack[1].x - stack[0].x + 2 * over, stack[1].y - stack[0].y + 2 * over), rng, nu=60, nv=56, rumple=0.04)
-    RK.solidify(bpy.data.objects["wash_room_sheet"], 0.0025)
     collider("wash_room_stools", coll, stack[0].x - 0.1, stack[1].x + 0.1, stack[0].y - 0.1, stack[1].y + 0.1, F, stack[1].z)
+    # West of them, the funeral's rice dumped on the floor: two sacks stood together and a
+    # third tipped over against them.
+    sacks = []
+    for k, (x, y, turn) in enumerate(((-1.0, 19.74, 0.25), (-0.56, 19.7, -0.35))):
+        o, _ = put("rice_sack", f"wash_room_sack_{k}", x, y, F, turn=turn, tris=5000)
+        sacks.append(o)
+    lying = scans.put(coll, "rice_sack", None, "wash_room_sack_2",
+                      Matrix.Translation((-0.22, 19.62, F)) @ Matrix.Rotation(1.35, 4, "Z") @ Matrix.Rotation(math.pi / 2 - 0.12, 4, "X"),
+                      tris=5000)
+    RK.vl()
+    lb = RK.box_of([lying])
+    lying.location.z += F - lb[0].z
+    sacks.append(lying)
+    sb_ = RK.box_of(sacks)
+    collider("wash_room_sacks", coll, sb_[0].x, sb_[1].x, sb_[0].y, sb_[1].y, F, sb_[1].z)
     print("[review] store room built behind the altar", flush=True)
     return flames, []
 

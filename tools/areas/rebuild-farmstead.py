@@ -1758,6 +1758,11 @@ def main():
     import village_review as VR
     HV.review(hc, HR.materials(m2), ground)
     VR.review(fc, ground)
+    # The user's third review (Nov 25, four screenshots): the certificate behind the hall's
+    # post down, a real hanging lamp where Kanha's knotted net read as a paper lamp, the
+    # hall lamp on a real chain (house_polish.py).
+    import house_polish as HPo
+    HPo.polish(hc, HR.materials(m2))
     # Nothing left hanging in the air: the old house's stored trap that hung past the
     # veranda's edge goes under its floor; what stood on things that are gone is set down.
     hang_under("house_decay_stored_trap_2", 0.8)
@@ -1768,6 +1773,9 @@ def main():
     # Last, when everything stands where it will: each open door leaf folded back against
     # its wall where nothing else is.
     SH.fold_clear()
+    # Then the webs, into corners nothing else stands in (cobwebs.refit, Nov 25).
+    import cobwebs as CW
+    CW.refit()
     for coll in (hc, fc, bpy.data.collections["funeral_under"]):
         for o in coll.objects:
             if o.name.startswith("col_"):

@@ -262,7 +262,9 @@ def bedroom(coll, m, rng):
 
 
 def kanha(coll, m, rng, bed_top):
-    """Her iron bed made up as it was, a thin mattress, her pillow, the net knotted."""
+    """Her iron bed made up as it was, a thin mattress, her pillow. (Her mosquito net knotted
+    up over it read as a white paper lamp; the user's review of Nov 25 hung a real kerosene
+    lamp there instead: house_polish.py.)"""
     x, y, z = bed_top
     b = Batch("dress_kanha")
     b.grid(m["pillow_floral"], lambda u, v: (x - 0.9 + 1.8 * u, y - 0.4 + 0.8 * v,
@@ -270,7 +272,6 @@ def kanha(coll, m, rng, bed_top):
            24, 12, uv=lambda u, v: (u * 6, v * 2.6))
     HP.pillow(b, m["pillow_embroidered"], place(x - 0.7, y, z + 0.06, rz=math.pi / 2 + 0.1), L=0.5, W=0.3, H=0.12, rng=rng)
     b.build(coll)
-    HP.mosquito_net(coll, m, x - 0.95, x + 0.95, y - 0.45, y + 0.45, z, FLOOR + 2.15, "dress_kanha_net", rng, knotted=True)
     print_on(coll, m, "dress_kanha_vj", "VJ_KANHA", (4.35, SH.ROW1 - T / 2, FLOOR + 1.45), (0, -1, 0), 0.6, framed=True, seed=12)
     HP.peg_rail(coll, m, "dress_kanha_pegs", 5.4, 6.3, SH.ROW1 - T / 2, FLOOR + 1.3, -1, rng,
                 hang=((0, "pillow_floral", 0.55, "dress"), (1, "pillow_gingham", 0.5, "dress")))

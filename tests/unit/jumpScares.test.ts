@@ -6,13 +6,11 @@ import {
   KITCHEN_DOOR,
   LOFT_FLOOR,
   SCARES,
-  WASHING_FIGURE,
   backDoorTrigger,
   facing,
   kitchenTrigger,
   loftTrigger,
   scareFlag,
-  washingTrigger,
 } from "@/episodes/ep1/data/scares";
 import { JARS } from "@/episodes/ep1/data/hunt";
 import { SCARE_JAR } from "@/episodes/ep1/data/scares";
@@ -21,9 +19,10 @@ import { SCARE_JAR } from "@/episodes/ep1/data/scares";
 const look = (from: Vector3, to: Vector3) => ({ x: to.x - from.x, z: to.z - from.z });
 
 describe("jump scares", () => {
-  it("are five, each remembered by its own flag", () => {
-    expect(SCARES).toHaveLength(5);
-    expect(new Set(SCARES.map(scareFlag)).size).toBe(5);
+  it("are four (J2 taken out, Nov 25), each remembered by its own flag", () => {
+    expect(SCARES).toHaveLength(4);
+    expect(SCARES).not.toContain("washing");
+    expect(new Set(SCARES.map(scareFlag)).size).toBe(4);
   });
 
   it("measure how squarely Sora faces a place", () => {
@@ -42,18 +41,6 @@ describe("jump scares", () => {
     // On the walkway outside, or under the kitchen house, nothing.
     expect(kitchenTrigger(new Vector3(15, HOUSE_FLOOR, -19.15), { x: 1, z: 0 }, true)).toBe(false);
     expect(kitchenTrigger(new Vector3(24.25, 0, -16.9), toDoor, true)).toBe(false);
-  });
-
-  it("J2: Act II, near the washing board and looking at it", () => {
-    const feet = new Vector3(-1.6, HOUSE_FLOOR, -18.15);
-    const at = look(feet, WASHING_FIGURE);
-    expect(washingTrigger(feet, at, true)).toBe(true);
-    expect(washingTrigger(feet, at, false)).toBe(false);
-    expect(washingTrigger(feet, { x: -at.x, z: -at.z }, true)).toBe(false);
-    // In the hall, on the far side of the altar wall.
-    expect(washingTrigger(new Vector3(-1.6, HOUSE_FLOOR, -16.0), { x: 0, z: -1 }, true)).toBe(
-      false,
-    );
   });
 
   it("J3: Act II, at the end of the long corridor facing the nailed door", () => {
