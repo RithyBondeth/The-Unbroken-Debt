@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GROW_FOREST,
   PLAY,
+  VILLAGE_ROAD,
   ROAD_Z,
   TERRAIN,
   YARD,
@@ -116,11 +117,15 @@ describe("forest border layout", () => {
 describe("the farmstead (Nov 22, 2026)", () => {
   it("is walked inside the outer fence and the road at its gate, nothing grown round it", () => {
     expect(GROW_FOREST).toBe(false);
-    // farmstead.py FARM: Blender x -46..44, y -40..58 (Babylon x = -x, z = -y), the road
-    // running 6.7 m out of the gate.
-    expect(PLAY).toEqual({ minX: -44.5, maxX: 46.5, minZ: -58.5, maxZ: 46.7 });
+    // farmstead.py FARM: Blender x -46..44, y -40..58 (Babylon x = -x, z = -y), and the
+    // village road outside the gate with its shops (village_road.py, Nov 25, 2026).
+    expect(PLAY).toEqual({ minX: -44.5, maxX: 46.5, minZ: -58.5, maxZ: 70 });
+    expect(VILLAGE_ROAD.z).toBeCloseTo(51.8);
     const anchors: [string, number, number][] = [
-      ["the spawn on the road", 0, 42.6],
+      ["the spawn at the gate", 0, 42.6],
+      ["the village road at either fallen tree", -VILLAGE_ROAD.walkX + 0.5, VILLAGE_ROAD.z],
+      ["", VILLAGE_ROAD.walkX - 0.5, VILLAGE_ROAD.z],
+      ["the noodle shop's veranda", 0, VILLAGE_ROAD.z + 6.2],
       ["the Neak Ta's shrine", 3.9, 34.9],
       ["the Preah Phum", SAVE_SHRINE_POSITION.x, SAVE_SHRINE_POSITION.z],
       ["the front of the house", 0, -9],

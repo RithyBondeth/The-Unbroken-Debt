@@ -301,6 +301,14 @@ export const ROOFS: readonly (Rect & { top: number })[] = [
   { minX: -31.5, maxX: -26.5, minZ: -7.5, maxZ: -2.5, top: 3.0 },
   { minX: -34.1, maxX: -30.9, minZ: -31.1, maxZ: -27.9, top: 3.6 },
   { minX: -11.55, maxX: -8.45, minZ: -6.8, maxZ: -4.2, top: 2.2 },
+  { minX: -3.78, maxX: 2.9, minZ: 56.38, maxZ: 62.78, top: 4.4 },
+  { minX: -15.73, maxX: -9.58, minZ: 55.99, maxZ: 62.16, top: 4.4 },
+  { minX: 9.2, maxX: 16.13, minZ: 56.81, maxZ: 63.27, top: 4.4 },
+  { minX: -28.13, maxX: -21.5, minZ: 56.44, maxZ: 62.32, top: 4.4 },
+  { minX: 22.41, maxX: 28.56, minZ: 56.89, maxZ: 63.06, top: 4.4 },
+  { minX: 8.46, maxX: 14.88, minZ: 41.38, maxZ: 47.5, top: 4.4 },
+  { minX: -15.34, maxX: -7.91, minZ: 40.34, maxZ: 46.66, top: 4.4 },
+  { minX: 21.62, maxX: 27.96, minZ: 41.26, maxZ: 47.52, top: 4.4 },
 ];
 
 /** The groves: centre and radius. */

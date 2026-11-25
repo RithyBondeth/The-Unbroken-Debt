@@ -1,6 +1,6 @@
 """Writes src/episodes/ep1/data/farmLayout.ts from the farmstead's plan (farmstead.py) in
 Babylon space (x = -Blender x, z = -Blender y): its fence, paths, cart track, fields,
-buildings, inner fences and groves, for what the game grows at runtime round them (the
+buildings, inner fences and groves, the roofs (the village road's shops among them), for what the game grows at runtime round them (the
 tall grass) and keeps off them.
 
     blender -b --factory-startup -P tools/areas/export-farm-layout.py
@@ -13,6 +13,7 @@ sys.path.insert(0, HERE)
 
 import farmstead as FS  # noqa: E402
 import village_fields as VF  # noqa: E402
+import village_road as VR  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(ROOT, "src", "episodes", "ep1", "data", "farmLayout.ts")
@@ -58,6 +59,9 @@ roofs = [((-8.0 - 0.9, 8.0 + 0.9, 9.2, 34.0 + 0.9), 7.5), (eaves(FS.KITCHEN), 6.
          (eaves(FS.SERVANTS), 4.6), (eaves(FS.TOOL_SHED, 0.6), 3.2), ((26.5, 31.5, 2.5, 7.5), 3.0),
          ((FS.GRANARY[0] - 1.6, FS.GRANARY[0] + 1.6, FS.GRANARY[1] - 1.6, FS.GRANARY[1] + 1.6), 3.6),
          ((VF.POUNDER[0] - 1.55, VF.POUNDER[0] + 1.55, VF.POUNDER[1] - 1.3, VF.POUNDER[1] + 1.3), 2.2)]
+# The shops along the village road outside the gate (village_road.py, Nov 25, 2026): their
+# verandas keep Sora dry.
+roofs += VR.roof_rects()
 fences = [(a, c) for a, c in FS._fence_lines()]
 
 ts = f"""/**

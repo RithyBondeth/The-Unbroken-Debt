@@ -1776,6 +1776,11 @@ def main():
     # Then the webs, into corners nothing else stands in (cobwebs.refit, Nov 25).
     import cobwebs as CW
     CW.refit()
+    # The village road outside the gate (the user, Nov 25, 2026: "road along with the shop
+    # and shop's poster for each shop just like driving scene"): its own collection and
+    # generator, built last so nothing in the farm moves for it (village_road.py).
+    import village_road as VRd
+    VRd.build(collection("village_road"), ground)
     for coll in (hc, fc, bpy.data.collections["funeral_under"]):
         for o in coll.objects:
             if o.name.startswith("col_"):

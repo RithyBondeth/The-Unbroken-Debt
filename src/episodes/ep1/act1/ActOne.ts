@@ -76,6 +76,7 @@ import { applySkyShelter } from "@/render/skyShelter";
 import { HOUSE_SHELTER } from "../data/shelter";
 import { BarnGate, BARN_GATE_MESH } from "../act3/BarnGate";
 import { Trapdoor, TRAPDOOR_MESH } from "./Trapdoor";
+import { cullVillageRoad, dressVillageRoad } from "./villageRoadLook";
 import {
   SAVE_SHRINE_POSITION,
   SAVE_SHRINE_LOCATION,
@@ -428,6 +429,13 @@ export class ActOne {
     for (const material of game.scene.materials)
       if (/^M_paddy_rice_/.test(material.name) && "alphaCutOff" in material)
         (material as { alphaCutOff: number }).alphaCutOff = 0.34;
+    // The village road's shops and posters outside the gate (Nov 25, 2026), dressed as the
+    // driving scene dresses its roadside.
+    const roadDressed = dressVillageRoad(game.scene.materials);
+    const roadLimited = cullVillageRoad(game.scene.meshes);
+    console.info(
+      `[ActOne] ${roadDressed} village road materials dressed, ${roadLimited} road meshes drawn only near`,
+    );
   }
 
   /**

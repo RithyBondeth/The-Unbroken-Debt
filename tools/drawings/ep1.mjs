@@ -11,6 +11,7 @@ import { funeralTributeTextures } from "./funeral.mjs";
 import { studioPrintTextures } from "./studio.mjs";
 import { crackTextures } from "./cracks.mjs";
 import { journalTextures } from "./journal.mjs";
+import { shopGoodsTextures } from "./shopGoods.mjs";
 
 /** Every Khmer string on the studio's paper, with its meaning. Review: pending. */
 export const KHMER = {
@@ -63,6 +64,75 @@ export const KHMER = {
   primaryCertificate: [
     "សញ្ញាបត្របឋមសិក្សា",
     "primary-school certificate, on Sok's 1907 certificate (village.mjs, house_papers); check the term of the time",
+  ],
+  // The village road's shop goods (shopGoods.mjs, Nov 25, 2026): labels, packets and notices.
+  goodsMadeIn: [
+    "ផលិតនៅកម្ពុជា",
+    "made in Cambodia (small print on every label of the village road's shop goods, shopGoods.mjs)",
+  ],
+  goodsFishSauce: ["ទឹកត្រី", "fish sauce (bottle label, shopGoods.mjs)"],
+  goodsSoySauce: ["ទឹកស៊ីអ៊ីវ", "soy sauce (bottle label)"],
+  goodsChili: ["ទឹកម្ទេស", "chili sauce (bottle label)"],
+  goodsCookingOil: ["ប្រេងឆា", "cooking oil (bottle label)"],
+  goodsOrangeDrink: ["ទឹកក្រូច", "orange drink (bottle label)"],
+  goodsBeer: ["ស្រាបៀរ", "beer (bottle label)"],
+  goodsRiceSpirit: ["ស្រាស", "rice spirit (bottle label)"],
+  goodsCondensedMilk: ["ទឹកដោះគោខាប់", "sweetened condensed milk (tin label)"],
+  goodsCoffee: ["កាហ្វេ", "coffee (tin label; the price list)"],
+  goodsHairOil: ["ប្រេងលាបសក់", "hair oil (barber's bottle)"],
+  goodsBalm: ["ប្រេងខ្យល់", "medicated oil (small bottle)"],
+  goodsTalc: ["ម្សៅក្រអូប", "scented talcum powder (tin)"],
+  goodsShampoo: ["សាប៊ូកក់សក់", "shampoo (bottle)"],
+  goodsVinegar: ["ទឹកខ្មេះ", "vinegar (bottle)"],
+  goodsSoda: ["ទឹកសូដា", "soda water (bottle label; the price list)"],
+  goodsCannedFish: ["ត្រីកំប៉ុង", "canned fish (tin)"],
+  goodsEngineOil: ["ប្រេងម៉ាស៊ីន", "engine oil (can, moto repair shop)"],
+  goodsKerosene: ["ប្រេងកាត", "kerosene (bottle)"],
+  goodsCoughSyrup: ["ថ្នាំក្អក", "cough syrup (bottle)"],
+  goodsPerfume: ["ទឹកអប់", "perfume (salon bottle)"],
+  goodsThread: ["អំបោះ", "sewing thread (spool label)"],
+  goodsSweets: ["ស្ករគ្រាប់", "sweets (jar label)"],
+  goodsPalmSugar: ["ស្ករត្នោត", "palm sugar (jar label)"],
+  goodsPickles: ["ជ្រក់", "pickles (jar label)"],
+  goodsPrahok: ["ប្រហុក", "prahok, fermented fish paste (jar label)"],
+  goodsTea: ["តែ", "tea (tin and box; the price list)"],
+  goodsBiscuits: ["នំប៊ីស្គី", "biscuits (tin and box)"],
+  goodsBattery: ["ថ្មពិល", "battery (cell wrapper)"],
+  goodsGrease: ["ខាញ់", "grease (tin, moto repair shop)"],
+  goodsCoconutWater: ["ទឹកដូង", "coconut water (can)"],
+  goodsLotion: ["ឡេលាបខ្លួន", "body lotion (salon bottle)"],
+  goodsAlcohol: ["អាល់កុល", "surgical spirit (dentist's bottle)"],
+  goodsCigarettes: ["បារី", "cigarettes (packet; the price list)"],
+  goodsMatches: ["ឈើគូស", "matches (matchbox)"],
+  goodsInstantNoodles: ["មីកញ្ចប់", "instant noodles (packet; the price list)"],
+  goodsBarSoap: ["សាប៊ូដុំ", "bar soap (wrapper)"],
+  goodsIncense: ["ធូប", "incense (bundle wrapper)"],
+  goodsCandles: ["ទៀន", "candles (box; the price list)"],
+  goodsWashingPowder: ["ម្សៅសាប៊ូ", "washing powder (box)"],
+  goodsToothpaste: ["ថ្នាំដុសធ្មេញ", "toothpaste (box)"],
+  goodsMedicine: ["ថ្នាំ", "medicine (box)"],
+  goodsRazor: ["កាំបិតកោរ", "razor blades (packet, barber)"],
+  goodsSongs: ["ចម្រៀង", "songs (cassette tape covers)"],
+  goodsSnacks: ["នំកញ្ចប់", "packet snacks"],
+  goodsDriedSquid: ["មឹកងៀត", "dried squid (snack packet)"],
+  goodsShrimpCrackers: ["នំប៉័ងគា", "shrimp crackers (snack packet)"],
+  goodsHairDye: ["ថ្នាំជ្រលក់សក់", "hair dye (box, salon)"],
+  goodsSparkPlug: ["ប៊ូហ្ស៊ី", "spark plug (box, moto repair shop)"],
+  goodsNeedles: ["ម្ជុល", "needles (card, tailor)"],
+  goodsCalendar: ["ប្រតិទិន", "calendar (shop wall calendar, no year)"],
+  goodsNotebook: ["សៀវភៅ", "exercise book"],
+  goodsLottery: ["ឆ្នោត", "lottery ticket"],
+  goodsFacePowder: ["ម្សៅលាបមុខ", "face powder (compact, salon)"],
+  goodsWatch: ["នាឡិកា", "watch (box, the watch repair counter)"],
+  goodsTeeth: ["ធ្មេញ", "teeth (heading of the dentist's chart)"],
+  goodsPriceList: ["តារាងតម្លៃ", "price list (hand-lettered on cardboard)"],
+  goodsShrinePaper: [
+    "សេចក្ដីសុខ",
+    "peace and well-being (red paper blessing by a shop's spirit shrine); check the wording",
+  ],
+  goodsNoCredit: [
+    "សុំកុំជំពាក់",
+    "please, no credit (hand-lettered cardboard notice by the counter)",
   ],
   // Sora's diary on her writing desk, the studio's save point (journal.mjs). One string per
   // paragraph, in her voice; the last breaks off mid-sentence when the telephone rings.
@@ -2706,4 +2776,5 @@ export const drawings = [
   }),
   ...villageTextures,
   ...funeralTributeTextures(KHMER),
+  ...shopGoodsTextures(KHMER),
 ];
