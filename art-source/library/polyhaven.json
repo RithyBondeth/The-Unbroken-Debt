@@ -471,6 +471,26 @@
   "brass_vase_04": {
    "resolution": "1k",
    "format": "gltf"
+  },
+  "food_pears_asian_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "food_pomegranate_01": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "lemon": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "brass_vase_02": {
+   "resolution": "1k",
+   "format": "gltf"
+  },
+  "metal_jug": {
+   "resolution": "1k",
+   "format": "gltf"
   }
  },
  "materials": {

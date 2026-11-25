@@ -33,7 +33,10 @@ export class ArrivalModels {
     const telephone = (this.telephone = new WallTelephone(scene));
     this.phone = telephone.root;
     this.receiver = telephone.receiver;
-    this.matches = c.root("arrival_blessed_matches", [-0.65, 3.614, -21.5]);
+    // On the hall altar's step before Sok's photograph (Blender (0.05, 16.97), its top at
+    // 3.6 m): the old house's altar stood where the washing room is now, and the box hung
+    // in the air there (the user's "floating white box", Nov 24, 2026).
+    this.matches = c.root("arrival_blessed_matches", [-0.05, 3.6125, -16.97]);
     c.box(this.matches, "arrival_matchbox", [0.095, 0.025, 0.065], [0, 0, 0], paper);
     const striker = c.mat("arrival_matchbox_striker", "#563529", 0.97);
     c.box(this.matches, "arrival_matchbox_drawer", [0.094, 0.021, 0.062], [0.0017, 0, 0], wood);

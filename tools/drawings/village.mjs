@@ -100,7 +100,7 @@ const DATA = ${JSON.stringify(data)};
  * the group, set before a painted sky-blue studio backdrop, hand-tinted as Phnom Penh
  * studios did, and his face gone soft as if the print were wiped and wept on.
  */
-function portrait() {
+function portrait(opts = {}) {
   const src = `data:image/jpeg;base64,${readFileSync(
     join(ARCHIVE, "Un_fonctionnaire_cambodgien_et_sa_famille_A36130.jpg"),
   ).toString("base64")}`;
@@ -147,6 +147,7 @@ function portrait() {
     // The region of the original shown, and the face to soften (centre, radii).
     view: [1440, 690, 340, 420],
     face: [1622, 840, 54, 60],
+    plain: !!opts.plain,
   });
 }
 
@@ -160,21 +161,30 @@ function paintSokPortrait(ctx, W, H, data) {
     const ox = W / 2 - (data.face[0] - vx) * s,
       oy = 46;
     const at = ([x, y]) => [ox + (x - vx) * s, oy + (y - vy) * s];
+    if (data.plain) {
+      // -- The funeral print (the user, Nov 24, 2026: "simple with blue background"): a
+      // plain studio blue, a little lighter behind the head, no painted clouds.
+      const flat = ctx.createRadialGradient(W * 0.5, H * 0.36, 30, W * 0.5, H * 0.45, W * 0.85);
+      flat.addColorStop(0, "#4f86c9");
+      flat.addColorStop(1, "#2a5799");
+      ctx.fillStyle = flat;
+      ctx.fillRect(0, 0, W, H);
+    }
     // -- The studio's painted sky: pale behind the head, deeper blue toward the edges,
     // brushed clouds, the canvas weave showing through.
     const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, "#5f8fbf");
     sky.addColorStop(0.42, "#93bddf");
     sky.addColorStop(1, "#6d9ac4");
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
+    if (!data.plain) ctx.fillStyle = sky;
+    if (!data.plain) ctx.fillRect(0, 0, W, H);
     const halo = ctx.createRadialGradient(W * 0.5, H * 0.34, 20, W * 0.5, H * 0.38, W * 0.62);
     halo.addColorStop(0, "rgba(214,232,244,0.75)");
     halo.addColorStop(1, "rgba(214,232,244,0)");
-    ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, W, H);
+    if (!data.plain) ctx.fillStyle = halo;
+    if (!data.plain) ctx.fillRect(0, 0, W, H);
     ctx.filter = "blur(18px)";
-    for (let k = 0; k < 26; k++) {
+    for (let k = 0; k < (data.plain ? 0 : 26); k++) {
       ctx.fillStyle = `rgba(236,244,250,${r(0.08, 0.22)})`;
       ctx.beginPath();
       ctx.ellipse(
@@ -189,7 +199,7 @@ function paintSokPortrait(ctx, W, H, data) {
       ctx.fill();
     }
     ctx.filter = "none";
-    mottle(ctx, W, H, 34, 7, 0.16);
+    if (!data.plain) mottle(ctx, W, H, 34, 7, 0.16);
     // -- The man, cut out along his outline, the edge feathered like a retoucher's mask.
     const man = document.createElement("canvas");
     man.width = W;
@@ -267,11 +277,14 @@ function paintSokPortrait(ctx, W, H, data) {
         const i = (y * W + x) * 4;
         const dx = (x - W / 2) / (W * 0.62),
           dy = (y - H * 0.45) / (H * 0.62);
-        const vig = 1 - 0.32 * smooth(0.55, 1.25, Math.sqrt(dx * dx + dy * dy));
-        const n = 1 + (grain[y * W + x] - 0.5) * 0.16;
-        for (let c = 0; c < 3; c++) q[i + c] = clamp(lerp(q[i + c] * vig * n, 205, 0.08), 0, 255);
+        const vig =
+          1 - (data.plain ? 0.12 : 0.32) * smooth(0.55, 1.25, Math.sqrt(dx * dx + dy * dy));
+        const n = 1 + (grain[y * W + x] - 0.5) * (data.plain ? 0.06 : 0.16);
+        for (let c = 0; c < 3; c++)
+          q[i + c] = clamp(lerp(q[i + c] * vig * n, 205, data.plain ? 0.02 : 0.08), 0, 255);
       }
     ctx.putImageData(g, 0, 0);
+    if (data.plain) return;
     // Foxing and fine scratches.
     for (let j = 0; j < 22; j++) {
       const x = r(0, W),
@@ -2549,6 +2562,12 @@ function paintStains(ctx, W, H) {
 
 export const villageTextures = [
   { name: "photo_sok", file: "T_ep1_photo_sok_BC", size: [768, 1024], draw: portrait },
+  {
+    name: "photo_sok_blue",
+    file: "T_ep1_photo_sok_blue_BC",
+    size: [768, 1024],
+    draw: () => portrait({ plain: true }),
+  },
   {
     name: "flame",
     file: "T_ep1_flame_BC",
