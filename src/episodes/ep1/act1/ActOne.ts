@@ -178,9 +178,8 @@ export class ActOne {
         BARN_GATE_MESH,
         // The hall trapdoor's lid (O6: Trapdoor lifts it).
         TRAPDOOR_MESH,
-        // What the jump scares change (JumpScares): the sheet on the washing board (it
-        // sits up, J2) and the nailed back door (smashed through, J3).
-        /^wash_room_sheet(\.|_|$)/,
+        // What the jump scares change (JumpScares): the nailed back door (smashed
+        // through, J3).
         /^door_back_(leaf|nail)/,
         /^sok_desk(?:$|_|\.)/,
         "portrait_sok",

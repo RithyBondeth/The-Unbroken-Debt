@@ -420,7 +420,10 @@ def wall_print(name, coll, atlas, item, mat, centre, right, up, width, curl=0.01
     a viewer sees it. The paper hangs from its top edge, flat to the wall there,
     and its lower edge has curled `curl` metres away from the boards with the damp.
     `pins`: a material for brass pins at the two top corners."""
-    S = atlas["size"][0]
+    # Atlases need not be square: the house atlas is 2048 x 2560. (Reading V off the width
+    # slid every house print 25 % down its sheet; the Phra Malai page over the hall's front
+    # door showed the dark ground under it and the tops of the first row.)
+    SX, SY = atlas["size"][0], atlas["size"][-1]
     x, y, w, h = atlas["items"][item]["rect"]
     height = width * h / w
     r = np.array(right, float); r /= np.linalg.norm(r)
@@ -430,8 +433,8 @@ def wall_print(name, coll, atlas, item, mat, centre, right, up, width, curl=0.01
     rng = np.random.default_rng(seed)
     nu, nv = 8, 10
     verts, faces, uvs = [], [], []
-    u0, u1 = x / S, (x + w) / S
-    v0, v1 = 1 - (y + h) / S, 1 - y / S
+    u0, u1 = x / SX, (x + w) / SX
+    v0, v1 = 1 - (y + h) / SY, 1 - y / SY
     side = rng.choice([-1, 1])
     for j in range(nv + 1):
         t = j / nv  # 0 at the bottom, 1 at the top

@@ -1,10 +1,7 @@
 """Episode 1's jump scares' props (the user approved J1-J5 from Cycles previews, Nov 24,
-2026; the previews are the scratchpad's jumpscare_preview.py):
+2026; the previews are the scratchpad's jumpscare_preview.py; J2, the sheeted figure that sat
+up in the store room behind the altar, the user had out on Nov 25):
 
-- J2, the washing room: the sheet on the washing board has sat up over the Preay reaching.
-  Her posed body (preay.blend's `reach` clip at 1 s, leant forward 0.18 rad) is baked to a
-  still mesh and a cotton sheet is dropped on it by a cloth simulation, as in the preview.
-  Feet at the origin, facing -Y (the rig's forward), like the Preay herself.
 - J3, the nailed back door: the four planks and the diagonal of stilt_house.locks(), and
   the door's leaf (from the rebuilt village), at their places in the house, smashed through
   where her face comes (a boolean hole), with splinters bent toward the corridor. The game
@@ -28,7 +25,6 @@ from kit import box, library_material, plain  # noqa: E402
 from shrine_craft import Batch  # noqa: E402
 import stilt_house as SH  # noqa: E402
 
-PREAY = ROOT / "art-source/characters/preay/preay.blend"
 OUT = ROOT / "art-export/ep1/scares.glb"
 BLEND = ROOT / "art-source/characters/scares/scares.blend"
 # The rebuilt village (tools/areas/rebuild-farmstead.py): the back door's leaf comes from it.
@@ -52,80 +48,6 @@ def evaluated_copy(obj, name, into):
     out.matrix_world = obj.matrix_world.copy()
     return out
 
-
-# ------------------------------------------------------------------ J2: the sheet sitting up
-with bpy.data.libraries.load(str(PREAY), link=False) as (src, dst):
-    dst.objects = ["preay_body", "preay_rig"]
-    dst.actions = list(src.actions)
-body = next(o for o in dst.objects if o.name.startswith("preay_body"))
-rig = next(o for o in dst.objects if o.name.startswith("preay_rig"))
-for o in (body, rig):
-    work.objects.link(o)
-act = next(a for a in bpy.data.actions if a.name == "reach")
-rig.animation_data_create()
-rig.animation_data.action = act
-if hasattr(rig.animation_data, "action_slot") and len(getattr(act, "slots", [])):
-    rig.animation_data.action_slot = act.slots[0]
-sc.render.fps = 30
-# Leant forward as she sits up (the preview's place_facing tilt), feet at the origin.
-rig.matrix_world = Matrix.Rotation(0.18, 4, "X")
-sc.frame_set(int(act.frame_range[0] + 1.0 * 30))
-bpy.context.view_layer.update()
-posed = evaluated_copy(body, "scare_sheet_body", coll)
-posed.matrix_world = Matrix.Identity(4)
-deps = bpy.context.evaluated_depsgraph_get()
-ev = body.evaluated_get(deps)
-# new_from_object keeps the object-space mesh; bake the rig's tilt into the vertices.
-posed.data.transform(ev.matrix_world)
-bpy.data.objects.remove(body, do_unlink=True)
-bpy.data.objects.remove(rig, do_unlink=True)
-sc.frame_set(1)
-
-top = max(v.co.z for v in posed.data.vertices)
-me = bpy.data.meshes.new("scare_sheet_cloth")
-bm = bmesh.new()
-bmesh.ops.create_grid(bm, x_segments=64, y_segments=64, size=1.05)
-bm.to_mesh(me)
-bm.free()
-sheet = bpy.data.objects.new("scare_sheet_cloth_sim", me)
-work.objects.link(sheet)
-sheet.location = (0, 0, top + 0.03)
-posed.modifiers.new("collision", "COLLISION")
-posed.collision.thickness_outer = 0.025
-posed.collision.cloth_friction = 3
-cl = sheet.modifiers.new("cloth", "CLOTH")
-cl.settings.quality = 10
-cl.settings.mass = 0.25
-cl.settings.tension_stiffness = 12
-cl.settings.compression_stiffness = 12
-cl.settings.bending_stiffness = 0.2
-cl.collision_settings.use_self_collision = False
-cl.collision_settings.distance_min = 0.015
-cl.collision_settings.collision_quality = 3
-cl.point_cache.frame_start = 1
-cl.point_cache.frame_end = 45
-for f in range(1, 46):
-    sc.frame_set(f)
-sub = sheet.modifiers.new("subd", "SUBSURF")
-sub.levels = sub.render_levels = 1
-cloth = evaluated_copy(sheet, "scare_sheet_cloth", coll)
-bpy.data.objects.remove(sheet, do_unlink=True)
-posed.modifiers.clear()
-cotton = library_material("rough_linen", "M_scare_sheet_cotton", tint=(0.86, 0.84, 0.79), tile=0.5)
-cotton.use_backface_culling = False
-cloth.data.materials.clear()
-cloth.data.materials.append(cotton)
-for p in cloth.data.polygons:
-    p.use_smooth = True
-uv = cloth.data.uv_layers.active or cloth.data.uv_layers.new(name="UVMap")
-for loop in cloth.data.loops:
-    co = cloth.data.vertices[loop.vertex_index].co
-    uv.data[loop.index].uv = (co.x / 0.5, co.y / 0.5)
-fig = bpy.data.objects.new("scare_sheet", None)
-coll.objects.link(fig)
-for o in (posed, cloth):
-    o.parent = fig
-print("[scares] sheet", len(cloth.data.vertices), "verts over", len(posed.data.polygons), "faces", flush=True)
 
 # ------------------------------------------------------------------ J3: the planks smashed through
 FLOOR, T = SH.FLOOR, SH.T
