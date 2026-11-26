@@ -9,7 +9,7 @@ import { cabinStormBed } from "../audio/taxiDreadSounds";
 import { DreadScore } from "@/audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
-import { TAXI_CONVERSATION, taxiConversationAt, taxiDriverVoiceUrls } from "./taxiConversation";
+import { TAXI_CONVERSATION, taxiConversationAt, taxiVoiceUrls } from "./taxiConversation";
 import { TaxiSoundscape, taxiAnxietyLevel, taxiThrottle } from "./TaxiSoundscape";
 import { taxiLightning, taxiVacuumDuck } from "./taxiApparitions";
 
@@ -26,8 +26,8 @@ export class TaxiRide {
   private visuals!: TaxiVisuals;
   private windAudio!: WindAudio;
   private dread: TaxiSoundscape | null = null;
-  /** The driver's Khmer lines, by their `voice` number. */
-  private readonly driverVoice = new Map<number, StaticSound>();
+  /** Both speakers' Khmer lines, in conversation order. */
+  private readonly dialogueVoice = new Map<number, StaticSound>();
   private speaking: StaticSound | null = null;
   private score = new DreadScore(null);
   private skip: HTMLButtonElement | null = null;
@@ -112,7 +112,7 @@ export class TaxiRide {
       if (line) this.game.subtitles.show(line.speaker, line.text);
       else this.game.subtitles.hide();
       // Spoken from its first word; a ride resumed mid-line shows only the subtitle.
-      const voice = line?.voice ? this.driverVoice.get(line.voice) : undefined;
+      const voice = line ? this.dialogueVoice.get(line.index) : undefined;
       if (line && voice && t - line.at < 0.5) {
         this.speaking?.stop();
         this.speaking = voice;
@@ -208,17 +208,17 @@ export class TaxiRide {
       sound.loop = true;
       this.loops.push({ sound, base: volume });
     }
-    // The driver's voice, recorded in Khmer (S1-042), heard from the front seat.
+    // Load each take before starting the ride clock.
     await Promise.all(
-      TAXI_CONVERSATION.filter((line) => line.voice).map(async (line) => {
-        const urls = taxiDriverVoiceUrls(line.voice!).map(
+      TAXI_CONVERSATION.map(async (line, index) => {
+        const urls = taxiVoiceUrls(line.speaker, line.voice).map(
           (url) => `${import.meta.env.BASE_URL}${url}`,
         );
         const buffer = await audio.load(urls);
         if (buffer)
-          this.driverVoice.set(
-            line.voice!,
-            await audio.sound(`taxi_driver_${line.voice}`, buffer, "voice", 0.95),
+          this.dialogueVoice.set(
+            index,
+            await audio.sound(`taxi_${line.speaker}_${line.voice}`, buffer, "voice", 0.95),
           );
       }),
     );

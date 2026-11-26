@@ -36,15 +36,15 @@ export const LINES = {
     id: "E1-P06-2",
     speaker: "Sora",
     text: "Yay? What's wrong? It's past eight—",
-    seconds: 2.6,
+    seconds: 3.31,
   },
   call3: {
     id: "E1-P06-3",
     speaker: "Yay Mey",
     text: "You must come home. Right now. Uncle Sok… he broke it… it's inside the house—",
-    seconds: 4.6,
+    seconds: 4.81,
   },
-  call4: { id: "E1-P06-4", speaker: "Sora", text: "Yay? …Yay!", seconds: 2.4 },
+  call4: { id: "E1-P06-4", speaker: "Sora", text: "Yay? Can you hear me? Yay!", seconds: 2.4 },
 } satisfies Record<string, Line>;
 
 /** Seconds between scripted beats. */
