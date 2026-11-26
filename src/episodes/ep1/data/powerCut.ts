@@ -1,8 +1,8 @@
 /**
- * The moment the dancer ghost goes (Episode 1 studio, November 2026): every light
- * in Sora's floor dies at once, the oil lamps with the electric ones, and comes back
- * stuttering. Shared by the lights (StudioLights.powerCut) and the sound that goes
- * with it (dancerSounds.blackout), so each snap is heard as the light catches.
+ * The moment after the altar falls (Episode 1 studio, November 2026): every light in
+ * Sora's floor dies at once, the oil lamps with the electric ones, and comes back
+ * stuttering. Shared by the lights (StudioLights.powerCut) and the sounds that go with
+ * it (studioSounds.powerDown and powerUp), so each snap is heard as the light catches.
  */
 export const POWER_CUT = {
   /** Seconds from the cut until the lights hold steady again. */
@@ -18,12 +18,9 @@ export const POWER_CUT = {
   ] as const satisfies readonly (readonly [number, number])[],
 };
 
-/**
- * Where the lights start coming back: held out (StudioLights.lightsOut) the cut can last
- * as long as the dancer is there; StudioLights.lightsBack runs the timeline on from here.
- */
+/** Where the lights start coming back (studioSounds.powerUp is played from here). */
 export const POWER_RETURN = 1.2;
-/** Seconds from lightsBack until the lights hold steady. */
+/** Seconds from POWER_RETURN until the lights hold steady. */
 export const POWER_RETURN_LENGTH = POWER_CUT.length - POWER_RETURN;
 
 /** The light `seconds` after the cut (1 before it starts and once it is over). */

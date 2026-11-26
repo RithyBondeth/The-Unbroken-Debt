@@ -20,7 +20,7 @@ import { createShadowedPointLight, FLAME_COLOR } from "@/render/renderSetup";
 import type { Area } from "@/core/areaLoader";
 import { Lightning } from "@/render/weather/Lightning";
 import { useSoftFalloff } from "@/render/softLampFalloff";
-import { powerAt, POWER_RETURN } from "../data/powerCut";
+import { powerAt } from "../data/powerCut";
 
 /**
  * The lightmap stores light x this, RGBD-encoded (LIGHTMAP_GAIN in
@@ -63,7 +63,7 @@ export async function loadStudioLightmap(
  * The studio's light (Beat Sheet 4.1, rebuilt November 2026 as a shophouse floor).
  *
  * Baked: the green banker's lamp (the key light), the writing sconce, the bulb
- * under the airwell roof, the oil lamp on the altar, the glow up the stairs and the
+ * under the airwell roof, the oil lamp on the tea table, the glow up the stairs and the
  * night sky, with soft shadows, bounce light and the room's grime, in one lightmap
  * on every `_LM` material. On those surfaces the lightmap is the diffuse light; the
  * desk lamp adds only its highlight on varnish, brass and tile (Babylon's
@@ -71,12 +71,12 @@ export async function loadStudioLightmap(
  * for the lamp at all.
  *
  * Runtime: the same lamps light what is not baked (props, things that move or are
- * picked up), each only within its reach; the shelf candle, which goes out in P05,
- * and the lightning through the balcony doors, both with shadow maps drawn only
- * when something has changed.
+ * picked up), each only within its reach; the shelf candle, which goes out in P05, the
+ * oil lamp on the altar, which falls and goes out (StudioScares.ts), and the lightning
+ * through the balcony doors, all with shadow maps drawn only when something has changed.
  */
-/** How much light is left while the lights are held down (lightsOut). */
-const HELD_LIGHT = 0.3;
+/** The altar's oil lamp: its light is all runtime now (it is no longer in the bake). */
+const ALTAR_LAMP = { intensity: 1.5, range: 4 };
 
 export class StudioLights {
   private readonly candlePower = 2.6;
@@ -88,8 +88,12 @@ export class StudioLights {
   /** Lightmapped meshes. */
   readonly baked: AbstractMesh[] = [];
   private readonly airwellBulb: PointLight;
-  /** Paraffin flames baked steady (the altar lamp, the tea-table lamp), flickered live. */
+  /** Paraffin flames baked steady (the tea-table lamp, the desk candle), flickered live. */
   private readonly flames: { light: PointLight; base: number; phase: number }[] = [];
+  /** The oil lamp on the altar (not baked), until it falls (altarLampOut). */
+  private readonly altarLamp: PointLight;
+  private readonly altarShadows: ShadowGenerator | null = null;
+  private altarLit = true;
   private readonly candleFlame: Mesh;
   /** Live flames other than the shelf candle's (the desk candle by the diary). */
   private readonly flameMeshes: Mesh[] = [];
@@ -97,8 +101,6 @@ export class StudioLights {
   private candleLit = true;
   /** Seconds since every light in the house went out (POWER_CUT), or null. */
   private cutAt: number | null = null;
-  /** The lights are held out (lightsOut) until lightsBack. */
-  private held = false;
   /** How much of the house's light is on (0–1): the power cut's level now. */
   power = 1;
   private readonly lightmap: Texture | null;
@@ -108,6 +110,10 @@ export class StudioLights {
   /** Whatever glows in the house (bulbs, shades, flames): [material, colour at full]. */
   private readonly glows: [PBRMaterial, Color3][] = [];
   private readonly storm = new Lightning();
+  /** Puts the lightning back after a scare's own flash (strikeFrom). */
+  private special: (() => void) | null = null;
+  /** How much brighter than usual this flash is (strikeFrom). */
+  private flashGain = 1;
   private time = 0;
   private readonly flashShadows: ShadowGenerator;
   private readonly candleShadows: ShadowGenerator | null = null;
@@ -216,20 +222,48 @@ export class StudioLights {
     this.airwellBulb.shadowEnabled = false;
     exclude(this.airwellBulb, bulbAt, 4.5);
 
-    // The oil lamps on the altar and the tea table: baked steady, flickered live.
-    for (const [name, fallback, phase] of [
-      ["altar_lamp", new Vector3(-1.53, 2.2, -13.83), 0],
-      ["tea_lamp", new Vector3(-4.0, 0.75, -2.95), 2.1],
-    ] as const) {
-      const p = at(name, fallback);
-      const light = new PointLight(name, p, scene);
+    // The oil lamp on the tea table: baked steady, flickered live.
+    {
+      const p = at("tea_lamp", new Vector3(-4.0, 0.75, -2.95));
+      const light = new PointLight("tea_lamp", p, scene);
       light.diffuse = FLAME_COLOR.clone();
       light.range = 3.5;
       light.intensity = 0.35;
       light.shadowEnabled = false;
       exclude(light, p, 3.5, true);
-      this.flames.push({ light, base: 0.35, phase });
+      this.flames.push({ light, base: 0.35, phase: 2.1 });
     }
+
+    // The oil lamp on the altar: all of its light is live, since it falls and goes out
+    // (StudioScares.ts). The offerings beside it and the shelf throw their shadows up the
+    // wall and over the Buddha print, drawn once (the scare redraws them as things fall).
+    const altarAt = at("altar_lamp", new Vector3(-1.53, 1.98, -13.83));
+    const lampMeshes = (m: AbstractMesh) =>
+      /^vintage_oil_lamp/.test(m.name) && near(m, altarAt, 0.3);
+    if (preset.shadowedFlames > 1) {
+      const shadowed = createShadowedPointLight(
+        scene,
+        "altar_lamp",
+        altarAt,
+        ALTAR_LAMP.range,
+        Math.min(1024, preset.lampShadowMapSize),
+        (m) => castsShadow(m) && !lampMeshes(m),
+      );
+      this.altarLamp = shadowed.light;
+      this.altarShadows = shadowed.shadows;
+      const map = shadowed.shadows.getShadowMap();
+      if (map) map.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+    } else {
+      this.altarLamp = new PointLight("altar_lamp", altarAt, scene);
+      this.altarLamp.shadowEnabled = false;
+    }
+    this.altarLamp.diffuse = FLAME_COLOR.clone();
+    this.altarLamp.range = ALTAR_LAMP.range;
+    this.altarLamp.intensity = ALTAR_LAMP.intensity;
+    exclude(this.altarLamp, altarAt, ALTAR_LAMP.range, true);
+    // Its own glass and burner, lit from a few centimetres, would burn white.
+    this.altarLamp.excludedMeshes.push(...scene.meshes.filter(lampMeshes));
+    useSoftFalloff(this.altarLamp);
 
     // The shelf candle on the partition: not baked, since it goes out (P05).
     const candleAt = flames.get("candle");
@@ -351,7 +385,69 @@ export class StudioLights {
   /** Something near the candle was taken or moved: draw its shadows again once. */
   refreshShadows(): void {
     this.candleShadows?.getShadowMap()?.resetRefreshCounter();
+    this.altarShadows?.getShadowMap()?.resetRefreshCounter();
     this.flashShadows.getShadowMap()?.resetRefreshCounter();
+  }
+
+  /**
+   * One flash from `from`, aimed at `to`, with `casters` in its shadows as well (the
+   * shadow scare: a figure no one can see throws her shadow on the wall beside Sora).
+   * `gain` times as bright as a flash usually is: the strike is right over the house, and
+   * the shadow must stand out on the partition's dark boards. The lightning goes back
+   * where it was, and the casters out of its shadows, once the flash is over.
+   */
+  strikeFrom(
+    from: Vector3,
+    to: Vector3,
+    casters: AbstractMesh[],
+    pattern: { pulses: number[]; decay?: number },
+    gain = 1,
+  ): void {
+    const light = this.lightning;
+    const map = this.flashShadows.getShadowMap();
+    const home = { position: light.position.clone(), direction: light.direction.clone() };
+    light.position.copyFrom(from);
+    light.direction.copyFrom(to.subtract(from).normalize());
+    const list = map?.renderList;
+    if (list) list.push(...casters);
+    this.flashGain = gain;
+    this.special = () => {
+      this.flashGain = 1;
+      light.position.copyFrom(home.position);
+      light.direction.copyFrom(home.direction);
+      if (list)
+        for (const mesh of casters) {
+          const i = list.indexOf(mesh);
+          if (i >= 0) list.splice(i, 1);
+        }
+      map?.resetRefreshCounter();
+    };
+    this.storm.strike(pattern);
+  }
+
+  /** Puts the special flash's casters in the lightning's shadows once, to build their shaders. */
+  warmFlash(casters: AbstractMesh[]): () => void {
+    const list = this.flashShadows.getShadowMap()?.renderList;
+    if (!list) return () => undefined;
+    list.push(...casters);
+    this.flashShadows.getShadowMap()?.resetRefreshCounter();
+    return () => {
+      for (const mesh of casters) {
+        const i = list.indexOf(mesh);
+        if (i >= 0) list.splice(i, 1);
+      }
+      this.flashShadows.getShadowMap()?.resetRefreshCounter();
+    };
+  }
+
+  /**
+   * The altar's lamp has fallen: its flame is out and its light with it. The light stays
+   * switched on at nothing: switching it off would rebuild the shader of every material
+   * it reaches, a stall of most of a second in the middle of the crash.
+   */
+  altarLampOut(): void {
+    this.altarLit = false;
+    this.altarLamp.intensity = 0;
   }
 
   /**
@@ -360,28 +456,7 @@ export class StudioLights {
    * the storm go on.
    */
   powerCut(): void {
-    this.held = false;
     this.cutAt = 0;
-  }
-
-  /**
-   * Every light on the floor drops at once to a glow (HELD_LIGHT: enough to make out the
-   * room, the user found it too dark at nothing) and stays there until lightsBack().
-   */
-  lightsOut(): void {
-    this.held = true;
-    this.cutAt = 0;
-  }
-
-  /** The lights stutter back on after lightsOut() (the end of POWER_CUT). */
-  lightsBack(): void {
-    this.held = false;
-    this.cutAt = POWER_RETURN;
-  }
-
-  /** The lights are held down for the dancer (lightsOut), not out in the stutter. */
-  get dimmed(): boolean {
-    return this.held;
   }
 
   /** P05: the shelf candle goes out. */
@@ -400,6 +475,7 @@ export class StudioLights {
       [this.writingLight, 0.3],
       [this.candle, 1],
       [this.airwellBulb, 0.3],
+      [this.altarLamp, 1],
     ] as const) {
       if (!l.isEnabled()) continue;
       const d = Math.max(0.5, Vector3.Distance(eye, l.getAbsolutePosition()));
@@ -423,14 +499,18 @@ export class StudioLights {
     for (const { light, base, phase } of this.flames)
       light.intensity =
         base * (0.75 + 0.18 * Math.sin(t * 6.3 + phase) + 0.07 * Math.sin(t * 14.1 + phase * 3));
+    if (this.altarLit)
+      this.altarLamp.intensity =
+        ALTAR_LAMP.intensity * (0.8 + 0.14 * Math.sin(t * 5.7) + 0.06 * Math.sin(t * 13.3 + 1.7));
     for (const flame of this.flameMeshes) flame.scaling.y = 1 + 0.1 * Math.sin(t * 11.7 + 2.3);
     // The power cut, over everything above.
     if (this.cutAt !== null) {
       this.cutAt += dt;
-      this.power = this.held ? HELD_LIGHT : powerAt(this.cutAt);
+      this.power = powerAt(this.cutAt);
       if (this.power === 1 && this.cutAt > 2) this.cutAt = null;
       for (const [light, full] of this.lamps) light.intensity = full * this.power;
       for (const { light } of this.flames) light.intensity *= this.power;
+      if (this.altarLit) this.altarLamp.intensity *= this.power;
       if (this.candleLit) this.candle.intensity *= this.power;
       this.candleFlame.isVisible = this.power > 0.5;
       for (const flame of this.flameMeshes) flame.isVisible = this.power > 0.5;
@@ -439,7 +519,11 @@ export class StudioLights {
         material.emissiveColor.copyFrom(full).scaleInPlace(this.power);
     }
     const level = this.storm.update(dt);
-    this.lightning.intensity = level * 60;
+    this.lightning.intensity = level * 60 * this.flashGain;
+    if (this.special && !this.storm.flashing) {
+      this.special();
+      this.special = null;
+    }
     // Things are picked up and drawers opened between flashes: redraw while lit.
     if (level > 0) this.flashShadows.getShadowMap()?.resetRefreshCounter();
     for (const glass of this.glass)
@@ -468,6 +552,10 @@ function castsShadow(m: AbstractMesh): boolean {
     !m.name.startsWith("desk_lamp") &&
     !/glass|flame|rain|ink_line|ink_blot|pickup_volume|ceiling|roof/.test(m.name)
   );
+}
+
+function near(m: AbstractMesh, p: Vector3, reach: number): boolean {
+  return Vector3.Distance(m.getBoundingInfo().boundingSphere.centerWorld, p) < reach;
 }
 
 function receivesShadow(m: AbstractMesh): boolean {

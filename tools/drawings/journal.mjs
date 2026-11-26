@@ -8,8 +8,8 @@
 // iron-gall ink:
 // the left-hand page full, the right-hand page stopping mid-sentence at eight o'clock,
 // paler where the pen ran dry and dark again after each dip. Under it, a quick pencil
-// study of the dancer she dreamed of. The words are KHMER.diary* in ep1.mjs, where every
-// Khmer string waits for review.
+// study of the shadow she saw on the wall in the lightning (the studio's shadow scare).
+// The words are KHMER.diary* in ep1.mjs, where every Khmer string waits for review.
 
 /* global rng, clamp, noise, document */
 
@@ -176,197 +176,145 @@ function paintJournal(ctx, W, H, data) {
     ctx.ellipse(lastEnd[0] + 12, lastEnd[1] - 3, 5, 4, 0.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // ---- A pencil study under the writing: the dancer of her dream, quick and light,
-    // her head lolling to one side under a tall crown, an arm lifted with the nails long
-    // like claws, the sampot gathered at the hip.
-    ctx.strokeStyle = "rgba(70,70,74,0.42)";
-    ctx.lineWidth = 1.3;
-    const sx = PW + 360;
-    const sy = Math.min(TOP + end * RULE_PX + 95, PH - 430);
+    // ---- A pencil study under the writing: the shadow she saw on the wall beside the
+    // door frame in the lightning, a woman with her hair hanging over her face, one arm
+    // reaching, the long fingers spread; hatched dark, the outline gone over twice.
+    const sx = PW + 400;
+    // Below the last line, small: about 300 px high.
+    const sy = Math.min(Math.max(TOP + end * RULE_PX + 110, 660), PH - 290);
+    const S = 0.68;
+    const at = ([x, y]) => [sx + x * S, sy + y * S];
     function stroke(points, wobble = 1.2, times = 2) {
       for (let t = 0; t < times; t++) {
         ctx.beginPath();
-        points.forEach(([x, y], i) => {
-          const p = [sx + x + r.normal(wobble), sy + y + r.normal(wobble)];
+        points.forEach((q, i) => {
+          const [px, py] = at(q);
+          const p = [px + r.normal(wobble), py + r.normal(wobble)];
           if (i) ctx.lineTo(p[0], p[1]);
           else ctx.moveTo(p[0], p[1]);
         });
         ctx.stroke();
       }
     }
-    // Neck, shoulders, torso.
-    stroke([
-      [-6, 40],
-      [-4, 52],
-      [-34, 62],
-      [-30, 120],
-      [-22, 170],
-      [-30, 200],
-    ]);
-    stroke([
-      [6, 40],
-      [4, 52],
-      [36, 60],
-      [30, 118],
-      [20, 170],
-      [28, 200],
-    ]);
-    // The head, fallen to her right, and the crown's spire rising crooked from it.
-    const head = [];
-    for (let k = 0; k <= 16; k++) {
-      const a = (k / 16) * Math.PI * 2;
-      const [ex, ey] = [12 * Math.cos(a), 16 * Math.sin(a)];
-      head.push([
-        -16 + ex * Math.cos(-0.4) - ey * Math.sin(-0.4),
-        22 + ex * Math.sin(-0.4) + ey * Math.cos(-0.4),
-      ]);
-    }
-    stroke(head, 0.8, 2);
+    ctx.strokeStyle = "rgba(70,70,74,0.42)";
+    ctx.lineWidth = 1.2;
+    // The door frame beside it, a few ruled lines.
     stroke(
       [
-        [-28, 12],
-        [-34, -10],
-        [-40, -34],
-        [-44, -62],
+        [-190, -70],
+        [-188, 400],
       ],
-      1,
+      0.6,
       2,
     );
     stroke(
       [
-        [-8, 4],
-        [-20, -14],
-        [-32, -38],
-        [-44, -62],
+        [-172, -68],
+        [-170, 400],
       ],
+      0.6,
       1,
-      2,
     );
-    for (let k = 0; k < 4; k++)
+    stroke(
+      [
+        [-190, -70],
+        [-110, -73],
+      ],
+      0.6,
+      1,
+    );
+    // Her outline: the bowed head, the hair hanging straight down over the face and
+    // past the shoulders, one arm out towards the door frame, the dress to the floor.
+    const outline = [
+      [0, -40],
+      [12, -38],
+      [20, -28],
+      [24, -10],
+      [26, 22],
+      [30, 40],
+      [44, 48],
+      [50, 92],
+      [52, 140],
+      [46, 200],
+      [52, 300],
+      [60, 382],
+      [40, 394],
+      [-34, 394],
+      [-46, 380],
+      [-40, 300],
+      [-34, 200],
+      [-30, 150],
+      [-32, 84],
+      [-62, 84],
+      [-96, 82],
+      [-124, 78],
+      [-128, 68],
+      [-120, 62],
+      [-84, 60],
+      [-50, 52],
+      [-28, 36],
+      [-24, 4],
+      [-22, -14],
+      [-18, -28],
+      [-10, -37],
+    ];
+    ctx.save();
+    ctx.beginPath();
+    outline.forEach((q, i) => {
+      const [x, y] = at(q);
+      if (i) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+    });
+    ctx.closePath();
+    ctx.clip();
+    // Hatched dark: two layers of quick diagonal strokes, the second across the first.
+    ctx.lineWidth = 1.0;
+    for (const [lean, gap, alpha] of [
+      [0.55, 3.4, 0.38],
+      [-0.4, 4.6, 0.3],
+    ])
+      for (let k = -60; k < 160; k++) {
+        const y = -90 + k * gap;
+        ctx.strokeStyle = `rgba(58,58,64,${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(sx - 150 + r.normal(1.2), sy + y + r.normal(1.2));
+        ctx.lineTo(sx + 60 + r.normal(1.2), sy + y - 210 * lean + r.normal(1.2));
+        ctx.stroke();
+      }
+    ctx.restore();
+    ctx.strokeStyle = "rgba(56,56,62,0.55)";
+    ctx.lineWidth = 1.3;
+    stroke([...outline, outline[0]], 0.9, 2);
+    // The long fingers, spread, reaching for the door frame.
+    ctx.lineWidth = 1.1;
+    for (const [dx, dy] of [
+      [-34, -14],
+      [-40, -5],
+      [-40, 4],
+      [-34, 12],
+      [-20, 18],
+    ])
       stroke(
         [
-          [-30 + k * 2, 0 - k * 12],
-          [-16 + k * 1, -2 - k * 12],
+          [-124, 70],
+          [-124 + dx * 0.5, 70 + dy * 0.5],
+          [-124 + dx, 70 + dy],
         ],
-        0.6,
+        0.5,
         1,
       );
-    // The long nails of the lifted hand, curled like claws.
-    stroke(
-      [
-        [104, -10],
-        [116, -22],
-        [126, -18],
-        [128, -6],
-      ],
-      0.7,
-      1,
-    );
-    stroke(
-      [
-        [104, -10],
-        [118, -14],
-        [127, -4],
-        [125, 6],
-      ],
-      0.7,
-      1,
-    );
-    stroke(
-      [
-        [102, -6],
-        [112, -2],
-        [118, 8],
-        [114, 16],
-      ],
-      0.7,
-      1,
-    );
-    // The raised arm, ending at the wrist.
-    stroke([
-      [36, 60],
-      [74, 38],
-      [96, 2],
-      [104, -10],
-    ]);
-    // The other arm down and out.
-    stroke([
-      [-34, 62],
-      [-66, 104],
-      [-84, 146],
-    ]);
-    // The sampot, gathered and falling in folds to the ankles; the feet.
-    stroke([
-      [-30, 200],
-      [-46, 300],
-      [-50, 380],
-      [-20, 388],
-    ]);
-    stroke([
-      [28, 200],
-      [44, 296],
-      [48, 380],
-      [16, 388],
-    ]);
-    stroke(
-      [
-        [-6, 206],
-        [-10, 290],
-        [-8, 372],
-      ],
-      1,
-      1,
-    );
-    stroke(
-      [
-        [10, 206],
-        [16, 286],
-        [18, 370],
-      ],
-      1,
-      1,
-    );
-    stroke(
-      [
-        [-20, 388],
-        [-34, 404],
-        [-8, 406],
-      ],
-      1,
-      1,
-    );
-    stroke(
-      [
-        [16, 388],
-        [30, 402],
-        [6, 405],
-      ],
-      1,
-      1,
-    );
-    // The sbai over one shoulder.
-    stroke(
-      [
-        [-30, 60],
-        [10, 130],
-        [24, 176],
-      ],
-      1,
-      1,
-    );
-    // Shading hatched down one side.
-    ctx.lineWidth = 0.9;
-    for (let k = 0; k < 14; k++) {
-      const y = 210 + k * 12;
+    // Strands of the hair, darker, falling over the face.
+    ctx.strokeStyle = "rgba(40,40,46,0.55)";
+    for (let k = 0; k < 10; k++)
       stroke(
         [
-          [30 + k * 0.6, y],
-          [42 + k * 0.6, y - 10],
+          [-16 + k * 3.6, -34],
+          [-20 + k * 4.2, 30],
+          [-22 + k * 4.6, 96 + (k % 3) * 10],
         ],
-        0.6,
+        1,
         1,
       );
-    }
 
     // ---- Age: grain, blotches, foxing, the gutter in shadow, the edges darkened.
     const img = ctx.getImageData(0, 0, W, H);
