@@ -62,6 +62,9 @@ def _keep(lo, hi, hw, suffix):
     ext = hi - lo
     if max(ext) >= 2.6 and (ext.z > 2.0 or lo.z < 0.15 or lo.z > 2.0):
         return True                      # walls, floors, beams, rafters
+    if (lo.x > -3.22 and hi.x < -0.04 and abs(lo.y) < hw and abs(hi.y) < hw and lo.z > 1.95 and hi.z < 2.3
+            and max(ext) < 0.3):
+        return False                     # bottles left standing on a stripped shelf's top
     if lo.z > 2.0:
         return True                      # lamps, festoons, the ceiling's beams
     if (lo.x + hi.x) / 2 > 1.6 and max(ext) >= 1.2:
@@ -161,6 +164,7 @@ def scan(file, budget):
     if key not in _TEMPLATES:
         objs = TRD._load_decimated_scan(file, 0.999, TRD.full_gltf_group, TRD.import_glb)
         for o in objs:
+            weld(o)
             tris = sum(len(p.vertices) - 2 for p in o.data.polygons)
             if tris > budget * 1.1:
                 bpy.ops.object.select_all(action="DESELECT")
@@ -174,6 +178,37 @@ def scan(file, budget):
             o.hide_render = True
         _TEMPLATES[key] = objs
     return _TEMPLATES[key]
+
+
+def weld(o, dist=1e-4):
+    """Merges a scan's split vertices. Several scans are exported as loose triangles: decimated
+    as they are, the clay stove fell into 6000 shards with daylight between them."""
+    import bmesh
+
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=dist)
+    seen, specks = set(), []
+    for v in bm.verts:
+        if v in seen:
+            continue
+        isl, stack = [], [v]
+        seen.add(v)
+        while stack:
+            a = stack.pop()
+            isl.append(a)
+            for e in a.link_edges:
+                w = e.other_vert(a)
+                if w not in seen:
+                    seen.add(w)
+                    stack.append(w)
+        if len(isl) <= 12:
+            specks.extend(isl)
+    if specks:
+        bmesh.ops.delete(bm, geom=specks, context="VERTS")
+    bm.to_mesh(o.data)
+    bm.free()
+    o.data.update()
 
 
 def place(coll, tpls, Mw, name):
@@ -201,7 +236,8 @@ PH_DETAIL = {"bananas": 2600, "wooden_table_02": 3200, "wooden_stool_01": 2400, 
              "painted_wooden_shelves": 3200, "vintage_cabinet_01": 3600, "ornate_mirror_01": 2400, "wooden_crate_01": 1600,
              "wicker_basket_01": 3600, "wooden_bucket_01": 2000, "pot_enamel_01": 1800, "jug_01": 1800, "oil_tin": 1600,
              "tea_set_01": 3000, "wooden_ladder_02": 1600, "vintage_oil_lamp": 2600}
-SCAN_DETAIL = {"rice_sack": 3500, "water_jar": 5000, "basket_deep": 4000, "clay_stove": 3500, "kettle": 2500,
+# (The water jar scan is broken past welding, 1800 loose pieces: rain_jar models it instead.)
+SCAN_DETAIL = {"rice_sack": 3500, "basket_deep": 4000, "clay_stove": 3500, "kettle": 2500,
                "cooking_pot": 2500, "broom": 2500, "jar_handles": 3500, "basket_round": 3500, "winnowing_tray": 3000}
 
 
@@ -221,6 +257,9 @@ def upgrade_props(coll):
                 if tpl:
                     o.data = tpl[0].data
                     n += 1
+        elif rest == "water_jar":
+            bpy.data.objects.remove(o, do_unlink=True)
+            n += 1
         elif rest in SCAN_DETAIL:
             key = (o.name.split(".")[0], tuple(round(v, 3) for row in o.matrix_world for v in row))
             scans.setdefault(key, []).append(o)
@@ -235,6 +274,111 @@ def upgrade_props(coll):
         place(coll, tpl, mw, name)
         n += 1
     return n
+
+
+# ------------------------------------------------------------------ fixings and common things
+
+def wall_peg(K, x, wall_y, z, inward, length=0.07):
+    """A turned wooden peg driven into a side wall (its face at wall_y, `inward` +1/-1 into the
+    room), for a tyre, an inner tube, a coil to hang on."""
+    G.cylm(K["shop_dark_wood"], T(0, 0, 0), (x, wall_y - inward * 0.01, z), (x, wall_y + inward * length, z), 0.009, segs=8)
+    G.sphere(K["shop_dark_wood"], T(0, 0, 0), (x, wall_y + inward * length, z), 0.013, 8, 5)
+
+
+JAR = [(0.0, 0.0), (0.17, 0.0), (0.24, 0.06), (0.33, 0.25), (0.36, 0.42), (0.32, 0.6), (0.2, 0.74),
+       (0.13, 0.78), (0.14, 0.82), (0.155, 0.85), (0.12, 0.85), (0.11, 0.8)]
+
+
+def rain_jar(K, M, s=0.8, rng=None):
+    """The big glazed Martaban jar (ពាង) catching the downspout's water at the veranda's
+    corner: a dark brown glaze running thin at the shoulder, raised bands, the water dark in
+    it, a plank lid slid half off and a coconut-shell dipper on it. (The scanned jar it
+    replaces fell apart into loose glassy shards.)"""
+    G.lathe(K["shop_glaze"], [(r * s, h * s) for r, h in JAR], M, segs=36)
+    for z, r in ((0.25, 0.332), (0.6, 0.322)):
+        G.torus(K["shop_glaze"], M, (0, 0, z * s), (0, 0, 1), r * s, 0.006, n=40, m=5)
+    G.lathe(K["glaze_tan"], [(0.2 * s, 0.735 * s), (0.135 * s, 0.775 * s), (0.142 * s, 0.82 * s), (0.157 * s, 0.85 * s),
+                            (0.12 * s, 0.852 * s)], M, segs=36, cap_bottom=False)
+    G.lathe(K["water_dark"], [(0.0, 0.74 * s), (0.2 * s, 0.74 * s)], M, segs=24, cap_bottom=False)
+    top = 0.852 * s
+    L = M @ T(0.07, -0.05, top, yaw=0.4)
+    G.lathe(K["shop_table_wood"], [(0.0, 0.0), (0.2 * s, 0.0), (0.2 * s, 0.022), (0.0, 0.022)], L, segs=24)
+    G.boxm(K["shop_table_wood"], L, (0.0, 0.0, 0.03), (0.04, 0.3 * s, 0.016))
+    D = L @ T(0.03, 0.06, 0.022, yaw=1.2)
+    G.lathe(K["coconut"], [(0.0, 0.0), (0.03, 0.002), (0.055, 0.02), (0.068, 0.05), (0.07, 0.065), (0.066, 0.065),
+                          (0.062, 0.05), (0.05, 0.024), (0.0, 0.008)], D, segs=16)
+    G.cylm(K["shop_bamboo"], D, (0.05, 0, 0.05), (0.32, 0, 0.07), 0.009, segs=6)
+
+
+def spirit_shrine(K, M):
+    """The Chinese-Khmer spirit shelf by the shop door (M on the front wall's face, +x out):
+    a red lacquered shelf on two brackets, its gilt-edged backboard and red paper, a little
+    tiled roof on gilt columns, two electric candles glowing red, a cup of incense sticks in
+    ash, a cup of water and a hand of bananas."""
+    red, gold = K["plastic_red"], K["gold_paint"]
+    G.boxm(red, M, (0.13, 0, 0.0), (0.26, 0.34, 0.024), bevel=0.004)
+    G.boxm(gold, M, (0.258, 0, 0.0), (0.006, 0.344, 0.03))
+    for y in (-0.13, 0.13):
+        G.extrude_outline(K["shop_dark_wood"], M @ T(0, y, -0.012, tilt=(math.pi / 2, 0)),
+                          [(0.0, 0.0), (0.2, 0.0), (0.2, -0.02), (0.02, -0.16), (0.0, -0.16)], 0.02)
+    G.boxm(red, M, (0.012, 0, 0.22), (0.024, 0.34, 0.42), bevel=0.003)
+    for y in (-0.165, 0.165):
+        G.boxm(gold, M, (0.026, y, 0.22), (0.006, 0.012, 0.42))
+    G.boxm(gold, M, (0.026, 0, 0.425), (0.006, 0.34, 0.012))
+    G.wall_paper(K, M @ T(0.025, 0, 0.23, yaw=math.pi / 2), 0.14, 0.2, "shrine_paper")
+    for y in (-0.15, 0.15):
+        G.cylm(gold, M, (0.22, y, 0.012), (0.22, y, 0.352), 0.009, segs=8)
+    for side in (-1, 1):
+        G.boxm(red, M @ T(0.13, side * 0.1, 0.38, tilt=(-side * 0.45, 0)), (0, 0, 0), (0.3, 0.24, 0.016), bevel=0.003)
+    G.cylm(gold, M, (-0.0, 0, 0.43), (0.28, 0, 0.43), 0.012, segs=8)
+    for y in (-0.1, 0.1):
+        G.lathe(K["plastic_red"], [(0.0, 0.0), (0.022, 0.0), (0.022, 0.012), (0.012, 0.016), (0.012, 0.11), (0.0, 0.11)],
+                M @ T(0.15, y, 0.012), segs=12)
+        G.lathe(K["led_red"], [(0.0, 0.11), (0.009, 0.112), (0.01, 0.125), (0.005, 0.14), (0.0, 0.145)], M @ T(0.15, y, 0.012),
+                segs=10)
+    C = M @ T(0.17, 0.0, 0.012)
+    G.lathe(K["brass"], [(0.0, 0.0), (0.03, 0.0), (0.038, 0.01), (0.04, 0.045), (0.036, 0.05), (0.0, 0.05)], C, segs=16)
+    G.lathe(K["paper"], [(0.0, 0.046), (0.035, 0.046), (0.0, 0.047)], C, segs=14, cap_bottom=False)
+    for k in range(5):
+        a = k * 1.3
+        G.cylm(K["incense"], C, (math.cos(a) * 0.012, math.sin(a) * 0.012, 0.03),
+               (math.cos(a) * 0.03, math.sin(a) * 0.03, 0.2 + 0.01 * k), 0.0018, segs=4)
+        G.sphere(K["led_red"], C, (math.cos(a) * 0.03, math.sin(a) * 0.03, 0.2 + 0.01 * k), 0.0028, 5, 3)
+    G.tumbler(K, M @ T(0.09, -0.06, 0.012), r=0.02, h=0.05, liquid="water")
+    for k in range(4):
+        G.cylm(K["plastic_yellow"], M, (0.08 + k * 0.012, 0.07, 0.023), (0.05 + k * 0.012, 0.13, 0.041), 0.011, 0.008, segs=8)
+
+
+def shrine_at(sp):
+    """Where the spirit shelf hangs on the front wall: beside the doorway, the side away
+    from the barber's chairs, clear of the doorway's gate and the flank's poster."""
+    door_w = 1.95
+    return 0.05, (1.0 if sp["trade"] == "barber" else -1.0) * (door_w / 2 + 0.25), 1.86
+
+
+def doorway_curtain(K, y0, y1, z_top=2.5, z_bottom=0.24, x0=-0.03):
+    """A silk curtain on a rod across the doorway (between the jambs, behind the folded-back
+    doors), gathered to one side and hung in soft folds (it was a flat blue slab)."""
+    G.cylm(K["shop_iron"], T(0, 0, 0), (x0, -0.975, z_top + 0.03), (x0, 0.975, z_top + 0.03), 0.009, segs=8)
+    bm = K["shop_hol_silk"]
+    nu, nv = 28, 16
+    rows = []
+    for j in range(nv + 1):
+        t = j / nv
+        z = z_top - (z_top - z_bottom) * t
+        row = []
+        for i in range(nu + 1):
+            u = i / nu
+            y = y0 + (y1 - y0) * u
+            folds = 0.028 * math.sin(u * math.pi * 11) * (0.6 + 0.4 * t)
+            x = x0 + folds
+            row.append(bm.verts.new((x, y, z)))
+        rows.append(row)
+    for a, b in zip(rows, rows[1:]):
+        for i in range(nu):
+            bm.faces.new((a[i], a[i + 1], b[i + 1], b[i]))
+    for i in range(0, nu + 1, 4):
+        G.torus(K["shop_iron"], T(x0, y0 + (y1 - y0) * i / nu, z_top + 0.03), (0, 0, 0), (0, 1, 0), 0.016, 0.0025, n=10, m=3)
 
 
 # ------------------------------------------------------------------ stocking shelves
@@ -358,7 +502,7 @@ def dress_noodle(K, coll, idx, sp, rng, light):
     F.lpg_cylinder(K, T(-0.6, 2.2, ZI))
     for k in range(5):
         F.stool(K, T(-0.5, -2.2, ZI + k * 0.06), key="plastic_red" if k % 2 else "plastic_blue")
-    F.mat_roll(K, T(-1.0, hw - 0.25, ZI, yaw=0.0))
+    F.mat_roll(K, T(-1.0, hw - 0.56, ZI, yaw=0.0))      # (it ran out through the side wall)
     _common(K, sp, rng, (-1.0, -hw + 0.06, 1.55, math.pi), (BACK + 0.06, 0.4, 2.1, 0.0, True),
             notices=[("price_list", (-0.06, 1.4, 1.35, -math.pi / 2, 0.32, 0.44))])
 
@@ -390,7 +534,7 @@ def dress_tv_coffee(K, coll, idx, sp, rng, light):
             segs=18)
     G.lathe(K["plastic_white"], [(0.0, 0.34), (0.03, 0.34), (0.03, 0.39), (0.0, 0.39)], T(0.06, 0.32, ct), segs=12)
     snack_case(K, T(0.16, 0.6, ct), 0.62, 0.3, 0.26, rng, light, idx)
-    G.wall_paper(K, T(0.4, -0.95, ct + 0.2, yaw=math.pi / 2), 0.26, 0.36, "price_list")
+    G.wall_paper(K, T(0.061, -0.55, 0.62, yaw=math.pi / 2), 0.26, 0.36, "price_list")
     # The repair bench at the back: two televisions left on, showing snow; a radio, cassettes,
     # a velvet tray of watches under the lamp, the loupe and fine screwdrivers.
     bt = 0.97
@@ -442,6 +586,7 @@ def desk_lamp(K, M, light, idx):
     G.cylm(K["shop_iron"], M, (0.12, 0.05, 0.38), (0.32, 0.08, 0.3), 0.007, segs=6)
     H = M @ T(0.34, 0.08, 0.28, tilt=(0, 2.6))
     G.lathe(K["shop_enamel_green"], [(0.0, -0.02), (0.03, 0.0), (0.07, 0.07), (0.075, 0.08)], H, segs=18, cap_bottom=False)
+    G.cylm(K["shop_iron"], H, (0, 0, -0.018), (0, 0, 0.03), 0.011, segs=8)
     G.sphere(K["shop_bulb"], H, (0, 0, 0.04), 0.022, 10, 6)
     light(f"vroad_desk_lamp_{idx}", M @ Vector((0.36, 0.08, 0.22)), 2.2, (1.0, 0.72, 0.42))
 
@@ -462,6 +607,7 @@ def snack_case(K, M, w, d, h, rng, light, idx):
             face = ("snacks", "dried_squid", "shrimp_crackers", "biscuit_box")[int(rng.integers(4))]
             G.packet(K, M @ T(-d / 2 + 0.05 + i * (d - 0.1) / 3, -w / 2 + 0.06 + j * (w - 0.12) / 4, 0.017 + rng.uniform(0, 0.01),
                               yaw=rng.normal(0, 0.3)), 0.08, 0.1, 0.02, face)
+    G.cylm(K["shop_iron"], M, (0, 0, h - 0.008), (0, 0, h - 0.03), 0.01, segs=8)
     G.sphere(K["shop_bulb"], M, (0, 0, h - 0.04), 0.018, 10, 6)
     light(f"vroad_case_{idx}", M @ Vector((0, 0, h - 0.06)), 1.0, (1.0, 0.72, 0.4))
 
@@ -483,11 +629,11 @@ def dress_moto(K, coll, idx, sp, rng, light):
             G.bottle(K, T(1.6 + (0.06 if k % 2 else -0.06), -1.75 + k * 0.14, za + z, yaw=rng.uniform(0, 6)), "petrol", segs=12,
                      fill=rng.uniform(0.6, 0.95))
     G.lathe(K["tinplate"], [(0.0, 0.0), (0.008, 0.0), (0.008, 0.06), (0.06, 0.16), (0.06, 0.17), (0.055, 0.17), (0.0, 0.07)],
-            T(1.5, -0.75, za + 0.93), segs=16)
+            T(1.52, -0.86, za + 0.915), segs=16)
     G.boxm(K["plastic_yellow"], T(1.35, -2.25, za), (0, 0, 0.17), (0.18, 0.3, 0.34), bevel=0.02)
     G.cylm(K["plastic_yellow"], T(1.35, -2.25, za), (0, -0.08, 0.34), (0, 0.02, 0.4), 0.02, segs=8)
     for k in range(4):
-        F.tyre(K, T(1.2, 2.0, za + k * 0.075, yaw=k))
+        F.tyre(K, T(1.05, 1.66, za + k * 0.075, yaw=k))
     F.drum(K, T(0.45, -2.35, za), paint="plastic_blue")
     F.drum(K, T(0.45, 2.35, za), paint="plastic_red")
     G.lathe(K["black_paint"], [(0.0, 0.0), (0.2, 0.0), (0.22, 0.05), (0.21, 0.05), (0.19, 0.008), (0.0, 0.008)], T(0.4, -1.5, za), segs=24)
@@ -509,7 +655,7 @@ def dress_moto(K, coll, idx, sp, rng, light):
     chain_coil(K, T(BACK + 0.55, 0.95, bt))
     G.boxm(K["shop_linen_towel"], T(BACK + 0.6, 0.05, bt), (0, 0, 0.012), (0.28, 0.22, 0.02), bevel=0.008)
     # The tool board above it, every tool on its nail.
-    wx = -3.115                    # the face of the builder's tool board (kept, on the back wall)
+    wx = -3.16                     # the face of the builder's tool board (flush on the back wall)
     for k in range(8):
         G.cylm(K["steel"], T(wx, -0.62 + k * 0.085, 1.98), (0, 0, 0), (0.03, 0, 0.0), 0.0018, segs=4)
         G.spanner(K, T(wx + 0.004, -0.62 + k * 0.085, 1.96 - (0.06 + k * 0.01), tilt=(0, math.pi / 2)), length=0.12 + k * 0.02)
@@ -517,12 +663,15 @@ def dress_moto(K, coll, idx, sp, rng, light):
         G.screwdriver(K, T(wx + 0.01, 0.12 + k * 0.06, 1.97, tilt=(0, math.pi / 2)),
                       handle=("plastic_yellow", "plastic_red", "plastic_blue", "plastic_yellow")[k])
     G.pliers(K, T(wx + 0.008, 0.45, 1.95, tilt=(0, math.pi / 2)))
-    G.hammer(K, T(wx + 0.016, 0.62, 2.0, tilt=(0, math.pi / 2)))
+    G.cylm(K["steel"], T(wx, 0.62, 1.975), (0, 0, 0), (0.035, 0, 0.0), 0.0018, segs=4)
+    G.hammer(K, T(wx + 0.004, 0.62, 2.0, tilt=(0, -math.pi / 2)))
     # Inner tubes and two tyres on the side wall, the compressor on the floor.
     for k in range(3):
         G.torus(K["inner_tube"], T(-1.0 - k * 0.45, -hw + 0.07, 1.6, tilt=(math.pi / 2, 0)), (0, 0, 0), (0, 0, 1), 0.2, 0.02, n=24, m=6)
+        wall_peg(K, -1.0 - k * 0.45, -hw + 0.05, 1.6 + 0.2 - 0.02 - 0.009, +1)
     for k in range(2):
-        F.tyre(K, T(-2.3 + k * 0.5, hw - 0.1, 1.3, tilt=(math.pi / 2, 0)))
+        F.tyre(K, T(-2.3 + k * 0.5, hw - 0.052, 1.3, tilt=(math.pi / 2, 0)))
+        wall_peg(K, -2.3 + k * 0.5, hw - 0.05, 1.3 + 0.215 - 0.012, -1, length=0.11)
     compressor(K, T(-1.2, -1.9, ZI, yaw=0.3))
     G.lathe(K["tinplate"], [(0.0, 0.0), (0.13, 0.0), (0.15, 0.3), (0.14, 0.3)], T(-0.6, -2.3, ZI), segs=20)
     G.boxm(K["shop_linen_towel"], T(-0.6, -2.3, ZI), (0, 0, 0.29), (0.18, 0.16, 0.05), bevel=0.02)
@@ -566,7 +715,7 @@ def compressor(K, M):
         for y in (-0.1, 0.1):
             G.cylm(K["steel"], M, (x, y, 0.0), (x * 0.9, y * 0.9, 0.1), 0.01, segs=6)
     G.boxm(K["black_paint"], M, (0.05, 0, 0.42), (0.22, 0.16, 0.14), bevel=0.02)
-    G.lathe(K["chrome"], [(0.0, 0.0), (0.03, 0.0), (0.03, 0.012), (0.0, 0.012)], M @ T(-0.1, 0.08, 0.4, tilt=(math.pi / 2, 0)), segs=16)
+    G.lathe(K["chrome"], [(0.0, 0.0), (0.03, 0.0), (0.03, 0.012), (0.0, 0.012)], M @ T(0.02, 0.08, 0.42, tilt=(-math.pi / 2, 0)), segs=16)
     G.tube(K["rubber"], M, [(-0.25, 0, 0.2), (-0.4, 0.1, 0.05), (-0.3, 0.3, 0.02), (0.0, 0.32, 0.02), (0.15, 0.2, 0.05)], 0.008, segs=6)
 
 
@@ -604,24 +753,29 @@ def dress_grocery(K, coll, idx, sp, rng, light):
         place(coll, sack, shop_M(idx) @ T(x, y, ZI + (0.25 if k == 2 else 0), yaw=yaw), f"vroad_goods_{idx}_rice_sack")
     basket = ph("wicker_basket_01", 3600)
     for k, (x, y, food) in enumerate(((-0.8, -2.2, "yellow_onion"), (-0.4, -2.3, "food_ginger_01"), (-1.2, -2.25, "food_lime_01"))):
-        place(coll, basket, shop_M(idx) @ T(x, y, ZI, yaw=k), f"vroad_goods_{idx}_basket")
-        produce = ph(food, 500)
-        for j in range(9):
-            a, d = rng.uniform(0, 6.28), rng.uniform(0, 0.1)
-            place(coll, produce, shop_M(idx) @ T(x + math.cos(a) * d, y + math.sin(a) * d, ZI + 0.15 + rng.uniform(0, 0.05),
-                                                  yaw=rng.uniform(0, 6.28), tilt=(rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5))),
-                  f"vroad_goods_{idx}_{food}")
+        b = place(coll, basket, shop_M(idx) @ T(x, y, ZI, yaw=k), f"vroad_goods_{idx}_basket")
+        fill_basket(coll, idx, b[0], ph(food, 500), f"vroad_goods_{idx}_{food}", rng, size=PRODUCE_SIZE[food])
     for k in range(4):
-        egg_tray(K, T(-2.7, -1.9, ZI + k * 0.06, yaw=0.1 * k), full=(k == 3))
+        egg_tray(K, T(-2.7, -1.9, ZI + k * 0.026, yaw=0.04 * k), full=(k == 3))
     F.soda_crate(K, T(-2.7, -2.5, ZI), label="beer")
     F.soda_crate(K, T(-2.7, -2.5, ZI + 0.27, yaw=0.1), label="soda")
     for k in range(3):
         G.bottle(K, T(-0.45 + k * 0.09, 2.6, ZI), "petrol", liquid="water", segs=12)
-    # The veranda: snack strips hung from the pole, plastic buckets stacked, brooms.
-    for k, y in enumerate(np.linspace(-hw * 0.7, hw * 0.7, 7)):
-        if abs(y) < 0.5:
-            continue
-        snack_strip(K, T(1.58, y, 2.24), rng, ("snacks", "dried_squid", "shrimp_crackers", "noodles_red")[k % 4])
+    # The veranda: a bamboo pole lashed between the front posts; from it, on the side away from
+    # the steps (the doorway's path stays clear, the rain blind hangs on the other side), snack
+    # strips and the brooms; plastic buckets stacked below. (No hung bananas: the user, Nov 26.)
+    rail_z = 2.24
+    G.cylm(K["shop_bamboo"], T(0, 0, 0), (RAIL_X, -hw + 0.074, rail_z), (RAIL_X, hw - 0.074, rail_z), 0.024, segs=10)
+    for y in (-hw + 0.1, hw - 0.1):
+        for dz in (-0.012, 0.012):
+            G.torus(K["cork"], T(RAIL_X, y, rail_z + dz), (0, 0, 0), (0, 1, 0), 0.026, 0.004, n=12, m=4)
+    for k, y in enumerate(np.linspace(-hw + 0.3, hw - 0.3, 9)):
+        G.torus(K["shop_bamboo"], T(RAIL_X, y, rail_z), (0, 0, 0), (0, 1, 0), 0.025, 0.004, n=12, m=4)
+    for y, face in ((-2.62, "noodles_yellow"), (-2.32, "snacks"), (-2.02, "shrimp_crackers"), (-1.74, "noodles_red"),
+                    (-1.46, "dried_squid")):
+        snack_strip(K, T(RAIL_X, y, rail_z - 0.024), rng, face)
+    for k, y in enumerate((-1.22, -1.12)):
+        hung_broom(K, T(RAIL_X, y, rail_z - 0.024, yaw=0.3 * k))
     for k in range(4):
         G.lathe(K[("plastic_red", "plastic_blue", "plastic_green", "plastic_yellow")[k]],
                 [(0.0, 0.0), (0.12, 0.0), (0.16, 0.26), (0.165, 0.27), (0.155, 0.27), (0.11, 0.01), (0.0, 0.01)],
@@ -639,11 +793,73 @@ def egg_tray(K, M, full=True):
                 G.sphere(K["egg"], M, (p[0], p[1], 0.045), 0.021, 10, 7, scale=(1.0, 1.0, 1.28))
 
 
+RAIL_X = 1.70     # the grocery's bamboo pole: behind the rain blind, against the posts' inner faces
+
+
 def snack_strip(K, M, rng, face):
-    """A string of snack packets hung from the veranda pole."""
-    G.cylm(K["thread_white"], M, (0, 0, 0), (0, 0, -0.75), 0.002, segs=4)
+    """A strip of snack packets hung from a loop over the veranda pole (M at the pole's
+    underside), their printed faces to the road and the shop, joined seal to seal."""
+    G.torus(K["thread_white"], M @ T(0, 0, 0.024), (0, 0, 0), (0, 1, 0), 0.027, 0.0018, n=12, m=3)
+    G.cylm(K["thread_white"], M, (0, 0, 0.0), (0, 0, -0.06), 0.002, segs=4)
     for k in range(6):
-        G.packet(K, M @ T(0, 0, -0.14 - k * 0.11, yaw=rng.normal(0, 0.15), tilt=(math.pi / 2, 0)), 0.1, 0.1, 0.022, face)
+        G.packet(K, M @ T(0, 0, -0.06 - k * 0.104, yaw=math.pi / 2 + rng.normal(0, 0.06), tilt=(math.pi / 2, 0)),
+                 0.1, 0.1, 0.022, face)
+
+
+def hung_broom(K, M):
+    """A soft-grass broom hung by a loop of string from the veranda pole (M at its underside):
+    the bamboo handle, the bound grass head flaring out below."""
+    G.torus(K["thread_white"], M @ T(0, 0, 0.024), (0, 0, 0), (0, 1, 0), 0.028, 0.002, n=12, m=3)
+    G.cylm(K["thread_white"], M, (0, 0, 0.0), (0, 0, -0.05), 0.002, segs=4)
+    G.cylm(K["shop_bamboo"], M, (0, 0, -0.05), (0, 0, -0.62), 0.013, 0.015, segs=8)
+    for z in (-0.6, -0.64, -0.68):
+        G.torus(K["plastic_red"], M, (0, 0, z), (0, 0, 1), 0.024, 0.004, n=12, m=4)
+    G.lathe(K["bristle"], [(0.0, -0.58), (0.026, -0.6), (0.03, -0.7), (0.06, -0.85), (0.1, -0.96), (0.11, -0.98), (0.0, -0.97)],
+            M @ Matrix.Diagonal((1.0, 0.45, 1.0, 1.0)), segs=18)
+
+
+def local_points(idx, obj):
+    """An object's vertices in shop idx's frame, as an (N, 3) array."""
+    co = np.empty(len(obj.data.vertices) * 3)
+    obj.data.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    m = np.array(shop_M(idx).inverted() @ obj.matrix_world)
+    return co @ m[:3, :3].T + m[:3, 3]
+
+
+def local_box(idx, obj):
+    """An object's box in shop idx's frame (lo, hi)."""
+    co = np.empty(len(obj.data.vertices) * 3)
+    obj.data.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    m = np.array(shop_M(idx).inverted() @ obj.matrix_world)
+    q = co @ m[:3, :3].T + m[:3, 3]
+    return Vector(q.min(0).tolist()), Vector(q.max(0).tolist())
+
+
+# Each produce scan's longest side when sold (the ginger scan came in at a third of a metre).
+PRODUCE_SIZE = {"yellow_onion": 0.075, "food_ginger_01": 0.12, "food_lime_01": 0.05}
+
+
+def fill_basket(coll, idx, basket, tpl, name, rng, n=11, size=None):
+    """Produce heaped in a basket: each piece dropped in from above onto the basket's floor or
+    the pieces already in (they were scattered at one height, some hanging in the air)."""
+    if not tpl:
+        return
+    M = shop_M(idx)
+    lo, hi = local_box(idx, basket)
+    cx, cy, rad = (lo.x + hi.x) / 2, (lo.y + hi.y) / 2, min(hi.x - lo.x, hi.y - lo.y) / 2 - 0.05
+    placed = [basket]
+    s = size / max(tpl[0].dimensions) if size else 1.0
+    n = int(n * min(3.0, max(1.0, (1.0 / s) ** 0.5))) if size else n
+    for j in range(n):
+        a, d = rng.uniform(0, 6.28), rad * math.sqrt(rng.uniform(0, 1)) * (1.0 - 0.06 * j / n)
+        o = place(coll, tpl, M @ T(cx + math.cos(a) * d, cy + math.sin(a) * d, hi.z + 0.25, yaw=rng.uniform(0, 6.28),
+                                   tilt=(rng.uniform(-0.6, 0.6), rng.uniform(-0.6, 0.6)), s=s), name)[0]
+        if drop_onto(o, placed, limit=0.6) <= 0.0:
+            bpy.data.objects.remove(o, do_unlink=True)
+            continue
+        placed.append(o)
 
 
 def dress_barber(K, coll, idx, sp, rng, light):
@@ -677,7 +893,7 @@ def dress_barber(K, coll, idx, sp, rng, light):
     F.desk_fan(K, T(BACK + 0.18, -1.15, z, yaw=0.6))
     # The cape on its hook, the waiting bench with the day's newspaper.
     G.cylm(K["chrome"], T(-0.4, hw - 0.06, 1.7), (0, 0, 0), (0, -0.06, 0.02), 0.005, segs=6)
-    G.boxm(K["plastic_white"], T(-0.4, hw - 0.1, 1.2), (0, 0, 0), (0.48, 0.02, 0.9), bevel=0.01)
+    G.boxm(K["plastic_white"], T(-0.4, hw - 0.112, 1.285), (0, 0, 0), (0.48, 0.02, 0.9), bevel=0.01)
     F.bench(K, T(-0.9, -hw + 0.3, ZI, yaw=math.pi / 2), w=1.3)
     G.boxm(K["shop_news"], T(-0.7, -hw + 0.3, ZI + 0.45), (0, 0, 0.004), (0.3, 0.42, 0.008), bevel=0.002)
     F.bench(K, T(1.0, -1.5, ZV, yaw=0.0), w=1.5)
@@ -755,7 +971,7 @@ def dress_salon(K, coll, idx, sp, rng, light):
                (0, 0.02, 0.012), 0.012, segs=10)
     for k in range(3):
         G.towel(K, T(BACK + 0.2, 0.68 - 0.02, z + 0.03 + k * 0.036), key="shop_linen_towel")
-    G.carton(K, T(BACK + 0.15, -0.95, z), 0.1, 0.05, 0.16, "hair_dye")
+    G.carton(K, T(BACK + 0.15, -0.7, z), 0.1, 0.05, 0.16, "hair_dye")
     G.boxm(K["shop_news"], T(-1.0, -0.4, ZI + 0.0), (0, 0, 0.005), (0.28, 0.4, 0.01), bevel=0.002)
     # The tailoring corner: treadle machine, a dress form in silk, spools on the wall, bolts.
     F.sewing_machine(K, T(-1.1, -1.7, ZI, yaw=0.0))
@@ -766,14 +982,102 @@ def dress_salon(K, coll, idx, sp, rng, light):
         G.lathe(K[spool], [(0.0, 0.0), (0.016, 0.0), (0.016, 0.005), (0.013, 0.005), (0.013, 0.045), (0.016, 0.045),
                            (0.016, 0.05), (0.0, 0.05)], T(-2.6 + k * 0.085, -hw + 0.12, ZI + 1.362), segs=12)
     for k in range(4):
-        G.cylm(K[("shop_hol_silk", "shop_krama", "shop_hol_silk", "shop_krama")[k]], T(-2.65, 1.85, ZI + 0.02 + k * 0.1),
+        G.cylm(K[("shop_hol_silk", "shop_krama", "shop_hol_silk", "shop_krama")[k]], T(-2.65, 1.85, ZI + k * 0.1),
                (0, -0.45, 0.05), (0, 0.45, 0.05), 0.05, segs=14)
-    G.carton(K, T(-1.0, -1.5, ZI + 0.79), 0.12, 0.08, 0.004, "needles", front_axis="z")
-    G.scissors(K, T(-1.0, -1.85, ZI + 0.79, yaw=0.3), s=1.4)
-    G.torus(K["plastic_yellow"], T(-1.05, -2.0, ZI + 0.79), (0, 0, 0.004), (0, 0, 1), 0.025, 0.004, n=14, m=4)
-    F.bench(K, T(1.0, 1.3, ZV, yaw=0.0), w=1.4)
-    G.boxm(K["shop_krama"], T(1.0, 1.4, ZV + 0.45), (0, 0, 0.004), (0.3, 0.45, 0.01), bevel=0.003)
+    G.carton(K, T(-1.0, -1.5, ZI + 0.768), 0.12, 0.08, 0.004, "needles", front_axis="z")
+    G.scissors(K, T(-1.0, -1.85, ZI + 0.768, yaw=0.3), s=1.4)
+    G.torus(K["plastic_yellow"], T(-1.05, -2.0, ZI + 0.768), (0, 0, 0.004), (0, 0, 1), 0.025, 0.004, n=14, m=4)
+    F.bench(K, T(1.0, 1.15, ZV, yaw=0.0), w=1.3)
+    G.boxm(K["shop_krama"], T(1.0, 1.25, ZV + 0.45), (0, 0, 0.004), (0.3, 0.45, 0.01), bevel=0.003)
+    doorway_curtain(K, 0.42, 0.95)
     _common(K, sp, rng, (-1.2, hw - 0.06, 1.75, 0.0), (BACK + 0.06, -1.1, 2.15, 0.0, False))
+
+
+# ------------------------------------------------------------------ resting things on things
+
+def _world_tris(objs):
+    """World-space vertices and triangles of objects, for one BVH."""
+    V, F, off = [], [], 0
+    for o in objs:
+        me = o.data
+        if not len(me.vertices):
+            continue
+        co = np.empty(len(me.vertices) * 3)
+        me.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        mw = np.array(o.matrix_world)
+        V.append(co @ mw[:3, :3].T + mw[:3, 3])
+        me.calc_loop_triangles()
+        t = np.empty(len(me.loop_triangles) * 3, dtype=np.int64)
+        me.loop_triangles.foreach_get("vertices", t)
+        F.append(t.reshape(-1, 3) + off)
+        off += len(co)
+    if not V:
+        return None
+    from mathutils.bvhtree import BVHTree
+
+    return BVHTree.FromPolygons(np.concatenate(V).tolist(), np.concatenate(F).tolist(), all_triangles=True)
+
+
+def _lowest(o, n=40):
+    co = np.empty(len(o.data.vertices) * 3)
+    o.data.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    mw = np.array(o.matrix_world)
+    w = co @ mw[:3, :3].T + mw[:3, 3]
+    return w[np.argsort(w[:, 2])[:n]]
+
+
+def drop_onto(o, supports, limit=0.4, bvh=None):
+    """Lowers `o` straight down until it rests on `supports` (it may already). Returns the drop."""
+    tree = bvh or _world_tris(supports)
+    if tree is None:
+        return 0.0
+    down = Vector((0, 0, -1))
+    best = None
+    for v in _lowest(o):
+        # From 3 cm above each low point: a hit nearer than that means it already rests on (or
+        # sits a little into) something, and it stays where it is.
+        hit = tree.ray_cast(Vector((v[0], v[1], v[2] + 0.03)), down, limit + 0.03)
+        if hit[0] is not None:
+            d = hit[3] - 0.03
+            best = d if best is None else min(best, d)
+    if best is not None and best > 0.003:
+        o.matrix_world = Matrix.Translation((0, 0, -best)) @ o.matrix_world
+        return best
+    return 0.0
+
+
+SETTLE_SKIP = ("ornate_mirror", "winnowing_tray", "painted_wooden_shelves", "vintage_cabinet", "wooden_ladder")
+
+
+def settle(coll, idx, sp):
+    """Every loose prop in and before shop idx (the Poly Haven furniture, the scans, the rice
+    sacks) brought down onto whatever is under it, lowest first, so a pot sits on its stove and
+    a lamp on its table (several stood a few centimetres in the air)."""
+    pre = f"vroad_shop_{idx}_"
+    loose = [o for o in coll.objects if o.type == "MESH" and (
+        (o.name.startswith(pre + "ph_") or o.name.split(".")[0][len(pre):] in SCAN_DETAIL) and o.name.startswith(pre)
+        or o.name.startswith(f"vroad_goods_{idx}_rice_sack")) and not any(k in o.name for k in SETTLE_SKIP)]
+    static = [o for o in coll.objects if o.type == "MESH" and o not in loose and (
+        o.name.startswith(pre) or o.name.startswith(f"vroad_goods_{idx}_")) and not o.name.startswith("vroad_goods_%d_food" % idx)]
+    loose.sort(key=lambda o: _lowest(o, 1)[0][2])
+    moved = 0
+    for o in loose:
+        if drop_onto(o, static + [x for x in loose if x is not o], limit=0.35) > 0:
+            moved += 1
+    return moved
+
+
+def flush_on_back_wall(coll, idx):
+    """The Poly Haven mirrors hung on the back wall moved back until they touch it."""
+    for o in coll.objects:
+        if o.name.startswith(f"vroad_shop_{idx}_ph_ornate_mirror"):
+            lo, _hi = local_box(idx, o)
+            dx = BACK - lo.x
+            if abs(dx) > 0.002:
+                M = shop_M(idx)
+                o.matrix_world = M @ Matrix.Translation((dx, 0, 0)) @ M.inverted() @ o.matrix_world
 
 
 DRESS = {"noodle": dress_noodle, "tv_coffee": dress_tv_coffee, "moto": dress_moto, "grocery": dress_grocery,
@@ -783,23 +1087,31 @@ DRESS = {"noodle": dress_noodle, "tv_coffee": dress_tv_coffee, "moto": dress_mot
 def dress(coll, shops, m, light):
     """Strips and furnishes every shop of `shops` [(idx, spec, matrix)]; `light(name, world point,
     watts, colour)` adds a lamp marker. Returns (pieces taken out, triangles added)."""
+    import taxi_roadside_details as TRD
+
     Gm = G.materials(m)
     out_n, tris = 0, 0
     for idx, sp, M in shops:
         _SHOP_M[idx] = M
-        if sp["trade"] not in DRESS:
-            continue
-        out_n += strip(idx, sp)
         K = G.Kit(Gm)
         rng = np.random.default_rng(4100 + idx)
 
         def lt(name, p, watts, colour, M=M):
             light(name, M @ Vector(p), watts, colour)
 
-        DRESS[sp["trade"]](K, coll, idx, sp, rng, lt)
+        if sp["trade"] in DRESS:
+            out_n += strip(idx, sp)
+            DRESS[sp["trade"]](K, coll, idx, sp, rng, lt)
+        rain_jar(K, T(TRD.RAIN_JAR[0], sp["hw"] - TRD.RAIN_JAR[1], ZV, yaw=0.3 * idx))
+        if sp["trade"] in ("noodle", "tv_coffee", "grocery", "barber"):
+            x, y, z = shrine_at(sp)
+            spirit_shrine(K, T(x, y, z))
         K.emit(coll, f"vroad_goods_{idx}", M)
         tris += K.tris
     n_up = upgrade_props(coll)
+    for idx, sp, M in shops:
+        flush_on_back_wall(coll, idx)
+        settle(coll, idx, sp)
     drop_templates()
     print(f"[shop_interiors] {out_n} crude pieces out, {tris} triangles of goods in, {n_up} props in detail", flush=True)
     return out_n, tris

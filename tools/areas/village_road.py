@@ -180,8 +180,9 @@ def build(coll, ground):
     fallen_trees(coll, ground, base, rng)
     verge(coll, ground, base, m, rng)
     backdrop(coll, ground, np.random.default_rng(SEED + 1))
+    intruders = clear_intruders(base)
     colliders(coll, ground, base, gaps)
-    print(f"[village_road] cleared {cleared}, objects {len(coll.objects)}", flush=True)
+    print(f"[village_road] cleared {cleared} (+{intruders} leaning into shops), objects {len(coll.objects)}", flush=True)
 
 
 PREFIXES = ("vroad_", "col_vroad_", "light_flame_vroad_", "taxi_road_anchor_", "tpl_ph_", "taxi_road_", "tpl_vgoods_")
@@ -266,6 +267,57 @@ def clear_ground(ground):
     return gone
 
 
+def clear_intruders(base):
+    """Plants whose leaves reach into a shop: a banana or a tree standing clear of the shop by
+    its trunk can still push fronds through its walls or under its veranda roof (a leaf showed
+    inside the noodle shop and the dentist's). Any plant with a vertex inside a shop's rooms or
+    roofed veranda goes. Returns how many."""
+    import bpy
+    from mathutils import Vector
+
+    boxes = []
+    for sp in SHOPS:
+        Minv = shop_matrix(sp, base).inverted()
+        hw = sp["hw"]
+        boxes.append((Minv, hw))
+    gone = 0
+    for o in list(bpy.data.objects):
+        if o.type != "MESH" or o.parent is not None or not len(o.data.vertices):
+            continue
+        name = o.name[6:] if o.name.startswith("vroad_") else o.name
+        if not name.startswith(PLANTS + ("jungle_", "banana_", "sugar_palm_", "grove_", "fern", "shrub", "grass")):
+            continue
+        if o.name.startswith("vroad_fallen_tree"):
+            continue
+        bb = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        cx, cy = sum(p.x for p in bb) / 8, sum(p.y for p in bb) / 8
+        r = max((p - Vector((cx, cy, p.z))).length for p in bb)
+        near = [(Minv, hw) for (Minv, hw), sp in zip(boxes, SHOPS)
+                if math.hypot(cx - shop_frame(sp)[0], cy - shop_frame(sp)[1]) < r + hw + 4.5]
+        if not near:
+            continue
+        co = np.empty(len(o.data.vertices) * 3)
+        o.data.vertices.foreach_get("co", co)
+        co = co.reshape(-1, 3)
+        mw = np.array(o.matrix_world)
+        w = co @ mw[:3, :3].T + mw[:3, 3]
+        hit = False
+        for Minv, hw in near:
+            mi = np.array(Minv)
+            q = w @ mi[:3, :3].T + mi[:3, 3]
+            rooms = (q[:, 0] > -3.32) & (q[:, 0] < 0.06) & (np.abs(q[:, 1]) < hw + 0.06) & (q[:, 2] > 0.1) & (q[:, 2] < 3.6)
+            veranda = (q[:, 0] >= 0.06) & (q[:, 0] < 2.2) & (np.abs(q[:, 1]) < hw + 0.08) & (q[:, 2] > 0.15) & (q[:, 2] < 2.6)
+            if rooms.any() or veranda.any():
+                hit = True
+                break
+        if hit:
+            for c in [o] + list(o.children_recursive):
+                bpy.data.objects.remove(c, do_unlink=True)
+            gone += 1
+    print(f"[village_road] plants reaching into shops removed: {gone}", flush=True)
+    return gone
+
+
 def _vertex_colour_multiply(mat):
     """Multiply the colour map by the mesh's "Col" vertex colours (wet ruts, mossy shoulders)."""
     nt = mat.node_tree
@@ -301,6 +353,9 @@ def materials():
     shop, posters = TRD.shop_materials(library_material, plain, world_uvs)
     m = dict(shop)
     m["posters"] = posters
+    # The split-bamboo walls (salon, outpost) at half the driving scene's tile: seen up close
+    # at 1.8 m a tile, their node rows read as stacked sacks rather than canes.
+    m["bamboo_wall"]["tile"] = 0.9
     m["laterite"] = library_material("red_laterite_soil_stones", "M_vroad_laterite", tint=(0.5, 0.39, 0.31), tile=1.8)
     m["bank"] = library_material("brown_mud_leaves_01", "M_vroad_bank", tint=(0.62, 0.56, 0.5), tile=2.0)
     for k in ("laterite", "bank"):
@@ -308,7 +363,7 @@ def materials():
     # The driving scene's glows are set for headlights and a moving car; on a dark road
     # Sora stands still on, they glare: windows, the noodle cart's case, the tubes and the
     # TV dimmed to a lamp's warmth (the bulbs themselves keep most of theirs).
-    for k, strength in (("win_glow", 0.9), ("noodle_glow", 0.55), ("fluoro", 2.2), ("crt", 1.5), ("bulb", 4.0),
+    for k, strength in (("win_glow", 0.3), ("noodle_glow", 0.55), ("fluoro", 2.2), ("crt", 1.5), ("bulb", 4.0),
                         ("shrine_glow", 3.0)):
         _emission(m[k], strength)
     m["pole"] = library_material("bark_brown_02", "M_vroad_pole", tint=(0.42, 0.36, 0.3), tile=1.2)
@@ -544,7 +599,14 @@ def shops(coll, ground, base, m):
     for idx, sp in enumerate(SHOPS):
         before = set(bpy.data.objects)
         M = shop_matrix(sp, base)
-        ins = TRD._build_detailed_shop(coll, M, m, props, ph_props, p_verts, p_faces, p_uvs, sp, idx)
+
+        def ground_z(lx, ly, sp=sp, M=M):
+            # The bank's height under a point of the shop's frame, in that frame.
+            wx, wy = shop_world(sp, lx, ly)
+            return _road_height(wx, lateral_of(wx, wy), ground, base) - M.translation.z
+
+        spec = dict(sp, village=True, ground_z=ground_z)
+        ins = TRD._build_detailed_shop(coll, M, m, props, ph_props, p_verts, p_faces, p_uvs, spec, idx)
         insulators.append((sp, ins))
         new = [o for o in bpy.data.objects if o not in before]
         # Its lamps: the veranda's pendant, the light inside (a cool tube or a warm bulb).
@@ -676,6 +738,7 @@ def poles(coll, ground, base, m, insulators, rng):
             TRD._cyl_bm(tin, shade_top, shade_top + Vector((0, 0, -0.2)), 0.04, 0.24, segs=16, cap=False)
             TRD._cyl_bm(iron, b1, b1 + Vector((0, 0, -0.12)), 0.018, 0.018, segs=6)
             bz = b1 + Vector((0, 0, -0.2))
+            TRD._cyl_bm(iron, b1 + Vector((0, 0, -0.1)), bz + Vector((0, 0, 0.005)), 0.016, 0.016, segs=8)
             TRD._cyl_bm(bulb, bz, bz + Vector((0, 0, -0.08)), 0.03, 0.026, segs=10)
             light_marker(coll, "vroad_junction", bz + Vector((0, 0, -0.08)), 10.0, (1.0, 0.7, 0.38))
     # The lines, pole to pole, sagging.
@@ -721,11 +784,7 @@ def fallen_trees(coll, ground, base, rng):
 
 def verge(coll, ground, base, m, rng):
     """Verge grass along the shoulders and banks, ferns and shrubs between the shops, bananas
-    and a sugar palm behind them, storm litter on the road, loose laterite stones in the ruts."""
-    import bmesh
-    from mathutils import Euler
-
-    import taxi_roadside_details as TRD
+    and a sugar palm behind them, a little fallen wood on the outer banks (the road clean)."""
     import village_nature as VN
 
     grass = VN.poly_haven("grass_medium_01") + VN.poly_haven("grass_medium_02")
@@ -748,7 +807,8 @@ def verge(coll, ground, base, m, rng):
         # Named vroad_*: the game's snapToGround (groundSnap.GROUNDED) would otherwise lower
         # verge grass and litter from the raised bank to the forest floor under it.
         px, py = at(x, lt)
-        z = _road_height(x, lt, ground, base)
+        # A few centimetres in: a tuft's base is flat and the bank slopes under it.
+        z = _road_height(x, lt, ground, base) - 0.07
         o = VN.put(coll, src, px, py, lambda *_: z, float(rng.uniform(0, 6.283)) if yaw is None else yaw, s)
         o.name = "vroad_" + o.name
 
@@ -787,24 +847,15 @@ def verge(coll, ground, base, m, rng):
         px, py = at(x, side * lt)
         VN.place(coll, palm, f"vroad_sugar_palm_{k}", px, py, ground(px, py) - 0.05, float(rng.uniform(0, 6.283)),
                  float(rng.uniform(0.85, 1.0)))
-    # Storm litter on the road and its banks: branches down, bark, leaves.
-    for _ in range(70):
+    # The road itself is kept clean (the user, Nov 26, 2026: "cleanup to make the road clean"):
+    # no branches, bark or loose stones on the carriageway, shoulders or in the ditches; only
+    # a few fallen twigs and bark on the outer banks between the shops, as any verge has.
+    for _ in range(40):
         x = float(rng.uniform(-WALK_X - 6, WALK_X + 6))
-        lt = float(rng.choice([rng.uniform(-2.6, 2.6), rng.uniform(2.6, 3.4) * rng.choice([-1, 1])], p=None))
+        lt = float(rng.choice([-1, 1])) * float(rng.uniform(6.2, 7.0))
         if not free(x, lt):
             continue
-        put(litter[int(rng.integers(len(litter)))], x, lt, float(rng.uniform(0.7, 1.25)))
-    # Loose laterite stones and gravel, thickest in the ruts' edges.
-    cob = bmesh.new()
-    for _ in range(520):
-        x = float(rng.uniform(-WALK_X - 8, WALK_X + 8))
-        lt = float(rng.choice([1, -1])) * float(rng.choice([rng.uniform(0.0, 0.35), rng.uniform(0.95, 2.6), rng.uniform(0.45, 0.95)]))
-        px, py = at(x, lt)
-        z = _road_height(x, lt, ground, base)
-        sx, sy, sz = float(rng.uniform(0.03, 0.09)), float(rng.uniform(0.028, 0.08)), float(rng.uniform(0.012, 0.03))
-        _box(cob, (px, py, z + sz * 0.25), (sx, sy, sz), rot=Euler((float(rng.uniform(-0.2, 0.2)), float(rng.uniform(-0.2, 0.2)),
-                                                                      float(rng.uniform(0, 6.283)))), bevel=min(sx, sy, sz) * 0.32)
-    TRD._bm_obj("vroad_cobbles", cob, m["cobble"], coll, world_uvs_fn=m["world_uvs"], smooth=True)
+        put(litter[int(rng.integers(len(litter)))], x, lt, float(rng.uniform(0.6, 1.0)))
     print(f"[village_road] verge plants {n}", flush=True)
 
 

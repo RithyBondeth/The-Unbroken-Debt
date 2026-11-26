@@ -156,6 +156,13 @@ def materials(m):
     p("velvet_red", (0.3, 0.02, 0.03), rough=0.95)
     p("gum_pink", (0.75, 0.32, 0.35), rough=0.3)
     p("tooth", (0.9, 0.88, 0.8), rough=0.25)
+    # The rain jars' glaze: its own semi-gloss material (in the gloss group it read as glass).
+    G["shop_glaze"] = bpy.data.materials.get("M_vroad_goods_glaze") or plain("M_vroad_goods_glaze", (0.075, 0.038, 0.018), rough=0.36)
+    p("glaze_brown", (0.085, 0.042, 0.02), rough=0.14)
+    p("glaze_tan", (0.3, 0.19, 0.1), rough=0.32)
+    p("water_dark", (0.012, 0.016, 0.016), rough=0.02)
+    p("coconut", (0.2, 0.12, 0.06), rough=0.75)
+    p("stalk", (0.16, 0.17, 0.07), rough=0.7)
     p("dial_glow", (0.95, 0.62, 0.25), rough=0.3, emission=(1.0, 0.55, 0.2), strength=0.8)
     p("led_red", (0.8, 0.05, 0.03), rough=0.3, emission=(1.0, 0.05, 0.02), strength=2.0)
     stat = bpy.data.materials.get("M_vroad_goods_crt_static")
@@ -560,10 +567,12 @@ def carton(K, M, sx, sy, sz, face, front_axis="y"):
 
 
 def packet(K, M, sx, sy, sz, face):
-    """A pillow packet (noodles, snacks): printed faces bulging, crimped seals at the ends."""
-    printed_box(K["label"], M, sx, sy * 0.86, sz, face_rect(face))
+    """A pillow packet (noodles, snacks) lying on its back at M: the print on its two big faces
+    (top and bottom; it was on the thin sides, so a stack showed only the border colour), the
+    crimped seals as fins across its two ends."""
+    printed_box(K["label"], M, sx, sy * 0.86, sz, face_rect(face), front_axis="z")
     for s in (-1, 1):
-        boxm(K["paper"], M, (0, 0, sz * 0.5 + s * sz * 0.5), (sx * 1.02, sy * 0.18, 0.006))
+        boxm(K["paper"], M, (0, s * sy * 0.45, sz * 0.5), (sx * 0.98, sy * 0.1, sz * 0.3))
 
 
 def bowl(K, M, r, h, key="porcelain", rim=None, inner=None, segs=18):
