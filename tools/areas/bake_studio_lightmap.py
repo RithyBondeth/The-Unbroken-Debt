@@ -79,6 +79,13 @@ def setup_lights():
     point("bake_tea_lamp", obj("marker_tea_lamp").location, 9.0, (1.0, 0.58, 0.26), 0.012)
     # The candle by Sora's diary on the writing desk (the save point; flickered live, Studio.ts).
     point("bake_desk_candle", obj("light_flame_desk_candle").location, 1.2, (1.0, 0.6, 0.26), 0.006)
+    # The rear bathroom: faint stormy blue sky through the north frosted window + a tiny
+    # ambient floor on the caged bulb (its main tungsten light is runtime in Studio.ts so
+    # it can flicker during the mirror haunt and die completely during the exit!).
+    if "marker_bath_window" in bpy.data.objects:
+        point("bake_bath_window", obj("marker_bath_window").location, 6.0, (0.52, 0.64, 0.88), 0.22)
+    if "marker_bath_bulb" in bpy.data.objects:
+        point("bake_bath_bulb_base", obj("marker_bath_bulb").location, 3.5, (1.0, 0.86, 0.62), 0.04)
 
     world = scene.world or bpy.data.worlds.new("night")
     scene.world = world
@@ -118,20 +125,35 @@ def falls(o):
     return None
 
 
-def hide_helpers():
+def hide_helpers(for_bake=False):
     """Colliders and interaction volumes are invisible in the game: hide them from Cycles.
     So are the things Sora takes, the crack decals (blended over walls in the game), the
-    vase's shards and what falls without leaving a mark."""
+    vase's shards and what falls without leaving a mark. When `for_bake=True`, moving doors
+    and haunted furniture are also hidden so opening/moving them never leaves a baked shadow blot."""
+    moving_prefixes = ("haunt_partition_door", "haunt_bedroom_door", "haunt_bath_door", "haunt_balcony_door", "haunt_stool", "haunt_drop_book", "haunt_slide_book")
+
+    def is_moving(o):
+        while o:
+            if o.name in moving_prefixes:
+                return True
+            o = o.parent
+        return False
+
+    hidden_moving = []
     for o in bpy.data.objects:
         group = falls(o)
         if o.name.startswith("col_") or "pickup_volume" in o.name or "crack" in o.name or taken(o):
             o.hide_render = True
         if "_shard_" in o.name or (group and group not in FALLS_CASTING):
             o.hide_render = True
+        if for_bake and is_moving(o):
+            o.hide_render = True
+            hidden_moving.append(o)
         # Bulbs and flames are opaque meshes round their point lights: in the bake they
         # would swallow the light (the shades and chimneys around them stay).
         if o.type == "MESH" and any(k in o.name for k in ("bulb", "flame")) and "holder" not in o.name:
             o.hide_render = True
+    return hidden_moving
 
 
 def cycles(samples):
@@ -157,6 +179,18 @@ def cycles(samples):
 def preview(outdir):
     """Renders a few eye-level views (no lightmap) to check the room before baking."""
     os.makedirs(outdir, exist_ok=True)
+    # In preview mode, illuminate runtime lights so QA sees bathroom, altar & candle zones clearly.
+    if "bake_bath_bulb_base" in bpy.data.objects:
+        bpy.data.objects["bake_bath_bulb_base"].data.energy = 24.0
+    for nm, energy, col in (("marker_altar_lamp", 14.0, (1.0, 0.65, 0.32)), ("light_flame_candle", 8.0, (1.0, 0.68, 0.35))):
+        if nm in bpy.data.objects:
+            ld = bpy.data.lights.new(f"preview_{nm}", type="POINT")
+            ld.energy = energy
+            ld.color = col
+            ld.shadow_soft_size = 0.04
+            lo = bpy.data.objects.new(f"preview_{nm}", ld)
+            lo.location = bpy.data.objects[nm].matrix_world.translation
+            scene.collection.objects.link(lo)
     cycles(64)
     scene.render.resolution_x, scene.render.resolution_y = 960, 540
     scene.view_settings.view_transform = "AgX"
@@ -181,6 +215,17 @@ def preview(outdir):
         "12_sleeping_mat": ((3.0, 7.3, 1.7), (4.6, 6.7, 1.6)),
         "13_drafting_table": ((3.0, 1.75, 1.55), (3.0, 0.6, 0.85)),
         "14_back_room_door": ((0.6, 9.5, 1.6), (2.2, 13.5, 1.1)),
+        "15_bath_entry": ((2.42, 13.05, 1.55), (1.7, 16.5, 1.15)),
+        "16_bath_mirror_tank": ((2.45, 14.95, 1.48), (0.85, 16.45, 0.95)),
+        "17_bath_toilet": ((1.15, 14.95, 1.42), (3.0, 16.05, 1.05)),
+        "18_books_shelf": ((1.65, 4.95, 1.50), (0.15, 5.15, 1.38)),
+        "19_bath_cistern": ((2.45, 15.15, 1.38), (0.45, 15.85, 0.65)),
+        "20_tea_table": ((3.10, 2.25, 1.12), (3.75, 2.68, 0.52)),
+        "21_bath_sink": ((1.72, 15.82, 1.26), (1.72, 16.58, 0.80)),
+        "22_switch_door": ((1.55, 5.15, 1.32), (1.15, 6.02, 1.25)),
+        "23_sconce_wire": ((1.25, 2.15, 1.85), (0.02, 2.15, 1.80)),
+        "24_altar_candles": ((1.35, 13.05, 1.98), (1.05, 13.86, 1.85)),
+        "25_hall_door_clear": ((1.55, 7.25, 1.35), (0.35, 6.45, 1.10)),
     }
     only = argv[2:] if len(argv) > 2 else None
     for name, (eye, target) in views.items():
@@ -203,13 +248,14 @@ SKIP_NAMES = ("glass", "net", "water", "flame", "bulb", "shade", "cord", "wire",
               "chain", "pull", "rain", "puddle", "telephone", "earpiece", "krama", "sampot", "towel", "peg",
               "laundry", "fern", "moss", "banana", "branch", "firewood", "lantern_", "birdcage", "chilli", "garlic", "ladle",
               "bowl", "jar_lid", "dipper", "kettle", "shrine_orange", "shrine_incense", "blind", "cobweb", "crack",
-              "food_cover", "chopstick", "hat_", "coat", "screen", "ant_", "drip_water", "lamp_rose")
-SKIP_MATERIALS = ("glass", "net", "water", "bulb", "flame", "opal", "neighbour", "dark_room", "mesh", "cobweb")
+              "food_cover", "chopstick", "hat_", "coat", "screen", "ant_", "drip_water", "lamp_rose",
+              "mirror", "soap", "bottle", "cork", "toothbrush", "tumbler", "comb", "razor", "drain", "clog", "valve", "cage", "louvre")
+SKIP_MATERIALS = ("glass", "net", "water", "bulb", "flame", "opal", "neighbour", "dark_room", "mesh", "cobweb", "mirror", "frosted", "ember")
 
 
 def under_dynamic(o):
     while o:
-        if o.name.startswith(("interact_", "marker_", "spawn_", "col_", "light_flame_", "fall_")):
+        if o.name.startswith(("interact_", "marker_", "spawn_", "col_", "light_flame_", "fall_", "haunt_")):
             return True
         o = o.parent
     return False
@@ -323,6 +369,10 @@ MARKS = (
     ((4.6, 7.55, 2.6), (0.12, 0.35, 0.95), (0.65, 0.5, 0.33), 0.5, 0.35),     # its run down the east wall
     ((2.95, 9.12, 0.35), (0.7, 0.12, 0.45), (0.58, 0.55, 0.45), 0.6, 0.45),   # damp rising behind the water jar
     ((0.9, 14.0, 3.2), (0.8, 0.15, 0.7), (0.62, 0.48, 0.32), 0.45, 0.4),      # an old leak in the back room
+    ((0.5, 16.2, 0.35), (0.75, 0.75, 0.55), (0.42, 0.46, 0.38), 0.65, 0.35),  # bathroom mildew around water tank
+    ((1.18, 15.96, 0.0), (0.45, 0.45, 0.12), (0.45, 0.44, 0.38), 0.6, 0.3),   # wet grime around bathroom drain
+    ((1.72, 16.72, 0.65), (0.45, 0.18, 0.65), (0.52, 0.44, 0.34), 0.55, 0.3), # rust & damp under bathroom sink
+    ((3.35, 16.05, 1.95), (0.18, 0.55, 0.85), (0.56, 0.50, 0.40), 0.5, 0.3),  # damp stain under high toilet cistern
 )
 
 
@@ -575,8 +625,12 @@ def bake():
 
 if __name__ == "__main__":
     setup_lights()
-    hide_helpers()
     if argv and argv[0] == "preview":
+        hide_helpers(for_bake=False)
         preview(argv[1])
     else:
+        hidden_moving = hide_helpers(for_bake=True)
         bake()
+        for o in hidden_moving:
+            o.hide_render = False
+        bpy.ops.wm.save_mainfile()

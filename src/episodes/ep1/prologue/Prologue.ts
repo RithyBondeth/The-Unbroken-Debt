@@ -1,7 +1,7 @@
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import type { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import type { Game } from "@/core/Game";
 import { loadArea, type Area } from "@/core/areaLoader";
@@ -21,8 +21,8 @@ import { t, type StringKey } from "@/data/strings";
 import { Objectives, type Objective } from "@/ui/html/StoryUi";
 import { StudioDetails } from "./StudioDetails";
 import { StudioScares } from "./StudioScares";
+import { STUDIO_DOORS, studioSpaceAt, type StudioDoorId } from "../data/studioScares";
 import { shufflePosters } from "./posterShuffle";
-import { creak, knock, whisper } from "../audio/studioSounds";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { SavePoint } from "@/systems/saves/SavePoint";
@@ -32,6 +32,9 @@ const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
 const DOOR = "interact_door";
 const PHONE = "interact_telephone";
+const BATH_FAUCET = "interact_bath_faucet";
+const DOOR_IDS = new Set<string>(Object.keys(STUDIO_DOORS));
+const isStudioDoor = (id: string): id is StudioDoorId => DOOR_IDS.has(id);
 /** Interactables that are items: what Sora gains by taking each one. */
 const PICKUPS: Record<string, { item: string; count?: number }> = {
   interact_satchel: { item: "satchel" },
@@ -81,15 +84,13 @@ export class Prologue {
   private readonly objectives = new Objectives();
   details!: StudioDetails;
   scares!: StudioScares;
-  /** When the house next makes a sound of its own (play time, s). */
-  private nextScare = 24;
 
   constructor(private readonly game: Game) {}
 
   /** Included in the development overlay when diagnosing browser input. */
   get debugStatus(): string {
     const missing = KIT.filter((item) => !this.game.inventory.has(item));
-    return `phone ringing=${this.ringing} waiting=${this.waiting.has(PHONE)} answered=${this.game.flags.get("ep1.phone.answered", false)}\nkit missing: ${missing.join(", ") || "none"}`;
+    return `phone ringing=${this.ringing} waiting=${this.waiting.has(PHONE)} answered=${this.game.flags.get("ep1.phone.answered", false)}\nkit missing: ${missing.join(", ") || "none"}\nspace=${this.game.audio?.currentSpace ?? "none"} bathFaucet=${this.scares?.faucetIsRunning ?? false} bathBulb=${this.lights?.bathBulb.intensity.toFixed(1) ?? "n/a"}`;
   }
 
   async load(): Promise<void> {
@@ -113,6 +114,11 @@ export class Prologue {
         /^save_journal/,
         // What falls in the scares (StudioScares.ts).
         /^fall_/,
+        // Dynamic haunt props & bathroom fixtures kept unmerged for runtime animation and lighting.
+        /^haunt_/,
+        /^bath_lamp_/,
+        /^bath_mirror_glass$/,
+        /^bath_win_louvre_/,
       ],
     });
     this.details = new StudioDetails(game.scene, this.area);
@@ -160,11 +166,49 @@ export class Prologue {
       pickup.setParent(lamp);
     }
 
+    // The waist-high stair gate (0.92 m) sits below eye level: add an invisible doorway-height
+    // pickup volume so approaching the stairs looking naturally ahead always focuses `interact_door`.
+    const stairGate = this.node(DOOR);
+    let stairGateVisible: AbstractMesh[] | undefined;
+    if (stairGate) {
+      stairGateVisible = meshesOf(stairGate);
+      const gatePickup = CreateBox(
+        "studio_stair_gate_pickup",
+        { width: 1.04, height: 1.85, depth: 0.28 },
+        game.scene,
+      );
+      gatePickup.position.copyFrom(stairGate.getAbsolutePosition());
+      gatePickup.position.y = 0.95;
+      gatePickup.visibility = 0;
+      gatePickup.setParent(stairGate);
+    }
+
     // P01: fade in at the drafting table, looking down at the illustration.
+    const devSpots: Record<string, { pos: [number, number, number]; yaw: number; pitch: number }> =
+      {
+        books: { pos: [-1.45, 0, -4.35], yaw: Math.PI / 2, pitch: 0.08 },
+        bath: { pos: [-1.72, 0, -14.7], yaw: Math.PI, pitch: 0.08 },
+        toilet: { pos: [-1.25, 0, -15.35], yaw: -1.92, pitch: 0.14 },
+        tea: { pos: [-3.05, 0, -2.25], yaw: -2.12, pitch: 0.72 },
+        sink: { pos: [-1.72, 0, -15.85], yaw: Math.PI, pitch: 0.72 },
+        switch: { pos: [-1.36, 0, -5.15], yaw: Math.PI + 0.16, pitch: 0.22 },
+        wire: { pos: [-1.35, 0, -2.15], yaw: Math.PI / 2, pitch: -0.18 },
+        altar: { pos: [-1.25, 0, -12.75], yaw: Math.PI + 0.1, pitch: -0.24 },
+        shelf: { pos: [-3.28, 0, -4.95], yaw: Math.PI, pitch: 0.06 },
+        balcony: { pos: [-1.45, 0, -1.35], yaw: 0.08, pitch: 0.18 },
+        stairs: { pos: [-3.85, 0, -6.48], yaw: Math.PI, pitch: 0.34 },
+      };
+    const devSpot =
+      import.meta.env.DEV && typeof location !== "undefined"
+        ? devSpots[new URLSearchParams(location.search).get("at") ?? ""]
+        : undefined;
     const spawn = this.area.level.spawns.get("player");
-    game.spawnPlayer(spawn?.position, spawn?.yaw ?? Math.PI);
+    game.spawnPlayer(
+      devSpot ? new Vector3(...devSpot.pos) : spawn?.position,
+      devSpot ? devSpot.yaw : (spawn?.yaw ?? Math.PI),
+    );
     for (const ladder of this.area.level.ladders) game.player.addLadder(ladder);
-    game.player.pitch = 0.6;
+    game.player.pitch = devSpot ? devSpot.pitch : 0.6;
 
     // Studio checkpoints restore the collected props and drawer, not just inventory.
     for (const [id, pickup] of Object.entries(PICKUPS)) {
@@ -179,7 +223,18 @@ export class Prologue {
     // cut in November 2026): it is simply there, half inked, until the ink spills.
     for (const { name, node } of this.area.level.interactables)
       if (node.isEnabled() && name !== ILLUSTRATION && !(name === DRAWER && this.drawerOpen))
-        game.interaction.add(name, node);
+        game.interaction.add(name, node, name === DOOR ? stairGateVisible : undefined);
+    // Every hinged room door (studio partition, bedroom, bathroom, west balcony casement)
+    // is openable and closable with E; highlight only its brass hardware so the whole leaf stays natural.
+    for (const doorId of Object.keys(STUDIO_DOORS) as StudioDoorId[]) {
+      const doorNode = this.node(doorId);
+      if (!doorNode || !doorNode.isEnabled()) continue;
+      const doorMeshes = meshesOf(doorNode);
+      const handleMeshes = doorMeshes.filter((m) =>
+        /(knob|handle|lockplate|lockcase|_plate_)/i.test(m.name),
+      );
+      game.interaction.add(doorId, doorMeshes, handleMeshes.length ? handleMeshes : undefined);
+    }
     game.bus.on("interact:use", ({ id }) => this.onUse(id));
     const savePoint =
       this.area.level.markers.get("save_studio")?.position.clone() ??
@@ -210,6 +265,27 @@ export class Prologue {
         game.hints.hide();
         if (this.ringing) game.hints.show("hint.phone", 8);
       }
+      if (id === BATH_FAUCET) {
+        game.hints.show(
+          this.scares.faucetIsRunning ? "hint.bathFaucetTurnOff" : "hint.bathFaucetTurnOn",
+          6,
+        );
+      }
+      if (id === DOOR) {
+        game.hints.show(this.stairGateHint(), 6);
+      }
+      if (isStudioDoor(id)) {
+        const open = this.scares?.isDoorOpen?.(id) ?? false;
+        const key: StringKey =
+          id === "haunt_balcony_door"
+            ? open
+              ? "hint.balconyDoorClose"
+              : "hint.balconyDoorOpen"
+            : open
+              ? "hint.doorClose"
+              : "hint.doorOpen";
+        game.hints.show(key, 5);
+      }
     });
   }
 
@@ -235,16 +311,11 @@ export class Prologue {
       await warmSceneViews(game.scene, game.camera, [
         view([-2.3, -0.6], [-2.3, 1.3, -5.5]),
         view([-2.5, -3.0], [-0.3, 1.0, -2.7]),
-        view([-2.3, -5.0], [-2.3, 1.4, 0.5]),
-        // Up to the doorway onto the airwell, where the shadow scare happens: seen for the
-        // first time it stalled for a second (November 24, 2026).
-        view([-0.8, -4.9], [-0.9, 1.4, -7.5]),
-        view([-1.2, -6.6], [-2.5, 1.0, -8.5]),
-        view([-2.3, -6.8], [-1.0, 1.2, -9.4]),
-        view([-3.5, -8.5], [-0.5, 1.0, -7.5]),
+        view([-1.2, -6.5], [-3.2, 1.0, -8.5]),
         view([-0.9, -10.3], [-1.9, 1.0, -13.5]),
-        view([-2.5, -11.5], [-3.5, 1.0, -9.8]),
-        view([-2.0, -13.0], [-0.6, 1.3, -9.3]),
+        view([-2.5, -11.5], [-1.2, 1.4, -13.8]),
+        // Rear 1932 tiled bathroom annex (mirror, cistern, toilet, towels & dynamic haunt decals).
+        view([-1.7, -14.7], [-1.7, 1.4, -16.6]),
       ]);
     } finally {
       hide();
@@ -276,17 +347,21 @@ export class Prologue {
     this.ink.update(dt);
     this.score.update(dt);
     this.bell.update(dt);
-    this.scares.update(dt);
+    this.scares.update(dt, this.ringing);
+    // Smoothly shift room reverb & street-rain occlusion between front studio, back room & tiled bathroom.
+    game.audio?.setSpace(studioSpaceAt(game.camera.globalPosition), 1.6);
     // In the power cut the dark is total: no eyes adjusting, no night sight.
     const eyes = this.lights.power;
     game.atmosphere.baseExposure = 1.25 * (0.3 + 0.7 * eyes);
     game.atmosphere.nightSightIntensity = 1.8 * eyes;
     game.atmosphere.update(dt, this.lights.lightAtEye(game.camera.globalPosition));
-    this.houseSounds();
     // Thunder follows each flash after a few seconds (sound travels about 1 km in 3 s).
     const flashing = this.lights.flashing;
-    if (flashing && !this.wasFlashing)
-      setTimeout(() => this.play("thunder"), 1500 + Math.random() * 2500);
+    if (flashing && !this.wasFlashing) {
+      const stormAt =
+        this.area.level.markers.get("lightning")?.position ?? new Vector3(-2.6, 3.8, 4.0);
+      setTimeout(() => this.scares.playStormThunder(stormAt), 1500 + Math.random() * 2500);
+    }
     this.wasFlashing = flashing;
   }
 
@@ -300,11 +375,13 @@ export class Prologue {
       void game.input.lockPointer();
       void game.audio?.unlock();
     });
-    await this.makeSounds();
+    // Decode audio in the background while fading straight into the studio so pressing Enter
+    // never stalls on a blank black screen!
+    void this.makeSounds();
 
     // P01: rain, the storm and the desk lamp; Sora at her drafting table, the Wat
     // Phnom illustration inked to the middle. Look and move hints if she sits still.
-    void game.fade.to(0, 3);
+    void game.fade.to(0, 1.25);
     game.cutscene = false;
     game.interaction.allow = () => true;
     void this.idleHints();
@@ -335,6 +412,7 @@ export class Prologue {
         void this.saveProgress("Studio · The telephone call");
       } else void this.ink.spill(0.01);
       this.lights.snuffCandle();
+      this.scares?.onShelfCandleSnuffed?.();
       // P06: a breath of silence, then the telephone, ringing until Sora answers.
       await this.wait(1.1);
       game.sketchbook?.close();
@@ -378,24 +456,27 @@ export class Prologue {
     await this.wait(0.3);
     const cutOff = this.say(LINES.call3);
     await this.wait(LINES.call3.seconds * 0.75);
+    game.audio?.duckAmbience(0.24, 0.3);
     this.play("scream");
-    this.score.sting("shock", 0.75);
+    this.score.sting("shock", 0.72);
     this.lights.strike();
     await cutOff;
     await this.wait(1.6);
-    // The line dies: a blow of pressure, then nothing but her ears ringing.
+    // The line dies: a blow of pressure, then stunned hush as the rain returns.
     this.sfx.get("static")?.stop();
     this.score.sting("drop");
     this.score.ring();
     this.score.pressure(0);
+    game.audio?.duckAmbience(1, 2.2);
     await this.wait(0.9);
     await this.say(LINES.call4);
-    this.score.pressure(0.35);
+    this.score.pressure(0.38);
     this.node("telephone_earpiece")?.setEnabled(true);
     game.hands.holdPhone(false);
     game.gated.holdStill = false;
     game.cutscene = false;
     game.flags.set("ep1.phone.answered", true);
+    this.scares?.onPhoneAnswered?.();
   }
 
   private async leave(): Promise<void> {
@@ -403,10 +484,26 @@ export class Prologue {
     game.cutscene = true;
     game.gated.holdStill = true;
     game.gated.holdLook = true;
-    this.play("drawer");
+    const gate = this.node?.(DOOR);
+    const gatePos = gate?.getAbsolutePosition();
+    if (gatePos && this.scares?.playDoorOpen) this.scares.playDoorOpen(gatePos);
+    else this.play("drawer");
+    // Visually swing the wooden stair gate open as Sora heads downstairs into the night.
+    if (gate) {
+      let swing = 0;
+      const obs = game.scene.onBeforeRenderObservable.add(() => {
+        swing = Math.min(1, swing + game.deltaSeconds / 0.65);
+        gate.rotationQuaternion = Quaternion.RotationAxis(
+          Vector3.Up(),
+          -(1 - (1 - swing) ** 3) * 1.15,
+        );
+        if (swing >= 1) obs.remove();
+      });
+    }
     this.score.pressure(0);
     await game.fade.to(1, 1.5);
     for (const sound of this.loops) sound.stop();
+    this.scares?.stopLoops?.();
     this.score.stop();
     game.flags.set("ep1.travel.pending", true);
     game.flags.set("ep1.opening.version", 2);
@@ -455,12 +552,52 @@ export class Prologue {
       setTimeout(() => this.lights.refreshShadows(), 600);
       return this.openDrawer();
     }
-    if ((id === PHONE || id === DOOR) && !this.ringing) {
+    if (id === BATH_FAUCET) {
+      this.scares?.toggleFaucet?.();
+      game.hints.show(
+        this.scares?.faucetIsRunning ? "hint.bathFaucetTurnOff" : "hint.bathFaucetTurnOn",
+        4,
+      );
+      return;
+    }
+    if (isStudioDoor(id)) {
+      const opened = this.scares?.toggleDoor?.(id) ?? false;
+      const key: StringKey =
+        id === "haunt_balcony_door"
+          ? opened
+            ? "hint.balconyDoorClose"
+            : "hint.balconyDoorOpen"
+          : opened
+            ? "hint.doorClose"
+            : "hint.doorOpen";
+      game.hints.show(key, 4);
+      return;
+    }
+    if (id === DOOR) {
+      const gatePos = this.node?.(DOOR)?.getAbsolutePosition();
+      const ready =
+        game.flags.get("ep1.phone.answered", false) &&
+        KIT.every((item) => game.inventory.has(item));
+      if (!ready) {
+        if (gatePos) this.scares?.playDoorLatch?.(gatePos);
+        game.hints.show(this.stairGateHint(), 8);
+      }
+      return;
+    }
+    if (id === PHONE && !this.ringing) {
       const missing = KIT.find((item) => !game.inventory.has(item));
       if (!game.flags.get("ep1.phone.answered", false))
         game.hints.show(missing ? KIT_HINTS[missing] : "hint.phoneQuiet", 8);
-      else if (id === DOOR && missing) game.hints.show(KIT_HINTS[missing], 8);
     }
+  }
+
+  /** Context-aware prompt for the stair gate so going downstairs is always clear. */
+  private stairGateHint(): StringKey {
+    if (this.ringing) return "hint.answerPhoneFirst";
+    const missing = KIT.find((item) => !this.game.inventory.has(item));
+    if (missing) return KIT_HINTS[missing];
+    if (!this.game.flags.get("ep1.phone.answered", false)) return "hint.notReadyToLeave";
+    return "hint.leaveDownstairs";
   }
 
   /** P03: the drawer slides out: Yay Mey's letters, tied with red string, and the matchbox. */
@@ -544,29 +681,6 @@ export class Prologue {
     else if (game.flags.get("ep1.phone.answered", false)) list.push({ text: t("objective.leave") });
     if (list.length) this.objectives.show(list);
     else this.objectives.hide();
-  }
-
-  /**
-   * The house between the scares, while Sora packs and until she leaves: a board
-   * taking a weight overhead, three slow knocks in the back room (until the altar has
-   * fallen), and once it has, something breathing words just behind Sora.
-   */
-  private houseSounds(): void {
-    const game = this.game;
-    if (this.playTime < this.nextScare || game.cutscene || !this.sfx.has("creak")) return;
-    const eye = game.camera.globalPosition;
-    const forward = game.camera.getDirection(Vector3.Forward());
-    const seen = this.scares.altarDone;
-    const roll = Math.random();
-    if (!seen && roll < 0.4) this.play("knock", new Vector3(-2.6, 1.0, -13.7));
-    else if (seen && roll < 0.45 && !this.ringing)
-      this.play("whisper", eye.subtract(forward.scale(0.7)).add(new Vector3(0, 0.05, 0)));
-    else
-      this.play(
-        "creak",
-        eye.add(new Vector3((Math.random() - 0.5) * 3, 1.7, (Math.random() - 0.5) * 3)),
-      );
-    this.nextScare = this.playTime + (seen ? 20 : 14) + Math.random() * 14;
   }
 
   /** P04: what Sora still has to pack, and where each thing is, ticked off as she takes it. */
@@ -668,42 +782,56 @@ export class Prologue {
     game.hints.performed("hint.move");
   }
 
-  /** Placeholder sounds (src/episodes/ep1/audio/prologueSounds.ts), placed where they happen. */
+  /** Loads real CC0 studio recordings first, falling back to procedural synth stand-ins. */
   private async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
     const at = (name: string, fallback: Vector3) =>
       this.node(name)?.getAbsolutePosition().clone() ?? fallback;
-    const markers = this.area.level.markers;
     const window = at("window_glass", new Vector3(-3, 1.8, 0));
     const desk = at(ILLUSTRATION, new Vector3(-3, 0.9, -0.7));
-    const list: [string, SoundMaker, BusName, Vector3, SpatialOptions][] = [
-      ["rain", sounds.rainLoop, "ambience", window, { loop: true, minDistance: 3, volume: 0.8 }],
-      ["ring", sounds.phoneRing, "sfx", at(PHONE, desk), { loop: true, minDistance: 2 }],
+    const base = `${import.meta.env.BASE_URL}assets/ep1/audio/`;
+    const loadClip = (file: string) => audio.load([`${base}${file}.ogg`, `${base}${file}.m4a`]);
+
+    const list: [string, string | null, SoundMaker, BusName, Vector3, SpatialOptions][] = [
+      [
+        "rain",
+        "amb_ep1_studio_rain",
+        sounds.rainLoop,
+        "ambience",
+        window,
+        { loop: true, minDistance: 3.5, volume: 0.72 },
+      ],
+      [
+        "ring",
+        "sfx_ep1_studio_phone_ring",
+        sounds.phoneRing,
+        "sfx",
+        at(PHONE, desk),
+        { loop: true, minDistance: 2.2, volume: 0.85 },
+      ],
       [
         "static",
+        null,
         sounds.lineStatic,
         "voice",
         at(PHONE, desk),
-        { loop: true, volume: 0.5, minDistance: 3 },
+        { loop: true, volume: 0.42, minDistance: 3 },
       ],
-      ["scream", sounds.callScream, "voice", at(PHONE, desk), { minDistance: 3 }],
       [
-        "thunder",
-        sounds.thunder,
-        "ambience",
-        markers.get("lightning")?.position ?? window,
-        { minDistance: 30, volume: 0.9 },
+        "scream",
+        "sfx_ep1_studio_call_terror",
+        sounds.callScream,
+        "voice",
+        at(PHONE, desk),
+        { minDistance: 3, volume: 0.9 },
       ],
-      ["pen", sounds.penScratch, "sfx", desk, { volume: 0.6 }],
-      ["pickup", sounds.pickUp, "sfx", desk, { volume: 0.6 }],
-      ["drawer", sounds.drawerOpen, "sfx", at(DRAWER, desk), { volume: 0.8 }],
-      ["train", sounds.trainPassing, "ambience", desk, { minDistance: 20 }],
-      ["knock", knock, "sfx", desk, { minDistance: 2, volume: 0.7 }],
-      ["creak", creak, "sfx", desk, { minDistance: 2, volume: 0.8 }],
-      ["whisper", whisper, "threat", desk, { minDistance: 0.6, volume: 0.45 }],
+      ["pen", null, sounds.penScratch, "sfx", desk, { volume: 0.55 }],
+      ["pickup", null, sounds.pickUp, "sfx", desk, { volume: 0.55 }],
+      ["drawer", null, sounds.drawerOpen, "sfx", at(DRAWER, desk), { volume: 0.72 }],
+      ["train", null, sounds.trainPassing, "ambience", desk, { minDistance: 20 }],
     ];
-    // A small plastered room: Sora's own steps and the telephone ring in it.
+    // Start in the front plastered studio; update() smoothly crossfades into back bedroom & bathroom.
     audio.setSpace("studio", 0);
     const sampleRate = audio.context.sampleRate;
     // The room's own air, and Phnom Penh beyond the rain: it joins with the phone.
@@ -711,26 +839,26 @@ export class Prologue {
       "studio_room",
       audio.buffer(studioRoom(sampleRate), sampleRate),
       "room",
-      0.55,
+      0.5,
     ));
     room.loop = true;
     if (this.game.flags.get("ep1.phone.answered", false)) room.play();
     this.loops.push(room);
     this.score = new DreadScore(audio);
-    await this.score.load();
+    await this.score.load([
+      `${base}amb_ep1_studio_dread_bed.ogg`,
+      `${base}amb_ep1_studio_dread_bed.m4a`,
+    ]);
     await this.scares.makeSounds();
     const made = await Promise.all(
-      list.map(([name, make, bus, position, options], i) =>
-        audio.spatialSound(
-          name,
-          audio.buffer(make(sampleRate, seededRandom(1932 + i)), sampleRate),
-          bus,
-          position,
-          options,
-        ),
-      ),
+      list.map(async ([name, clip, make, bus, position, options], i) => {
+        const buffer =
+          (clip ? await loadClip(clip) : null) ??
+          audio.buffer(make(sampleRate, seededRandom(1932 + i)), sampleRate);
+        return audio.spatialSound(name, buffer, bus, position, options);
+      }),
     );
-    list.forEach(([name, , , , options], i) => {
+    list.forEach(([name, , , , , options], i) => {
       this.sfx.set(name, made[i]);
       if (options.loop && name === "rain") {
         made[i].play();

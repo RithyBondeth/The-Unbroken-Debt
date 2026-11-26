@@ -74,12 +74,14 @@ export function limiterOutputDb(db: number, limiter = LIMITER): number {
     : limiter.threshold + (db - limiter.threshold) / limiter.ratio;
 }
 
-/** The Web Audio nodes behind `setSpace`: reverb sends and the walls' muffling of the outdoors. */
+/** The Web Audio nodes behind `setSpace`: reverb sends, wall muffling and pre-scare ducking. */
 interface Acoustics {
   send: GainNode;
   out: AudioNode;
   occlusion: BiquadFilterNode;
   occlusionGain: GainNode;
+  ambienceDuck: GainNode;
+  roomDuck: GainNode | null;
 }
 
 /**
@@ -176,16 +178,24 @@ export class AudioSystem {
       occlusion.frequency.value = 20000;
       occlusion.Q.value = 0.5;
       const occlusionGain = context.createGain();
+      const ambienceDuck = context.createGain();
       ambience.disconnect(out);
-      ambience.connect(occlusion).connect(occlusionGain).connect(out);
+      ambience.connect(occlusion).connect(occlusionGain).connect(ambienceDuck).connect(out);
+      const roomNode = node(buses.room)._outNode;
+      let roomDuck: GainNode | null = null;
+      if (roomNode) {
+        roomDuck = context.createGain();
+        roomNode.disconnect(out);
+        roomNode.connect(roomDuck).connect(out);
+      }
       const send = context.createGain();
       for (const [name, level] of Object.entries(REVERB_SENDS) as [BusName, number][]) {
         const tap = context.createGain();
         tap.gain.value = level;
-        const from = name === "ambience" ? occlusionGain : node(buses[name])._outNode;
+        const from = name === "ambience" ? ambienceDuck : node(buses[name])._outNode;
         from?.connect(tap).connect(send);
       }
-      return { send, out, occlusion, occlusionGain };
+      return { send, out, occlusion, occlusionGain, ambienceDuck, roomDuck };
     } catch (error) {
       console.warn("[AudioSystem] no acoustics", error);
       return null;
@@ -236,6 +246,20 @@ export class AudioSystem {
   /** The space the listener is in, once `setSpace` has been called. */
   get currentSpace(): AcousticSpace | null {
     return this.space;
+  }
+
+  /**
+   * Ducks the open-air ambience and room bed together (e.g. a brief vacuum of
+   * near-silence right before a major scare), then restores them with `factor = 1`.
+   */
+  duckAmbience(factor: number, fade = 0.6): void {
+    const acoustics = this.acoustics;
+    if (!acoustics) return;
+    const clamped = Math.max(0.02, Math.min(1, factor));
+    const now = this.context.currentTime;
+    const tau = Math.max(0.015, fade / 3);
+    acoustics.ambienceDuck.gain.setTargetAtTime(clamped, now, tau);
+    acoustics.roomDuck?.gain.setTargetAtTime(clamped, now, tau);
   }
 
   async unlock(): Promise<void> {

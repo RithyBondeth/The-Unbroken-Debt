@@ -24,8 +24,8 @@ export async function warmSceneViews(
     stable = 0,
     frames = 0;
   // A view whose meshes never all report ready (a texture that never arrives) must not
-  // hold the game on a black screen: after this many frames it is left as it is.
-  const MAX_FRAMES = 90;
+  // hold the game on a black screen: cap each view tightly (~0.4 s) so loading never stalls.
+  const MAX_FRAMES = 24;
   const place = scene.onBeforeRenderObservable.add(() => {
     camera.position.copyFrom(views[index].eye);
     camera.setTarget(views[index].target);

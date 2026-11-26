@@ -222,6 +222,23 @@ export class ScreenFade {
     this.card.classList.remove("shown");
   }
 
+  /** Shows or clears a quiet loading notice on the black fade so boot never looks frozen. */
+  setLoading(message: string | null): void {
+    if (!message) {
+      this.card.classList.remove("shown");
+      this.card.replaceChildren();
+      return;
+    }
+    this.node.style.transitionDuration = "0s";
+    this.node.style.opacity = "1";
+    this.card.classList.remove("story-entry");
+    this.card.replaceChildren();
+    const p = document.createElement("p");
+    p.textContent = message;
+    this.card.appendChild(p);
+    this.card.classList.add("shown");
+  }
+
   /** Keep audio unlock and pointer capture in the player's activation gesture. */
   async waitForEnter(onEnter: () => void): Promise<void> {
     const previousFocus = document.activeElement as HTMLElement | null;
