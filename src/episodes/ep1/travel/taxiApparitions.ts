@@ -117,8 +117,11 @@ export function taxiLightning(t: number): number {
     // Early distant monsoon storm flashes across the flooded paddies
     pulse(9.2, 0.55, 5),
     pulse(13.4, 0.78, 4.2),
-    // Beat 1: sharp split-second blink right as the verge watcher snaps closer
+    // Beat 1: sharp split-second blink + quick horrified double-take fork right as verge watcher snaps closer!
     pulse(TAXI_STANDER.snapAt, 0.92, 9),
+    pulse(TAXI_STANDER.snapAt + 0.16, 0.62, 11),
+    // Subtle distant jungle sheet-lightning during micro-dread radio surge (~30.4 s)
+    pulse(30.4, 0.36, 5.2),
     // Beat 2: blinding strike illuminating the high-speed road sprint
     pulse(taxiPassBeat(taxiPass("crossing")), 1, 3.6),
     // Storm precursor before the jungle ambush
@@ -336,6 +339,16 @@ export const TAXI_MIRROR = {
   seated: { from: 46.0, to: 49.2 },
   lean: { from: 52.02, beat: 52.24, to: 54.15 },
 } as const;
+
+/** Six shock-beat impact times (s) for synchronized post-FX scare kicks, FOV punches & cabin flash bounces. */
+export const TAXI_SCARE_BEATS: readonly number[] = [
+  TAXI_STANDER.snapAt,
+  taxiPassBeat(taxiPass("crossing")),
+  TAXI_MIRROR.lean.beat,
+  taxiPassBeat(taxiPass("overtake")),
+  TAXI_WINDOW.beat,
+  TAXI_BONNET.beat,
+];
 
 export interface MirrorRiderPose {
   kind: "seated" | "lean";

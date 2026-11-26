@@ -60,7 +60,7 @@ const CAR_RELIEF = [
 // (The CLI's --pattern cannot exclude names, so the 1024 px cap runs through the API.)
 // (A name is tested, and the empty URI must not pass: hence the trailing ".")
 const NOT_PEOPLE =
-  /^(?!rp_|T_taxi_driver_head_|T_taxi_driver_clothes$|T_taxi_driver_hands_BC|T_taxi_sora_(?:blouse|trousers|skin_BC)|T_taxi_khmer_posters)./;
+  /^(?!rp_|T_taxi_driver_head_|T_taxi_driver_clothes$|T_taxi_driver_hands_BC|T_cab_driver_cap_BC|T_taxi_sora_(?:blouse|trousers|skin_BC|watch_dial_BC|watch_strap_BC)|T_taxi_khmer_posters)./;
 const PEOPLE_2K = [
   "rp_*",
   "T_taxi_driver_head_BC",
@@ -70,7 +70,12 @@ const PEOPLE_2K = [
   "T_taxi_sora_trousers",
   "T_taxi_sora_skin_BC",
 ];
-const FACE = "T_taxi_driver_head_BC";
+const CRISP_UASTC = [
+  "T_taxi_driver_head_BC",
+  "T_taxi_sora_watch_dial_BC",
+  "T_taxi_sora_watch_strap_BC",
+  "T_cab_driver_cap_BC",
+];
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 // No tangents ship: with them the instanced trim needs more than WebGPU's eight vertex
 // buffers, and the face's blend shapes lose their tangent frame (an older export had them).
@@ -192,8 +197,10 @@ try {
       for (const pattern of FAR_SCANS)
         gltf("resize", work, work, "--width", "256", "--height", "256", "--pattern", pattern);
     }
-    // The face first: already KTX2, the ETC1S pass then leaves it alone.
-    if (kind === "cabin") gltf("uastc", work, work, "--pattern", FACE);
+    // The driver's face, flat cap & Sora's watch dial first: already KTX2 UASTC, so ETC1S leaves them crisp.
+    if (kind === "cabin") {
+      for (const pattern of CRISP_UASTC) gltf("uastc", work, work, "--pattern", pattern);
+    }
     gltf(
       "etc1s",
       work,

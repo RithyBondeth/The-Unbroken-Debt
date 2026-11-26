@@ -3456,20 +3456,12 @@ def _smooth_people_and_cabin_polish(coll, m, plain, world_uvs_fn):
     _set_normal_strength("M_cab_satchel", 0.34)
     _set_normal_strength("M_taxi_seat", 0.36)
 
-    # 1. SCULPT ANATOMICAL NECK (if needed) + REFINE DRIVER HEAD/NECK SKIN CONTINUITY
-    _build_anatomical_driver_neck(coll)
-    _refine_driver_head_and_neck_skin(coll)
+    # 1-3. MUSEUM-GRADE REBUILD OF DRIVER HEAD + 1930s FLAT CAP, DRIVER BODY + STEERING GRIP + COLLAR/KRAMA,
+    #      AND SORA HANDS + FINGERNAILS + BVH-CONFORMED ART DECO WRISTWATCH!
+    import taxi_people_refine
 
-    # 2. REBUILD SEAMLESS DRIVER (separated human hand skin + woven linen clothes + cuffs)
     neck_target = Vector((0.268, 0.056, 0.922))
-    drv_body = bpy.data.objects.get("taxi_driver_body_scan")
-    if drv_body is None or not drv_body.data.get("seamless_driver_v11"):
-        _rebuild_seamless_driver(coll, neck_target, world_uvs_fn)
-
-    # 3. REBUILD SORA (Dual Quaternion skinning + natural Khmer hands + woven linen clothes + watch)
-    sora = bpy.data.objects.get("taxi_sora_legs_scan")
-    if sora is None or not sora.data.get("sora_realism_v8"):
-        _rebuild_seamless_sora(coll, world_uvs_fn)
+    taxi_people_refine.apply_people_realism(coll, plain, world_uvs_fn, neck_pos=neck_target)
 
     # 5. POLISH EVERY CABIN INTERIOR DETAIL TO SILKY MUSEUM-GRADE SMOOTHNESS!
     for obj_name in (
@@ -3580,9 +3572,7 @@ def apply_cabin_details(library_material, plain, world_uvs_fn, neck_pos=None):
     _upgrade_interior_props(coll, m, plain, world_uvs_fn)
     _upgrade_footwell_and_console(coll, m, plain, world_uvs_fn)
     _upgrade_rear_cabin(coll, m, plain, world_uvs_fn)
-    _repair_driver_head_normal()
     _smooth_people_and_cabin_polish(coll, m, plain, world_uvs_fn)
-    _add_driver_krama(coll, neck_pos, plain)
     rk = bpy.data.objects.get("taxi_rear_folded_krama")
     km = bpy.data.materials.get("M_cab_driver_krama")
     if rk and km:
@@ -3595,6 +3585,7 @@ if __name__ == "__main__":
     import sys
 
     sys.path.insert(0, str(ROOT / "tools/areas"))
+    sys.path.insert(0, str(ROOT / "tools/travel"))
     from kit import library_material, plain, world_uvs
 
     coll = bpy.context.scene.collection
@@ -3603,12 +3594,9 @@ if __name__ == "__main__":
         if sm and sm.users == 0:
             bpy.data.materials.remove(sm)
     m = _materials(library_material, plain)
-    # Refresh wiper header mounts + repair head normal + rebuild driver & Sora + drape krama
+    # Refresh wiper header mounts + rebuild driver (head, cap, grip, krama) & Sora (hands, nails, watch)
     _refresh_wiper_header_mounts(coll, m)
-    _repair_driver_head_normal()
     _smooth_people_and_cabin_polish(coll, m, plain, world_uvs)
-    neck_pos = Vector((0.268, 0.056, 0.922))
-    _add_driver_krama(coll, neck_pos, plain)
     # Sync rear folded krama to the upgraded krama material
     rk = bpy.data.objects.get("taxi_rear_folded_krama")
     km = bpy.data.materials.get("M_cab_driver_krama")

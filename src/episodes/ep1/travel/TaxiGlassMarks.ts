@@ -5,7 +5,7 @@ import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTextur
 import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { seededRandom } from "@/audio/synth";
-import { TAXI_WINDOW } from "./taxiApparitions";
+import { TAXI_WINDOW, taxiPass, taxiPassBeat } from "./taxiApparitions";
 
 /**
  * Where the ghost's face presses and her two wet palms strike on Sora's side glass
@@ -120,15 +120,19 @@ function palm(
 }
 
 /**
- * What the face at Sora's window leaves behind: two wet muddy palm prints framing
- * her face, and a bloom of breath condensing on the inside of the cold glass where
- * her mouth pressed. The prints stay for the rest of the ride, washing slowly in
- * the rain while lightning catches their grease.
+ * What the haunt at Sora's window leaves behind in three escalating stages:
+ * 1) Beat 4a slap (57.88 s): two wet muddy palm prints slam onto the pane immediately!
+ * 2) Pitch-black lull (58.9..60.2 s): wet dragged fingernail streaks slide down the glass
+ *    right as the fingernail-scrape sound plays in the dark!
+ * 3) Beat 4b face press (60.56 s): a cold bloom of breath condenses inside the glass
+ *    where her mouth pressed, lingering and evaporating slowly after she vanishes.
  */
 export class TaxiGlassMarks {
   private readonly material: StandardMaterial;
   private readonly prints: DynamicTexture;
+  private readonly scratches: StandardMaterial;
   private readonly breath: StandardMaterial;
+  private readonly slapAt = taxiPassBeat(taxiPass("overtake"));
 
   constructor(scene: Scene, glass: Mesh) {
     const size = 512;
@@ -160,6 +164,57 @@ export class TaxiGlassMarks {
     // Just inside the glass the face was outside: the prints were pressed from the other side.
     const inward = -Math.sign(glass.getBoundingInfo().boundingBox.centerWorld.x);
     marks.setAbsolutePosition(glass.getAbsolutePosition().add(new Vector3(inward * 0.004, 0, 0)));
+
+    // Wet fingernail drag streaks appearing during the pitch-black scrape (58.9..60.2 s)
+    const scratchTex = new DynamicTexture(
+      "taxi_window_nail_drags",
+      { width: size, height: size },
+      scene,
+      true,
+    );
+    const sc = scratchTex.getContext() as unknown as CanvasRenderingContext2D;
+    sc.clearRect(0, 0, size, size);
+    for (const p of PALMS) {
+      const px = p.u * size,
+        py = (1 - p.v) * size;
+      for (let fi = -2; fi <= 2; fi++) {
+        const sx = px + fi * 13.5 * p.scale,
+          sy = py - 24 * p.scale;
+        const dragLen = (82 + rand() * 54) * p.scale;
+        const g = sc.createLinearGradient(sx, sy, sx + fi * 2.5, sy + dragLen);
+        g.addColorStop(0, "rgba(188,184,174,0.44)");
+        g.addColorStop(0.55, "rgba(176,172,162,0.32)");
+        g.addColorStop(1, "rgba(165,162,154,0)");
+        sc.strokeStyle = g;
+        sc.lineWidth = 2.6 + rand() * 1.4;
+        sc.lineCap = "round";
+        sc.beginPath();
+        sc.moveTo(sx, sy);
+        sc.quadraticCurveTo(
+          sx + (rand() - 0.5) * 6,
+          sy + dragLen * 0.5,
+          sx + fi * 2.5,
+          sy + dragLen,
+        );
+        sc.stroke();
+      }
+    }
+    scratchTex.hasAlpha = true;
+    scratchTex.update();
+    this.scratches = new StandardMaterial("M_taxi_window_nail_drags", scene);
+    this.scratches.diffuseTexture = scratchTex;
+    this.scratches.useAlphaFromDiffuseTexture = true;
+    this.scratches.diffuseColor = new Color3(0.76, 0.76, 0.74);
+    this.scratches.specularColor = new Color3(0.28, 0.28, 0.3);
+    this.scratches.backFaceCulling = false;
+    this.scratches.alpha = 0;
+    this.scratches.zOffset = -3.5;
+    const scratchMesh = glass.clone("taxi_window_nail_drags", glass.parent);
+    scratchMesh.material = this.scratches;
+    scratchMesh.isPickable = false;
+    scratchMesh.setAbsolutePosition(
+      glass.getAbsolutePosition().add(new Vector3(inward * 0.005, 0, 0)),
+    );
 
     const fog = new DynamicTexture("taxi_window_breath", { width: 256, height: 256 }, scene, true);
     const f = fog.getContext() as unknown as CanvasRenderingContext2D;
@@ -196,17 +251,22 @@ export class TaxiGlassMarks {
   }
 
   update(t: number, flash: number): void {
-    const since = t - TAXI_WINDOW.beat;
-    // The prints land with the slap and fade slowly in the running rain.
-    this.material.alpha = since < 0 ? 0 : Math.max(0.38, 0.86 - since / 34);
-    // Wet grease on cold glass stays ghostly subtle in the dark, stark in lightning.
-    this.material.emissiveColor.set(0.34, 0.35, 0.37).scaleInPlace(0.24 + flash * 0.72);
-    // Breath condenses while she presses against the glass, then evaporates slowly.
+    const sinceSlap = t - this.slapAt;
+    const sinceFace = t - TAXI_WINDOW.beat;
+    // Stage 1: Palm prints land IMMEDIATELY on Beat 4a's slap (57.88 s) and slowly wash in rain!
+    this.material.alpha = sinceSlap < 0 ? 0 : Math.max(0.4, 0.88 - sinceSlap / 36);
+    this.material.emissiveColor.set(0.34, 0.35, 0.37).scaleInPlace(0.24 + flash * 0.78);
+    // Stage 2: Wet fingernail drag streaks materialize smoothly during the blackout scrape (58.9..60.2 s)!
+    const scrapeGrow = Math.max(0, Math.min(1, (t - 58.9) / 1.1));
+    this.scratches.alpha =
+      scrapeGrow <= 0 ? 0 : scrapeGrow * Math.max(0.35, 0.82 - Math.max(0, sinceFace) / 34);
+    this.scratches.emissiveColor.set(0.38, 0.4, 0.43).scaleInPlace(0.22 + flash * 0.82);
+    // Stage 3: Cold breath condenses right as her face presses against the glass (60.56 s), then evaporates!
     this.breath.alpha =
-      since < -0.35
+      sinceFace < -0.35
         ? 0
-        : since < 0.4
-          ? (since + 0.35) / 0.75
-          : Math.max(0, 1 - (since - 0.4) / 4.5);
+        : sinceFace < 0.4
+          ? (sinceFace + 0.35) / 0.75
+          : Math.max(0, 1 - (sinceFace - 0.4) / 4.8);
   }
 }
