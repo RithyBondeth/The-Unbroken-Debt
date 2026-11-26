@@ -146,6 +146,82 @@ export function taxiWipers(rate: number, random: () => number): Float32Array {
 }
 
 /**
+ * Speed-reactive flooded laterite road & tire wash, 9 s seamless loop: tyres
+ * slicing standing sheet-water, fender-well splash hiss, and muddy rut rumble.
+ * Scaled dynamically by `taxiSpeed(t)` in TaxiRide so deceleration to idle
+ * sounds genuinely physical.
+ */
+export function taxiRoadWash(rate: number, random: () => number): Float32Array {
+  const n = Math.round(rate * 9.2),
+    out = new Float32Array(n),
+    knocks = new Float32Array(n);
+  const tyres = biquad(noise(n, random), rate, "bandpass", Math.min(2200, rate * 0.4), 0.55);
+  const spray = biquad(noise(n, random), rate, "bandpass", Math.min(1150, rate * 0.4), 0.7);
+  const road = biquad(brown(n, random), rate, "lowpass", 200, 0.7);
+  for (let t = 0.6; t < 8.8; t += 0.95 + random() * 1.45)
+    knocks[Math.round(t * rate)] = 0.45 + random() * 0.55;
+  const thumps = modal(knocks, rate, [
+    [46, 0.095, 1],
+    [94, 0.05, 0.5],
+  ]);
+  let splash = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / rate;
+    if (i % Math.round(rate * 2.9) === Math.round(rate * 1.4)) splash = 1;
+    splash *= Math.exp(-1 / (rate * 0.34));
+    const swell = 0.84 + 0.16 * Math.sin((t * Math.PI * 2) / 3.05);
+    out[i] =
+      tyres[i] * (0.28 + splash * 0.95) * swell +
+      spray[i] * (0.24 + splash * 0.45) +
+      road[i] * 0.95 +
+      thumps[i] * 0.36;
+  }
+  return normalise(
+    wrapLoop(biquad(out, rate, "lowpass", Math.min(3400, rate * 0.4), 0.7), rate, 0.45),
+    0.58,
+  );
+}
+
+/**
+ * Single physical vacuum-wiper stroke (0.64 s) triggered in exact lockstep with
+ * `taxiWiperAngle(t)` reversals: wet rubber squeegee sweeping soaked windscreen
+ * glass, faint stick-slip micro-judder, and the vintage linkage end-stop clunk.
+ */
+export function taxiWiperStroke(rate: number, random: () => number): Float32Array {
+  const dur = 0.64,
+    n = Math.round(rate * dur),
+    out = new Float32Array(n);
+  const water = biquad(noise(n, random), rate, "bandpass", Math.min(1380, rate * 0.4), 0.85);
+  const rub = modal(
+    stickSlip(
+      n,
+      rate,
+      random,
+      (t) => 78 + 46 * Math.sin((t / dur) * Math.PI),
+      (t) => Math.sin((t / dur) * Math.PI) ** 1.4,
+      0.42,
+    ),
+    rate,
+    [
+      [Math.min(1720, rate * 0.4), 0.004, 1],
+      [Math.min(2980, rate * 0.4), 0.0022, 0.45],
+    ],
+  );
+  const clunk = modal(new Float32Array([1]), rate, [
+    [168, 0.032, 1],
+    [480, 0.014, 0.42],
+  ]);
+  const sweepEnd = Math.round((dur - 0.09) * rate);
+  for (let i = 0; i < sweepEnd; i++) {
+    const p = i / sweepEnd;
+    const speed = Math.sin(Math.PI * p);
+    out[i] = water[i] * speed ** 1.8 * 0.55 + rub[i] * speed ** 2.6 * 0.14;
+  }
+  for (let i = 0; i < clunk.length && sweepEnd + i < n; i++) out[sweepEnd + i] += clunk[i] * 0.18;
+  return normalise(biquad(out, rate, "lowpass", Math.min(3400, rate * 0.4), 0.7), 0.46);
+}
+
+/**
  * The clockwork taximeter on the dash, a 6 s loop: its escapement ticking four
  * times a second in a tin case, and once a loop the fare drum turning over with
  * a dull clunk and a ratchet.

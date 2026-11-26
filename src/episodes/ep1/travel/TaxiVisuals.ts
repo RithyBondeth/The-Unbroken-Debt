@@ -22,7 +22,14 @@ import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder"
 import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import type { MorphTarget } from "@babylonjs/core/Morph/morphTarget";
-import { taxiDriverFace, type DriverFace } from "./taxiDriver";
+import {
+  taxiDriverBody,
+  taxiDriverFace,
+  taxiSoraBody,
+  type DriverBodyPose,
+  type DriverFace,
+  type SoraBodyPose,
+} from "./taxiDriver";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { SpotLight } from "@babylonjs/core/Lights/spotLight";
@@ -54,12 +61,17 @@ import {
 } from "./taxiMotion";
 import {
   TAXI_MIRROR,
+  TAXI_SCARE_BEATS,
+  TAXI_WINDOW,
   taxiElectrics,
   taxiFlinch,
   taxiMirrorRiderAt,
+  taxiPass,
+  taxiPassBeat,
   taxiSpiritAt,
   taxiSwerve,
 } from "./taxiApparitions";
+import { taxiAnxietyLevel } from "./TaxiSoundscape";
 import { TaxiMist } from "./TaxiMist";
 import { buildTaxiFarForest, thickenTaxiUnderstorey } from "./taxiForestDepth";
 import { TaxiTallGrass } from "./TaxiTallGrass";
@@ -370,9 +382,24 @@ export class TaxiVisuals {
   private rearGlanceReturnYaw = -0.12;
   private rearGlanceLastYaw = -0.12;
   private readonly blinkTargets: MorphTarget[] = [];
-  /** The driver's other baked shapes by name, eased towards taxiDriverFace each frame. */
+  /** The driver's head/face shapes by name, eased towards taxiDriverFace each frame. */
   private readonly faceTargets = new Map<keyof DriverFace, MorphTarget[]>();
   private readonly face: DriverFace = { talk: 0, look_road: 0, look_sora: 0, nod: 0, grip: 0 };
+  /** The driver's live skeletal body & steering-wheel morphs (body + cuffs + cuff buttons). */
+  private readonly driverBodyTargets = new Map<keyof DriverBodyPose, MorphTarget[]>();
+  private readonly driverBody: DriverBodyPose = {
+    steer_left: 0,
+    steer_right: 0,
+    grip_tense: 0,
+    breathe: 0,
+    lean_peer: 0,
+  };
+  /** Sora's live skeletal hand, cuff, nail & wristwatch morphs moving in exact lockstep. */
+  private readonly soraTargets = new Map<keyof SoraBodyPose, MorphTarget[]>();
+  private readonly soraBody: SoraBodyPose = { breathe: 0, tense_grip: 0, fidget: 0 };
+  private baseFov = 0.8;
+  private fovKick = 0;
+  private readonly firedScares = new Set<number>();
   private blinkAt = -10;
   private nextBlink = 1.4;
   /** Sora's eyes above the cabin floor. */
@@ -1103,9 +1130,25 @@ export class TaxiVisuals {
               const list = this.faceTargets.get(target.name as keyof DriverFace) ?? [];
               list.push(target);
               this.faceTargets.set(target.name as keyof DriverFace, list);
+            } else if (target.name in this.driverBody) {
+              const list = this.driverBodyTargets.get(target.name as keyof DriverBodyPose) ?? [];
+              list.push(target);
+              this.driverBodyTargets.set(target.name as keyof DriverBodyPose, list);
             }
           }
     }
+    // Collect Sora's live passenger morphs (`breathe`, `tense_grip`, `fidget`) across her body,
+    // cuffs, cuff buttons, fingernails, and all 6 Art Deco wristwatch meshes so they animate in lockstep!
+    for (const mesh of cabinMeshes)
+      if (/taxi_sora/.test(mesh.name) && mesh.morphTargetManager)
+        for (let i = 0; i < mesh.morphTargetManager.numTargets; i++) {
+          const target = mesh.morphTargetManager.getTarget(i);
+          if (target.name in this.soraBody) {
+            const list = this.soraTargets.get(target.name as keyof SoraBodyPose) ?? [];
+            list.push(target);
+            this.soraTargets.set(target.name as keyof SoraBodyPose, list);
+          }
+        }
     for (const material of scene.materials)
       if (material instanceof PBRMaterial) material.maxSimultaneousLights = 12;
     // Keep high simultaneous-light headroom and deeply matte hair/cloth shading on both ghost
@@ -1186,16 +1229,42 @@ export class TaxiVisuals {
         /^M_taxi_(driver_clothes_scan|driver_shirt_scan|sora_trousers_scan|sora_blouse_scan)$/.test(
           material.name,
         ) ||
-        /^M_cab_(driver_krama|driver_cuff_cotton|sora_cuff_linen)$/.test(material.name)
+        /^M_cab_(driver_cap|driver_krama|driver_cuff_cotton|sora_cuff_linen)$/.test(material.name)
       ) {
-        // Woven cotton & linen fabric: micro-sheen grazing highlights with soft matte weave body
+        // Woven wool tweed, cotton & linen fabric: micro-sheen grazing highlights with soft matte weave body
         material.metallic = 0;
-        material.roughness = 0.88;
+        material.roughness = material.name === "M_cab_driver_cap" ? 0.9 : 0.88;
         material.specularIntensity = 0.06;
         material.sheen.isEnabled = true;
-        material.sheen.intensity = 0.24;
+        material.sheen.intensity = material.name === "M_cab_driver_cap" ? 0.28 : 0.24;
         material.sheen.roughness = 0.7;
         material.sheen.color.set(0.85, 0.82, 0.76);
+      }
+      if (material.name === "M_taxi_sora_nails") {
+        material.metallic = 0;
+        material.roughness = 0.26;
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = 0.45;
+        material.clearCoat.roughness = 0.18;
+      }
+      if (material.name === "M_taxi_sora_watch_gold") {
+        material.metallic = 0.94;
+        material.roughness = 0.24;
+      }
+      if (material.name === "M_taxi_sora_watch_strap") {
+        material.metallic = 0;
+        material.roughness = 0.48;
+      }
+      if (material.name === "M_taxi_sora_watch_crystal") {
+        material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+        material.alpha = 0.08;
+        material.metallic = 0;
+        material.roughness = 0.04;
+        material.specularIntensity = 0.55;
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = 0.75;
+        material.clearCoat.roughness = 0.04;
+        material.forceDepthWrite = false;
       }
       if (material.name === "M_cab_gauge_crystal") {
         material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
@@ -1240,8 +1309,9 @@ export class TaxiVisuals {
     realiseInstances(cabin);
     // Six hundred small authored parts would each be drawn twice (scene and mirror):
     // batch the static trim by material, keeping apart what moves or is re-textured.
+    // Keep apart what moves, animates via morph targets (driver + Sora + watch), or is re-textured.
     const apart =
-      /taxi_driver|taxi_charm|taxi_mirror_surface|taxi_instrument_face|taxi_side_glass_sora|taxi_steering_wheel|taxi_dash_radio_dial|taxi_cabin_dome_glass/;
+      /taxi_driver|taxi_sora|taxi_charm|taxi_mirror_surface|taxi_instrument_face|taxi_side_glass_sora|taxi_steering_wheel|taxi_dash_radio_dial|taxi_cabin_dome_glass/;
     const trim = cabin.meshes.filter(
       (m): m is Mesh =>
         m instanceof Mesh &&
@@ -1322,6 +1392,7 @@ export class TaxiVisuals {
     );
     // Far enough for the far tree cards on both sides; the haze closes beyond.
     g.camera.maxZ = 140;
+    this.baseFov = g.camera.fov;
     if (g.pipeline.fog) {
       g.pipeline.fog.density = 0.034;
       g.pipeline.fog.heightFalloff = 0.22;
@@ -1343,6 +1414,7 @@ export class TaxiVisuals {
       this.mirrorCharmTriggered = false;
       this.rearGlanceState = "idle";
     }
+    if (this.lastT >= 0 && t < this.lastT - 0.5) this.firedScares.clear();
     for (const chunk of this.routeChunks) {
       const active = taxiRouteChunkVisible(chunk.minZ, chunk.maxZ, distance, chunk.ahead);
       if (active !== chunk.active) {
@@ -1442,6 +1514,17 @@ export class TaxiVisuals {
     this.mirrorFillTarget = 2.8 * (0.12 + 0.88 * power) + flash * 1.6;
     this.mirrorCabinFill.intensity = 0;
     this.soraFill.intensity = 0.11 * (0.14 + 0.86 * power) + flash * 0.12;
+    // Cold side-glass lightning bounce into the cabin on Beat 4a/4b so even forward-looking
+    // players catch the blinding silver-blue flash + muddy handprint sweep in peripheral vision!
+    const sideFlashWindow =
+      Math.abs(t - taxiPassBeat(taxiPass("overtake"))) < 0.35 ||
+      Math.abs(t - TAXI_WINDOW.beat) < 0.7;
+    if (sideFlashWindow && flash > 0.12) {
+      this.soraFill.diffuse.set(0.72, 0.84, 1);
+      this.soraFill.intensity += flash * 0.68;
+    } else {
+      this.soraFill.diffuse.set(0.9, 0.8, 0.64);
+    }
     this.footwellLight.intensity = 0.24 * (0.08 + 0.92 * power) + flash * 0.1;
     this.roadBounce.intensity = 0.16 * power + flash * 0.34;
     this.roadBounce.diffuse.set(
@@ -1460,14 +1543,36 @@ export class TaxiVisuals {
     this.mist.update(dt, t, distance, power, flash);
     this.updateCabinLife(dt, t, speed, flash);
     this.lastT = t;
-    // Small suspension movement + visceral shock micro-jolt on haunt impacts.
+    // Small suspension movement + visceral shock micro-jolt + smooth adrenaline FOV punch & Atmosphere fear!
     const bump = (Math.sin(t * 5.6) * 0.0028 + Math.sin(t * 9.9 + 0.7) * 0.0012) * (speed / 6.8);
     const flinch = taxiFlinch(t);
+    const anxiety = taxiAnxietyLevel(t);
+    if (livePlay) {
+      for (const [idx, beat] of TAXI_SCARE_BEATS.entries()) {
+        if (!this.firedScares.has(idx) && this.lastT < beat && t >= beat) {
+          this.firedScares.add(idx);
+          g.atmosphere.scare();
+          this.fovKick = idx === 0 ? 0.022 : 0.036;
+          // Subtle lateral mirror-charm jolt on Beat 4a/4b side-window slams!
+          if (idx === 3 || idx === 4) this.charmSwing.sideRate -= 5.2;
+        }
+      }
+    }
+    this.fovKick *= Math.exp(-dt * 4.4);
+    g.camera.fov = this.baseFov + this.fovKick;
+    g.atmosphere.mood.fear = Math.min(1, anxiety * 0.78 + flinch * 0.42);
     const tremor = flinch * Math.sin(t * 48) * 0.0055;
+    // Lateral jolt away from Sora's right window when Beat 4a/4b hits the side glass!
+    const sideSlapJolt =
+      Math.max(
+        Math.exp(-(((t - taxiPassBeat(taxiPass("overtake")) - 0.06) / 0.12) ** 2)),
+        Math.exp(-(((t - TAXI_WINDOW.beat - 0.06) / 0.14) ** 2)),
+      ) * -0.016;
     g.camera.position.y = g.player.feet.y + this.eyeHeight + bump - flinch * 0.018 + tremor;
     g.camera.rotation.z =
       (Math.sin(t * 1.15) * 0.003 + Math.sin(t * 3.1) * 0.001) * (speed / 6.8) +
       swerve * 0.3 +
+      sideSlapJolt +
       flinch * Math.sin(t * 34) * 0.012;
     this.dialIn -= dt;
     if (this.dialIn <= 0) {
@@ -1644,13 +1749,14 @@ export class TaxiVisuals {
       .scaleInPlace(pose.presence * (0.8 + 0.2 * Math.sin(t * 2.3)) + flash * 0.9);
     form.root.position.set(pose.x, pose.y, pose.z);
     form.root.rotation.set(pose.lean, pose.kind === "lean" ? 0.02 : 0.06, 0);
-    // Upright haunting stare framing her gaunt pale face, jet-black hair & white shoulders cleanly
-    // inside the rear-view mirror just like the approved preview!
+    // Seated phase holds an eerie motionless stare in the rear-view mirror; snap-lunge transitions
+    // into `reach` with pale fingers clawing forward between the headrests right behind Sora's neck!
     form.pose(
-      "stand",
+      pose.kind === "lean" ? "reach" : "stand",
       pose.kind === "lean"
-        ? 1.8 + (t - TAXI_MIRROR.lean.from) * 0.5
+        ? 0.22 + (t - TAXI_MIRROR.lean.from) * 0.72
         : t - TAXI_MIRROR.seated.from + 1.5,
+      pose.kind !== "lean",
     );
     form.root.computeWorldMatrix(true);
     // Lock her gaze directly into the rear-view mirror and straight at Sora.
@@ -1686,14 +1792,14 @@ export class TaxiVisuals {
       swing.pitch = Math.max(-0.5, Math.min(0.5, swing.pitch));
       Quaternion.FromEulerAnglesToRef(swing.pitch, 0, swing.side, this.charm.rotationQuaternion);
     }
-    // Live steering wheel turn following road curvature & emergency swerves (bounded cleanly so the
-    // driver's scanned hands stay seated naturally around the sculpted 1933 bakelite rim!).
+    // Live steering wheel turn following road curvature & emergency swerves (bounded cleanly to +-0.16 rad
+    // to match our 1:1 lockstep `steer_left` / `steer_right` skeletal hand arcs with zero rim slip!)
     if (this.wheel?.rotationQuaternion && this.wheelBase) {
       const targetAngle = Math.max(
-        -0.32,
+        -0.16,
         Math.min(
-          0.32,
-          turnRate * 0.85 + taxiSwerve(t) * 2.8 + Math.sin(t * 7.3) * 0.018 * (speed / 6.8),
+          0.16,
+          turnRate * 0.62 + taxiSwerve(t) * 1.95 + Math.sin(t * 7.3) * 0.012 * (speed / 6.8),
         ),
       );
       this.wheelAngle += (targetAngle - this.wheelAngle) * (1 - Math.exp(-dt * 14));
@@ -1713,21 +1819,39 @@ export class TaxiVisuals {
     const since = t - this.blinkAt,
       lid = since < 0.07 ? since / 0.07 : since < 0.22 ? 1 - (since - 0.07) / 0.15 : 0;
     for (const target of this.blinkTargets) target.influence = Math.max(lid, taxiFlinch(t) * 0.55);
-    // Lips, glances, nods and his hand on the wheel follow the conversation.
+    // Lips, glances, nods & cap follow the conversation; arms/cuffs steer the wheel & tense with dread!
     const want = taxiDriverFace(t),
       follow = 1 - Math.exp(-dt / 0.12);
     for (const name of Object.keys(this.face) as (keyof DriverFace)[]) {
-      // The jaw follows syllables closely; the head turns more slowly.
       this.face[name] +=
         (want[name] - this.face[name]) *
         (name === "talk" ? Math.min(1, follow * 1.4) : follow * 0.6);
       for (const target of this.faceTargets.get(name) ?? []) target.influence = this.face[name];
     }
+    const wantBody = taxiDriverBody(t, this.wheelAngle),
+      bodyFollow = 1 - Math.exp(-dt / 0.085);
+    for (const name of Object.keys(this.driverBody) as (keyof DriverBodyPose)[]) {
+      const rate =
+        name === "steer_left" || name === "steer_right"
+          ? Math.min(1, bodyFollow * 1.45)
+          : bodyFollow;
+      this.driverBody[name] += (wantBody[name] - this.driverBody[name]) * rate;
+      for (const target of this.driverBodyTargets.get(name) ?? [])
+        target.influence = this.driverBody[name];
+    }
+    // Sora's live passenger hands, sleeves, nails & Art Deco watch breathe, fidget & clench in terror!
+    const wantSora = taxiSoraBody(t),
+      soraFollow = 1 - Math.exp(-dt / 0.09);
+    for (const name of Object.keys(this.soraBody) as (keyof SoraBodyPose)[]) {
+      const rate = name === "tense_grip" ? Math.min(1, soraFollow * 1.65) : soraFollow * 0.7;
+      this.soraBody[name] += (wantSora[name] - this.soraBody[name]) * rate;
+      for (const target of this.soraTargets.get(name) ?? []) target.influence = this.soraBody[name];
+    }
     if (this.driver) {
       const flinch = taxiFlinch(t);
-      this.driver.rotation.x = Math.sin(t * 1.45) * 0.006 - flinch * 0.06 - flash * 0.01;
-      this.driver.rotation.y = flinch * 0.05;
-      this.driver.rotation.z = Math.sin(t * 0.37) * 0.004;
+      this.driver.rotation.x = Math.sin(t * 1.45) * 0.005 - flinch * 0.048 - flash * 0.008;
+      this.driver.rotation.y = flinch * 0.04;
+      this.driver.rotation.z = Math.sin(t * 0.37) * 0.003;
     }
   }
 

@@ -626,3 +626,78 @@ export function thunderCrack(rate: number, random: () => number): Float32Array {
   }
   return normalise(softClip(out, 1.4), 0.94);
 }
+
+/**
+ * Wet fingernails dragging slowly down cold rain-streaked window glass (1.35 s):
+ * terrifying stick-slip high-frequency squeal + hollow laminated glass vibration
+ * during the pitch-black Beat 4a -> 4b vacuum silence!
+ */
+export function glassNailScrape(rate: number, random: () => number): Float32Array {
+  const n = Math.round(rate * 1.35),
+    out = new Float32Array(n);
+  const slip = stickSlip(
+    n,
+    rate,
+    random,
+    (t) => 420 + 780 * (t / 1.35) + 95 * Math.sin(t * 21),
+    (t) => Math.sin(Math.min(1, t / 1.25) * Math.PI) ** 0.75,
+    0.18,
+  );
+  const squeal = modal(slip, rate, [
+    [cap(1880, rate), 0.009, 0.9],
+    [cap(2920, rate), 0.006, 1.0],
+    [cap(4120, rate), 0.0035, 0.55],
+  ]);
+  const pane = biquad(noise(n, random), rate, "bandpass", cap(980, rate), 1.4);
+  for (let i = 0; i < n; i++) {
+    const t = i / rate;
+    const env = Math.sin(Math.min(1, t / 1.32) * Math.PI) ** 0.8;
+    out[i] = squeal[i] * 0.92 + pane[i] * env * 0.16;
+  }
+  biquad(out, rate, "highpass", 420, 0.7);
+  return normalise(out, 0.84);
+}
+
+/**
+ * Heavy 1930s leather bench & steel coil-spring weight-shift creak (1.45 s):
+ * someone just leaned forward on the back seat right behind Sora's neck!
+ */
+export function seatSpringCreak(rate: number, random: () => number): Float32Array {
+  const n = Math.round(rate * 1.45),
+    out = new Float32Array(n);
+  const leather = modal(
+    stickSlip(
+      n,
+      rate,
+      random,
+      (t) => 54 + 32 * Math.sin(t * 5.2),
+      (t) => Math.sin(Math.min(1, t / 1.35) * Math.PI) ** 1.1,
+      0.42,
+    ),
+    rate,
+    [
+      [cap(185, rate), 0.025, 1.0],
+      [cap(365, rate), 0.016, 0.75],
+      [cap(740, rate), 0.009, 0.45],
+    ],
+  );
+  const spring = modal(
+    stickSlip(
+      n,
+      rate,
+      random,
+      (t) => 115 - 38 * (t / 1.45),
+      (t) => (t > 0.22 && t < 1.18 ? Math.sin(((t - 0.22) / 0.96) * Math.PI) : 0),
+      0.24,
+    ),
+    rate,
+    [
+      [cap(520, rate), 0.045, 0.7],
+      [cap(1090, rate), 0.024, 0.45],
+    ],
+  );
+  for (let i = 0; i < n; i++) out[i] = leather[i] * 0.95 + spring[i] * 0.55;
+  biquad(out, rate, "highpass", 55, 0.7);
+  biquad(out, rate, "lowpass", cap(2400, rate), 0.7);
+  return normalise(out, 0.85);
+}

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
-import { taxiDriverFace } from "@/episodes/ep1/travel/taxiDriver";
+import { taxiDriverBody, taxiDriverFace, taxiSoraBody } from "@/episodes/ep1/travel/taxiDriver";
 import { TAXI_CONVERSATION } from "@/episodes/ep1/travel/taxiConversation";
-import { taxiPass, taxiPassBeat } from "@/episodes/ep1/travel/taxiApparitions";
+import { TAXI_WINDOW, taxiPass, taxiPassBeat } from "@/episodes/ep1/travel/taxiApparitions";
 
 it("moves his jaw only while he speaks, opening and closing on syllables", () => {
   for (const line of TAXI_CONVERSATION) {
@@ -30,9 +30,32 @@ it("watches the trees while Sora asks why, and snaps forward at the crossing", (
 });
 
 it("keeps every weight within 0–1 for the whole ride", () => {
-  for (let t = 0; t <= 72; t += 0.05)
+  for (let t = 0; t <= 72; t += 0.05) {
     for (const value of Object.values(taxiDriverFace(t))) {
       expect(value).toBeGreaterThanOrEqual(0);
       expect(value).toBeLessThanOrEqual(1);
     }
+    for (const value of Object.values(taxiDriverBody(t, Math.sin(t) * 0.25))) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+    for (const value of Object.values(taxiSoraBody(t))) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
+it("drives driver steering-wheel morphs with wheel angle and tenses Sora's hands on scares", () => {
+  expect(taxiDriverBody(10, 0.25).steer_left).toBeGreaterThan(0.8);
+  expect(taxiDriverBody(10, 0.25).steer_right).toBe(0);
+  expect(taxiDriverBody(10, -0.25).steer_right).toBeGreaterThan(0.8);
+  expect(taxiDriverBody(10, -0.25).steer_left).toBe(0);
+  expect(taxiDriverBody(TAXI_WINDOW.beat + 0.15, 0).grip_tense).toBeGreaterThan(0.7);
+
+  // Sora fidgets subtly while calm, and clenches her knees tightly on Beat 4b's window scare!
+  expect(taxiSoraBody(7).fidget).toBeGreaterThan(0.4);
+  expect(taxiSoraBody(7).tense_grip).toBeLessThan(0.2);
+  expect(taxiSoraBody(TAXI_WINDOW.beat + 0.15).tense_grip).toBeGreaterThan(0.75);
+  expect(taxiSoraBody(TAXI_WINDOW.beat + 0.15).fidget).toBe(0);
 });
