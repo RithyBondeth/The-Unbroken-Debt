@@ -9,7 +9,7 @@ import { cabinStormBed } from "../audio/taxiDreadSounds";
 import { DreadScore } from "@/audio/DreadScore";
 import { WindAudio, stingGust } from "../audio/WindAudio";
 import { TaxiVisuals } from "./TaxiVisuals";
-import { TAXI_CONVERSATION, taxiConversationAt, taxiDriverVoiceUrls } from "./taxiConversation";
+import { TAXI_CONVERSATION, taxiConversationAt, taxiVoiceUrls } from "./taxiConversation";
 import { TaxiSoundscape, taxiAnxietyLevel, taxiThrottle } from "./TaxiSoundscape";
 import { taxiElectrics, taxiFlinch, taxiLightning, taxiVacuumDuck } from "./taxiApparitions";
 import { taxiSpeed, taxiWiperAngle } from "./taxiMotion";
@@ -40,8 +40,8 @@ export class TaxiRide {
   private visuals!: TaxiVisuals;
   private windAudio!: WindAudio;
   private dread: TaxiSoundscape | null = null;
-  /** The driver's Khmer lines, spatialized at his front-left seat by their `voice` number. */
-  private readonly driverVoice = new Map<number, StaticSound>();
+  /** Both speakers' Khmer lines, in conversation order (Driver spatialized at the front-left seat). */
+  private readonly dialogueVoice = new Map<number, StaticSound>();
   private speaking: StaticSound | null = null;
   private score = new DreadScore(null);
   private skip: HTMLButtonElement | null = null;
@@ -169,7 +169,7 @@ export class TaxiRide {
       if (line) this.game.subtitles.show(line.speaker, line.text);
       else this.game.subtitles.hide();
       // Spoken from its first word; a ride resumed mid-line shows only the subtitle.
-      const voice = line?.voice ? this.driverVoice.get(line.voice) : undefined;
+      const voice = line ? this.dialogueVoice.get(line.index) : undefined;
       if (line && voice && t - line.at < 0.5) {
         this.speaking?.stop();
         this.speaking = voice;
@@ -257,7 +257,6 @@ export class TaxiRide {
     // Tight 1933 steel-and-upholstery sedan cabin acoustics.
     audio.setSpace("cabin", 0.3);
     const rate = audio.context.sampleRate;
-
     // 1. Speed-reactive vintage 4-cylinder engine + separate speed-reactive flooded-road tire wash
     const motorSound = await audio.sound(
       "taxi_motor",
@@ -311,22 +310,30 @@ export class TaxiRide {
       ),
     );
 
-    // 4. Driver's recorded Khmer voice, spatialized authentically at the driver's left-seat head!
+    // 4. Recorded Khmer dialogue: Driver spatialized at his front-left seat, Sora centered.
     const driverHeadPos = new Vector3(-0.48, 1.04, -0.02);
     await Promise.all(
-      TAXI_CONVERSATION.filter((line) => line.voice).map(async (line) => {
-        const urls = taxiDriverVoiceUrls(line.voice!).map(
+      TAXI_CONVERSATION.map(async (line, index) => {
+        const urls = taxiVoiceUrls(line.speaker, line.voice).map(
           (url) => `${import.meta.env.BASE_URL}${url}`,
         );
         const buffer = await audio.load(urls);
         if (buffer)
-          this.driverVoice.set(
-            line.voice!,
-            await audio.spatialSound(`taxi_driver_${line.voice}`, buffer, "voice", driverHeadPos, {
-              minDistance: 0.95,
-              maxDistance: 6,
-              volume: 0.96,
-            }),
+          this.dialogueVoice.set(
+            index,
+            line.speaker === "Driver"
+              ? await audio.spatialSound(
+                  `taxi_driver_${line.voice}`,
+                  buffer,
+                  "voice",
+                  driverHeadPos,
+                  {
+                    minDistance: 0.95,
+                    maxDistance: 6,
+                    volume: 0.96,
+                  },
+                )
+              : await audio.sound(`taxi_${line.speaker}_${line.voice}`, buffer, "voice", 0.95),
           );
       }),
     );

@@ -1,0 +1,139 @@
+{
+  "language": "km-KH",
+  "model": "muyleanging/VoxPocket-TTS-Khmer",
+  "revision": "7c4390ed1813b56a5b4c36d5ec29ee6d12eccbcb",
+  "cast": {
+    "sora": {
+      "preset": "Woman 1",
+      "source": "https://huggingface.co/spaces/muyleanging/VoxPocket-TTS-Demo/tree/91c9f9741fa7d927961111f6fc2397e3ad3a4a63/voices"
+    },
+    "mey": {
+      "direction": "An elderly woman, warm lived-in voice, calling gently to her granddaughter and growing urgent.",
+      "seed": 61,
+      "referenceText": "សូរ៉ា… ឮយាយអត់ ចៅ? ចៅមកផ្ទះវិញមក។ មកឥឡូវហ្នឹងណា ចៅ។",
+      "reference": "studio-driving-cast/mey-reference.wav"
+    },
+    "driver": {
+      "direction": "A middle-aged man, low dry conversational voice, speaking quietly but firmly to his passenger.",
+      "seed": 814,
+      "referenceText": "ក្មួយ មើលទៅមុខទៅ។ កុំហៅវាអី។",
+      "reference": "studio-driving-cast/driver-reference.wav"
+    }
+  },
+  "takes": [
+    {
+      "key": "studio_letters",
+      "role": "sora",
+      "text": "សំបុត្រយាយ… យប់នេះ ខ្ញុំអានមិនកើតទេ។",
+      "asset": "vo_studio_km_E1-P03-1"
+    },
+    {
+      "key": "studio_call1",
+      "role": "mey",
+      "text": "សូរ៉ា? សូរ៉ា ចៅមែនទេ? ឮយាយនិយាយទេ ចៅ?",
+      "asset": "vo_studio_km_E1-P06-1"
+    },
+    {
+      "key": "studio_call2",
+      "role": "sora",
+      "text": "យាយ? មានរឿងអីយាយ? ម៉ោងប្រាំបីជាងហើយ…",
+      "asset": "vo_studio_km_E1-P06-2"
+    },
+    {
+      "key": "studio_call3",
+      "role": "mey",
+      "text": "ចៅមកផ្ទះវិញមក។ មកឥឡូវនេះ! ពូសុខធ្វើឱ្យវាបែកហើយ… វានៅក្នុងផ្ទះ។",
+      "asset": "vo_studio_km_E1-P06-3"
+    },
+    {
+      "key": "studio_call4",
+      "role": "sora",
+      "text": "យាយ? យាយឮខ្ញុំទេ? យាយ!",
+      "asset": "vo_studio_km_E1-P06-4"
+    },
+    {
+      "key": "taxi_driver_1",
+      "role": "driver",
+      "text": "ផ្លូវលិចទឹកអស់ហើយ។ មានគេចាំក្មួយនៅផ្ទះទេ?",
+      "asset": "vo_taxi_driver_km_1"
+    },
+    {
+      "key": "taxi_sora_1",
+      "role": "sora",
+      "text": "យាយខ្ញុំទូរស័ព្ទមក។ ខ្ញុំទៅផ្ទះពូសុខ។",
+      "asset": "vo_taxi_sora_km_1"
+    },
+    {
+      "key": "taxi_driver_2",
+      "role": "driver",
+      "text": "ព្រឹកមិញ ពូទើបតែដឹកអ្នកទៅបុណ្យសពនៅទីនោះ។",
+      "asset": "vo_taxi_driver_km_2"
+    },
+    {
+      "key": "taxi_sora_2",
+      "role": "sora",
+      "text": "ខ្ញុំខានមកផ្ទះច្រើនឆ្នាំហើយ។ មើលទៅប្លែកណាស់។",
+      "asset": "vo_taxi_sora_km_2"
+    },
+    {
+      "key": "taxi_driver_3",
+      "role": "driver",
+      "text": "ដើមឈើធំអស់ហើយ… តែផ្លូវនៅដដែល។",
+      "asset": "vo_taxi_driver_km_3"
+    },
+    {
+      "key": "taxi_sora_3",
+      "role": "sora",
+      "text": "ពូចេះតែងាកមើលទៅក្នុងព្រៃ។",
+      "asset": "vo_taxi_sora_km_3"
+    },
+    {
+      "key": "taxi_driver_4",
+      "role": "driver",
+      "text": "គ្មានអ្នកណាមកឈរចាំក្បែរផ្លូវនេះទេ… ជាពិសេសពេលភ្លៀងបែបនេះ។",
+      "asset": "vo_taxi_driver_km_4"
+    },
+    {
+      "key": "taxi_sora_4",
+      "role": "sora",
+      "text": "អ៊ីចឹង ពូកំពុងរកអ្នកណា?",
+      "asset": "vo_taxi_sora_km_4"
+    },
+    {
+      "key": "taxi_sora_5",
+      "role": "sora",
+      "text": "ពូ… មិញពូឃើញអត់? ដូចមានអ្នកណាឈរកណ្ដាលផ្លូវ។",
+      "asset": "vo_taxi_sora_km_5"
+    },
+    {
+      "key": "taxi_driver_5",
+      "role": "driver",
+      "text": "ក្មួយ មើលទៅមុខទៅ។ កុំហៅវាអី។",
+      "asset": "vo_taxi_driver_km_5"
+    },
+    {
+      "key": "taxi_sora_6",
+      "role": "sora",
+      "text": "ក្រោយឡានយើង អត់មានអ្នកណាទេ។",
+      "asset": "vo_taxi_sora_km_6"
+    },
+    {
+      "key": "taxi_driver_6",
+      "role": "driver",
+      "text": "ល្អហើយ។ គ្របចង្កៀងទុកសិន ទាល់តែចេញផុត។",
+      "asset": "vo_taxi_driver_km_6"
+    },
+    {
+      "key": "taxi_sora_7",
+      "role": "sora",
+      "text": "ពូជូនខ្ញុំទៅដល់ផ្ទះតែម្ដងមិនបានទេ?",
+      "asset": "vo_taxi_sora_km_7"
+    },
+    {
+      "key": "taxi_driver_7",
+      "role": "driver",
+      "text": "ពូជូនបានត្រឹមនេះហើយ។ ដើរតាមផ្លូវនេះទៅដល់ផ្ទះហើយ។ កុំមាត់ឮៗណា។",
+      "asset": "vo_taxi_driver_km_7"
+    }
+  ]
+}
