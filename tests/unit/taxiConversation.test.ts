@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   TAXI_CONVERSATION,
   taxiConversationAt,
-  taxiDriverVoiceUrls,
+  taxiVoiceUrls,
 } from "@/episodes/ep1/travel/taxiConversation";
 describe("taxi conversation", () => {
   it("gives both characters a readable exchange without overlapping lines or the final fade", () => {
@@ -26,15 +26,16 @@ describe("taxi conversation", () => {
     expect(taxiConversationAt(60)?.text).toContain("house");
     expect(taxiConversationAt(69.5)).toBeNull();
   });
-  it("voices every driver line in Khmer, once each, finished before the next line", () => {
+  it("voices every line in Khmer, once each, finished before the next line", () => {
     const driver = TAXI_CONVERSATION.filter((l) => l.speaker === "Driver");
     expect(driver.map((l) => l.voice)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(TAXI_CONVERSATION.filter((l) => l.speaker === "Sora").every((l) => !l.voice)).toBe(true);
+    expect(TAXI_CONVERSATION.filter((l) => l.speaker === "Sora").map((l) => l.voice)).toEqual([
+      1, 2, 3, 4, 5, 6, 7,
+    ]);
     for (const [i, line] of TAXI_CONVERSATION.entries()) {
-      if (!line.voice) continue;
-      expect(line.clip!).toBeLessThanOrEqual(line.seconds);
-      expect(line.at + line.clip!).toBeLessThanOrEqual(TAXI_CONVERSATION[i + 1]?.at ?? 70);
-      for (const url of taxiDriverVoiceUrls(line.voice))
+      expect(line.clip).toBeLessThanOrEqual(line.seconds);
+      expect(line.at + line.clip).toBeLessThanOrEqual(TAXI_CONVERSATION[i + 1]?.at ?? 70);
+      for (const url of taxiVoiceUrls(line.speaker, line.voice))
         expect(existsSync(fileURLToPath(new URL(`../../public/${url}`, import.meta.url)))).toBe(
           true,
         );

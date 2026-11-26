@@ -73,6 +73,7 @@ export class Prologue {
   private readonly waiting = new Map<string, () => void>();
   private readonly loops: StaticSound[] = [];
   private sfx = new Map<string, StaticSound>();
+  private dialogueReady = Promise.resolve();
   private score = new DreadScore(null);
   private drawerOpen = false;
   private ringing = false;
@@ -455,7 +456,7 @@ export class Prologue {
     await this.say(LINES.call2);
     await this.wait(0.3);
     const cutOff = this.say(LINES.call3);
-    await this.wait(LINES.call3.seconds * 0.75);
+    await this.wait(LINES.call3.seconds - 0.35);
     game.audio?.duckAmbience(0.24, 0.3);
     this.play("scream");
     this.score.sting("shock", 0.72);
@@ -761,7 +762,21 @@ export class Prologue {
     });
   }
 
-  private say(line: Line): Promise<void> {
+  private async loadDialogue(): Promise<void> {
+    const audio = this.game.audio;
+    if (!audio) return;
+    await Promise.allSettled(
+      Object.values(LINES).map(async ({ id }) => {
+        const base = `${import.meta.env.BASE_URL}assets/ep1/audio/vo_studio_km_${id}`;
+        const buffer = await audio.load([`${base}.ogg`, `${base}.m4a`]);
+        if (buffer) this.sfx.set(id, await audio.sound(id, buffer, "voice", 0.95));
+      }),
+    );
+  }
+
+  private async say(line: Line): Promise<void> {
+    await this.dialogueReady;
+    this.play(line.id);
     return this.game.subtitles.say(line.speaker, line.text, line.seconds);
   }
 
@@ -786,6 +801,7 @@ export class Prologue {
   private async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
+    this.dialogueReady = this.loadDialogue();
     const at = (name: string, fallback: Vector3) =>
       this.node(name)?.getAbsolutePosition().clone() ?? fallback;
     const window = at("window_glass", new Vector3(-3, 1.8, 0));
