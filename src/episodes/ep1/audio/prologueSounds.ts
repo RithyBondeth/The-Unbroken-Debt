@@ -215,46 +215,40 @@ function telephone(samples: Float32Array, sampleRate: number, drive = 2): Float3
 export function callScream(sampleRate: number, rand: () => number): Float32Array {
   const length = seconds(3.2, sampleRate);
   const raw = new Float32Array(length);
-  // The voice: a glottal buzz with jitter, rising, its pitch breaking near the top.
-  const screamFor = 1.45;
+  // The voice: a breathy distressed gasp and cry without harsh sawtooth buzzing.
+  const screamFor = 1.25;
   const n = seconds(screamFor, sampleRate);
-  const buzz = new Float32Array(n);
+  const glottal = new Float32Array(n);
   let phase = 0,
-    wobble = 0,
-    cycle = 0;
+    wobble = 0;
   for (let i = 0; i < n; i++) {
     const t = i / sampleRate;
-    wobble += (rand() - 0.5) * 0.02 - wobble * 0.002;
+    wobble += (rand() - 0.5) * 0.015 - wobble * 0.003;
     const f0 =
-      (520 + 380 * Math.min(1, t / 0.5) + (t > 0.9 ? 120 * Math.sin((t - 0.9) * 9) : 0)) *
-      (1 + 0.025 * Math.sin(t * 2 * Math.PI * 7.5) + wobble);
+      (340 + 180 * Math.min(1, t / 0.35) - 60 * Math.max(0, t - 0.7)) *
+      (1 + 0.018 * Math.sin(t * 2 * Math.PI * 5.8) + wobble);
     phase += f0 / sampleRate;
-    if (phase >= 1) {
-      phase -= 1;
-      cycle++;
-    }
-    // A sawtooth, every other cycle weaker: the rough period-doubling of a throat at its limit.
-    buzz[i] = (phase * 2 - 1) * (cycle % 2 ? 0.7 : 1);
+    const w = 2 * Math.PI * phase;
+    glottal[i] = Math.sin(w) * 0.65 + Math.sin(2 * w) * 0.3 + Math.sin(3 * w) * 0.12;
   }
-  const voice = formant(buzz, sampleRate, [
-    [950, 130, 1],
-    [1450, 160, 0.75],
-    [2900, 260, 0.45],
-    [3800, 400, 0.2],
+  const voice = formant(glottal, sampleRate, [
+    [720, 140, 1],
+    [1320, 180, 0.7],
+    [2450, 320, 0.32],
   ]);
   const breath = formant(noise(n, rand), sampleRate, [
-    [950, 300, 1],
-    [2900, 600, 0.5],
+    [820, 260, 1],
+    [2100, 500, 0.55],
   ]);
   mix(
     raw,
     voice,
     sampleRate,
-    0.03,
-    1,
-    (t) => Math.min(1, t / 0.08) * (t > 1.15 ? Math.max(0, 1 - (t - 1.15) / 0.3) : 1),
+    0.05,
+    0.65,
+    (t) => Math.min(1, t / 0.1) * (t > 0.85 ? Math.max(0, 1 - (t - 0.85) / 0.4) : 1),
   );
-  mix(raw, breath, sampleRate, 0.03, 0.25, (t) => (t < screamFor ? Math.min(1, t / 0.05) : 0));
+  mix(raw, breath, sampleRate, 0.03, 0.55, (t) => (t < screamFor ? Math.min(1, t / 0.06) : 0));
   // Glass: the pane cracks, then shards ring as they fall and scatter.
   mix(
     raw,

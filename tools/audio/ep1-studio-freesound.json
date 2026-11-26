@@ -1,0 +1,245 @@
+{
+  "about": "Episode 1 studio recorded sound sources: Freesound HQ Ogg previews of CC0 1.0 recordings (licence checked via Freesound search filter, 2026-11-26). Cut and encoded to Ogg Opus + AAC by tools/audio/make-ep1-studio-audio.sh.",
+  "folder": "art-source/audio/library/freesound-ep1",
+  "licence": "CC0 1.0",
+  "sources": [
+    {
+      "id": 854720,
+      "uid": 14328669,
+      "user": "cinnxi",
+      "file": "854720_cinnxi_heavy_rain_indoors.ogg",
+      "title": "Heavy Rain Indoors - Window closed"
+    },
+    {
+      "id": 812182,
+      "uid": 13183432,
+      "user": "JW_Audio",
+      "file": "812182_jw_audio_rain_indoor_window.ogg",
+      "title": "RAINInt_Indoor, House, Open Window, Heavy Shower"
+    },
+    {
+      "id": 709887,
+      "uid": 6419187,
+      "user": "sfxbro",
+      "file": "709887_sfxbro_thunder_roll_clap.ogg",
+      "title": "Thunder roll and clap with rain"
+    },
+    {
+      "id": 431301,
+      "uid": 4705283,
+      "user": "olijohns1",
+      "file": "431301_olijohns1_thunder_heavy_rain.ogg",
+      "title": "Thunder and heavy rain"
+    },
+    {
+      "id": 156578,
+      "uid": 1480854,
+      "user": "SpliceSound",
+      "file": "156578_splicesound_picture_frame_shatter.ogg",
+      "title": "Picture frame dropped on wood floor, shatters"
+    },
+    {
+      "id": 221528,
+      "uid": 1038806,
+      "user": "unfa",
+      "file": "221528_unfa_glass_break.ogg",
+      "title": "Glass Break"
+    },
+    {
+      "id": 595487,
+      "uid": 12672587,
+      "user": "SavReese",
+      "file": "595487_savreese_glass_crack_break.ogg",
+      "title": "Glass cracking and breaking"
+    },
+    {
+      "id": 399080,
+      "uid": 2247456,
+      "user": "Kinoton",
+      "file": "399080_kinoton_clay_pottery_break.ogg",
+      "title": "Clay Pottery Drop 'n' Break"
+    },
+    {
+      "id": 873248,
+      "uid": 9839964,
+      "user": "harrisonlace",
+      "file": "873248_harrisonlace_wood_splinters.ogg",
+      "title": "WOODBrk_Layered Cracking Thin Plywood Board Splinters"
+    },
+    {
+      "id": 483354,
+      "uid": 2524442,
+      "user": "craigsmith",
+      "file": "483354_craigsmith_wood_splinters_creaks.ogg",
+      "title": "Wood Splinters and Creaks"
+    },
+    {
+      "id": 181115,
+      "uid": 1591616,
+      "user": "AlecCorday",
+      "file": "181115_aleccorday_metal_cup_drop.ogg",
+      "title": "Metal Cup Drop"
+    },
+    {
+      "id": 165310,
+      "uid": 2989529,
+      "user": "ShawnyBoy",
+      "file": "165310_shawnyboy_metal_clatter.ogg",
+      "title": "Metal Clatter"
+    },
+    {
+      "id": 245944,
+      "uid": 4361022,
+      "user": "sophiehall3535",
+      "file": "245944_sophiehall3535_bowl_drop_spin.ogg",
+      "title": "Bowl drop and spin"
+    },
+    {
+      "id": 822745,
+      "uid": 9250976,
+      "user": "Nox_Sound",
+      "file": "822745_nox_sound_wood_floor_creaks.ogg",
+      "title": "Foley_Creak_Wood_Floor_Sequence_Stereo"
+    },
+    {
+      "id": 874897,
+      "uid": 17191970,
+      "user": "lreeve",
+      "file": "874897_lreeve_creaky_footsteps_wood.ogg",
+      "title": "Creaky footsteps on wood floor"
+    },
+    {
+      "id": 448359,
+      "uid": 4844765,
+      "user": "ExplosiveTamale",
+      "file": "448359_explosivetamale_knocking_wood_door.ogg",
+      "title": "Knocking On a Wooden Door"
+    },
+    {
+      "id": 728716,
+      "uid": 15671594,
+      "user": "windyeq",
+      "file": "728716_windyeq_knocking_wall.ogg",
+      "title": "knocking on table or wall or door even"
+    },
+    {
+      "id": 523273,
+      "uid": 129727,
+      "user": "MrFossy",
+      "file": "523273_mrfossy_footsteps_wooden_floor.ogg",
+      "title": "Foley_Footsteps_ShedWoodenFloor"
+    },
+    {
+      "id": 766212,
+      "uid": 15695817,
+      "user": "kgopong",
+      "file": "766212_kgopong_footsteps_wood.ogg",
+      "title": "FEETHmn_Int_Footsteps on Wooden Floor"
+    },
+    {
+      "id": 794907,
+      "uid": 16786392,
+      "user": "Ultra-Edward",
+      "file": "794907_ultra_edward_dripping_water.ogg",
+      "title": "Dripping Water"
+    },
+    {
+      "id": 422873,
+      "uid": 6613468,
+      "user": "IPaddeh",
+      "file": "422873_ipaddeh_water_dripping_loop.ogg",
+      "title": "Water_Dripping_Loop"
+    },
+    {
+      "id": 558859,
+      "uid": 9743519,
+      "user": "digpro120",
+      "file": "558859_digpro120_faucet_running.ogg",
+      "title": "Running water faucet"
+    },
+    {
+      "id": 212177,
+      "uid": 2418916,
+      "user": "OwlStorm",
+      "file": "212177_owlstorm_tap_water.ogg",
+      "title": "Tap water"
+    },
+    {
+      "id": 634158,
+      "uid": 522747,
+      "user": "Erbsland-Music",
+      "file": "634158_erbsland_water_splash_sink.ogg",
+      "title": "Short Water Splash in Metal Sink"
+    },
+    {
+      "id": 275471,
+      "uid": 4366671,
+      "user": "adharca",
+      "file": "275471_adharca_creaky_wooden_door.ogg",
+      "title": "creaky wooden door"
+    },
+    {
+      "id": 870437,
+      "uid": 6473503,
+      "user": "moogleoftheages",
+      "file": "870437_moogleoftheages_old_wooden_door.ogg",
+      "title": "Old Wooden Door in Scotland Cottage"
+    },
+    {
+      "id": 456433,
+      "uid": 3902754,
+      "user": "mycompasstv",
+      "file": "456433_mycompasstv_old_rotary_phone_ring.ogg",
+      "title": "Old Rotary Phone Ringing - Western Electric Bell"
+    },
+    {
+      "id": 866662,
+      "uid": 19146166,
+      "user": "hipoidogs",
+      "file": "866662_hipoidogs_edison_bulb_flicker.ogg",
+      "title": "Vintage Edison Bulb Flicker & Warm-Up"
+    },
+    {
+      "id": 368615,
+      "uid": 3302499,
+      "user": "Nightflame",
+      "file": "368615_nightflame_breath_01.ogg",
+      "title": "breath_01"
+    },
+    {
+      "id": 832742,
+      "uid": 16008573,
+      "user": "EvaMusik",
+      "file": "832742_evamusik_whisper1.ogg",
+      "title": "Whisper1"
+    },
+    {
+      "id": 234044,
+      "uid": 3893898,
+      "user": "raspberrytickle",
+      "file": "234044_raspberrytickle_creepy_whispering.ogg",
+      "title": "Creepy Whispering"
+    },
+    {
+      "id": 175944,
+      "uid": 2619645,
+      "user": "litruv",
+      "file": "175944_litruv_ghost_whispers.ogg",
+      "title": "Ghost Whispers"
+    },
+    {
+      "id": 318078,
+      "uid": 5057106,
+      "user": "Drkvixn91",
+      "file": "318078_drkvixn91_whimper_gasp_female.ogg",
+      "title": "Whimper_Gasp_1_Female"
+    },
+    {
+      "id": 609149,
+      "uid": 2282212,
+      "user": "szegvari",
+      "file": "609149_szegvari_dark_horror_drone.ogg",
+      "title": "Dark Horror Drone Atmosphere"
+    }
+  ]
+}

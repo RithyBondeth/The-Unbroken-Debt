@@ -9,6 +9,7 @@ import { ellipse, Sheet } from "./pen.mjs";
 import { villageTextures } from "./village.mjs";
 import { funeralTributeTextures } from "./funeral.mjs";
 import { studioPrintTextures } from "./studio.mjs";
+import { studioBookTextures } from "./books.mjs";
 import { crackTextures } from "./cracks.mjs";
 import { journalTextures } from "./journal.mjs";
 import { shopGoodsTextures } from "./shopGoods.mjs";
@@ -2768,6 +2769,7 @@ export const drawings = [
   },
   { name: "study_boats", file: "T_studio_study_boats_BC", size: [1024, 1024], draw: boatStudy },
   ...studioPrintTextures,
+  ...studioBookTextures,
   ...crackTextures,
   ...journalTextures({
     heading: KHMER.diaryHeading[0],

@@ -236,6 +236,7 @@ export class Game {
 
   /** Visual review fixtures can omit audio initialization; normal play enables it. */
   async start({ audio = true }: { audio?: boolean } = {}): Promise<void> {
+    this.fade.setLoading("Loading…");
     await Promise.all([enablePhysics(this.scene), loadSketchbookFonts(), this.hands.load()]);
     this.audio = audio
       ? await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch((error: unknown) => {
@@ -256,6 +257,7 @@ export class Game {
       await this.fade.to(1, 0);
       await section.warmup();
     }
+    this.fade.setLoading(null);
     if (import.meta.env.DEV)
       new PerfOverlay(this.engine, this.scene, document.body, () => [
         `input diagnostic v1`,

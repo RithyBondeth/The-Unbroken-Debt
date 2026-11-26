@@ -77,6 +77,8 @@ export async function loadStudioLightmap(
  */
 /** The altar's oil lamp: its light is all runtime now (it is no longer in the bake). */
 const ALTAR_LAMP = { intensity: 1.5, range: 4 };
+/** The rear bathroom's caged Edison pendant bulb (runtime so it can flicker and die). */
+const BATH_BULB = { intensity: 4.2, range: 5.2 };
 
 export class StudioLights {
   private readonly candlePower = 2.6;
@@ -85,9 +87,19 @@ export class StudioLights {
   readonly lightning: SpotLight;
   /** The writing sconce over the desk (runtime part, for the props on the desk). */
   readonly writingLight: PointLight;
+  /** The caged pendant bulb in the rear bathroom annex (flickers & dies in Phase 2/4). */
+  readonly bathBulb: PointLight;
   /** Lightmapped meshes. */
   readonly baked: AbstractMesh[] = [];
   private readonly airwellBulb: PointLight;
+  /** Cool lightning bounce through the bathroom's frosted north window. */
+  private readonly bathFlash: PointLight;
+  private readonly bathShadows: ShadowGenerator | null = null;
+  private bathBulbMat: { material: PBRMaterial; full: Color3 } | null = null;
+  private bathLevel = 1;
+  private bathFlickerLeft = 0;
+  private hallFlickerLeft = 0;
+  private hallLevel = 1;
   /** Paraffin flames baked steady (the tea-table lamp, the desk candle), flickered live. */
   private readonly flames: { light: PointLight; base: number; phase: number }[] = [];
   /** The oil lamp on the altar (not baked), until it falls (altarLampOut). */
@@ -222,6 +234,42 @@ export class StudioLights {
     this.airwellBulb.shadowEnabled = false;
     exclude(this.airwellBulb, bulbAt, 4.5);
 
+    // The rear bathroom's caged Edison pendant bulb: runtime & shadowed so it can
+    // sputter violently during the mirror apparition and die behind Sora in Phase 4.
+    const bathAt = at("bath_bulb", new Vector3(-1.68, 2.52, -15.45));
+    const bathLampMesh = (m: AbstractMesh) => /^bath_lamp_/.test(m.name);
+    if (preset.shadowedFlames > 0) {
+      const shadowed = createShadowedPointLight(
+        scene,
+        "bath_bulb",
+        bathAt,
+        BATH_BULB.range,
+        Math.min(1024, preset.lampShadowMapSize),
+        (m) => castsShadow(m) && !bathLampMesh(m),
+      );
+      this.bathBulb = shadowed.light;
+      this.bathShadows = shadowed.shadows;
+      const map = shadowed.shadows.getShadowMap();
+      if (map) map.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+    } else {
+      this.bathBulb = new PointLight("bath_bulb", bathAt, scene);
+      this.bathBulb.shadowEnabled = false;
+    }
+    this.bathBulb.diffuse = new Color3(1, 0.84, 0.56);
+    this.bathBulb.range = BATH_BULB.range;
+    this.bathBulb.intensity = BATH_BULB.intensity;
+    exclude(this.bathBulb, bathAt, BATH_BULB.range, true);
+    this.bathBulb.excludedMeshes.push(...scene.meshes.filter(bathLampMesh));
+    useSoftFalloff(this.bathBulb);
+
+    const bathWinAt = at("bath_window", new Vector3(-1.72, 2.38, -16.65));
+    this.bathFlash = new PointLight("bath_window_flash", bathWinAt, scene);
+    this.bathFlash.diffuse = new Color3(0.66, 0.78, 1);
+    this.bathFlash.range = 5.5;
+    this.bathFlash.intensity = 0;
+    this.bathFlash.shadowEnabled = false;
+    exclude(this.bathFlash, bathWinAt, 5.5, true);
+
     // The oil lamp on the tea table: baked steady, flickered live.
     {
       const p = at("tea_lamp", new Vector3(-4.0, 0.75, -2.95));
@@ -304,6 +352,8 @@ export class StudioLights {
     flameMat.albedoColor = Color3.Black();
     flameMat.disableLighting = true;
     this.candleFlame.material = flameMat;
+    // Photorealistic animated teardrop flame & curling smoke is rendered by StudioFlamesAndSmoke.
+    this.candleFlame.isVisible = false;
 
     // The candle by Sora's diary on the writing desk (the save point): baked steady like
     // the oil lamps and flickered live; it dies with everything else in the power cut.
@@ -325,6 +375,7 @@ export class StudioLights {
       flame.position.copyFrom(p);
       flame.material = flameMat;
       flame.isPickable = false;
+      flame.isVisible = false;
       this.flameMeshes.push(flame);
     }
 
@@ -361,15 +412,25 @@ export class StudioLights {
     for (const light of [this.deskLamp, highlight, this.writingLight, this.airwellBulb])
       this.lamps.push([light, light.intensity]);
     // What glows inside (not the neighbours' windows or the lightning on the glass).
-    for (const material of scene.materials)
+    for (const material of scene.materials) {
       if (
         material instanceof PBRMaterial &&
         material.emissiveColor.toLuminance() > 0.001 &&
-        !/neighbour|glass_window|window_glass/i.test(material.name)
-      )
-        this.glows.push([material, material.emissiveColor.clone()]);
+        !/neighbour|glass_window|window_glass|bath_frosted/i.test(material.name)
+      ) {
+        if (/bath_bulb/i.test(material.name)) {
+          this.bathBulbMat = { material, full: material.emissiveColor.clone() };
+        } else {
+          this.glows.push([material, material.emissiveColor.clone()]);
+        }
+      }
+    }
     for (const mesh of scene.meshes)
-      if (/^window_glass/.test(mesh.name) && mesh.material instanceof PBRMaterial)
+      if (
+        /^(?:window_glass|bath_win_louvre_)/.test(mesh.name) &&
+        mesh.material instanceof PBRMaterial &&
+        !this.glass.includes(mesh.material)
+      )
         this.glass.push(mesh.material);
   }
 
@@ -382,11 +443,28 @@ export class StudioLights {
     this.storm.strike();
   }
 
-  /** Something near the candle was taken or moved: draw its shadows again once. */
+  /** Something near the candle, altar or bathroom door moved: draw shadows again once. */
   refreshShadows(): void {
     this.candleShadows?.getShadowMap()?.resetRefreshCounter();
     this.altarShadows?.getShadowMap()?.resetRefreshCounter();
+    this.bathShadows?.getShadowMap()?.resetRefreshCounter();
     this.flashShadows.getShadowMap()?.resetRefreshCounter();
+  }
+
+  /** Sets the bathroom pendant bulb's base output (0 = dead, 1 = normal). */
+  setBathBulbLevel(level: number): void {
+    this.bathLevel = Math.max(0, Math.min(1, level));
+  }
+
+  /** Causes the bathroom's vintage Edison bulb to violently sputter for `duration` seconds. */
+  flickerBathBulb(duration: number): void {
+    this.bathFlickerLeft = Math.max(this.bathFlickerLeft, duration);
+  }
+
+  /** Sets the airwell/hall bulb level (0 = dead, 1 = normal) and optional nervous flicker. */
+  setHallBulbLevel(level: number, flickerSeconds = 0): void {
+    this.hallLevel = Math.max(0, Math.min(1, level));
+    if (flickerSeconds > 0) this.hallFlickerLeft = Math.max(this.hallFlickerLeft, flickerSeconds);
   }
 
   /**
@@ -476,6 +554,7 @@ export class StudioLights {
       [this.candle, 1],
       [this.airwellBulb, 0.3],
       [this.altarLamp, 1],
+      [this.bathBulb, 0.7],
     ] as const) {
       if (!l.isEnabled()) continue;
       const d = Math.max(0.5, Vector3.Distance(eye, l.getAbsolutePosition()));
@@ -503,6 +582,27 @@ export class StudioLights {
       this.altarLamp.intensity =
         ALTAR_LAMP.intensity * (0.8 + 0.14 * Math.sin(t * 5.7) + 0.06 * Math.sin(t * 13.3 + 1.7));
     for (const flame of this.flameMeshes) flame.scaling.y = 1 + 0.1 * Math.sin(t * 11.7 + 2.3);
+    // Bathroom vintage tungsten filament: subtle aged hum, or violent sputter during a haunt.
+    let bathGain = this.bathLevel;
+    if (this.bathFlickerLeft > 0) {
+      this.bathFlickerLeft = Math.max(0, this.bathFlickerLeft - dt);
+      const pulse = Math.sin(t * 53) * Math.sin(t * 29 + 1.3) + 0.5 * Math.sin(t * 89);
+      bathGain *= pulse > 0.18 ? 1.15 : pulse > -0.35 ? 0.14 : 0.02;
+    } else if (bathGain > 0) {
+      bathGain *= 0.96 + 0.03 * Math.sin(t * 11.3) + 0.015 * Math.sin(t * 27.1);
+    }
+    this.bathBulb.intensity = BATH_BULB.intensity * bathGain * this.power;
+    if (this.bathBulbMat) {
+      this.bathBulbMat.material.emissiveColor
+        .copyFrom(this.bathBulbMat.full)
+        .scaleInPlace(bathGain * this.power);
+    }
+    // Hall / airwell bulb nervous flicker during Phase 4 retreat.
+    let hallGain = this.hallLevel;
+    if (this.hallFlickerLeft > 0) {
+      this.hallFlickerLeft = Math.max(0, this.hallFlickerLeft - dt);
+      hallGain *= Math.sin(t * 47) * Math.sin(t * 19 + 0.6) > -0.15 ? 1 : 0.12;
+    }
     // The power cut, over everything above.
     if (this.cutAt !== null) {
       this.cutAt += dt;
@@ -512,14 +612,14 @@ export class StudioLights {
       for (const { light } of this.flames) light.intensity *= this.power;
       if (this.altarLit) this.altarLamp.intensity *= this.power;
       if (this.candleLit) this.candle.intensity *= this.power;
-      this.candleFlame.isVisible = this.power > 0.5;
-      for (const flame of this.flameMeshes) flame.isVisible = this.power > 0.5;
       if (this.lightmap) this.lightmap.level = this.lightmapLevel * this.power;
       for (const [material, full] of this.glows)
         material.emissiveColor.copyFrom(full).scaleInPlace(this.power);
     }
+    this.airwellBulb.intensity = 3 * hallGain * this.power;
     const level = this.storm.update(dt);
     this.lightning.intensity = level * 60 * this.flashGain;
+    this.bathFlash.intensity = level * 7.5;
     if (this.special && !this.storm.flashing) {
       this.special();
       this.special = null;

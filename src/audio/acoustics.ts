@@ -8,6 +8,9 @@ import { biquad, noise } from "./synth";
  */
 export type SpaceName = "studio" | "house" | "wardrobe" | "underHouse" | "tent" | "outdoors";
 
+/** Episode 1 prologue's inner shophouse spaces: the back bedroom and rear tiled bathroom. */
+export type StudioSpace = "studioBack" | "bathroom";
+
 /** Episode 1's vehicle interior: the 1933 Citroën Rosalie driving through the storm. */
 export type TravelSpace = "cabin";
 
@@ -15,7 +18,7 @@ export type TravelSpace = "cabin";
 export type PagodaSpace = "jungle" | "kuti" | "hall" | "library";
 
 /** Any space the listener can be moved into. */
-export type AcousticSpace = SpaceName | TravelSpace | PagodaSpace;
+export type AcousticSpace = SpaceName | StudioSpace | TravelSpace | PagodaSpace;
 
 export interface Space {
   /** Seconds the late tail takes to fall 60 dB, in the lows, mids and highs. */
@@ -48,6 +51,36 @@ export const SPACES: Record<AcousticSpace, Space> = {
     wet: 0.2,
     // The prologue's rain is already the rain heard from inside.
     occlusion: [20000, 1],
+  },
+  // The back bedroom of Sora's shophouse, behind the airwell: quieter, deeper
+  // into the house, with the street rain muffled behind plaster and teak walls.
+  studioBack: {
+    rt60: [0.62, 0.52, 0.28],
+    preDelay: 0.004,
+    early: [
+      [0.006, 0.52],
+      [0.01, 0.44],
+      [0.014, 0.36],
+      [0.019, 0.26],
+      [0.025, 0.18],
+    ],
+    wet: 0.24,
+    occlusion: [2400, 0.48],
+  },
+  // The rear 1932 tiled bathroom annex: glazed wall tiles, cement mosaic floor
+  // and masonry cistern produce crisp, close slapback while muffling the street rain.
+  bathroom: {
+    rt60: [0.85, 0.92, 0.62],
+    preDelay: 0.002,
+    early: [
+      [0.003, 0.7],
+      [0.0055, 0.62],
+      [0.0085, 0.52],
+      [0.012, 0.42],
+      [0.017, 0.32],
+    ],
+    wet: 0.36,
+    occlusion: [1400, 0.32],
   },
   // Inside the 1933 Citroën Rosalie: tight glass & steel early reflections, upholstered seats
   // swallowing the late tail, and closed panes muffling the jungle outside.

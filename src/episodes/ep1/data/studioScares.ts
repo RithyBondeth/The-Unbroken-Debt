@@ -19,7 +19,47 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
  * Positions are Blender's (tools/areas/ep1_area_studio.py: x east, y north, z up);
  * `runtime` turns them into the game's (x = -x, y = z, z = -y).
  */
-export type StudioScareId = "picture" | "shadow" | "altar";
+export type StudioScareId =
+  | "picture"
+  | "shadow"
+  | "altar"
+  | "fan"
+  | "book"
+  | "bathFaucet"
+  | "bathMirror"
+  | "bathTank"
+  | "bathDoor"
+  | "doorWatcher"
+  | "stairSteps"
+  | "balconyKnock"
+  | "phantomRing"
+  | "partitionDoor"
+  | "bedBreath"
+  | "chairTurn"
+  | "dropBook"
+  | "balconySlam"
+  | "hallFlash";
+
+export type StudioDoorId =
+  "haunt_partition_door" | "haunt_bedroom_door" | "haunt_bath_door" | "haunt_balcony_door";
+
+export interface StudioDoorConfig {
+  openDeg: number;
+  closedDeg: number;
+  ajarDeg: number;
+  initialDeg: number;
+}
+
+export const STUDIO_DOORS: Record<StudioDoorId, StudioDoorConfig> = {
+  haunt_partition_door: { openDeg: 88, closedDeg: 0, ajarDeg: 24, initialDeg: 88 },
+  haunt_bedroom_door: { openDeg: 88, closedDeg: 0, ajarDeg: 26, initialDeg: 88 },
+  haunt_bath_door: { openDeg: 132, closedDeg: 0, ajarDeg: 36, initialDeg: 132 },
+  // West balcony French casement swings inward (+42° around east stile hinge = -42° in Blender Z)
+  haunt_balcony_door: { openDeg: -42, closedDeg: 0, ajarDeg: -16, initialDeg: 0 },
+};
+
+export type StudioSpaceName = "studio" | "studioBack" | "bathroom";
+export type StudioHauntPhase = 1 | 2 | 3 | 4;
 
 export const studioScareFlag = (id: StudioScareId): string => `ep1.scare.studio.${id}`;
 
@@ -37,6 +77,15 @@ export const FRONT = { y0: 0, y1: 6.0 };
 export const PARTITION = { y: 6.0, door: [0.15, 1.15], wall: [1.3, 4.3] } as const;
 /** The back room begins past the airwell's back wall. */
 export const BACK_ROOM_Y = 9.27;
+/** The rear bathroom annex behind the back bedroom (doorway at y 14.0..14.15). */
+export const BATHROOM = {
+  y0: 14.08,
+  y1: 16.75,
+  x0: 0,
+  x1: 3.35,
+  doorOpenDeg: 132,
+  doorAjarDeg: 40,
+} as const;
 
 export const PICTURE = {
   /** Not before Sora has been in the room this long (s). */
@@ -114,6 +163,170 @@ export function inFrontStudio(eye: Vector3): boolean {
 /** Is Sora in the back room? */
 export function inBackRoom(eye: Vector3): boolean {
   return plan(eye)[1] > BACK_ROOM_Y;
+}
+
+/** Is Sora inside the rear tiled bathroom annex? */
+export function inBathroom(eye: Vector3): boolean {
+  const [x, y] = plan(eye);
+  return y >= BATHROOM.y0 && x >= BATHROOM.x0 - 0.1 && x <= BATHROOM.x1 + 0.1;
+}
+
+/** Acoustic zone for Sora's current position in the shophouse studio. */
+export function studioSpaceAt(eye: Vector3): StudioSpaceName {
+  if (inBathroom(eye)) return "bathroom";
+  if (plan(eye)[1] >= 9.0) return "studioBack";
+  return "studio";
+}
+
+/** Current psychological horror escalation phase across the studio floor. */
+export function studioHauntPhase(state: {
+  kitCount: number;
+  visitedBackOrBath: boolean;
+  altarDone: boolean;
+  phoneAnswered: boolean;
+}): StudioHauntPhase {
+  if (state.phoneAnswered) return 4;
+  if (state.altarDone) return 3;
+  if (state.visitedBackOrBath || state.kitCount >= 2) return 2;
+  return 1;
+}
+
+/** Phase 1: ceiling fan creeps silently off-camera in the front studio. */
+export function fanDriftDue(time: number, eye: Vector3, forward: Vector3, fan: Vector3): boolean {
+  if (time < 10 || !inFrontStudio(eye)) return false;
+  return angleTo(eye, forward, fan) >= 65;
+}
+
+/** Phase 1: featured shelf book slides out of the bookcase while Sora looks away. */
+export function bookSlideDue(time: number, eye: Vector3, forward: Vector3, book: Vector3): boolean {
+  if (time < 16 || !inFrontStudio(eye)) return false;
+  const d = Math.hypot(book.x - eye.x, book.z - eye.z);
+  if (d < 1.1 || d > 4.6) return false;
+  return angleTo(eye, forward, book) >= 95;
+}
+
+/** Phase 2: Sora steps into the bathroom and faces the antique foxed mirror. */
+export function bathMirrorDue(eye: Vector3, forward: Vector3, mirror: Vector3): boolean {
+  if (!inBathroom(eye)) return false;
+  const d = Math.hypot(mirror.x - eye.x, mirror.z - eye.z);
+  if (d > 2.15) return false;
+  return angleTo(eye, forward, mirror) <= 34;
+}
+
+/** Phase 2: looking toward the dark tiled Khmer water cistern triggers ripples and dipper shift. */
+export function bathTankDue(eye: Vector3, forward: Vector3, tank: Vector3): boolean {
+  if (!inBathroom(eye)) return false;
+  const d = Math.hypot(tank.x - eye.x, tank.z - eye.z);
+  if (d > 2.35) return false;
+  return angleTo(eye, forward, tank) <= 45;
+}
+
+/** Phase 2: after the mirror scare, the louvred door creaks partway shut behind her. */
+export function bathDoorDue(
+  eye: Vector3,
+  forward: Vector3,
+  door: Vector3,
+  mirrorDone: boolean,
+): boolean {
+  if (!mirrorDone || !inBathroom(eye)) return false;
+  const d = Math.hypot(door.x - eye.x, door.z - eye.z);
+  if (d > 2.7) return false;
+  return angleTo(eye, forward, door) >= 75;
+}
+
+/** Phase 4: glancing north down the corridor reveals a figure peeking around the back doorway. */
+export function doorWatcherDue(
+  eye: Vector3,
+  forward: Vector3,
+  watcher: Vector3,
+  phoneAnswered: boolean,
+): boolean {
+  if (!phoneAnswered || inBackRoom(eye)) return false;
+  const [, y] = plan(eye);
+  if (y < 2.2 || y > 8.6) return false;
+  return angleTo(eye, forward, watcher) <= 32;
+}
+
+/** Phase 4: reaching the stair gate with the full kit triggers hurried footsteps behind Sora. */
+export function stairStepsDue(
+  eye: Vector3,
+  stairDoor: Vector3,
+  phoneAnswered: boolean,
+  kitComplete: boolean,
+): boolean {
+  if (!phoneAnswered || !kitComplete) return false;
+  return Math.hypot(stairDoor.x - eye.x, stairDoor.z - eye.z) <= 2.2;
+}
+
+/** Phase 1/2: three urgent knocks tap directly on the wet balcony glass behind Sora. */
+export function balconyKnockDue(
+  time: number,
+  eye: Vector3,
+  forward: Vector3,
+  balcony: Vector3,
+): boolean {
+  if (time < 26 || !inFrontStudio(eye)) return false;
+  const d = Math.hypot(balcony.x - eye.x, balcony.z - eye.z);
+  if (d < 1.2 || d > 5.4) return false;
+  return angleTo(eye, forward, balcony) >= 85;
+}
+
+/** Phase 2: solitary impossible half-ring from the unpowered hallway phone before the altar falls. */
+export function phantomRingDue(
+  time: number,
+  eye: Vector3,
+  visitedBackOrBath: boolean,
+  altarDone: boolean,
+): boolean {
+  if (altarDone || !visitedBackOrBath || time < 32) return false;
+  return inBackRoom(eye) || inFrontStudio(eye);
+}
+
+/** Phase 2: close-mic low breathing rises from under the bed as Sora nears the satchel. */
+export function bedBreathDue(eye: Vector3, bedAt: Vector3, altarDone: boolean): boolean {
+  if (altarDone || !inBackRoom(eye) || inBathroom(eye)) return false;
+  return Math.hypot(bedAt.x - eye.x, bedAt.z - eye.z) <= 2.1;
+}
+
+/** Phase 2/3: wooden stool silently rotates toward the doorway while Sora looks away. */
+export function chairTurnDue(
+  time: number,
+  eye: Vector3,
+  forward: Vector3,
+  stoolAt: Vector3,
+  visitedBackOrBath: boolean,
+): boolean {
+  if (!visitedBackOrBath || time < 22 || !inFrontStudio(eye)) return false;
+  const d = Math.hypot(stoolAt.x - eye.x, stoolAt.z - eye.z);
+  if (d < 0.8 || d > 4.8) return false;
+  return angleTo(eye, forward, stoolAt) >= 80;
+}
+
+/** Phase 2/3: upper bookcase volume drops heavily onto the cement floor behind Sora. */
+export function dropBookDue(
+  time: number,
+  eye: Vector3,
+  forward: Vector3,
+  bookAt: Vector3,
+  visitedBackOrBath: boolean,
+): boolean {
+  if (!visitedBackOrBath || time < 28 || !inFrontStudio(eye)) return false;
+  const d = Math.hypot(bookAt.x - eye.x, bookAt.z - eye.z);
+  if (d < 1.2 || d > 4.6) return false;
+  return angleTo(eye, forward, bookAt) >= 85;
+}
+
+/** Phase 4: glancing north through the flickering airwell flashes a motionless figure in the hall. */
+export function hallFlashDue(
+  eye: Vector3,
+  forward: Vector3,
+  backDoorAt: Vector3,
+  phoneAnswered: boolean,
+): boolean {
+  if (!phoneAnswered || inBackRoom(eye)) return false;
+  const [, y] = plan(eye);
+  if (y < 5.6 || y > 8.6) return false;
+  return angleTo(eye, forward, backDoorAt) <= 38;
 }
 
 /** Should the picture fall now? */

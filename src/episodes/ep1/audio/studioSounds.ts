@@ -41,25 +41,33 @@ export function heartbeat(rate: number): Float32Array {
   return normalise(out, 0.85);
 }
 
-/** About 1.6 s: someone breathing words behind her, too low to make out. */
+/** About 1.6 s: soft organic breath close behind her, without choppy static. */
 export function whisper(rate: number, rand: () => number): Float32Array {
   const length = n(1.6, rate);
-  const syllables = formant(noise(length, rand), rate, [
-    [520 + rand() * 200, 160, 0.6],
-    [1500 + rand() * 300, 260, 1],
-    [2900, 400, 0.6],
-    [5200, 900, 0.3],
+  const air = formant(noise(length, rand), rate, [
+    [480 + rand() * 120, 190, 0.75],
+    [1280 + rand() * 220, 280, 1],
+    [2350, 420, 0.45],
   ]);
-  const rateS = 4.2 + rand() * 1.5;
   const out = new Float32Array(length);
+  const phrases: [number, number, number][] = [
+    [0.12, 0.42, 0.8],
+    [0.58, 0.48, 1.0],
+    [1.12, 0.36, 0.65],
+  ];
   for (let i = 0; i < length; i++) {
     const t = i / rate;
-    const syl = Math.max(0, Math.sin(2 * Math.PI * rateS * t + rand() * 0.3)) ** 1.6;
-    const shape = Math.sin((Math.PI * t) / 1.6) ** 0.7;
-    out[i] = syllables[i] * syl * shape;
+    let env = 0;
+    for (const [start, dur, amp] of phrases) {
+      if (t >= start && t <= start + dur) {
+        env += amp * Math.sin(((t - start) / dur) * Math.PI) ** 1.4;
+      }
+    }
+    out[i] = air[i] * env;
   }
-  biquad(out, rate, "highpass", 700, 0.7);
-  return normalise(out, 0.7);
+  biquad(out, rate, "highpass", 380, 0.7);
+  biquad(out, rate, "lowpass", 3200, 0.7);
+  return normalise(out, 0.62);
 }
 
 /** Three slow knocks on a teak board in the dark, about 2.2 s. */
@@ -143,14 +151,20 @@ export function powerUp(rate: number, rand: () => number): Float32Array {
   mix(out, swell, rate, 0, 0.4, (t) => (t / 0.08) ** 3);
   for (const at of [1.28, 1.47, 1.72]) {
     const when = at - POWER_RETURN;
-    const snap = biquad(noise(n(0.05, rate), rand), rate, "highpass", 2200, 0.7);
-    mix(out, snap, rate, when, 0.8, decay(0.012));
-    const buzz = new Float32Array(n(0.08, rate));
-    for (let i = 0; i < buzz.length; i++) {
+    const snap = biquad(noise(n(0.04, rate), rand), rate, "bandpass", 1800, 1.2);
+    mix(out, snap, rate, when, 0.7, decay(0.01));
+    const relay = modal(impulse(rate, 0.09), rate, [
+      [260, 0.03, 1],
+      [920, 0.018, 0.65],
+      [1840, 0.012, 0.35],
+    ]);
+    mix(out, relay, rate, when, 0.75, () => 1);
+    const hum = new Float32Array(n(0.1, rate));
+    for (let i = 0; i < hum.length; i++) {
       const t = i / rate;
-      buzz[i] = ((t * 100) % 1) * 2 - 1;
+      hum[i] = Math.sin(2 * Math.PI * 50 * t) * 0.7 + Math.sin(2 * Math.PI * 100 * t) * 0.3;
     }
-    mix(out, biquad(buzz, rate, "lowpass", 1800, 0.7), rate, when, 0.35, decay(0.03));
+    mix(out, hum, rate, when, 0.22, decay(0.045));
   }
   return normalise(out, 0.85);
 }
@@ -292,4 +306,56 @@ export function thud(rate: number, rand: () => number): Float32Array {
     () => 1,
   );
   return normalise(out, 0.8);
+}
+
+/** About 0.28 s: crisp brass doorknob & mortise latch release click. */
+export function doorLatch(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(n(0.28, rate));
+  const s = 0.96 + rand() * 0.08;
+  for (const [at, g, pitch] of [
+    [0.0, 0.85, 1.0],
+    [0.055, 0.65, 1.18],
+  ] as const) {
+    mix(
+      out,
+      modal(impulse(rate, 0.12), rate, [
+        [680 * s * pitch, 0.016, 0.7],
+        [1640 * s * pitch, 0.014, 1.0],
+        [3120 * s * pitch, 0.009, 0.55],
+      ]),
+      rate,
+      at,
+      g,
+      () => 1,
+    );
+  }
+  return normalise(out, 0.72);
+}
+
+/** About 0.55 s: solid teak door shutting into its jamb with a latched brass catch. */
+export function doorClose(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(n(0.55, rate));
+  const s = 0.94 + rand() * 0.12;
+  mix(
+    out,
+    modal(impulse(rate, 0.4), rate, [
+      [92 * s, 0.085, 1.0],
+      [185 * s, 0.05, 0.72],
+      [390 * s, 0.025, 0.4],
+    ]),
+    rate,
+    0,
+    1.0,
+    () => 1,
+  );
+  mix(
+    out,
+    biquad(noise(n(0.14, rate), rand), rate, "lowpass", 820, 0.7),
+    rate,
+    0,
+    0.55,
+    decay(0.032),
+  );
+  mix(out, doorLatch(rate, rand), rate, 0.045, 0.55, () => 1);
+  return normalise(out, 0.88);
 }
