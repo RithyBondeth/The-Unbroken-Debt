@@ -104,7 +104,7 @@ def barber_chair(K, M, leather="leather_red"):
           segs=32)
     lathe(K["chrome"], [(0.06, 0.09), (0.062, 0.12), (0.05, 0.13), (0.05, 0.4), (0.07, 0.43), (0.07, 0.46), (0.0, 0.47)], M,
           segs=20)
-    cylm(K["chrome"], M, (0.0, 0.12, 0.2), (-0.05, 0.3, 0.32), 0.012, segs=8)
+    cylm(K["chrome"], M, (0.0, 0.04, 0.2), (-0.05, 0.3, 0.32), 0.012, segs=8)
     boxm(K["chrome"], M, (-0.05, 0.31, 0.33), (0.07, 0.04, 0.02), bevel=0.006)
     # The seat: a box of enamel with the cushion on it, piped round its edge.
     boxm(K["porcelain"], M, (0, 0, 0.5), (0.5, 0.5, 0.07), bevel=0.025, segs=3)
@@ -124,8 +124,8 @@ def barber_chair(K, M, leather="leather_red"):
     for y in (-0.27, 0.27):
         boxm(K["porcelain"], M, (0.03, y, 0.73), (0.5, 0.05, 0.05), bevel=0.012)
         boxm(K[leather], M, (0.02, y, 0.765), (0.42, 0.065, 0.03), bevel=0.013, segs=3)
-        cylm(K["chrome"], M, (0.27, y, 0.53), (0.27, y, 0.74), 0.016, segs=10)
-        boxm(K["porcelain"], M, (-0.18, y, 0.64), (0.06, 0.05, 0.18), bevel=0.01)
+        cylm(K["chrome"], M, (0.21, y * 0.94, 0.47), (0.25, y, 0.74), 0.016, segs=10)
+        boxm(K["porcelain"], M, (-0.18, y * 0.95, 0.6), (0.06, 0.05, 0.26), bevel=0.01)
     # The footrest: a bracket and a ribbed chrome plate.
     cylm(K["chrome"], M, (0.24, 0, 0.47), (0.42, 0, 0.26), 0.018, segs=10)
     boxm(K["chrome"], M, (0.46, 0, 0.255), (0.12, 0.34, 0.016), bevel=0.004)
@@ -151,10 +151,10 @@ def dental_chair(K, M):
     boxm(K["vinyl_cream"], B, (0.06, 0, 0.84), (0.08, 0.24, 0.12), bevel=0.03)
     boxm(K["vinyl_cream"], M, (0.42, 0, 0.36), (0.36, 0.4, 0.07), bevel=0.025)
     for y in (-0.26, 0.26):
-        boxm(K["vinyl_cream"], M, (0.02, y, 0.66), (0.44, 0.06, 0.04), bevel=0.015)
-        cylm(K["chrome"], M, (0.2, y, 0.48), (0.2, y, 0.65), 0.014, segs=8)
+        boxm(K["vinyl_cream"], M, (0.02, y * 0.96, 0.66), (0.44, 0.06, 0.04), bevel=0.015)
+        cylm(K["chrome"], M, (0.2, y * 0.9, 0.45), (0.2, y * 0.9, 0.65), 0.014, segs=8)
     # The spittoon on its swing arm, a glass for rinsing beside it.
-    cylm(K["chrome"], M, (0.0, -0.3, 0.4), (0.1, -0.46, 0.8), 0.014, segs=8)
+    cylm(K["chrome"], M, (0.0, -0.22, 0.42), (0.1, -0.46, 0.8), 0.014, segs=8)
     from shop_goods import bowl, tumbler
     bowl(K, M @ T(0.12, -0.5, 0.8), 0.11, 0.07, key="porcelain")
     tumbler(K, M @ T(0.22, -0.42, 0.8), r=0.028, h=0.09, liquid="water")
@@ -204,6 +204,7 @@ def motorbike(K, M, paint="plastic_blue"):
         cylm(K["chrome"], M, fw + Vector((0, y, 0)), head + Vector((0, y, -0.12)), 0.016, segs=10)
         cylm(K["black_paint"], M, fw + Vector((-0.04, y, 0.18)), head + Vector((-0.01, y, -0.14)), 0.022, segs=10)
     cylm(K[paint], M, head + Vector((0, 0, -0.14)), head + Vector((0.02, 0, 0.12)), 0.04, segs=12)
+    boxm(K["cast_iron"], M, head + Vector((0.0, 0, -0.12)), (0.07, 0.2, 0.035), bevel=0.01)
     # The front mudguard, curving over the front tyre.
     curved_sheet(K[paint], M, fw, 0.33, 0.25, 2.55, 0.11)
     # The backbone, from the head down under the step and up to the tail.
@@ -260,9 +261,10 @@ def motorbike(K, M, paint="plastic_blue"):
         tube(K["chrome"], M, [Vector((-0.58, y, 0.76)), Vector((-0.66, y, 0.8)), Vector((-0.92, y, 0.8))], 0.009, segs=6)
     for x in (-0.7, -0.8, -0.9):
         cylm(K["chrome"], M, (x, -0.1, 0.8), (x, 0.1, 0.8), 0.006, segs=6)
-    lathe(K["plastic_red"], [(0.0, 0.0), (0.04, 0.0), (0.045, 0.02), (0.0, 0.03)], M @ T(-0.93, 0, 0.72, tilt=(0, -math.pi / 2)),
+    boxm(K["black_paint"], M, (-0.905, 0, 0.67), (0.012, 0.05, 0.27))
+    lathe(K["plastic_red"], [(0.0, 0.0), (0.04, 0.0), (0.045, 0.02), (0.0, 0.03)], M @ T(-0.911, 0, 0.74, tilt=(0, -math.pi / 2)),
           segs=12)
-    boxm(K["plastic_white"], M, (-0.93, 0, 0.6), (0.006, 0.16, 0.1))
+    boxm(K["plastic_white"], M, (-0.914, 0, 0.6), (0.006, 0.16, 0.1))
     # The handlebar: bar, grips, levers, the headlamp housing, the speedometer, two mirrors.
     bar = head + Vector((0.0, 0, 0.17))
     cylm(K["chrome"], M, bar + Vector((-0.04, -0.32, 0.02)), bar + Vector((-0.04, 0.32, 0.02)), 0.011, segs=8)
@@ -270,8 +272,10 @@ def motorbike(K, M, paint="plastic_blue"):
         cylm(K["rubber"], M, bar + Vector((-0.045, y * 0.24, 0.02)), bar + Vector((-0.05, y * 0.35, 0.02)), 0.017, segs=10)
         cylm(K["chrome"], M, bar + Vector((0.0, y * 0.2, 0.03)), bar + Vector((-0.08, y * 0.3, 0.03)), 0.006, segs=6)
         cylm(K["chrome"], M, bar + Vector((-0.03, y * 0.22, 0.02)), bar + Vector((-0.06, y * 0.25, 0.34)), 0.005, segs=6)
-        lathe(K["chrome"], [(0.0, 0.0), (0.04, 0.0), (0.045, 0.01), (0.0, 0.014)], M @ T(-0.06, y * 0.25, bar.z + 0.34,
-                                                                                         tilt=(0, -math.pi / 2)), segs=14)
+        lathe(K["chrome"], [(0.0, -0.004), (0.04, -0.004), (0.045, 0.006), (0.0, 0.01)],
+              M @ T(bar.x - 0.06, y * 0.25, bar.z + 0.36, tilt=(0, -math.pi / 2)), segs=14)
+        lathe(K["glass"], [(0.0, 0.0105), (0.038, 0.0105), (0.0, 0.0115)],
+              M @ T(bar.x - 0.06, y * 0.25, bar.z + 0.36, tilt=(0, -math.pi / 2)), segs=14, cap_bottom=False)
     boxm(K[paint], M, bar + Vector((0.02, 0, -0.02)), (0.16, 0.3, 0.12), bevel=0.04)
     lathe(K["chrome"], [(0.0, 0.0), (0.07, 0.0), (0.075, 0.03), (0.07, 0.07), (0.0, 0.075)],
           M @ T(bar.x + 0.08, 0, bar.z - 0.04, tilt=(0, math.pi / 2)), segs=20)
@@ -283,6 +287,8 @@ def motorbike(K, M, paint="plastic_blue"):
     for y in (-0.09, 0.09):
         cylm(K["black_paint"], M, (-0.05, y, 0.3), (-0.12, y * 1.4, 0.0), 0.012, segs=6)
     cylm(K["black_paint"], M, (-0.12, -0.13, 0.0), (-0.12, 0.13, 0.0), 0.01, segs=6)
+    cylm(K["steel"], M, (-0.12, 0, 0.3), (-0.18, 0, 0.3), 0.015, segs=8)
+    cylm(K["steel"], M, (-0.18, -0.14, 0.3), (-0.18, 0.14, 0.3), 0.011, segs=8)
     for y in (-0.22, 0.22):
         cylm(K["rubber"], M, (-0.18, y * 0.6, 0.3), (-0.18, y, 0.3), 0.013, segs=8)
 
@@ -332,12 +338,12 @@ def noodle_cart(K, M, paint="plastic_blue"):
             py = cy - cw / 2 + 0.1 + j * (cw - 0.2) / 3
             noodle_nest(K, M @ T(px + rng.normal(0, 0.005), py + rng.normal(0, 0.005), z0 + 0.012), seed=i * 7 + j)
             noodle_nest(K, M @ T(px, py, z0 + 0.232), key="rice_noodles", seed=50 + i * 7 + j)
-    cylm(K["steel"], M, (cx, cy - cw / 2 + 0.04, z0 + ch - 0.04), (cx, cy + cw / 2 - 0.04, z0 + ch - 0.04), 0.004, segs=6)
+    cylm(K["steel"], M, (cx, cy - cw / 2, z0 + ch - 0.04), (cx, cy + cw / 2, z0 + ch - 0.04), 0.004, segs=6)
     for k in range(4):
         py = cy - cw / 2 + 0.12 + k * 0.15
         tube(K["steel"], M, [(cx, py, z0 + ch - 0.04), (cx, py, z0 + ch - 0.1), (cx + 0.015, py, z0 + ch - 0.12)], 0.0025, segs=4)
         sl = rng.uniform(1.2, 1.7)
-        sphere(K["meat"], M, (cx + rng.normal(0, 0.01), py, z0 + ch - 0.13 - 0.05 * sl), 0.05, 14, 9, scale=(rng.uniform(0.55, 0.8), 0.42, sl))
+        sphere(K["meat"], M, (cx + 0.015, py, z0 + ch - 0.112 - 0.05 * sl), 0.05, 14, 9, scale=(rng.uniform(0.55, 0.8), 0.42, sl))
     # The cauldron of broth over its burner on the right half, lid ajar, the ladle in it.
     bx, by = -0.02, 0.38
     lathe(K["cast_iron"], [(0.0, 0.0), (0.2, 0.0), (0.2, 0.16), (0.18, 0.17), (0.0, 0.17)], M @ T(bx, by, z0), segs=20)
@@ -346,7 +352,7 @@ def noodle_cart(K, M, paint="plastic_blue"):
     lathe(K["soy"], [(0.0, 0.25), (0.205, 0.25), (0.0, 0.252)], M @ T(bx, by, z0 + 0.17), segs=20, cap_bottom=False)
     lathe(K["steel"], [(0.0, 0.03), (0.21, 0.0), (0.225, 0.004), (0.0, 0.05)], M @ T(bx + 0.05, by + 0.04, z0 + 0.49, tilt=(0.25, 0)),
           segs=24)
-    cylm(K["steel"], M, (bx - 0.1, by - 0.05, z0 + 0.2), (bx - 0.18, by - 0.12, z0 + 0.72), 0.006, segs=6)
+    cylm(K["steel"], M, (bx - 0.1, by - 0.05, z0 + 0.2), (bx - 0.16, by - 0.1, z0 + 0.6), 0.006, segs=6)
     lathe(K["steel"], [(0.0, 0.0), (0.04, 0.005), (0.045, 0.03)], M @ T(bx - 0.08, by - 0.04, z0 + 0.38), segs=14, cap_bottom=False)
     # Bowls stacked, chopsticks and spoons, the condiment jars at the front edge.
     bowl_stack(K, M @ T(0.18, 0.06, z0), 6)
@@ -368,10 +374,14 @@ def sewing_machine(K, M):
         tube(K["cast_iron"], M, pts, 0.016, segs=8)
         tube(K["cast_iron"], M, [(0.18, y, 0.0), (0.12, y, 0.25), (0.18, y, 0.72)], 0.016, segs=8)
         cylm(K["cast_iron"], M, (-0.18, y, 0.3), (0.18, y, 0.3), 0.012, segs=6)
-        torus(K["cast_iron"], M, (0, y, 0.48), (0, 1, 0), 0.08, 0.01, n=16, m=5)
+        cylm(K["cast_iron"], M, (0.0, y, 0.12), (0.0, y, 0.72), 0.011, segs=6)
+        cylm(K["cast_iron"], M, (-0.15, y, 0.31), (0.15, y, 0.7), 0.008, segs=5)
+        cylm(K["cast_iron"], M, (0.15, y, 0.31), (-0.15, y, 0.7), 0.008, segs=5)
+        cylm(K["cast_iron"], M, (-0.18, y, 0.72), (0.18, y, 0.72), 0.012, segs=6)
     cylm(K["cast_iron"], M, (0, -0.36, 0.12), (0, 0.36, 0.12), 0.012, segs=6)
     boxm(K["cast_iron"], M, (0.04, 0, 0.12), (0.3, 0.5, 0.012), bevel=0.004)
     torus(K["cast_iron"], M, (0, 0.3, 0.38), (0, 1, 0), 0.16, 0.012, n=24, m=5)
+    cylm(K["steel"], M, (0, 0.28, 0.38), (0, 0.37, 0.38), 0.012, segs=8)
     for k in range(4):
         a = k * math.pi / 2
         cylm(K["cast_iron"], M, (0, 0.3, 0.38), (math.cos(a) * 0.16, 0.3, 0.38 + math.sin(a) * 0.16), 0.008, segs=5)
@@ -386,7 +396,7 @@ def sewing_machine(K, M):
     boxm(K["black_paint"], H, (0.0, -0.15, 0.17), (0.08, 0.06, 0.17), bevel=0.02)
     cylm(K["chrome"], H, (0.01, -0.16, 0.08), (0.01, -0.16, 0.04), 0.002, segs=5)
     boxm(K["chrome"], H, (0.0, -0.08, 0.052), (0.09, 0.07, 0.004))
-    lathe(K["chrome"], [(0.0, 0.0), (0.07, 0.0), (0.072, 0.02), (0.06, 0.025), (0.0, 0.025)], H @ T(0, 0.19, 0.2, tilt=(-math.pi / 2, 0)),
+    lathe(K["chrome"], [(0.0, 0.0), (0.07, 0.0), (0.072, 0.02), (0.06, 0.025), (0.0, 0.025)], H @ T(0, 0.15, 0.22, tilt=(-math.pi / 2, 0)),
           segs=20)
     cylm(K["chrome"], H, (0.0, 0.06, 0.285), (0.0, 0.06, 0.33), 0.003, segs=5)
     lathe(K["thread_red"], [(0.0, 0.0), (0.012, 0.0), (0.012, 0.004), (0.01, 0.004), (0.01, 0.036), (0.012, 0.036),
@@ -544,7 +554,7 @@ def balance_scale(K, M):
         lathe(K["brass"], [(0.0, 0.0), (0.06, 0.004), (0.095, 0.02), (0.1, 0.024)], M @ T(0, y, 0.08), segs=24, cap_bottom=False)
     for k, (wr, wh) in enumerate(((0.015, 0.02), (0.012, 0.016), (0.009, 0.012))):
         lathe(K["brass"], [(0.0, 0.0), (wr, 0.0), (wr, wh * 0.7), (wr * 0.4, wh * 0.8), (wr * 0.4, wh), (0.0, wh)],
-              M @ T(0.04 + k * 0.035, 0.12, 0.04), segs=12)
+              M @ T(-0.05 + k * 0.035, 0.12, 0.04), segs=12)
 
 
 def lpg_cylinder(K, M, paint="plastic_red"):
@@ -594,7 +604,9 @@ def cooler(K, M, key="plastic_blue"):
     """An ice box on the floor, lid open a little, sodas and ice in it."""
     boxm(K[key], M, (0, 0, 0.2), (0.4, 0.62, 0.4), bevel=0.03)
     boxm(K["plastic_white"], M, (0.0, 0, 0.392), (0.34, 0.56, 0.02))
-    boxm(K[key], M @ T(-0.2, 0, 0.42, tilt=(0, -0.35)), (0.2, 0, 0.02), (0.42, 0.64, 0.05), bevel=0.02)
+    boxm(K[key], M @ T(-0.2, 0, 0.405, tilt=(0, -0.35)), (0.2, 0, 0.022), (0.42, 0.64, 0.05), bevel=0.02)
+    for y in (-0.22, 0.22):
+        cylm(K["steel"], M, (-0.205, y - 0.04, 0.4), (-0.205, y + 0.04, 0.4), 0.008, segs=6)
     for k in range(5):
         boxm(K["glass"], M @ T(0, 0, 0, yaw=k), (0.05 * math.cos(k * 1.3), 0.12 * math.sin(k * 2.1), 0.405), (0.04, 0.04, 0.03),
              bevel=0.006)
