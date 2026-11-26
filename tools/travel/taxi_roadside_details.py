@@ -32,6 +32,9 @@ MODELS = ROOT / "art-source/library/models"
 #  12: ពន្លឺពេជ្រ ជួសជុលម៉ូតូ (Moto Repair)  13: ក្រុមតន្ត្រីសម័យពន្លឺថ្មី (Wedding Band)
 #  14: បញ្ញា កាត់សក់ (Panha Barber)         15: កាត់សក់ចន្ទ្រា (Chantra Barber)
 POSTER_COUNT = 16
+# The village shops' rain jar under the downspout: its centre in a shop's frame (x, inset from
+# the +y side), where shop_interiors.rain_jar stands it and the downspout's elbow ends.
+RAIN_JAR = (1.36, 0.42)
 
 
 def _poster_uv_rect(slot_idx):
@@ -536,6 +539,17 @@ def _add_electric_meter(bm_iron, bm_white, post_x, post_y, z_box=1.82, z_top=3.2
         _cyl_bm(bm_white, (post_x + 0.06, post_y + dy_i, z_top - 0.02), (post_x + 0.13, post_y + dy_i, z_top - 0.02), 0.024, 0.020, segs=8)
 
 
+def _add_side_meter(bm_iron, bm_white, post_x, post_y, side, z_box=1.78, z_top=2.5):
+    """The meter box on a post's outer side face (side: +1 or -1 in y), its conduit up the
+    post to two porcelain insulators under the eave."""
+    face = post_y + side * 0.075
+    _box_bm(bm_iron, (post_x - 0.02, face + side * 0.045, z_box), (0.18, 0.09, 0.26), bevel=0.006, segs=1)
+    _cyl_bm(bm_white, (post_x - 0.02, face + side * 0.088, z_box + 0.03), (post_x - 0.02, face + side * 0.1, z_box + 0.03), 0.048, 0.048, segs=8)
+    _cyl_bm(bm_iron, (post_x - 0.06, face + side * 0.013, z_box + 0.13), (post_x - 0.06, face + side * 0.013, z_top), 0.012, 0.012, segs=6)
+    for dx in (-0.06, 0.04):
+        _cyl_bm(bm_white, (post_x + dx, face - side * 0.002, z_top - 0.02), (post_x + dx, face + side * 0.06, z_top - 0.02), 0.024, 0.020, segs=8)
+
+
 def _add_spirit_shrine(bm_red, bm_amber, bm_shrine_glow, pos):
     """Authentic red-and-gold Khmer doorway spirit shrine shelf (Chumneang Phteah) with tiny glowing red diodes."""
     x, y, z = pos
@@ -691,6 +705,49 @@ def _add_catenary_tarp(bm_tarp, bm_bamboo, bm_wire, x0, x1, y0, y1, z_high, z_lo
         _cyl_bm(bm_wire, (x1, py, z_low - 0.02), (x1 + 0.42, py, -0.28), 0.006, 0.006, segs=4)
 
 
+def _add_village_tarp(bm_tarp, bm_bamboo, bm_wire, step_y, ground_z=None):
+    """The village shops' rain tarp: tied under the gutter and run out over the steps to a
+    bamboo ridge pole on two bamboo posts planted beside the footbridge (never in its way),
+    each post stayed by a rope to a peg in the bank."""
+    x0, x1, z_high, z_low = 2.12, 2.58, 2.33, 2.1
+    y0, y1 = step_y - 0.86, step_y + 0.86
+
+    def gz(x, y):
+        return ground_z(x, y) if ground_z else -0.3
+
+    nx, ny = 5, 10
+    grid = []
+    for i in range(nx + 1):
+        fx = i / nx
+        row = []
+        for j in range(ny + 1):
+            fy = j / ny
+            sag = -0.07 * math.sin(fx * math.pi) * (0.6 + 0.4 * math.sin(fy * math.pi))
+            ripple = 0.01 * math.sin(fy * math.pi * 5) * fx
+            row.append(bm_tarp.verts.new((x0 + (x1 - x0) * fx, y0 + (y1 - y0) * fy, z_high + (z_low - z_high) * fx + sag + ripple)))
+        grid.append(row)
+    for i in range(nx):
+        for j in range(ny):
+            bm_tarp.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
+    # Tied at the back corners and middle to the gutter's hangers.
+    for y in (y0 + 0.03, (y0 + y1) / 2, y1 - 0.03):
+        _cyl_bm(bm_wire, (x0, y, z_high), (2.15, y, 2.37), 0.005, 0.005, segs=4)
+    # The ridge pole the front edge is lashed over, on its two posts.
+    _cyl_bm(bm_bamboo, (x1, y0 - 0.1, z_low - 0.025), (x1, y1 + 0.1, z_low - 0.025), 0.022, 0.022, segs=8)
+    for s, y in ((-1, y0 + 0.02), (1, y1 - 0.02)):
+        foot = gz(x1, y)
+        _cyl_bm(bm_bamboo, (x1, y, foot - 0.12), (x1, y, z_low + 0.03), 0.026, 0.022, segs=8)
+        for k in range(3):            # nodes of the cane
+            zn = foot + 0.45 + k * 0.62
+            _torus_bm(bm_bamboo, (x1, y, zn), (0, 0, 1), 0.026, 0.005, n_maj=10, n_min=3)
+        _torus_bm(bm_wire, (x1, y, z_low - 0.025), (0, 0, 1), 0.028, 0.004, n_maj=10, n_min=3)   # lashing
+        # The stay: from the post's head out to a peg in the bank.
+        px, py = x1 + 0.32, y + s * 0.42
+        pz = gz(px, py)
+        _cyl_bm(bm_wire, (x1, y, z_low - 0.04), (px, py, pz + 0.06), 0.005, 0.005, segs=4)
+        _cyl_bm(bm_bamboo, (px, py, pz - 0.1), (px - 0.02, py, pz + 0.08), 0.012, 0.01, segs=5)
+
+
 def _add_festoon_lights(bm_wire, bm_bulb, p0, p1, n_bulbs=7, sag=0.18):
     """Warm sagging string of miniature Cambodian roadside cafe / wedding-band festoon bulbs across veranda eaves."""
     a, b = Vector(p0), Vector(p1)
@@ -784,6 +841,13 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
     has_fluoro = spec.get("fluoro", False)
     dim_outpost = spec.get("dim", False)
     door_w = 1.95 if not dim_outpost else 0.72
+    # The village road (tools/areas/village_road.py) builds these shops to be walked up to,
+    # not driven past: `village` fixes what a passing car never shows (things hung on
+    # nothing, boards behind posts, a tarp pole in the steps) and leaves out what the
+    # village's own dressing (shop_interiors.py) builds better. `ground_z(x, y)` gives the
+    # ground's height in the shop's frame. The driving scene is built as before.
+    village = spec.get("village", False)
+    ground_z = spec.get("ground_z")
 
     # Material-grouped bmeshes -> crisp textured PBR surfaces + zero bloat!
     bm_posts = bmesh.new()
@@ -850,7 +914,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         _cyl_bm(bm_posts, (0.0, py, -0.75), (1.75, py, 0.12), 0.045, 0.045, segs=6)
     # Main longitudinal floor girders + individual spaced weathered brown veranda deck planks!
     for py in stilt_ys:
-        _box_bm(bm_posts, (-0.75, py, 0.04), (5.3, 0.13, 0.14))
+        # In the village the girders carry the veranda's planks (they sat 2 cm above them).
+        _box_bm(bm_posts, (-0.75, py, 0.0625 if village else 0.04), (5.3, 0.13, 0.14))
     _box_bm(bm_deck, (-1.65, 0.0, 0.14), (3.45, hw * 2.02, 0.09))  # Interior plank floor
     n_planks = 12
     for k in range(n_planks):
@@ -897,7 +962,15 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
     # Downspout running down front corner post straight into rainwater Ong jar
     ds_y = hw - 0.12
     _cyl_bm(bm_iron, (2.14, ds_y, 2.40), (1.68, ds_y, 2.08), 0.036, 0.036, segs=7)
-    _cyl_bm(bm_iron, (1.68, ds_y, 2.08), (1.68, ds_y, 0.88), 0.036, 0.036, segs=7)
+    if village:
+        # Down the post, then an elbow into the mouth of the rain jar (shop_interiors.rain_jar).
+        _cyl_bm(bm_iron, (1.68, ds_y, 2.08), (1.68, ds_y, 1.22), 0.036, 0.036, segs=7)
+        _cyl_bm(bm_iron, (1.68, ds_y, 1.22), (RAIN_JAR[0] + 0.04, hw - RAIN_JAR[1] + 0.04, 0.95), 0.036, 0.036, segs=7)
+        _torus_bm(bm_iron, (1.68, ds_y, 1.22), (0, 0, 1), 0.037, 0.008, n_maj=10, n_min=4)
+        for zc in (1.5, 1.9):          # straps nailed to the post
+            _box_bm(bm_iron, (1.68, ds_y + 0.045, zc), (0.08, 0.03, 0.025))
+    else:
+        _cyl_bm(bm_iron, (1.68, ds_y, 2.08), (1.68, ds_y, 0.88), 0.036, 0.036, segs=7)
 
     # Optional Cambodian colonial stepped plaster parapet header above the veranda roof (Shop 2 Dentist/Salon!)
     if has_parapet:
@@ -922,19 +995,38 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
             _box_bm(bm_win_glow, (wx, sy + out_s * 0.066, wz), (0.56, 0.025, 0.74))
             for bx_w in (-0.18, 0.0, 0.18):
                 _box_bm(bm_posts, (wx + bx_w, sy + out_s * 0.082, wz), (0.028, 0.028, 0.76))
-            _box_bm(bm_shut, (wx - 0.52, sy + out_s * 0.12, wz), (0.36, 0.045, 0.78), rot=Euler((0, 0, math.radians(24 * out_s))))
+            if village:
+                # A top-hung shutter, as Khmer houses have them: hinged on the frame's head and
+                # propped open on a stick from the sill. (Hung at the side it stood off the wall
+                # past the back corner, and swung the other way it covered the side posters.)
+                ang = math.radians(50)
+                hinge = Vector((wx, sy + out_s * 0.077, wz + 0.43))
+                rot = Matrix.Rotation(out_s * ang, 3, "X")
+                _box_bm(bm_shut, hinge + rot @ Vector((0, out_s * 0.0225, -0.39)), (0.6, 0.045, 0.78),
+                        rot=Euler((out_s * ang, 0, 0)))
+                for hx in (-0.22, 0.22):
+                    _cyl_bm(bm_iron, hinge + Vector((hx - 0.05, 0, 0)), hinge + Vector((hx + 0.05, 0, 0)), 0.011, 0.011, segs=6)
+                sill = Vector((wx + 0.2, sy + out_s * 0.08, wz - 0.4))
+                _cyl_bm(bm_bamboo, sill, hinge + rot @ Vector((0.2, out_s * 0.045, -0.74)), 0.012, 0.011, segs=6)
+            else:
+                _box_bm(bm_shut, (wx - 0.52, sy + out_s * 0.12, wz), (0.36, 0.045, 0.78), rot=Euler((0, 0, math.radians(24 * out_s))))
     # Front wall flanks leaving a generous real recessed doorway/shopfront opening!
     flank_w = max(0.75, hw - door_w * 0.5)
     flank_y = door_w * 0.5 + flank_w * 0.5
     # Asymmetric weathered ceramic urn planter with dark arched tropical sword leaves (ONLY select shops, never toy cubes!)
     if trade in ("barber", "dentist_salon", "salon"):
         py_p = step_y - 0.88 if trade != "salon" else step_y + 0.88
-        _add_realistic_planter(bm_iron, bm_foliage, (1.84, py_p, 0.17), seed=800 + shop_idx * 17)
+        # (On the planks in the village: at x 1.84 it hung half off the veranda's edge.)
+        _add_realistic_planter(bm_iron, bm_foliage, (1.55, py_p, 0.178) if village else (1.84, py_p, 0.17), seed=800 + shop_idx * 17)
     # Wall-mounted Cambodian electric meter box, drop conduit & porcelain roof insulators on active shops!
-    if not dim_outpost:
+    if not dim_outpost and village:
+        # On the corner post's outer side (its front carries the corner signboard now).
+        _add_side_meter(bm_iron, bm_white, 1.75, hw if shop_idx % 2 else -hw, 1 if shop_idx % 2 else -1, z_box=1.78, z_top=2.5)
+    elif not dim_outpost:
         _add_electric_meter(bm_iron, bm_white, 1.75, -hw + 0.08 if shop_idx % 2 == 0 else hw - 0.08, z_box=1.78, z_top=2.56)
     # Red-and-gold Cambodian Chumneang Phteah house spirit shrine shelf with glowing red diodes at doorway corner!
-    if trade in ("noodle", "tv_coffee", "grocery", "barber"):
+    # (The village's shrines are built in detail by shop_interiors.spirit_shrine.)
+    if trade in ("noodle", "tv_coffee", "grocery", "barber") and not village:
         _add_spirit_shrine(bm_red, bm_amber, bm_shrine_glow, (0.04, -flank_y * 0.62 if trade != "barber" else flank_y * 0.62, 1.88))
     # Galvanized iron accordion folding security gate pushed open at doorway jambs (barber, dentist & tv shops!)
     if trade in ("barber", "dentist_salon", "tv_coffee"):
@@ -987,7 +1079,9 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
             _box_bm(bm_posts, (1.77, curt_y, 1.44 + sl * 0.17), (0.032, hw * 0.79, 0.016))
 
     # Curved catenary-sagging Cambodian blue monsoon vinyl rain tarp with bamboo props & taut guy-ropes!
-    if has_tarp:
+    if has_tarp and village:
+        _add_village_tarp(bm_blue, bm_bamboo, bm_wire_local, step_y, ground_z)
+    elif has_tarp:
         _add_catenary_tarp(bm_blue, bm_bamboo, bm_wire_local, 1.72, 2.52, -hw * 0.96, -0.02, 2.46, 2.10)
     # Warm sagging festoon string of miniature glowing café/wedding-band bulbs across eaves of Noodle & Grocery shops!
     if trade in ("noodle", "grocery"):
@@ -1000,7 +1094,20 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
     # Curated linked PolyHaven props placed per trade alongside rural scans (zero cartoon primitives!)
     ph_layout = []
 
-    if trade == "noodle":
+    if trade == "noodle" and village:
+        nz = 0.175
+        ph_layout += [
+            ("wooden_table_02", (0.98, -1.42, nz), (0.0, 0.0, math.pi * 0.5 + 0.06), 0.92),
+            ("tea_set_01", (0.98, -1.36, nz + 0.736), (0.0, 0.0, 0.42), 0.72),
+            ("vintage_oil_lamp", (0.92, -1.78, nz + 0.736), (0.0, 0.0, 0.2), 0.42),
+            ("wooden_stool_01", (1.46, -1.42, nz), (0.0, 0.0, -0.35), 0.95),
+            ("folding_wooden_stool", (0.98, -2.14, nz), (0.0, 0.0, 0.45), 0.95),
+            ("wooden_stool_01", (0.58, -0.92, nz), (0.0, 0.0, 1.1), 0.95),
+            ("wicker_basket_01", (0.76, -0.52, nz), (0.0, 0.0, 0.35), 1.15),
+            ("wooden_crate_01", (1.34, 1.32, nz), (0.0, 0.0, -0.22), 0.82),
+        ]
+
+    elif trade == "noodle":
         # SHOP 0: CAMBODIAN ROADSIDE KUY TEAV NOODLE & ICED COFFEE CART/STALL!
         nx, ny, nz = 1.05, 0.35, 0.175
         # Lower painted wood/tin cart cabinet with steel corners & pneumatic wheels
@@ -1058,8 +1165,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
             bm_c = bm_red if st % 2 == 0 else bm_blue
             _cyl_bm(bm_c, bp + Vector((0, 0, sz)), bp + Vector((0, 0, sz + 0.055)), 0.059, 0.059, segs=12)
         # Interior wide framed wall mirror + vanity shelf + folded textured linen towels + tonic bottles!
-        _box_bm(bm_posts, (-3.14, 0.0, 1.72), (0.06, 2.35, 1.18))
-        _box_bm(bm_mirror, (-3.10, 0.0, 1.72), (0.02, 2.18, 1.02))
+        _box_bm(bm_posts, (-3.17 if village else -3.14, 0.0, 1.72), (0.06, 2.35, 1.18))
+        _box_bm(bm_mirror, (-3.13 if village else -3.10, 0.0, 1.72), (0.02, 2.18, 1.02))
         _box_bm(bm_posts, (-2.94, 0.0, 1.02), (0.38, 2.48, 0.05))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.88, -0.88, 1.05), (0, 0.16, 0), 9, seed=101)
         for tw in range(4):
@@ -1109,19 +1216,21 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         for dx_v in (-0.26, 0.26):
             for dy_v in (-0.57, 0.57):
                 _box_bm(bm_iron, (-1.82 + dx_v, -0.95 + dy_v, 1.24), (0.028, 0.028, 0.60))
-        _box_bm(bm_posts, (-3.14, 0.95, 1.72), (0.06, 1.25, 1.10))
-        _box_bm(bm_mirror, (-3.10, 0.95, 1.72), (0.02, 1.12, 0.96))
+        _box_bm(bm_posts, (-3.17 if village else -3.14, 0.95, 1.72), (0.06, 1.25, 1.10))
+        _box_bm(bm_mirror, (-3.13 if village else -3.10, 0.95, 1.72), (0.02, 1.12, 0.96))
         _add_bottles_row(bm_amber, bm_green, bm_white, (-1.70, -1.42, 1.54), (0, 0.15, 0), 7, seed=209)
-        _add_hair_dryer_stand(bm_iron, bm_white, (-1.45, 1.22, 0.18))
+        if not village:
+            _add_hair_dryer_stand(bm_iron, bm_white, (-1.45, 1.22, 0.18))
         _cyl_bm(bm_white, (-0.92, -1.55, 0.78), (-0.92, -1.55, 0.92), 0.14, 0.21, segs=12)
         for ta in range(3):
             ang = ta * math.tau / 3.0
             _cyl_bm(bm_iron, (-0.92 + math.cos(ang) * 0.22, -1.55 + math.sin(ang) * 0.22, 0.18),
                     (-0.92 + math.cos(ang) * 0.12, -1.55 + math.sin(ang) * 0.12, 0.84), 0.014, 0.012, segs=6)
         _box_bm(bm_krama, (1.76, -1.65, 0.82), (0.14, 0.46, 0.34))
-        bc = Vector((1.28, 1.48, 2.02))
-        _cyl_bm(bm_bamboo, bc + Vector((0, 0, 0.22)), bc + Vector((0, 0, 0.56)), 0.008, 0.008, segs=6)
-        _cyl_bm(bm_bamboo, bc - Vector((0, 0, 0.18)), bc + Vector((0, 0, 0.22)), 0.16, 0.13, segs=10)
+        if not village:
+            bc = Vector((1.28, 1.48, 2.02))
+            _cyl_bm(bm_bamboo, bc + Vector((0, 0, 0.22)), bc + Vector((0, 0, 0.56)), 0.008, 0.008, segs=6)
+            _cyl_bm(bm_bamboo, bc - Vector((0, 0, 0.18)), bc + Vector((0, 0, 0.22)), 0.16, 0.13, segs=10)
         ph_layout += [
             ("vintage_cabinet_01", (-2.80, -1.35, 0.18), (0.0, 0.0, math.pi * 0.5), 0.88),
             ("ornate_mirror_01", (-3.12, -0.05, 1.38), (0.0, 0.0, math.pi * 0.5), 1.05),
@@ -1197,17 +1306,19 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         _box_bm(bm_table_wood, (-2.55, 0.0, 0.90), (0.82, 2.85, 0.07))
         _box_bm(bm_red, (-2.35, -0.62, 1.06), (0.34, 0.56, 0.24), bevel=0.01, segs=1)
         _box_bm(bm_blue, (-2.42, 0.65, 1.12), (0.28, 0.20, 0.36))
-        _box_bm(bm_posts, (-3.16, 0.0, 1.75), (0.04, 1.55, 0.76))
+        _box_bm(bm_posts, (-3.18 if village else -3.16, 0.0, 1.75), (0.04, 1.55, 0.76))
         for wk in range(8):
             wy = -0.60 + wk * 0.17
             _box_bm(bm_iron, (-3.12, wy, 1.72), (0.02, 0.032, 0.22 + (wk % 3) * 0.09))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.38, -0.05, 0.95), (0, 0.12, 0), 5, seed=401)
         _add_air_compressor(bm_red, bm_iron, bm_rubber, (-1.28, -1.68, 0.18))
-        _box_bm(bm_table_wood, (2.22, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(-14), 0.12)))
-        _box_bm(bm_table_wood, (2.42, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(14), 0.12)))
+        if not village:
+            _box_bm(bm_table_wood, (2.22, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(-14), 0.12)))
+            _box_bm(bm_table_wood, (2.42, -1.58, 0.42), (0.04, 0.46, 0.68), rot=Euler((0, math.radians(14), 0.12)))
         _cyl_bm(bm_red, (1.35, -1.78, 0.175), (1.35, -1.78, 0.72), 0.024, 0.024, segs=8)
         _cyl_bm(bm_iron, (1.35, -1.90, 0.74), (1.35, -1.66, 0.74), 0.014, 0.014, segs=6)
-        _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.15, 2.22, -0.25), yaw=math.radians(82))
+        if not village:
+            _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.15, 2.22, -0.25), yaw=math.radians(82))
         ph_layout += [
             ("oil_tin", (1.42, 1.25, 0.175), (0.0, 0.0, 0.35), 1.3),
             ("oil_tin", (1.28, 1.12, 0.175), (0.0, 0.0, -0.6), 1.25),
@@ -1219,9 +1330,10 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
 
     elif trade == "grocery":
         # SHOP 5: PONLEU THMEY WEDDING BAND & VILLAGE DRY-GOODS GENERAL STORE!
-        _cyl_bm(bm_bamboo, (1.58, -hw * 0.88, 2.26), (1.58, hw * 0.88, 2.26), 0.022, 0.022, segs=6)
-        _add_hanging_brooms(bm_bamboo, bm_posts, (1.56, -0.96, 2.24))
-        for hy, n_t, bm_pkt, tilt in [
+        if not village:
+            _cyl_bm(bm_bamboo, (1.58, -hw * 0.88, 2.26), (1.58, hw * 0.88, 2.26), 0.022, 0.022, segs=6)
+            _add_hanging_brooms(bm_bamboo, bm_posts, (1.56, -0.96, 2.24))
+        for hy, n_t, bm_pkt, tilt in [] if village else [
             (-0.34, 3, bm_red, 0.24), (0.64, 4, bm_amber, -0.18), (0.94, 3, bm_white, 0.22), (1.20, 2, bm_blue, -0.14),
         ]:
             for tier in range(n_t):
@@ -1238,8 +1350,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
             _cyl_bm(bm_kantel, (0.32 + k_m * 0.11, -2.35, 0.18), (0.28 + k_m * 0.11, -2.35, 1.48), 0.055, 0.055, segs=10)
         _add_plastic_crate(bm_red, bm_amber, bm_green, (1.08, -1.78, 0.175), rot_z=0.18, filled=True)
         ph_layout += [
-            ("bananas", (1.58, -1.75, 2.04), (0.0, math.radians(78), 0.15), 0.95),
-            ("bananas", (1.58, 1.56, 2.04), (0.0, math.radians(78), -0.45), 0.92),
+            *([] if village else [("bananas", (1.58, -1.75, 2.04), (0.0, math.radians(78), 0.15), 0.95),
+                                  ("bananas", (1.58, 1.56, 2.04), (0.0, math.radians(78), -0.45), 0.92)]),
             ("wooden_table_02", (1.05, 1.15, 0.175), (0.0, 0.0, math.pi * 0.5 - 0.04), 0.90),
             ("tea_set_01", (1.05, 1.12, 0.175 + 0.72), (0.0, 0.0, -0.35), 0.68),
             ("jug_01", (1.02, 1.44, 0.175 + 0.72), (0.0, 0.0, 0.4), 0.95),
@@ -1253,8 +1365,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
 
     elif trade == "salon":
         # SHOP 6: MALIN & CHANTRA BRIDAL TAILOR & STILT CORNER SALON!
-        _box_bm(bm_posts, (-3.14, 0.0, 1.72), (0.06, 1.48, 1.08))
-        _box_bm(bm_mirror, (-3.10, 0.0, 1.72), (0.02, 1.34, 0.94))
+        _box_bm(bm_posts, (-3.17 if village else -3.14, 0.0, 1.72), (0.06, 1.48, 1.08))
+        _box_bm(bm_mirror, (-3.13 if village else -3.10, 0.0, 1.72), (0.02, 1.34, 0.94))
         _box_bm(bm_posts, (-2.88, 0.0, 0.96), (0.44, 1.65, 0.05))
         _add_bottles_row(bm_amber, bm_green, bm_red, (-2.82, -0.65, 0.99), (0, 0.17, 0), 8, seed=601)
         _add_sewing_machine(bm_table_wood, bm_iron, bm_hol_silk, (-1.28, -1.42, 0.18))
@@ -1262,8 +1374,9 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         for sb_k in range(3):
             _cyl_bm(bm_hol_silk, (-2.72, 1.25 + sb_k * 0.16, 1.44), (-2.72, 1.25 + sb_k * 0.16, 1.76), 0.058, 0.058, segs=10)
         _cyl_bm(bm_kantel, (0.48, 2.12, 0.18), (0.44, 2.12, 1.42), 0.056, 0.056, segs=10)
-        _add_hair_dryer_stand(bm_iron, bm_white, (-1.75, 0.72, 0.18))
-        _box_bm(bm_linen, (0.06, 0.74, 1.38), (0.05, 0.42, 2.34), rot=Euler((0, 0, 0.14)))
+        if not village:     # (the village's dryer is a hood dryer; its curtain hangs in folds)
+            _add_hair_dryer_stand(bm_iron, bm_white, (-1.75, 0.72, 0.18))
+            _box_bm(bm_linen, (0.06, 0.74, 1.38), (0.05, 0.42, 2.34), rot=Euler((0, 0, 0.14)))
         _box_bm(bm_posts, (1.75, 1.52, 0.88), (0.07, 1.85, 0.06))
         for ks in range(7):
             _box_bm(bm_posts, (1.75, 0.72 + ks * 0.26, 0.52), (0.036, 0.036, 0.68))
@@ -1271,7 +1384,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         for by in (0.85, 1.98):
             _box_bm(bm_posts, (1.02, by, 0.33), (0.32, 0.07, 0.38))
         _box_bm(bm_krama, (1.04, 1.55, 0.575), (0.34, 0.44, 0.045))
-        _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.10, -2.05, -0.25), yaw=math.radians(-78))
+        if not village:
+            _add_bicycle(bm_iron, bm_rubber, bm_bamboo, (2.10, -2.05, -0.25), yaw=math.radians(-78))
         ph_layout += [
             ("ornate_mirror_01", (-3.12, -1.45, 1.24), (0.0, 0.0, math.pi * 0.5), 1.05),
             ("painted_wooden_shelves", (-2.75, 1.68, 0.18), (0.0, 0.0, math.pi * 0.5), 1.08),
@@ -1284,7 +1398,8 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
 
     else:
         # SHOP 7: LONELY HALF-SHUTTERED JUNGLE-EDGE OUTPOST!
-        _box_bm(bm_win_glow, (-0.02, 0.06, 1.38), (0.04, 0.28, 2.28))
+        if not village:
+            _box_bm(bm_win_glow, (-0.02, 0.06, 1.38), (0.04, 0.28, 2.28))
         _box_bm(bm_iron, (0.12, -0.14, 1.32), (0.06, 0.09, 0.11))
         ph_layout += [
             ("wooden_table_02", (1.05, 1.35, 0.175), (0.0, 0.0, math.pi * 0.5 + 0.08), 0.90),
@@ -1297,17 +1412,27 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
 
     # 5. LIGHTING FIXTURES (VERANDA PENDANT + INTERIOR LAMP/FLUORESCENT + GOOSENECK SIGN LAMP)
     # Main hanging enamel pendant lamp under front veranda awning + runtime PointLight anchor!
-    _add_pendant_lamp(bm_iron, bm_shade, bm_bulb, (1.08, 0.10, 3.04), drop=0.62)
+    if village:
+        _add_pendant_lamp(bm_iron, bm_shade, bm_bulb, (1.08, 0.10, 3.10), drop=0.68)
+        _cyl_bm(bm_iron, (1.08, 0.10, 3.06), (1.08, 0.10, 3.1), 0.028, 0.028, segs=10)   # the ceiling rose
+    else:
+        _add_pendant_lamp(bm_iron, bm_shade, bm_bulb, (1.08, 0.10, 3.04), drop=0.62)
     anc_ext = bpy.data.objects.new(f"taxi_road_anchor_shop_lamp_{shop_idx}", None)
     coll.objects.link(anc_ext)
     anc_ext.location = to_w((1.12, 0.10, 2.34))
 
     # Interior practical lamp (either cool-white fluorescent tube bar or warm hanging tungsten bulb!)
-    if has_fluoro:
+    if has_fluoro and village:
+        _box_bm(bm_iron, (-1.62, 0.0, 2.92), (0.09, 1.28, 0.055))
+        _cyl_bm(bm_fluoro, (-1.62, -0.58, 2.87), (-1.62, 0.58, 2.87), 0.022, 0.022, segs=8)
+        for cy in (-0.5, 0.5):
+            for k in range(5):        # a short chain to the beam
+                _torus_bm(bm_iron, (-1.62, cy, 2.958 + k * 0.019), (1, 0, 0) if k % 2 else (0, 1, 0), 0.011, 0.0025, n_maj=8, n_min=3)
+    elif has_fluoro:
         _box_bm(bm_iron, (-1.45, 0.0, 2.86), (0.09, 1.28, 0.055))
         _cyl_bm(bm_fluoro, (-1.45, -0.58, 2.81), (-1.45, 0.58, 2.81), 0.022, 0.022, segs=8)
     else:
-        _add_pendant_lamp(bm_iron, bm_shade, bm_bulb, (-1.55, 0.0, 3.12), drop=0.58)
+        _add_pendant_lamp(bm_iron, bm_shade, bm_bulb, (-1.60 if village else -1.55, 0.0, 3.12), drop=0.58)
     anc_int = bpy.data.objects.new(f"taxi_road_anchor_shop_int_lamp_{shop_idx}", None)
     coll.objects.link(anc_int)
     anc_int.location = to_w((-1.42, 0.0, 2.36))
@@ -1324,7 +1449,11 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
     _box_bm(bm_posts, (2.42, bs_y, 2.02), (1.02, 0.048, 0.82), bevel=0.008, segs=1)
 
     # Opposite corner secondary framed signboard + wooden framing moldings for all exterior wall posters!
-    _box_bm(bm_posts, (1.76, -hw * 0.96, 2.08), (0.06, 1.06, 0.82))
+    cb_x = 1.855 if village else 1.76
+    _box_bm(bm_posts, (cb_x, -hw * 0.96, 2.08), (0.06, 1.06, 0.82))
+    if village:     # its two iron straps round the post
+        for zc in (1.82, 2.34):
+            _box_bm(bm_iron, (1.75, -hw, zc), (0.17, 0.17, 0.03))
 
     # 6. CURATED REAL HAND-PAINTED KHMER 90s SHOP SIGNS & POSTERS (ZERO GENERATED POSTERS!)
     p_hero = spec["posters"]["hero"]
@@ -1332,6 +1461,7 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
     p_side_a, p_side_b = spec["posters"]["side"]
     p_hang_a, p_hang_b = spec["posters"]["hang"]
 
+    sx_a, sx_b, so = (-0.56, -1.63, 0.088) if village else (-0.82, -2.02, 0.068)
     slots = [
         # Prominent overhead veranda fascia signboard (lit by gooseneck lamp!)
         ((2.172, 0.0, 2.86), (0, 1, 0), (0, 0, 1), 2.22, 0.78, p_hero),
@@ -1342,12 +1472,13 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         ((2.42, bs_y + 0.032, 2.02), (-1, 0, 0), (0, 0, 1), 0.94, 0.74, p_hang_a),
         ((2.42, bs_y - 0.032, 2.02), (1, 0, 0), (0, 0, 1), 0.94, 0.74, p_hang_b),
         # Opposite corner post board facing road
-        ((1.802, -hw * 0.96, 2.08), (0, 1, 0), (0, 0, 1), 0.98, 0.74, p_side_a),
+        ((cb_x + (0.042 if village else 0.032), -hw * 0.96, 2.08), (0, 1, 0), (0, 0, 1), 0.98, 0.74, p_side_a),
         # Approach side walls (+Y and -Y so approaching headlights ALWAYS illuminate two big signs!)
-        ((-0.82, hw + 0.068, 1.92), (-1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_a),
-        ((-2.02, hw + 0.068, 1.88), (-1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_b),
-        ((-0.82, -hw - 0.068, 1.92), (1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_a),
-        ((-2.02, -hw - 0.068, 1.88), (1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_b),
+        # (In the village clear of the side window and proud of the moulding rail they cut.)
+        ((sx_a, hw + so, 1.92), (-1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_a),
+        ((sx_b, hw + so, 1.88), (-1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_b),
+        ((sx_a, -hw - so, 1.92), (1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_a),
+        ((sx_b, -hw - so, 1.88), (1, 0, 0), (0, 0, 1), 0.98, 1.26, p_side_b),
     ]
     if has_parapet:
         # Upper colonial parapet banner sign on Shop 1!
@@ -1356,11 +1487,31 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
         # Real 3D framed wooden signboard moldings around wall-mounted signs (never bare pasted quads!)
         if i in (1, 2, 6, 7, 8, 9):
             _add_poster_frame_bm(bm_posts, lp, lr, lu, pw, ph)
+        if village and i in (6, 7, 8, 9):
+            # A plank backing board nailed over the moulding rail, the poster pasted on it.
+            nb = Vector(lr).cross(Vector(lu)).normalized()
+            rb = Vector(lr)
+            # (1.2 cm behind the poster: its rain buckle dips 7 mm, and the board showed through.)
+            _box_bm(bm_posts, Vector(lp) - nb * 0.03, (abs(rb.x) * (pw + 0.05) + abs(nb.x) * 0.036,
+                                                       abs(rb.y) * (pw + 0.05) + abs(nb.y) * 0.036, ph + 0.05))
         _add_poster_to_lists(
             p_verts, p_faces, p_uvs,
             to_w(lp), dir_w(lr), dir_w(lu),
             pw, ph, pidx, seed=400 + shop_idx * 25 + i,
         )
+
+    service_pt = None
+    if village and not dim_outpost:
+        # The service drop ends on a porcelain insulator on the fascia, clear of the hero sign
+        # and the bracket sign, and a short wire runs under the eave to the meter's conduit.
+        # (It used to end in the air above the veranda roof, behind the sign.)
+        ms = 1 if shop_idx % 2 else -1
+        ip = Vector((2.105, ms * 0.8 * hw, 2.5))
+        _box_bm(bm_iron, ip + Vector((-0.012, 0, 0)), (0.025, 0.05, 0.06))
+        _cyl_bm(bm_white, ip, ip + Vector((0.07, 0, 0)), 0.024, 0.02, segs=8)
+        meter_top = Vector((1.69, ms * (hw + 0.088), 2.5))
+        _tube_bm(bm_wire_local, [ip + Vector((0.04, 0, 0)), (ip + meter_top) * 0.5 + Vector((0, 0, -0.06)), meter_top], 0.006, segs=4)
+        service_pt = ip + Vector((0.07, 0, 0))
 
     # Emit grouped meshes cleanly in world space
     parts = [
@@ -1486,11 +1637,18 @@ def _build_detailed_shop(coll, M_shop, mats, props, ph_props, p_verts, p_faces, 
             ("winnowing_tray", (0.34, 1.56, 0.44), (0.0, math.radians(76), -0.22), 0.94),
         ]
 
+    if village:
+        # The rain jar (shop_interiors.rain_jar) stands where the water jar scan did; a broom
+        # left lying there went under it: brooms lie along the front wall instead.
+        prop_layout = [(k, (0.2, hw - 0.5, 0.18), (0.0, 0.0, math.pi / 2), sc) if k == "broom" else (k, lp, rot, sc)
+                       for k, lp, rot, sc in prop_layout if k != "water_jar"]
     for pkey, lp, prot, psc in prop_layout:
         if props.get(pkey):
             M_p = M_shop @ Matrix.Translation(lp) @ Euler(prot, "XYZ").to_matrix().to_4x4() @ Matrix.Scale(psc, 4)
             _place_linked(props[pkey], coll, M_p, f"shop_{shop_idx}_{pkey}")
 
+    if service_pt is not None:
+        return to_w(service_pt)
     # Return ceramic insulator position at roof corner for overhead electrical drop wire!
     return to_w((1.75, 0.0, 3.32))
 
