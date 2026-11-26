@@ -425,7 +425,7 @@ def byre(coll, m, ground, rng):
     # The pen's floor: hard mud and old straw, dung; a cold smudge-fire heap by the gate.
     floor = Batch("wy_byre_floor")
     nu, nv = 24, 18
-    floor.grid(m["mud"], lambda u, v: (-LX + 2 * LX * u, -WY + 2 * WY * v, g(-LX + 2 * LX * u, -WY + 2 * WY * v) + .012),
+    floor.grid(m["mud"], lambda u, v: (-LX + 2 * LX * u, -WY + 2 * WY * v, g(-LX + 2 * LX * u, -WY + 2 * WY * v) + .02),
                nu, nv, uv=lambda u, v: (u * 2 * LX / 2, v * 2 * WY / 2))
     for k in range(70):
         u, v = rng.uniform(-LX + .2, LX - .2), rng.uniform(-WY + .2, WY - .2)

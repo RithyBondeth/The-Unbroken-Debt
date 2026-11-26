@@ -235,7 +235,8 @@ def floors(coll, m, ground):
         for j in range(ny):
             for i in range(nx):
                 x, y = x0 - 0.3 + (x1 - x0 + 0.6) * i / (nx - 1), y0 - 0.3 + (y1 - y0 + 0.6) * j / (ny - 1)
-                verts.append((x, y, ground(x, y) + 0.012))
+                # 2 cm over the drawn terrain: nearer, the game can't tell which is in front.
+                verts.append((x, y, ground(x, y) + 0.02))
                 uvs.append((x / 2.2, y / 2.2))
         for j in range(ny - 1):
             for i in range(nx - 1):
@@ -552,7 +553,7 @@ def drying_mats(coll, m, ground, rng):
             p = R @ Vector(((u - 0.5) * W, (v - 0.5) * D, 0))
             curl = 0.035 * (max(0, abs(u - 0.5) - 0.44) + max(0, abs(v - 0.5) - 0.46)) / 0.05
             x, y = cx + p.x, cy + p.y
-            return Vector((x, y, ground(x, y) + 0.012 + lift + curl))
+            return Vector((x, y, ground(x, y) + 0.02 + lift + curl))
 
         b.grid(m["mat"], lambda u, v: pt(u, v, 0.0), nx, ny, uv=lambda u, v: (u * W / 0.5, v * D / 0.5))
 

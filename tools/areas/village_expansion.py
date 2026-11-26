@@ -349,9 +349,15 @@ def open_fence(prefix, axis, lo, hi):
 # ------------------------------------------------------------ ground sampling
 
 class Ground:
-    """Bilinear heights from the (expanded) ground's 1 m grid."""
+    """The (expanded) ground's height as the game draws it: on the mesh's own triangles, each
+    1 m quad split along a diagonal. Until Nov 26, 2026 this read the 1 m grid bilinearly,
+    which parts from the triangles by up to 5.5 cm: floors laid 1.2 cm over it (the paddies,
+    the byre, the drying mats, the road's bank) sank under the drawn terrain in patches the
+    game showed as dark blots. `bilinear` keeps the old reading."""
 
     def __init__(self):
+        from mathutils.bvhtree import BVHTree
+
         g = bpy.data.objects["ground"]
         co = np.empty(len(g.data.vertices) * 3, dtype=np.float32)
         g.data.vertices.foreach_get("co", co)
@@ -362,8 +368,17 @@ class Ground:
         h = np.zeros((ny, nx), dtype=np.float32)
         h[np.rint(co[:, 1] - self.y0).astype(int), np.rint(co[:, 0] - self.x0).astype(int)] = co[:, 2]
         self.h = h
+        me = g.data
+        me.calc_loop_triangles()
+        self.bvh = BVHTree.FromPolygons([tuple(v) for v in co.tolist()], [tuple(t.vertices) for t in me.loop_triangles],
+                                        all_triangles=True)
+        self.top = float(co[:, 2].max()) + 10.0
 
     def __call__(self, x, y):
+        hit = self.bvh.ray_cast(Vector((x, y, self.top)), Vector((0.0, 0.0, -1.0)))
+        return float(hit[0].z) if hit[0] is not None else self.bilinear(x, y)
+
+    def bilinear(self, x, y):
         fx = min(max(x - self.x0, 0), self.h.shape[1] - 1.0001)
         fy = min(max(y - self.y0, 0), self.h.shape[0] - 1.0001)
         i, j = int(fx), int(fy)
