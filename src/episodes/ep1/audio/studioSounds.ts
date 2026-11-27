@@ -359,3 +359,145 @@ export function doorClose(rate: number, rand: () => number): Float32Array {
   mix(out, doorLatch(rate, rand), rate, 0.045, 0.55, () => 1);
   return normalise(out, 0.88);
 }
+
+/**
+ * About 2.4 s: haunting Asian bowed-string dissonant slide (erhu-like tension swell).
+ * Two closely tuned bowed voices gliding apart in microtones with rosin air,
+ * freezing the room without relying on a loud Western brass horn.
+ */
+export function erhuDread(rate: number, rand: () => number): Float32Array {
+  const length = n(2.4, rate);
+  const out = new Float32Array(length);
+  const rosin = biquad(noise(length, rand), rate, "bandpass", 1320, 2.4);
+  const voices: [baseHz: number, endHz: number, vibHz: number, gain: number][] = [
+    [293.66, 271.0, 5.2, 0.65],
+    [309.5, 326.0, 5.9, 0.55],
+    [587.3, 548.0, 6.4, 0.28],
+  ];
+  for (const [f0, f1, vib, gain] of voices) {
+    let phase = rand() * Math.PI * 2;
+    for (let i = 0; i < length; i++) {
+      const t = i / rate;
+      const k = Math.min(1, t / 2.2);
+      const slide = f0 + (f1 - f0) * (k * k * (3 - 2 * k));
+      const freq = slide * (1 + 0.011 * Math.sin(2 * Math.PI * vib * t));
+      phase += (2 * Math.PI * freq) / rate;
+      const bow =
+        Math.sin(phase) +
+        0.48 * Math.sin(2 * phase) +
+        0.24 * Math.sin(3 * phase) +
+        0.1 * Math.sin(4 * phase);
+      const env = Math.min(1, t / 0.14) * Math.exp(-Math.max(0, t - 0.55) / 0.82);
+      out[i] += bow * env * gain;
+    }
+  }
+  for (let i = 0; i < length; i++) {
+    const t = i / rate;
+    const env = Math.min(1, t / 0.1) * Math.exp(-Math.max(0, t - 0.4) / 0.72);
+    out[i] += rosin[i] * env * 0.45;
+  }
+  biquad(out, rate, "highpass", 180, 0.7);
+  biquad(out, rate, "lowpass", 2400, 0.8);
+  return normalise(out, 0.84);
+}
+
+/**
+ * About 1.9 s: guttural Asian ghost vocal rattle (low glottal creak pulses through a hollow throat).
+ * Intimate, dry, and deeply unsettling when placed inches behind the player's ear or mirror.
+ */
+export function throatRattle(rate: number, rand: () => number): Float32Array {
+  const length = n(1.9, rate);
+  const raw = new Float32Array(length);
+  let t = 0.04;
+  while (t < 1.72) {
+    const idx = n(t, rate);
+    const amp = (0.55 + rand() * 0.45) * Math.sin((t / 1.8) * Math.PI) ** 0.75;
+    for (let j = 0; j < n(0.014, rate) && idx + j < length; j++) {
+      const u = j / rate;
+      raw[idx + j] += amp * (1 - u / 0.014) * (0.7 + 0.3 * Math.sin(2 * Math.PI * 190 * u));
+    }
+    t += 0.044 + rand() * 0.026;
+  }
+  const breath = noise(length, rand);
+  for (let i = 0; i < length; i++) {
+    const u = i / rate;
+    const env = Math.sin(Math.min(1, u / 1.85) * Math.PI) ** 0.8;
+    raw[i] = raw[i] * 0.82 + breath[i] * 0.14 * env;
+  }
+  const out = formant(raw, rate, [
+    [310, 95, 1.0],
+    [780, 150, 0.78],
+    [1460, 220, 0.45],
+  ]);
+  biquad(out, rate, "highpass", 140, 0.7);
+  biquad(out, rate, "lowpass", 2300, 0.7);
+  return normalise(out, 0.86);
+}
+
+/**
+ * About 1.85 s: four deliberate wet bare footsteps slapping across cold cement tiles,
+ * growing subtly closer and stopping dead before the player.
+ */
+export function wetStepsClose(rate: number, rand: () => number): Float32Array {
+  const length = n(1.85, rate);
+  const out = new Float32Array(length);
+  const times = [0.02, 0.48, 0.92, 1.34];
+  times.forEach((at, step) => {
+    const gain = 0.52 + step * 0.16;
+    const slap = biquad(noise(n(0.11, rate), rand), rate, "bandpass", 1150 + rand() * 240, 1.4);
+    const heel = modal(impulse(rate, 0.18), rate, [
+      [115 + rand() * 14, 0.032, 1.0],
+      [285 + rand() * 25, 0.018, 0.6],
+      [640 + rand() * 50, 0.01, 0.35],
+    ]);
+    mix(out, heel, rate, at, gain, () => 1);
+    mix(out, slap, rate, at + 0.012, gain * 0.85, decay(0.018));
+    // Wet peel as the damp sole lifts off the tile
+    const peel = biquad(noise(n(0.08, rate), rand), rate, "bandpass", 2200, 1.8);
+    mix(out, peel, rate, at + 0.18, gain * 0.28, decay(0.015));
+  });
+  return normalise(out, 0.9);
+}
+
+/** About 0.65 s: urgent brass doorknob & jammed mortise bolt rattling twice when locked. */
+export function lockedRattle(rate: number, rand: () => number): Float32Array {
+  const out = new Float32Array(n(0.65, rate));
+  for (const [at, g] of [
+    [0.0, 1.0],
+    [0.14, 0.78],
+    [0.32, 0.92],
+    [0.44, 0.62],
+  ] as const) {
+    const s = 0.95 + rand() * 0.1;
+    const clack = modal(impulse(rate, 0.14), rate, [
+      [520 * s, 0.018, 0.85],
+      [1380 * s, 0.014, 1.0],
+      [2740 * s, 0.009, 0.65],
+    ]);
+    const wood = modal(impulse(rate, 0.16), rate, [
+      [110 * s, 0.04, 0.75],
+      [240 * s, 0.025, 0.45],
+    ]);
+    mix(out, clack, rate, at, g, () => 1);
+    mix(out, wood, rate, at + 0.008, g * 0.6, () => 1);
+  }
+  return normalise(out, 0.86);
+}
+
+/** About 1.6 s: sudden chest-heavy infrasonic room-pressure drop (dead air before a reveal). */
+export function deadAirDrop(rate: number, rand: () => number): Float32Array {
+  const length = n(1.6, rate);
+  const out = new Float32Array(length);
+  const air = biquad(noise(length, rand), rate, "lowpass", 260, 0.8);
+  let phase = 0;
+  for (let i = 0; i < length; i++) {
+    const t = i / rate;
+    const f = 54 - 28 * Math.min(1, t / 0.55);
+    phase += (2 * Math.PI * f) / rate;
+    const env = Math.min(1, t / 0.02) * Math.exp(-t / 0.65);
+    out[i] =
+      (Math.sin(phase) + 0.35 * Math.sin(2 * phase)) * env * 0.85 +
+      air[i] * Math.min(1, t / 0.08) * Math.exp(-t / 0.48) * 0.55;
+  }
+  return normalise(out, 0.9);
+}

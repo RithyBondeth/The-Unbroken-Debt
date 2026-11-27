@@ -54,6 +54,7 @@ export class StudioDetails {
     this.matchbox = matchbox;
     this.buildMatchbox();
     this.buildLetters();
+    this.buildSketchbook();
     this.batching = true;
     mergeStaticMeshes(this.staticMeshes, { cellSize: 3 });
   }
@@ -322,31 +323,114 @@ export class StudioDetails {
    * centimetres bigger than it all round, so one press of E takes it from any angle.
    */
   groundPickups(): void {
-    const groups: [TransformNode | null, TransformNode[], number][] = [
-      [this.node("interact_satchel"), [], 0.06],
-      [this.node("interact_sketchbook"), [], 0.07],
-      [this.node("matchbox"), [], 0],
-      [
-        this.node("letters_string"),
-        [0, 1, 2, 3, 4].flatMap((i) => this.node(`letter_${i}`) ?? []),
+    const groups: {
+      owner: TransformNode | null;
+      others: TransformNode[];
+      margin: number;
+      /** Supporting surface height (floor/table/krama/drawer top) so the contact shadow is never buried. */
+      supportY?: number;
+      /** Optional mesh-name filter so overhanging straps/ribbons don't skew the seated contact footprint. */
+      skipShadow?: RegExp;
+      /** Subtle directional shadow offset in world XZ (e.g. away from an overhead wall sconce). */
+      offsetX?: number;
+      offsetZ?: number;
+    }[] = [
+      {
+        owner: this.node("interact_satchel"),
+        others: [],
+        margin: 0.06,
+        supportY: 0.582,
+        skipShadow: /shoulder_strap/i,
+      },
+      {
+        owner: this.node("interact_sketchbook"),
+        others: [],
+        margin: 0.07,
+        supportY: 0.7812,
+        skipShadow: /bookmark|pencil/i,
+        offsetX: -0.012,
+      },
+      {
+        owner: this.node("matchbox"),
+        others: [],
+        margin: 0,
+        supportY: 0.6334,
+      },
+      {
+        owner: this.node("letters_string"),
+        others: [0, 1, 2, 3, 4].flatMap((i) => this.node(`letter_${i}`) ?? []),
         // No bigger box: the bundle is large, and one would cover the matchbox beside it.
-        0,
-      ],
+        margin: 0,
+        supportY: 0.6334,
+      },
     ];
-    for (const [owner, others, margin] of groups) {
+    for (const {
+      owner,
+      others,
+      margin,
+      supportY,
+      skipShadow,
+      offsetX = 0,
+      offsetZ = 0,
+    } of groups) {
       if (!owner) continue;
       const parts = [owner, ...others];
       const { min, max } = visibleBounds(parts);
       if (!Number.isFinite(min.x)) continue;
       const size = max.subtract(min);
       const centre = Vector3.Center(min, max);
+      // Match the item's horizontal yaw so angled props (like the satchel on the bed) get a fitted shadow.
+      const world = owner.getWorldMatrix();
+      const forward = Vector3.TransformNormal(Vector3.Forward(), world);
+      let yaw = 0;
+      if (Math.hypot(forward.x, forward.z) > 0.25) {
+        yaw = Math.atan2(forward.x, forward.z);
+      } else {
+        const right = Vector3.TransformNormal(Vector3.Right(), world);
+        if (Math.hypot(right.x, right.z) > 0.25) yaw = Math.atan2(-right.z, right.x);
+      }
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      let lxMin = Infinity,
+        lxMax = -Infinity,
+        lzMin = Infinity,
+        lzMax = -Infinity;
+      for (const part of parts) {
+        const meshes = [
+          ...("getTotalVertices" in part ? [part as Mesh] : []),
+          ...part.getChildMeshes(false),
+        ];
+        for (const mesh of meshes) {
+          if (mesh.visibility <= 0 || !mesh.isVisible || mesh.getTotalVertices() === 0) continue;
+          if (skipShadow && skipShadow.test(mesh.name)) continue;
+          const corners = mesh.getBoundingInfo().boundingBox.vectorsWorld;
+          for (const v of corners) {
+            const dx = v.x - centre.x;
+            const dz = v.z - centre.z;
+            const rx = dx * cos - dz * sin;
+            const rz = dx * sin + dz * cos;
+            if (rx < lxMin) lxMin = rx;
+            if (rx > lxMax) lxMax = rx;
+            if (rz < lzMin) lzMin = rz;
+            if (rz > lzMax) lzMax = rz;
+          }
+        }
+      }
+      // Recentre the contact shadow on the actual seated footprint (important when overhanging straps exist).
+      const localCx = Number.isFinite(lxMin) ? (lxMin + lxMax) / 2 : 0;
+      const localCz = Number.isFinite(lzMin) ? (lzMin + lzMax) / 2 : 0;
+      const shadowCx = centre.x + localCx * cos + localCz * sin + offsetX;
+      const shadowCz = centre.z - localCx * sin + localCz * cos + offsetZ;
+      const shadowW = Number.isFinite(lxMin) ? (lxMax - lxMin) * 1.24 + 0.042 : size.x * 1.28;
+      const shadowD = Number.isFinite(lzMin) ? (lzMax - lzMin) * 1.24 + 0.042 : size.z * 1.28;
+      const shadowY = supportY !== undefined ? supportY : min.y + 0.0016;
       const shadow = CreatePlane(
         `${owner.name}_contact_shadow`,
-        { width: size.x * 1.45 + 0.03, height: size.z * 1.45 + 0.03 },
+        { width: shadowW, height: shadowD },
         this.scene,
       );
-      shadow.rotation.x = Math.PI / 2;
-      shadow.position.set(centre.x, min.y + 0.0015, centre.z);
+      shadow.rotation.set(Math.PI / 2, yaw, 0);
+      shadow.position.set(shadowCx, shadowY, shadowCz);
       shadow.material = this.contactShadow();
       shadow.isPickable = false;
       shadow.receiveShadows = false;
@@ -366,31 +450,88 @@ export class StudioDetails {
         hit.setParent(owner);
       }
     }
+
+    // The hurricane lantern hangs on a brass hook against the north timber partition wall (Z = -6.12);
+    // add a soft vertical wall contact shadow parented to `interact_lamp` so it lifts cleanly with the lamp.
+    const lamp = this.node("interact_lamp");
+    if (lamp) {
+      const { min, max } = visibleBounds([lamp]);
+      if (Number.isFinite(min.x)) {
+        const size = max.subtract(min);
+        const centre = Vector3.Center(min, max);
+        const wallShadow = CreatePlane(
+          "interact_lamp_contact_shadow",
+          { width: size.x * 1.7 + 0.04, height: size.y * 1.25 + 0.04 },
+          this.scene,
+        );
+        wallShadow.position.set(centre.x, centre.y, -6.1225);
+        wallShadow.material = this.contactShadow(0.62);
+        wallShadow.isPickable = false;
+        wallShadow.receiveShadows = false;
+        wallShadow.setParent(lamp);
+      }
+    }
   }
 
-  private shadowMaterial: PBRMaterial | null = null;
+  private shadowMaterials = new Map<number, PBRMaterial>();
 
-  /** A soft dark pool, darkest under the middle: unlit, so it reads the same in any light. */
-  private contactShadow(): PBRMaterial {
-    if (this.shadowMaterial) return this.shadowMaterial;
-    const tex = new DynamicTexture("T_studio_contact_shadow", 128, this.scene, true);
+  /**
+   * Soft rounded-rectangle ambient occlusion shadow with explicit PBRMATERIAL_ALPHABLEND
+   * (without transparencyMode, Babylon PBRMaterial enables ALPHATEST and discards feathered
+   * shadow edges below 0.5 alpha).
+   */
+  private contactShadow(alpha = 0.84): PBRMaterial {
+    const existing = this.shadowMaterials.get(alpha);
+    if (existing) return existing;
+    const size = 128;
+    const tex = new DynamicTexture(`T_studio_contact_shadow_${alpha}`, size, this.scene, true);
     const c = tex.getContext() as unknown as CanvasRenderingContext2D;
-    const grad = c.createRadialGradient(64, 64, 4, 64, 64, 62);
-    grad.addColorStop(0, "rgba(0,0,0,0.85)");
-    grad.addColorStop(0.45, "rgba(0,0,0,0.55)");
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    c.fillStyle = grad;
-    c.fillRect(0, 0, 128, 128);
+    c.clearRect(0, 0, size, size);
+    const roundedRect = (x: number, y: number, w: number, h: number, r: number) => {
+      const rr = Math.min(r, w / 2, h / 2);
+      c.beginPath();
+      c.moveTo(x + rr, y);
+      c.lineTo(x + w - rr, y);
+      c.quadraticCurveTo(x + w, y, x + w, y + rr);
+      c.lineTo(x + w, y + h - rr);
+      c.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+      c.lineTo(x + rr, y + h);
+      c.quadraticCurveTo(x, y + h, x, y + h - rr);
+      c.lineTo(x, y + rr);
+      c.quadraticCurveTo(x, y, x + rr, y);
+      c.closePath();
+    };
+    // 1) Soft feathered outer penumbra around all four sides and corners of the item.
+    const layers = 16;
+    for (let i = 0; i < layers; i++) {
+      const t = i / (layers - 1);
+      const inset = 3 + t * 23;
+      const w = size - inset * 2;
+      const radius = 24 * (1 - t * 0.45);
+      const stepAlpha = 0.04 + 0.14 * t * t;
+      c.fillStyle = `rgba(0,0,0,${stepAlpha.toFixed(3)})`;
+      roundedRect(inset, inset, w, w, radius);
+      c.fill();
+    }
+    // 2) Tight dark contact crease directly under the item perimeter so it sits heavy on the surface.
+    c.fillStyle = "rgba(0,0,0,0.86)";
+    roundedRect(22, 22, size - 44, size - 44, 10);
+    c.fill();
     tex.hasAlpha = true;
+    tex.getAlphaFromRGB = false;
     tex.update();
-    const mat = new PBRMaterial("M_studio_contact_shadow", this.scene);
+    const mat = new PBRMaterial(`M_studio_contact_shadow_${alpha}`, this.scene);
     mat.albedoColor = Color3.Black();
+    mat.emissiveColor = Color3.Black();
+    mat.unlit = true;
     mat.disableLighting = true;
     mat.opacityTexture = tex;
-    mat.alpha = 0.75;
+    mat.alpha = alpha;
+    mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
+    mat.backFaceCulling = false;
     mat.disableDepthWrite = true;
     mat.zOffset = -2;
-    this.shadowMaterial = mat;
+    this.shadowMaterials.set(alpha, mat);
     return mat;
   }
 
@@ -639,6 +780,368 @@ export class StudioDetails {
       0.0013,
       cotton,
     );
+  }
+
+  /**
+   * Upgrades Sora's 1932 artist sketchbook (`interact_sketchbook`) from flat untextured
+   * boards to a rich quarter-bound Phnom Penh field book: woven charcoal buckram linen,
+   * pebbled oxblood leather spine with raised bands & gold fillet trim, aged cotton-rag
+   * handwritten bookplate, striated watercolor-paper edges, patinated brass corner guards,
+   * ribbed crimson elastic strap, silk bookmark ribbon, and a cedar sketching pencil.
+   */
+  private buildSketchbook(): void {
+    const sk = this.node("interact_sketchbook");
+    if (!sk) return;
+    sk.computeWorldMatrix(true);
+
+    // 1. Woven charcoal-slate buckram bookcloth with thread cross-weave, worn edges & blind-debossed frame
+    const clothMat = this.label("sketchbook_buckram", 512, 512, (c) => {
+      const rand = seededRandom(19321);
+      c.fillStyle = "#1c211e";
+      c.fillRect(0, 0, 512, 512);
+      // Horizontal and vertical linen bookcloth threads
+      for (let y = 0; y < 512; y += 2) {
+        c.fillStyle = y % 4 === 0 ? "rgba(255,248,232,0.045)" : "rgba(0,0,0,0.12)";
+        c.fillRect(0, y, 512, 1);
+      }
+      for (let x = 0; x < 512; x += 2) {
+        c.fillStyle = x % 4 === 0 ? "rgba(240,234,215,0.04)" : "rgba(0,0,0,0.1)";
+        c.fillRect(x, 0, 1, 512);
+      }
+      // Subtle organic cloth mottling and artist handling wear near fore-edge
+      for (let i = 0; i < 2400; i++) {
+        const x = rand() * 512;
+        const y = rand() * 512;
+        c.fillStyle =
+          i % 3 === 0
+            ? `rgba(74, 82, 72, ${(0.03 + rand() * 0.05).toFixed(3)})`
+            : `rgba(8, 10, 9, ${(0.04 + rand() * 0.07).toFixed(3)})`;
+        c.fillRect(x, y, 1 + rand() * 4, 1 + rand() * 3);
+      }
+      // Worn lighter rub around outer edges & dark vignette shadow into the binding hinge
+      const edge = c.createRadialGradient(270, 256, 120, 256, 256, 355);
+      edge.addColorStop(0, "rgba(42,48,43,0.12)");
+      edge.addColorStop(0.75, "rgba(18,22,19,0.06)");
+      edge.addColorStop(1, "rgba(6,8,7,0.42)");
+      c.fillStyle = edge;
+      c.fillRect(0, 0, 512, 512);
+      // Blind-debossed double tooling frame on the linen cover
+      c.strokeStyle = "rgba(6, 8, 7, 0.72)";
+      c.lineWidth = 3;
+      c.strokeRect(20, 22, 472, 468);
+      c.strokeStyle = "rgba(190, 178, 148, 0.14)";
+      c.lineWidth = 1.5;
+      c.strokeRect(24, 26, 464, 460);
+      c.strokeStyle = "rgba(6, 8, 7, 0.45)";
+      c.lineWidth = 1.5;
+      c.strokeRect(32, 34, 448, 444);
+      // Subtle faded charcoal smudge near lower-right fore-edge from artist's thumb
+      const thumb = c.createRadialGradient(420, 385, 6, 420, 385, 56);
+      thumb.addColorStop(0, "rgba(12, 13, 12, 0.28)");
+      thumb.addColorStop(1, "rgba(12, 13, 12, 0)");
+      c.fillStyle = thumb;
+      c.fillRect(350, 320, 140, 140);
+    });
+    clothMat.roughness = 0.88;
+
+    // 2. Pebbled dark chestnut/oxblood morocco leather for the quarter-binding & spine
+    const leatherMat = this.label("sketchbook_morocco", 256, 512, (c) => {
+      const rand = seededRandom(19322);
+      c.fillStyle = "#3a1e15";
+      c.fillRect(0, 0, 256, 512);
+      // Natural morocco pebble grain + subtle vertical hinge creases
+      for (let i = 0; i < 3600; i++) {
+        const x = rand() * 256;
+        const y = rand() * 512;
+        const r = 1 + rand() * 2.4;
+        c.fillStyle =
+          i % 2 === 0
+            ? `rgba(88, 52, 34, ${(0.06 + rand() * 0.1).toFixed(3)})`
+            : `rgba(18, 8, 5, ${(0.08 + rand() * 0.14).toFixed(3)})`;
+        c.beginPath();
+        c.arc(x, y, r, 0, Math.PI * 2);
+        c.fill();
+      }
+      // Hinge groove darkening along the spine joint
+      const crease = c.createLinearGradient(0, 0, 256, 0);
+      crease.addColorStop(0, "rgba(15, 7, 4, 0.48)");
+      crease.addColorStop(0.22, "rgba(92, 54, 34, 0.12)");
+      crease.addColorStop(0.75, "rgba(20, 10, 6, 0.22)");
+      crease.addColorStop(1, "rgba(10, 5, 3, 0.52)");
+      c.fillStyle = crease;
+      c.fillRect(0, 0, 256, 512);
+    });
+    leatherMat.roughness = 0.56;
+    leatherMat.clearCoat.isEnabled = true;
+    leatherMat.clearCoat.intensity = 0.16;
+    leatherMat.clearCoat.roughness = 0.52;
+
+    // 3. Striated deckled cream watercolor-paper edges for the page block
+    const pagesMat = this.label("sketchbook_page_block", 256, 128, (c) => {
+      const rand = seededRandom(19323);
+      c.fillStyle = "#c4b28f";
+      c.fillRect(0, 0, 256, 128);
+      for (let y = 0; y < 128; y += 2) {
+        const dark = 0.08 + rand() * 0.22;
+        c.fillStyle =
+          y % 8 === 0
+            ? `rgba(62, 46, 28, ${(dark + 0.14).toFixed(3)})`
+            : `rgba(88, 68, 42, ${dark.toFixed(3)})`;
+        c.fillRect(0, y, 256, 1);
+      }
+      for (let i = 0; i < 450; i++) {
+        c.fillStyle = `rgba(90, 66, 38, ${(0.04 + rand() * 0.08).toFixed(3)})`;
+        c.fillRect(rand() * 256, rand() * 128, 2 + rand() * 14, 1);
+      }
+    });
+    pagesMat.roughness = 0.94;
+
+    // 4. Aged cotton-rag cover bookplate with antique sepia border & handwritten Phnom Penh title
+    //    Warm parchment (#baa681) never blows out to flat white under the writing sconce or rim highlight.
+    const bookplateMat = this.label("sketchbook_bookplate", 512, 384, (c) => {
+      const rand = seededRandom(19324);
+      c.fillStyle = "#bca882";
+      c.fillRect(0, 0, 512, 384);
+      // Warm tea-stained paper edge darkening
+      const vig = c.createRadialGradient(256, 192, 95, 256, 192, 315);
+      vig.addColorStop(0, "rgba(218, 202, 168, 0.22)");
+      vig.addColorStop(0.75, "rgba(155, 132, 94, 0.12)");
+      vig.addColorStop(1, "rgba(74, 56, 34, 0.45)");
+      c.fillStyle = vig;
+      c.fillRect(0, 0, 512, 384);
+      // Paper fibers and faint foxing specks
+      for (let i = 0; i < 900; i++) {
+        c.fillStyle =
+          i % 7 === 0
+            ? `rgba(112, 78, 42, ${(0.08 + rand() * 0.12).toFixed(3)})`
+            : `rgba(70, 52, 32, ${(0.04 + rand() * 0.08).toFixed(3)})`;
+        c.fillRect(rand() * 512, rand() * 384, 1 + rand() * 3, 1 + rand() * 2);
+      }
+      // Double antique sepia ink border with tiny inset corner ticks
+      c.strokeStyle = "#3f2e1f";
+      c.lineWidth = 4;
+      c.strokeRect(18, 18, 476, 348);
+      c.lineWidth = 1.6;
+      c.strokeRect(28, 28, 456, 328);
+      for (const [cx, cy] of [
+        [28, 28],
+        [484, 28],
+        [28, 356],
+        [484, 356],
+      ]) {
+        c.fillStyle = "#3f2e1f";
+        c.beginPath();
+        c.arc(cx, cy, 4, 0, Math.PI * 2);
+        c.fill();
+      }
+      // Subtle ruled pencil guidelines + sepia calligraphy
+      c.strokeStyle = "rgba(63, 46, 31, 0.25)";
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(76, 178);
+      c.lineTo(436, 178);
+      c.moveTo(116, 250);
+      c.lineTo(396, 250);
+      c.stroke();
+
+      c.textAlign = "center";
+      c.fillStyle = "#2b2016";
+      c.font = "italic 62px Georgia, serif";
+      c.fillText("Sora", 256, 148);
+      // Small hand-drawn lotus/diamond divider
+      c.fillStyle = "#5c3b24";
+      c.beginPath();
+      c.moveTo(256, 169);
+      c.lineTo(266, 178);
+      c.lineTo(256, 187);
+      c.lineTo(246, 178);
+      c.closePath();
+      c.fill();
+      c.fillStyle = "#3a2b1d";
+      c.font = "italic 30px Georgia, serif";
+      c.fillText("Croquis · Phnom Penh", 256, 232);
+      c.font = "24px Georgia, serif";
+      c.fillStyle = "#4e3b28";
+      c.fillText("1932", 256, 304);
+    });
+    bookplateMat.roughness = 0.94;
+
+    // Re-skin existing GLB sketchbook meshes & hide the flat glowing blank label box
+    for (const child of sk.getChildMeshes(false)) {
+      if (/board_(up|low)/.test(child.name)) child.material = clothMat;
+      else if (/quarter|spine/.test(child.name)) child.material = leatherMat;
+      else if (/pages/.test(child.name)) child.material = pagesMat;
+      else if (/label/.test(child.name)) child.visibility = 0;
+    }
+
+    // World-aligned detail root at the sketchbook's base centre (-0.30, 0.78, -2.16):
+    // lx = -0.12 (near desk edge) .. +0.12 (wall edge)
+    // ly = 0.000 (desk) .. +0.024 (front board top)
+    // lz = -0.16 (north fore-edge) .. +0.16 (south spine)
+    const root = new TransformNode("studio_sketchbook_detail", this.scene);
+    root.position.copyFrom(sk.getAbsolutePosition());
+    root.setParent(sk);
+
+    // Clean UV-mapped linen top cover face (covers cloth portion lz = -0.158..+0.118)
+    const coverTop = this.attach(
+      CreatePlane("sketchbook_cover_cloth_top", { width: 0.276, height: 0.236 }, this.scene),
+      root,
+      [0, 0.02435, -0.02],
+      clothMat,
+    );
+    coverTop.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+
+    // Slightly recessed aged bookplate backing & printed cotton-rag label
+    const plateBacking = this.mat("sketchbook_plate_edge", "#221811", 0.9);
+    this.box(
+      root,
+      "sketchbook_bookplate_rim",
+      [0.074, 0.0006, 0.094],
+      [0, 0.0245, -0.056],
+      plateBacking,
+    );
+    const plate = this.attach(
+      CreatePlane("sketchbook_bookplate_print", { width: 0.088, height: 0.068 }, this.scene),
+      root,
+      [0, 0.02495, -0.056],
+      bookplateMat,
+    );
+    plate.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+
+    // Rounded leather spine cap + 4 raised leather spine bands + antique gold-leaf fillet trim
+    const spineCap = this.cylinder(
+      root,
+      "sketchbook_spine_round",
+      0.0252,
+      0.241,
+      [0, 0.012, 0.157],
+      leatherMat,
+    );
+    spineCap.rotation.z = Math.PI / 2;
+    for (const bx of [-0.084, -0.028, 0.028, 0.084]) {
+      const band = this.cylinder(
+        root,
+        "sketchbook_spine_band",
+        0.0276,
+        0.0065,
+        [bx, 0.012, 0.158],
+        leatherMat,
+      );
+      band.rotation.z = Math.PI / 2;
+    }
+    const gilt = this.mat("sketchbook_gilt_fillet", "#9e8145", 0.42, 0.72);
+    this.box(root, "sketchbook_gold_fillet_a", [0.237, 0.0007, 0.0018], [0, 0.02455, 0.1185], gilt);
+    this.box(root, "sketchbook_gold_fillet_b", [0.237, 0.0007, 0.001], [0, 0.02455, 0.123], gilt);
+
+    // Woven crimson-and-gold cloth headbands tucked at head & tail of the spine
+    const crimson = this.mat("sketchbook_crimson_cloth", "#5a1b1b", 0.86);
+    for (const sx of [-0.117, 0.117]) {
+      this.box(root, "sketchbook_headband", [0.004, 0.017, 0.008], [sx, 0.012, 0.152], crimson);
+    }
+
+    // Two patinated antique brass corner protectors gripping the outer fore-edge corners
+    for (const sx of [-1, 1]) {
+      const ex = sx * 0.119;
+      const fx = sx * 0.107;
+      this.box(
+        root,
+        "sketchbook_corner_a",
+        [0.024, 0.0018, 0.006],
+        [fx, 0.0248, -0.1575],
+        this.brass,
+      );
+      this.box(
+        root,
+        "sketchbook_corner_b",
+        [0.006, 0.0018, 0.024],
+        [ex - sx * 0.002, 0.0248, -0.148],
+        this.brass,
+      );
+      this.box(
+        root,
+        "sketchbook_corner_edge_x",
+        [0.024, 0.0055, 0.002],
+        [fx, 0.0228, -0.1605],
+        this.brass,
+      );
+      this.box(
+        root,
+        "sketchbook_corner_edge_z",
+        [0.002, 0.0055, 0.024],
+        [ex + sx * 0.0015, 0.0228, -0.148],
+        this.brass,
+      );
+    }
+
+    // Ribbed dark-burgundy woven elastic closure band wrapped around the fore-edge side
+    const elastic = this.mat("sketchbook_elastic_band", "#3a1719", 0.9);
+    const bandZ = -0.126;
+    this.box(root, "sketchbook_elastic_top", [0.243, 0.0018, 0.014], [0, 0.0252, bandZ], elastic);
+    for (const sx of [-0.121, 0.121]) {
+      this.box(
+        root,
+        "sketchbook_elastic_side",
+        [0.002, 0.025, 0.014],
+        [sx, 0.0125, bandZ],
+        elastic,
+      );
+    }
+
+    // Crimson silk bookmark ribbon emerging from the bottom page edge onto the rosewood desk
+    const silk = this.mat("sketchbook_bookmark_silk", "#6a1a1c", 0.52);
+    silk.backFaceCulling = false;
+    this.tube(
+      root,
+      "sketchbook_bookmark_ribbon",
+      [
+        [-0.114, 0.011, -0.032],
+        [-0.124, 0.009, -0.034],
+        [-0.136, 0.003, -0.042],
+        [-0.152, 0.0018, -0.048],
+        [-0.166, 0.0016, -0.042],
+      ],
+      0.0034,
+      silk,
+    );
+
+    // Worn hexagonal artist's graphite sketching pencil tucked cleanly under the elastic band
+    const pencilRoot = new TransformNode("studio_sketchbook_pencil", this.scene);
+    pencilRoot.parent = root;
+    pencilRoot.position.set(0.006, 0.0282, -0.112);
+    pencilRoot.rotation.set(0, -0.06, Math.PI / 2);
+    const cedarVarnish = this.mat("sketchbook_pencil_barrel", "#522518", 0.42);
+    const rawCedar = this.mat("sketchbook_pencil_wood", "#b58b5b", 0.84);
+    const graphite = this.mat("sketchbook_pencil_lead", "#1c1c1e", 0.34, 0.35);
+    const eraser = this.mat("sketchbook_pencil_eraser", "#9c625b", 0.9);
+    this.cylinder(pencilRoot, "sketchbook_pencil_shaft", 0.0074, 0.145, [0, 0, 0], cedarVarnish);
+    this.cylinder(
+      pencilRoot,
+      "sketchbook_pencil_cone",
+      0.0072,
+      0.019,
+      [0, 0.082, 0],
+      rawCedar,
+      0.0018,
+    );
+    this.cylinder(
+      pencilRoot,
+      "sketchbook_pencil_tip",
+      0.0018,
+      0.0055,
+      [0, 0.094, 0],
+      graphite,
+      0.0004,
+    );
+    this.cylinder(
+      pencilRoot,
+      "sketchbook_pencil_ferrule",
+      0.0077,
+      0.013,
+      [0, -0.079, 0],
+      this.darkBrass,
+    );
+    this.cylinder(pencilRoot, "sketchbook_pencil_eraser", 0.0068, 0.008, [0, -0.089, 0], eraser);
+    this.batchParts(root, pencilRoot);
   }
 }
 

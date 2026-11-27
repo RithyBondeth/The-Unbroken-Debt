@@ -191,3 +191,26 @@ it("installs the rim once per material and binds strength per mesh, including mu
   interaction.add("drawer", first);
   expect(shared.pluginManager?.getPlugin("InteractionHint")).toBe(rim);
 });
+
+it("never outlines or highlights contact shadow quads attached to pickups", () => {
+  const { scene, interaction, box, settle } = setup();
+  const root = new TransformNode("interact_satchel", scene);
+  const body = box("satchel_body", 0, 1);
+  body.material = new PBRMaterial("satchel_leather", scene);
+  body.parent = root;
+  const shadow = box("interact_satchel_contact_shadow", 0, 1);
+  const shadowMat = new PBRMaterial("M_studio_contact_shadow", scene);
+  shadowMat.alpha = 0.56;
+  shadowMat.disableDepthWrite = true;
+  shadow.material = shadowMat;
+  shadow.isPickable = false;
+  shadow.parent = root;
+
+  interaction.add("interact_satchel", root);
+  settle();
+
+  expect(interaction.focus).toBe("interact_satchel");
+  expect(body.edgesRenderer?.isEnabled).toBe(true);
+  expect(shadow.edgesRenderer).toBeNull();
+  expect(shadowMat.pluginManager?.getPlugin("InteractionHint")).toBeNull();
+});

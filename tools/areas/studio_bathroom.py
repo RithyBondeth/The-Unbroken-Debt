@@ -899,9 +899,17 @@ def build_bathroom(area, m, helpers):
     box("bath_soap_bar", area, sx - 0.225, sx - 0.135, y1 - 0.10, y1 - 0.05, sh_z + 0.028, sh_z + 0.054, m["bath_soap"], tilt=(0, 0, 0.08), edge=0.009)
     tum = [(0.0, 0.0), (0.028, 0.0), (0.034, 0.09), (0.031, 0.092), (0.026, 0.008), (0.0, 0.008)]
     turned("bath_tumbler", tum, sx - 0.04, y1 - 0.078, sh_z + 0.018, m["bath_porcelain"], segments=20)
-    for k, (dx, ang) in enumerate(((-0.01, 0.16), (0.012, -0.14))):
-        box(f"bath_toothbrush_{k}", area, sx - 0.04 + dx - 0.004, sx - 0.04 + dx + 0.004, y1 - 0.082, y1 - 0.074, sh_z + 0.024, sh_z + 0.165, m["paper"], tilt=(0.08, ang, 0), edge=0.002)
-        box(f"bath_toothbrush_head_{k}", area, sx - 0.04 + dx + (0.015 if k else -0.015) - 0.008, sx - 0.04 + dx + (0.015 if k else -0.015) + 0.008, y1 - 0.085, y1 - 0.071, sh_z + 0.145, sh_z + 0.168, m["linen"])
+    tx_c, ty_c, tb_z = sx - 0.04, y1 - 0.078, sh_z + 0.026
+    for k, (dx, dy, rx, ry, rz, handle_mat) in enumerate((
+        (-0.005, 0.005, 0.07, -0.22, 0.22, m["paper"]),
+        (0.006, -0.005, 0.05, 0.20, -0.28, m["worn"]),
+    )):
+        tb_root = empty(f"bath_toothbrush_root_{k}", area, (tx_c + dx, ty_c + dy, tb_z), (rx, ry, rz))
+        bpy.context.view_layer.update()
+        tb_handle = box(f"bath_toothbrush_{k}", area, -0.0042, 0.0042, -0.0026, 0.0026, 0.0, 0.142, handle_mat, edge=0.0018)
+        tb_bristles = box(f"bath_toothbrush_head_{k}", area, -0.0038, 0.0038, -0.0105, -0.0022, 0.116, 0.140, m["linen"], edge=0.001)
+        tb_handle.parent = tb_root
+        tb_bristles.parent = tb_root
     bot_a = [(0.0, 0.0), (0.022, 0.0), (0.022, 0.085), (0.010, 0.105), (0.010, 0.125), (0.013, 0.128), (0.0, 0.128)]
     turned("bath_amber_bottle", bot_a, sx + 0.10, y1 - 0.075, sh_z + 0.018, m["bath_amber_glass"], segments=18)
     cylinder("bath_amber_cork", area, sx + 0.10, y1 - 0.075, sh_z + 0.142, sh_z + 0.158, 0.008, m["worn"], verts=10)
@@ -1024,8 +1032,8 @@ def build_bathroom(area, m, helpers):
         cage = [(lx + 0.042 * math.sin(t) * math.cos(a), ly + 0.042 * math.sin(t) * math.sin(a), lz - 0.01 - 0.075 * (1 - math.cos(t)) / 2) for t in np.linspace(-math.pi / 2, math.pi / 2, 13)]
         tube(f"bath_lamp_cage_{k}", area, cage, 0.0018, m["rust"], sides=5)
     empty("marker_bath_bulb", area, (lx, ly, lz - 0.08))
-    bwire = [(lx, ly, BATH_H - 0.02), (1.84, ly, BATH_H - 0.02), (1.84, y0 + 0.020, BATH_H - 0.02), (1.84, y0 + 0.020, 1.448)]
-    tube("bath_wiring", area, bwire, 0.0035, m["cord"], sides=5)
+    bwire = [(lx, ly, BATH_H - 0.02), (1.84, ly, BATH_H - 0.02), (1.84, y0 + 0.023, BATH_H - 0.02), (1.84, y0 + 0.023, 1.448)]
+    tube("bath_wiring", area, bwire, 0.004, m["cord"], sides=6)
     for k, pz_ in enumerate((1.95, 2.65)):
         cl = turned(f"bath_cleat_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.02), (0.008, 0.024), (0.0, 0.024)], 0, 0, 0, m["bath_porcelain"], segments=10)
         cl.location = (1.84, y0 + 0.014, pz_)

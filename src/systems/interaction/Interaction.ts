@@ -1,7 +1,7 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import type { Material } from "@babylonjs/core/Materials/material";
+import { Material } from "@babylonjs/core/Materials/material";
 import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial";
 import { InteractionHint } from "./InteractionHint";
 import type { Node } from "@babylonjs/core/node";
@@ -37,6 +37,16 @@ interface Target {
 export function meshesOf(node: Node): AbstractMesh[] {
   const own = "getTotalVertices" in node ? [node as AbstractMesh] : [];
   return [...own, ...node.getChildMeshes(false)].filter((m) => m.getTotalVertices() > 0);
+}
+
+/** Excludes contact-shadow planes, invisible pickup boxes, and unpickable overlay decals from focus outlines. */
+function isHintableMesh(mesh: AbstractMesh): boolean {
+  if (mesh.isDisposed() || !mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0)
+    return false;
+  if (mesh.name.endsWith("_contact_shadow")) return false;
+  const mat = mesh.material;
+  if (mat && (mat.alpha === 0 || (mat.disableDepthWrite && !mesh.isPickable))) return false;
+  return true;
 }
 
 /**
@@ -83,10 +93,14 @@ export class Interaction {
   add(id: string, node: Node | AbstractMesh[], hintMeshes?: readonly AbstractMesh[]): void {
     this.remove(id);
     const meshes = Array.isArray(node) ? node : meshesOf(node);
+    const visualMeshes = meshes.filter(
+      (m) =>
+        !m.name.endsWith("_contact_shadow") && !(m.material?.disableDepthWrite && !m.isPickable),
+    );
     const target = {
       id,
       meshes,
-      hintMeshes: hintMeshes ? meshes.filter((m) => hintMeshes.includes(m)) : meshes,
+      hintMeshes: hintMeshes ? visualMeshes.filter((m) => hintMeshes.includes(m)) : visualMeshes,
     };
     this.targets.set(id, target);
     for (const mesh of meshes) {
@@ -189,6 +203,7 @@ export class Interaction {
       material.getClassName() === "StandardMaterial"
     ) {
       new InteractionHint(material, (mesh) => this.hintStrength.get(mesh) ?? 0);
+      material.markAsDirty(Material.MiscDirtyFlag);
     }
   }
 
@@ -197,16 +212,12 @@ export class Interaction {
     this.hintStrength.delete(mesh);
   }
 
-  /** All registered targets share the hint; invisible pickup volumes never draw. */
+  /** All registered targets share the hint; invisible pickup volumes and shadow pads never draw. */
   private setFocus(target: Target | null): void {
     if (target === this.focused) return;
     this.focused = target;
     for (const mesh of target?.hintMeshes ?? []) {
-      if (mesh.isDisposed() || !mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0)
-        continue;
-      // Texture-based offering slots already have a soft focus ring. Their
-      // transparent interaction patch must not acquire an opaque disc border.
-      if (mesh.material?.alpha === 0) continue;
+      if (!isHintableMesh(mesh)) continue;
       this.prepareMaterial(mesh.material);
       if (!mesh.edgesRenderer) mesh.enableEdgesRendering(EDGE_EPSILON);
       mesh.edgesColor = OUTLINE.clone();

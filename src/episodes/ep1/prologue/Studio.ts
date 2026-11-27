@@ -95,6 +95,8 @@ export class StudioLights {
   /** Cool lightning bounce through the bathroom's frosted north window. */
   private readonly bathFlash: PointLight;
   private readonly bathShadows: ShadowGenerator | null = null;
+  private readonly bathExtraCasters = new Set<AbstractMesh>();
+  private specialIndoor = false;
   private bathBulbMat: { material: PBRMaterial; full: Color3 } | null = null;
   private bathLevel = 1;
   private bathFlickerLeft = 0;
@@ -245,7 +247,8 @@ export class StudioLights {
         bathAt,
         BATH_BULB.range,
         Math.min(1024, preset.lampShadowMapSize),
-        (m) => castsShadow(m) && !bathLampMesh(m),
+        (m) =>
+          (castsShadow(m) && !bathLampMesh(m)) || (this.bathExtraCasters.has(m) && m.isEnabled()),
       );
       this.bathBulb = shadowed.light;
       this.bathShadows = shadowed.shadows;
@@ -461,6 +464,22 @@ export class StudioLights {
     this.bathFlickerLeft = Math.max(this.bathFlickerLeft, duration);
   }
 
+  /** Enables live real-time shadow casting from invisible unseen figures under the bathroom bulb. */
+  setBathShadowCasters(casters: AbstractMesh[] | null): void {
+    this.bathExtraCasters.clear();
+    const map = this.bathShadows?.getShadowMap();
+    if (casters && casters.length) {
+      for (const m of casters) this.bathExtraCasters.add(m);
+      if (map) {
+        map.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONEVERYFRAME;
+        map.resetRefreshCounter();
+      }
+    } else if (map) {
+      map.refreshRate = RenderTargetTexture.REFRESHRATE_RENDER_ONCE;
+      map.resetRefreshCounter();
+    }
+  }
+
   /** Sets the airwell/hall bulb level (0 = dead, 1 = normal) and optional nervous flicker. */
   setHallBulbLevel(level: number, flickerSeconds = 0): void {
     this.hallLevel = Math.max(0, Math.min(1, level));
@@ -480,19 +499,40 @@ export class StudioLights {
     casters: AbstractMesh[],
     pattern: { pulses: number[]; decay?: number },
     gain = 1,
+    tint?: Color3,
   ): void {
     const light = this.lightning;
     const map = this.flashShadows.getShadowMap();
-    const home = { position: light.position.clone(), direction: light.direction.clone() };
+    if (this.special) {
+      this.special();
+      this.special = null;
+    }
+    const home = {
+      position: light.position.clone(),
+      direction: light.direction.clone(),
+      diffuse: light.diffuse.clone(),
+      range: light.range,
+      shadowMaxZ: light.shadowMaxZ,
+    };
     light.position.copyFrom(from);
     light.direction.copyFrom(to.subtract(from).normalize());
+    if (tint) {
+      light.diffuse.copyFrom(tint);
+      light.range = 6.5;
+      light.shadowMaxZ = 6.5;
+    }
+    this.specialIndoor = Boolean(tint);
     const list = map?.renderList;
     if (list) list.push(...casters);
     this.flashGain = gain;
     this.special = () => {
       this.flashGain = 1;
+      this.specialIndoor = false;
       light.position.copyFrom(home.position);
       light.direction.copyFrom(home.direction);
+      light.diffuse.copyFrom(home.diffuse);
+      light.range = home.range;
+      light.shadowMaxZ = home.shadowMaxZ;
       if (list)
         for (const mesh of casters) {
           const i = list.indexOf(mesh);
@@ -619,15 +659,16 @@ export class StudioLights {
     this.airwellBulb.intensity = 3 * hallGain * this.power;
     const level = this.storm.update(dt);
     this.lightning.intensity = level * 60 * this.flashGain;
-    this.bathFlash.intensity = level * 7.5;
+    this.bathFlash.intensity = this.specialIndoor ? 0 : level * 7.5;
     if (this.special && !this.storm.flashing) {
       this.special();
       this.special = null;
     }
     // Things are picked up and drawers opened between flashes: redraw while lit.
     if (level > 0) this.flashShadows.getShadowMap()?.resetRefreshCounter();
+    const glassFlash = this.specialIndoor ? 0 : level * 1.2;
     for (const glass of this.glass)
-      glass.emissiveColor = new Color3(0.6, 0.68, 0.85).scale(level * 1.2);
+      glass.emissiveColor = new Color3(0.6, 0.68, 0.85).scale(glassFlash);
   }
 
   /** True during a lightning flash (thunder follows a few seconds later). */

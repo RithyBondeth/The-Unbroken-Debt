@@ -23,6 +23,7 @@ import type { BusName, SpatialOptions } from "@/audio/AudioSystem";
 import type { DreadScore } from "@/audio/DreadScore";
 import { seededRandom } from "@/audio/synth";
 import type { Game } from "@/core/Game";
+import { orientedBox } from "@/core/levelBuilder";
 import * as sounds from "../audio/studioSounds";
 import { phoneRing, thunder } from "../audio/prologueSounds";
 import { KIT } from "../data/prologue";
@@ -35,22 +36,16 @@ import {
   STUDIO_DOORS,
   altarDue,
   angleTo,
-  balconyKnockDue,
-  bathDoorDue,
+  bathFrostedDue,
   bathMirrorDue,
   bathTankDue,
   bedBreathDue,
-  bookSlideDue,
-  chairTurnDue,
   decodePoses,
-  doorWatcherDue,
-  dropBookDue,
   encodePoses,
-  fanDriftDue,
   hallFlashDue,
   inBackRoom,
   inBathroom,
-  phantomRingDue,
+  isDoorWalkablyOpen,
   pictureDue,
   runtime,
   shadowShot,
@@ -66,10 +61,8 @@ import type { StudioLights } from "./Studio";
 import { StudioBathVisuals } from "./StudioBathVisuals";
 import { StudioFlamesAndSmoke } from "./StudioFlamesAndSmoke";
 
-/** Seen by no camera (cameras see 0x0FFFFFFF): the shadow's figure is in the light's eyes only. */
+/** Seen by no camera (cameras see 0x0FFFFFFF): the figure exists ONLY to cast real 3D shadows. */
 const UNSEEN = 0x10000000;
-/** Standard camera visibility mask for real silhouette apparitions. */
-const VISIBLE = 0x0fffffff;
 /** The floor of every room on Sora's floor (runtime y). */
 const FLOOR = 0;
 /** An impact this fast (m/s) or faster is heard. */
@@ -85,6 +78,16 @@ type Kind =
   | "bowl"
   | "thud"
   | "breath"
+  | "neckBreath"
+  | "soraGasp"
+  | "glassScrape"
+  | "windowSlam"
+  | "elecFlicker"
+  | "erhuDread"
+  | "throatRattle"
+  | "wetStepsClose"
+  | "lockedRattle"
+  | "deadAirDrop"
   | "powerDown"
   | "powerUp"
   | "doorCreak"
@@ -100,6 +103,8 @@ type Kind =
   | "knock"
   | "whisper"
   | "phantomRing";
+
+export type DoorToggleResult = "opened" | "closed" | "locked";
 
 interface SoundPool {
   voices: StaticSound[];
@@ -118,6 +123,16 @@ interface DoorState {
   speed: number;
   /** Sound to fire the instant the door leaf meets its jamb (closedRad). */
   closingLatch: "none" | "normal" | "slam";
+  /** Game time until a haunted lock releases (0 = unlocked). */
+  lockedUntil: number;
+  /** Leaf bounding box in `node` local space for solid Havok collision. */
+  leafMin: Vector3;
+  leafMax: Vector3;
+  /** Closed-doorway world centre & half-width for player anti-pinch safety. */
+  closedCenter: Vector3;
+  closedHalfWidth: number;
+  colliderNode: TransformNode | null;
+  colliderBody: PhysicsBody | null;
 }
 
 interface Piece {
@@ -144,8 +159,9 @@ interface Fall {
 const DEG = Math.PI / 180;
 
 /**
- * The studio's 4-phase psychological horror director, interactive hinged door
- * system, animated candle/incense flame & smoke engine, and Havok scare physics.
+ * The studio's Asian psychological horror director, solid Havok-backed hinged door
+ * system, pure shadow-and-sound apparitions (no visible ghost model, no 2D mirror cracks),
+ * sacred altar omen flames/smoke, and Havok scare physics.
  */
 export class StudioScares {
   private readonly scene: Scene;
@@ -180,12 +196,6 @@ export class StudioScares {
   private flames: StudioFlamesAndSmoke | null = null;
   private visitedBackOrBath = false;
   private faucetRunning = false;
-  private fanNode: TransformNode | null = null;
-  private fanDrifting = false;
-  private fanDriftAngle = 0;
-  private slideBookNode: TransformNode | null = null;
-  private dropBookNode: TransformNode | null = null;
-  private stoolNode: TransformNode | null = null;
   private bathDipperNode: TransformNode | null = null;
   private bathMirrorAt: Vector3 | null = null;
   private bathTankAt: Vector3 | null = null;
@@ -194,11 +204,12 @@ export class StudioScares {
   private stairDoorAt: Vector3 | null = null;
   private balconyOpenSec = 0;
   private phase4BathKilled = false;
-  private phase4HallFlickered = false;
   private phase4BedroomClosed = false;
-  private watcherActive = false;
-  private watcherSlip = 0;
-  private nextAmbientAt = 18;
+  private phase4HallFlickered = false;
+  private frostedGhostActive = false;
+  private mirrorGhostActive = false;
+  private hallStalkerActive = false;
+  private nextAmbientAt = 32;
 
   constructor(
     private readonly game: Game,
@@ -220,15 +231,10 @@ export class StudioScares {
       this.altarAt = Vector3.Center(min, max);
     }
 
-    // Dynamic haunt & interactive nodes kept separate from static batching
-    this.fanNode = this.group("haunt_fan_rotor");
-    this.slideBookNode = this.group("haunt_slide_book");
-    this.dropBookNode = this.group("haunt_drop_book");
-    this.stoolNode = this.group("haunt_stool");
     this.bathDipperNode = this.group("haunt_bath_dipper");
     this.stairDoorAt = this.group("interact_door")?.getAbsolutePosition().clone() ?? null;
 
-    // Register all 4 interactive hinged doors (studio partition, bedroom, bathroom, balcony)
+    // Register all 4 interactive hinged doors with solid Havok door-leaf collision
     for (const id of Object.keys(STUDIO_DOORS) as StudioDoorId[]) {
       const node = this.group(id);
       if (!node) continue;
@@ -243,7 +249,15 @@ export class StudioScares {
         target: cfg.initialDeg * DEG,
         speed: 2.2,
         closingLatch: "none",
+        lockedUntil: 0,
+        leafMin: new Vector3(Infinity, Infinity, Infinity),
+        leafMax: new Vector3(-Infinity, -Infinity, -Infinity),
+        closedCenter: Vector3.Zero(),
+        closedHalfWidth: 0.45,
+        colliderNode: null,
+        colliderBody: null,
       };
+      this.setupDoorCollider(state);
       this.doors.set(id, state);
       this.applyDoorAngle(state);
     }
@@ -296,38 +310,14 @@ export class StudioScares {
       console.warn("[StudioScares] the shadow's figure did not load", error);
     }
 
-    // Restored checkpoint state: preserve fallen objects, slid/dropped books, handprint, footprints
+    // Restored checkpoint state: preserve fallen objects, footprints, and door state
     const poses = decodePoses(flags.get(FALLEN_FLAG, ""));
     if (this.done("picture")) this.layPicture(poses);
-    if (this.done("book") && this.slideBookNode) {
-      this.slideBookNode.setAbsolutePosition(
-        this.slideBookNode.getAbsolutePosition().add(new Vector3(-0.11, 0, 0)),
-      );
-    }
-    if (this.done("dropBook") && this.dropBookNode) {
-      const pose = poses.drop_book;
-      if (pose) this.pose(this.dropBookNode, pose);
-      else this.dropBookNode.setAbsolutePosition(runtime(0.72, 4.9, 0.02));
-    }
-    if (this.done("chairTurn") && this.stoolNode) {
-      this.stoolNode.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), 1.0);
-      this.stoolNode.setAbsolutePosition(
-        this.stoolNode.getAbsolutePosition().add(new Vector3(0.14, 0, -0.1)),
-      );
-    }
-    if (this.done("bathMirror")) this.bathVisuals.revealHandprint(true);
-    if (this.done("bathDoor")) {
-      const d = this.doors.get("haunt_bath_door");
-      if (d) {
-        d.angle = d.target = d.ajarRad;
-        this.applyDoorAngle(d);
-      }
-    }
     if (flags.get("ep1.clock.stopped", "")) {
       this.flames.extinguish("shelf", false);
     }
     if (flags.get("ep1.phone.answered", false)) {
-      this.bathVisuals.showWetFootprints(true);
+      this.bathVisuals.showWetFootprints(true, false);
     }
     if (this.done("altar")) {
       this.layAltar(poses);
@@ -341,7 +331,7 @@ export class StudioScares {
     }
   }
 
-  /** Loads all mastered CC0 Freesound clips with non-repeating pools and synth fallbacks. */
+  /** Loads all mastered CC0 recordings + bespoke Asian horror SFX with non-repeating pools. */
   async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
@@ -400,17 +390,62 @@ export class StudioScares {
         sounds.whisper,
         "threat",
         1,
-        { minDistance: 0.7, volume: 0.72 },
+        { minDistance: 0.7, volume: 0.78 },
       ],
-      ["powerDown", [], sounds.powerDown, "threat", 1, { minDistance: 3, volume: 0.9 }],
-      ["powerUp", [], sounds.powerUp, "threat", 1, { minDistance: 3, volume: 0.8 }],
+      [
+        "neckBreath",
+        ["sfx_ep1_taxi_neck_breath", "sfx_ep1_studio_breath"],
+        sounds.whisper,
+        "threat",
+        1,
+        { minDistance: 0.65, volume: 0.95 },
+      ],
+      [
+        "soraGasp",
+        ["sfx_ep1_taxi_sora_gasp_1", "sfx_ep1_taxi_sora_gasp_2"],
+        sounds.whisper,
+        "voice",
+        1,
+        { minDistance: 1.5, volume: 0.78 },
+      ],
+      [
+        "glassScrape",
+        ["sfx_ep1_taxi_glass_scrape"],
+        sounds.creak,
+        "threat",
+        1,
+        { minDistance: 1.4, volume: 0.92 },
+      ],
+      [
+        "windowSlam",
+        ["sfx_ep1_taxi_window_slam", "sfx_ep1_studio_door_slam"],
+        sounds.doorClose,
+        "threat",
+        1,
+        { minDistance: 2.4, volume: 0.96 },
+      ],
+      [
+        "elecFlicker",
+        ["sfx_ep1_taxi_elec_flicker", "sfx_ep1_studio_bulb_flicker"],
+        sounds.powerUp,
+        "sfx",
+        2,
+        { minDistance: 2.0, volume: 0.84 },
+      ],
+      ["erhuDread", [], sounds.erhuDread, "threat", 1, { minDistance: 3.5, volume: 0.86 }],
+      ["throatRattle", [], sounds.throatRattle, "threat", 1, { minDistance: 1.1, volume: 0.9 }],
+      ["wetStepsClose", [], sounds.wetStepsClose, "threat", 1, { minDistance: 1.5, volume: 0.92 }],
+      ["lockedRattle", [], sounds.lockedRattle, "sfx", 1, { minDistance: 1.6, volume: 0.88 }],
+      ["deadAirDrop", [], sounds.deadAirDrop, "threat", 1, { minDistance: 5.0, volume: 0.92 }],
+      ["powerDown", [], sounds.powerDown, "threat", 1, { minDistance: 3, volume: 0.92 }],
+      ["powerUp", [], sounds.powerUp, "threat", 1, { minDistance: 3, volume: 0.84 }],
       [
         "doorCreak",
         ["sfx_ep1_studio_door_creak_1", "sfx_ep1_studio_door_creak_2"],
         sounds.creak,
         "sfx",
         2,
-        { minDistance: 1.8, volume: 0.74 },
+        { minDistance: 1.8, volume: 0.78 },
       ],
       [
         "doorOpen",
@@ -418,7 +453,7 @@ export class StudioScares {
         sounds.creak,
         "sfx",
         2,
-        { minDistance: 1.8, volume: 0.8 },
+        { minDistance: 1.8, volume: 0.82 },
       ],
       [
         "doorClose",
@@ -426,7 +461,7 @@ export class StudioScares {
         sounds.doorClose,
         "sfx",
         2,
-        { minDistance: 2.0, volume: 0.84 },
+        { minDistance: 2.0, volume: 0.86 },
       ],
       [
         "doorLatch",
@@ -434,7 +469,7 @@ export class StudioScares {
         sounds.doorLatch,
         "sfx",
         2,
-        { minDistance: 1.5, volume: 0.72 },
+        { minDistance: 1.5, volume: 0.78 },
       ],
       [
         "doorSlam",
@@ -442,7 +477,7 @@ export class StudioScares {
         sounds.doorClose,
         "threat",
         2,
-        { minDistance: 2.6, volume: 0.96 },
+        { minDistance: 2.8, volume: 0.98 },
       ],
       [
         "waterStir",
@@ -450,7 +485,7 @@ export class StudioScares {
         sounds.thud,
         "sfx",
         1,
-        { minDistance: 1.4, volume: 0.7 },
+        { minDistance: 1.4, volume: 0.78 },
       ],
       [
         "bulbFlicker",
@@ -458,7 +493,7 @@ export class StudioScares {
         sounds.powerUp,
         "sfx",
         1,
-        { minDistance: 1.8, volume: 0.65 },
+        { minDistance: 1.8, volume: 0.74 },
       ],
       [
         "stepsSlow",
@@ -466,7 +501,7 @@ export class StudioScares {
         sounds.creak,
         "threat",
         1,
-        { minDistance: 1.8, volume: 0.64 },
+        { minDistance: 1.8, volume: 0.7 },
       ],
       [
         "stepsFast",
@@ -474,7 +509,7 @@ export class StudioScares {
         sounds.creak,
         "threat",
         1,
-        { minDistance: 2.2, volume: 0.84 },
+        { minDistance: 2.5, volume: 0.92 },
       ],
       [
         "creak",
@@ -490,15 +525,21 @@ export class StudioScares {
         sounds.knock,
         "sfx",
         1,
-        { minDistance: 2.2, volume: 0.68 },
+        { minDistance: 2.2, volume: 0.72 },
       ],
       [
         "whisper",
-        ["sfx_ep1_studio_whisper_1", "sfx_ep1_studio_whisper_2"],
+        [
+          "sfx_ep1_studio_whisper_1",
+          "sfx_ep1_studio_whisper_2",
+          "sfx_ep1_taxi_whisper_1",
+          "sfx_ep1_taxi_whisper_2",
+          "sfx_ep1_taxi_whisper_3",
+        ],
         sounds.whisper,
         "threat",
         1,
-        { minDistance: 0.75, volume: 0.58 },
+        { minDistance: 0.8, volume: 0.68 },
       ],
       [
         "phantomRing",
@@ -540,7 +581,7 @@ export class StudioScares {
       "studio_heart",
       audio.buffer(sounds.heartbeat(rate), rate),
       "sfx",
-      0.48,
+      0.52,
     ));
     heart.loop = true;
 
@@ -565,9 +606,9 @@ export class StudioScares {
         faucetPos,
         {
           loop: true,
-          minDistance: 0.9,
-          maxDistance: 10.5,
-          volume: 0.58,
+          minDistance: 1.0,
+          maxDistance: 11.0,
+          volume: 0.64,
         },
       );
     }
@@ -599,7 +640,7 @@ export class StudioScares {
       : [];
     let unwarm: () => void = () => undefined;
     if (this.preay) {
-      this.setFigureLayer(VISIBLE);
+      this.setFigureLayer(UNSEEN);
       this.preay.place(new Vector3(-2.3, FLOOR, -3.5), 0);
       this.preay.standStill(0);
       this.preay.setEnabled(true);
@@ -632,33 +673,48 @@ export class StudioScares {
     return this.faucetRunning;
   }
 
-  /** True when the given interactive studio door is currently open (or opening). */
+  /** True when the given interactive studio door is swung wide enough to walk through. */
   isDoorOpen(id: StudioDoorId): boolean {
     const d = this.doors.get(id);
     if (!d) return false;
-    return Math.abs(d.target - d.closedRad) > 0.2;
+    return isDoorWalkablyOpen(d.target, d.openRad, d.closedRad);
   }
 
-  /** Opens or closes any hinged door smoothly with tactile latch, creak & jamb-shut audio. */
-  toggleDoor(id: StudioDoorId): boolean {
+  /** True while a door's latch is temporarily held shut by a haunted encounter. */
+  isDoorLocked(id: StudioDoorId): boolean {
     const d = this.doors.get(id);
-    if (!d) return false;
-    const opening = !this.isDoorOpen(id);
+    return !!d && this.time < d.lockedUntil;
+  }
+
+  /** Opens or closes any hinged door smoothly with solid physics & latch/locked audio. */
+  toggleDoor(id: StudioDoorId): DoorToggleResult {
+    const d = this.doors.get(id);
+    if (!d) return "closed";
     const at = d.node.getAbsolutePosition();
+    if (this.time < d.lockedUntil) {
+      this.play("lockedRattle", at, 0.92);
+      return "locked";
+    }
+    // If Sora opens the bathroom door while the frosted-glass silhouette is still standing
+    // behind the glass, blink the bulb and vanish the figure instantly so she never clips!
+    if (id === "haunt_bath_door" && this.frostedGhostActive) {
+      this.clearFrostedGhost(true);
+    }
+    const opening = !this.isDoorOpen(id);
     d.target = opening ? d.openRad : d.closedRad;
-    d.speed = id === "haunt_balcony_door" ? 1.85 : 2.35;
+    d.speed = id === "haunt_balcony_door" ? 1.85 : 2.45;
     if (opening) {
       d.closingLatch = "none";
-      this.play("doorLatch", at, id === "haunt_balcony_door" ? 0.82 : 0.65);
-      this.play("doorOpen", at, 0.78);
+      this.play("doorLatch", at, id === "haunt_balcony_door" ? 0.82 : 0.7);
+      this.play("doorOpen", at, 0.82);
     } else {
       d.closingLatch = "normal";
-      this.play("doorCreak", at, 0.44);
+      this.play("doorCreak", at, 0.48);
     }
     if (id === "haunt_balcony_door" && opening) {
       this.flames?.pulseDraught(0.85, 0.25, -0.95);
     }
-    return opening;
+    return opening ? "opened" : "closed";
   }
 
   /** Plays a crisp brass latch click (e.g. rattling the locked stair gate). */
@@ -679,8 +735,25 @@ export class StudioScares {
 
   /** Toggles the bathroom cold tap when Sora presses E at `interact_bath_faucet`. */
   toggleFaucet(): void {
+    const wasRunning = this.faucetRunning;
     this.setFaucetRunning(!this.faucetRunning);
-    this.play("thud", this.bathFaucetAt ?? this.game.camera.globalPosition, 0.42);
+    this.play("thud", this.bathFaucetAt ?? this.game.camera.globalPosition, 0.44);
+    // Turning off the haunted running tap while standing at the sink springs the 3D mirror trap!
+    if (wasRunning && !this.done("bathMirror") && inBathroom(this.game.camera.globalPosition)) {
+      this.falls.push({
+        time: 0,
+        cues: [
+          {
+            at: 0.35,
+            play: () => {
+              if (!this.done("bathMirror") && inBathroom(this.game.camera.globalPosition)) {
+                this.triggerBathMirrorHaunt();
+              }
+            },
+          },
+        ],
+      });
+    }
   }
 
   /** Called by Prologue when the shelf candle is snuffed in P05: bursts rising wick smoke. */
@@ -700,14 +773,26 @@ export class StudioScares {
     this.heart?.stop();
     this.bathDrip?.stop();
     this.bathFaucet?.stop();
+    this.bathVisuals?.setMirrorActive(false);
     this.game.audio?.duckAmbience(1, 0.2);
+  }
+
+  /** Called by Prologue at the climax scream of Yay Mey's call: layers an in-room breath behind Sora! */
+  onPhoneCallClimax(): void {
+    const eye = this.game.camera.globalPosition;
+    const forward = this.game.camera.getDirection(Vector3.Forward());
+    const behindNeck = eye.subtract(forward.scale(0.42));
+    this.play("neckBreath", behindNeck, 0.94);
+    this.play("windowSlam", runtime(0.65, 9.25, 1.1), 0.72);
+    this.lights.setHallBulbLevel(0.35, 1.3);
+    this.flames?.pulseDraught(0.95, 0.3, 0.95);
   }
 
   /** Called by Prologue once Yay Mey's terrifying phone call ends (begins Phase 4). */
   onPhoneAnswered(): void {
-    this.bathVisuals?.showWetFootprints(true);
-    this.flames?.pulseDraught(0.75, 0.5, 0.85);
-    this.score().pressure(0.42);
+    this.bathVisuals?.showWetFootprints(true, true);
+    this.flames?.pulseDraught(0.8, 0.5, 0.85);
+    this.score().pressure(0.48);
   }
 
   /** Plays a non-repeating real thunder crack for natural storm lightning. */
@@ -719,6 +804,10 @@ export class StudioScares {
 
   update(dt: number, ringing = false): void {
     const game = this.game;
+    const eye = game.camera.globalPosition;
+    const inBath = inBathroom(eye);
+    const bathGain = Math.min(1.15, this.lights.bathBulb.intensity / 4.2) * this.lights.power;
+    this.bathVisuals?.setMirrorActive(inBath, this.mirrorGhostActive, eye, bathGain);
     this.bathVisuals?.update(dt);
     this.stepDoors(dt);
 
@@ -747,17 +836,30 @@ export class StudioScares {
       fall.step?.(fall.time, dt);
       if (!fall.cues.length && !fall.step) this.falls.splice(this.falls.indexOf(fall), 1);
     }
+
+    // Subtle breathing motion on the unseen shadow caster so cast shadows feel alive.
+    if (
+      this.preay?.isEnabled() &&
+      (this.mirrorGhostActive || this.hallStalkerActive || this.frostedGhostActive)
+    ) {
+      this.preay.standStill(dt);
+    }
+
     if (this.hideFigureAt >= 0 && this.time >= this.hideFigureAt) {
       this.hideFigureAt = -1;
+      this.frostedGhostActive = false;
+      this.mirrorGhostActive = false;
+      this.hallStalkerActive = false;
+      this.lights.setBathShadowCasters(null);
+      this.preay?.watch(null);
       this.preay?.setEnabled(false);
       this.setFigureLayer(UNSEEN);
     }
     if (game.cutscene) return;
     this.time += dt;
-    const eye = game.camera.globalPosition;
     const forward = game.camera.getDirection(Vector3.Forward());
 
-    if (inBackRoom(eye) || inBathroom(eye)) this.visitedBackOrBath = true;
+    if (inBackRoom(eye) || inBath) this.visitedBackOrBath = true;
 
     const kitCount = KIT.filter((k) => game.inventory.has(k)).length;
     const phoneAnswered = game.flags.get("ep1.phone.answered", false);
@@ -768,20 +870,17 @@ export class StudioScares {
       phoneAnswered,
     });
 
-    // ---- Phase 1: Subtle psychological gaslighting
-    this.stepFanDrift(dt, eye, forward);
+    // ---- Beat 1: Front Studio — Suffocating calm broken by Partition Shadow + Double-Tap Picture Crash
     if (
-      this.slideBookNode &&
-      !this.done("book") &&
-      bookSlideDue(this.time, eye, forward, this.slideBookNode.getAbsolutePosition())
+      this.preay &&
+      !this.done("shadow") &&
+      !this.lights.flashing &&
+      !this.mirrorGhostActive &&
+      !this.frostedGhostActive &&
+      !this.hallStalkerActive
     ) {
-      this.slideBookOut();
-    }
-    if (
-      !this.done("balconyKnock") &&
-      balconyKnockDue(this.time, eye, forward, runtime(1.2, 0.0, 1.55))
-    ) {
-      this.triggerBalconyKnock();
+      const shot = shadowShot(this.time, eye, forward, this.figureHead);
+      if (shot) this.shadowFalls(shot);
     }
     if (
       this.pictureAt &&
@@ -791,88 +890,51 @@ export class StudioScares {
       this.pictureFalls();
     }
 
-    // ---- Phase 2: The Intrusion (Bathroom, Partition/Bedroom Doors, Phone Echo, Poltergeist)
-    if (inBackRoom(eye) && !this.done("bathFaucet") && !phoneAnswered) {
-      this.game.flags.set(studioScareFlag("bathFaucet"), true);
-      this.setFaucetRunning(true);
-    }
-    if (inBackRoom(eye) && !this.done("partitionDoor") && !phoneAnswered) {
-      this.game.flags.set(studioScareFlag("partitionDoor"), true);
-      this.hauntDoorTo("haunt_partition_door", "ajar", 0.55);
-    }
-    if (!this.done("bedBreath") && bedBreathDue(eye, runtime(3.75, 11.4, 0.35), this.altarDone)) {
-      this.triggerBedBreath();
-    }
-    if (
-      !this.done("phantomRing") &&
-      !ringing &&
-      phantomRingDue(this.time, eye, this.visitedBackOrBath, this.altarDone)
-    ) {
-      this.triggerPhantomRing();
-    }
-    if (
-      this.bathMirrorAt &&
-      !this.done("bathMirror") &&
-      bathMirrorDue(eye, forward, this.bathMirrorAt)
-    ) {
-      this.triggerBathMirrorHaunt();
-    }
-    if (this.bathTankAt && !this.done("bathTank") && bathTankDue(eye, forward, this.bathTankAt)) {
-      this.triggerBathTankHaunt();
-    }
-    if (
-      this.doors.has("haunt_bath_door") &&
-      !this.done("bathDoor") &&
-      bathDoorDue(
-        eye,
-        forward,
-        this.doors.get("haunt_bath_door")!.node.getAbsolutePosition(),
-        this.done("bathMirror"),
-      )
-    ) {
-      this.game.flags.set(studioScareFlag("bathDoor"), true);
-      this.hauntDoorTo("haunt_bath_door", "ajar", 0.72);
-    }
-    if (
-      this.stoolNode &&
-      !this.done("chairTurn") &&
-      chairTurnDue(
-        this.time,
-        eye,
-        forward,
-        this.stoolNode.getAbsolutePosition(),
-        this.visitedBackOrBath,
-      )
-    ) {
-      this.triggerChairTurn();
-    }
-    if (
-      this.dropBookNode &&
-      !this.done("dropBook") &&
-      dropBookDue(
-        this.time,
-        eye,
-        forward,
-        this.dropBookNode.getAbsolutePosition(),
-        this.visitedBackOrBath,
-      )
-    ) {
-      this.triggerBookDrop();
-    }
-    if (this.preay && !this.done("shadow") && !this.lights.flashing && !this.watcherActive) {
-      const shot = shadowShot(this.time, eye, forward, this.figureHead);
-      if (shot) this.shadowFalls(shot);
-    }
-
-    // If the player unlatched the French balcony door, a sudden storm gust eventually slams it shut!
+    // If the player unlatched the French balcony door, a sudden storm gust slams it shut!
     if (balconyOpenFrac > 0.5 && !this.done("balconySlam")) {
       this.balconyOpenSec += dt;
-      if (this.balconyOpenSec >= 7.5) this.triggerBalconySlam();
+      if (this.balconyOpenSec >= 6.5) this.triggerBalconySlam();
     } else {
       this.balconyOpenSec = 0;
     }
 
-    // ---- Phase 3: The Rupture (Altar collapse & Blackout doorway figure)
+    // ---- Beat 2 & 3: Back Bedroom & Closed Bathroom — Running Tap, Frosted-Glass Figure & Live 3D Mirror Trap
+    if (inBackRoom(eye) && !this.done("bathFaucet") && !phoneAnswered) {
+      this.game.flags.set(studioScareFlag("bathFaucet"), true);
+      this.setFaucetRunning(true);
+    }
+    const bathDoor = this.doors.get("haunt_bath_door");
+    if (
+      bathDoor &&
+      this.preay &&
+      !this.done("bathFrosted") &&
+      !phoneAnswered &&
+      !this.mirrorGhostActive &&
+      bathFrostedDue(eye, forward, bathDoor.closedCenter, !this.isDoorOpen("haunt_bath_door"))
+    ) {
+      this.triggerBathFrostedSilhouette();
+    }
+    if (
+      this.bathMirrorAt &&
+      !this.done("bathMirror") &&
+      !this.frostedGhostActive &&
+      bathMirrorDue(eye, forward, this.bathMirrorAt)
+    ) {
+      this.triggerBathMirrorHaunt();
+    }
+    if (
+      this.bathTankAt &&
+      this.done("bathMirror") &&
+      !this.done("bathTank") &&
+      bathTankDue(eye, forward, this.bathTankAt)
+    ) {
+      this.triggerBathTankHaunt();
+    }
+
+    // ---- Beat 4: Back Bedroom — Sacred Altar Omen (Sideways Incense + Sequential Candle Snuff + Under-Bed Breath)
+    if (!this.done("bedBreath") && bedBreathDue(eye, runtime(3.75, 11.6, 0.35), this.altarDone)) {
+      this.triggerBedAndAltarOmen();
+    }
     if (this.altar === "waiting" && this.altarAt && game.inventory.has("satchel")) {
       this.holding += dt;
       const inside = inBackRoom(eye);
@@ -882,132 +944,262 @@ export class StudioScares {
       if (altarDue(this.holding, this.waited, away, this.outside)) this.altarFalls();
     }
 
-    // ---- Phase 4: The Stalked Exit (Closing doors cascade, hall flash, doorframe watcher, stair footsteps)
+    // ---- Beat 6: Post-Call Exit — Dying Lights, Motionless Hall Stalker & Stair-Gate Final Rush
     if (phase === 4) {
-      this.stepPhase4(dt, eye, forward, kitCount === KIT.length);
+      this.stepPhase4(eye, forward, kitCount === KIT.length);
     }
 
-    // ---- Organic phase-aware directional house sounds (non-repeating pools)
+    // ---- Sparse, oppressive directional house dread (silence dominates!)
     this.stepAmbientHouseSounds(phase, eye, forward, ringing);
   }
 
-  // ---------------------------------------------------------------- Phase 1 & 2 surprising haunts
+  // ---------------------------------------------------------------- Beat 2: Closed Frosted-Glass Bathroom Door (Shadow + Sound Only)
 
-  private stepFanDrift(dt: number, eye: Vector3, forward: Vector3): void {
-    const fan = this.fanNode;
-    if (!fan) return;
-    if (!this.done("fan") && fanDriftDue(this.time, eye, forward, fan.getAbsolutePosition())) {
-      this.game.flags.set(studioScareFlag("fan"), true);
-      this.fanDrifting = true;
-      this.play("creak", fan.getAbsolutePosition(), 0.32);
-    }
-    if (!this.fanDrifting) return;
-    // Freezes dead the instant Sora looks up toward the ceiling fan!
-    if (angleTo(eye, forward, fan.getAbsolutePosition()) < 50) {
-      this.fanDrifting = false;
-      return;
-    }
-    const step = dt * 0.42;
-    this.fanDriftAngle += step;
-    fan.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), this.fanDriftAngle);
-    if (this.fanDriftAngle >= 1.95) this.fanDrifting = false;
-  }
+  private triggerBathFrostedSilhouette(): void {
+    const preay = this.preay;
+    if (!preay) return;
+    this.game.flags.set(studioScareFlag("bathFrosted"), true);
+    this.frostedGhostActive = true;
+    const doorPos = this.doors.get("haunt_bath_door")?.closedCenter ?? runtime(2.42, 14.15, 1.1);
+    const glassAt = new Vector3(doorPos.x, 1.48, doorPos.z);
 
-  private slideBookOut(): void {
-    const book = this.slideBookNode;
-    if (!book) return;
-    this.game.flags.set(studioScareFlag("book"), true);
-    const start = book.getAbsolutePosition().clone();
-    this.play("thud", start, 0.34);
-    const duration = 1.25;
-    const fall: Fall = {
-      time: 0,
-      cues: [],
-      step: (t) => {
-        const k = Math.min(1, t / duration);
-        const ease = 1 - (1 - k) ** 3;
-        book.setAbsolutePosition(start.add(new Vector3(-0.11 * ease, 0, 0)));
-        if (k >= 1) fall.step = undefined;
-      },
-    };
-    this.falls.push(fall);
-  }
+    // Unseen caster stands inside the bathroom, casting a looming warm 3D shadow across
+    // the north-east bathroom wall visible straight through the frosted glass door panes.
+    this.setFigureLayer(UNSEEN);
+    preay.place(runtime(1.78, 15.42, FLOOR), 0.25);
+    preay.perform("reach", 0.72);
+    preay.standStill(0);
+    preay.setEnabled(true);
+    for (const mesh of this.figure) mesh.computeWorldMatrix(true);
 
-  /** Three sharp urgent knocks tap directly on the exterior wet balcony glass + cold draught! */
-  private triggerBalconyKnock(): void {
-    this.game.flags.set(studioScareFlag("balconyKnock"), true);
-    const glassAt = runtime(1.2, -0.1, 1.55);
-    this.vacuum(1.4, 0.28);
-    this.play("knock", glassAt, 0.82);
-    this.flames?.pulseDraught(0.92, 0.15, -0.95);
-    this.score().pressure(0.24);
-  }
+    this.lights.setBathShadowCasters(this.figure);
+    this.lights.strikeFrom(
+      runtime(1.1, 14.36, 1.35),
+      runtime(2.55, 16.72, 1.64),
+      this.figure,
+      { pulses: [0, 0.42, 0.92], decay: 0.28 },
+      0.72,
+      new Color3(1, 0.84, 0.56),
+    );
 
-  /** Impossible solitary half-ring from the hallway phone before the altar even falls! */
-  private triggerPhantomRing(): void {
-    this.game.flags.set(studioScareFlag("phantomRing"), true);
-    const phoneAt = runtime(2.95, 6.12, 1.47);
-    const pool = this.sfx.get("phantomRing");
-    if (!pool || !pool.voices.length) return;
-    const voice = pool.voices[0];
-    voice.spatial.position = phoneAt.clone();
-    voice.volume = 0.56;
-    voice.play();
-    this.falls.push({
-      time: 0,
-      cues: [{ at: 0.58, play: () => voice.stop() }],
-    });
-  }
+    this.vacuum(1.9, 0.18);
+    this.play("deadAirDrop", glassAt, 0.78);
+    this.play("wetStepsClose", runtime(2.2, 14.8, FLOOR), 0.74);
+    this.play("glassScrape", glassAt, 0.86);
+    this.lights.flickerBathBulb(1.85);
+    this.score().pressure(0.42);
 
-  /** Close-mic breathing directly from underneath the wooden bed + bedroom door creeps inward. */
-  private triggerBedBreath(): void {
-    this.game.flags.set(studioScareFlag("bedBreath"), true);
-    const underBed = runtime(3.65, 11.4, 0.22);
-    this.play("breath", underBed, 0.88);
-    this.flames?.pulseDraught(0.7, -0.8, 0.4);
-    this.hauntDoorTo("haunt_bedroom_door", "ajar", 0.48);
-  }
-
-  /** Uncanny silent repositioning: wooden stool turns toward the doorway off-camera! */
-  private triggerChairTurn(): void {
-    const stool = this.stoolNode;
-    if (!stool) return;
-    this.game.flags.set(studioScareFlag("chairTurn"), true);
-    const start = stool.getAbsolutePosition().clone();
-    this.play("creak", start, 0.3);
-    const fall: Fall = {
-      time: 0,
-      cues: [],
-      step: (t) => {
-        const k = Math.min(1, t / 0.85);
-        const ease = 1 - (1 - k) ** 2;
-        stool.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), 1.0 * ease);
-        stool.setAbsolutePosition(start.add(new Vector3(0.14 * ease, 0, -0.1 * ease)));
-        if (k >= 1) fall.step = undefined;
-      },
-    };
-    this.falls.push(fall);
-  }
-
-  /** Sudden poltergeist drop: upper bookcase hardcover tumbles heavily onto the tiles behind Sora! */
-  private triggerBookDrop(): void {
-    const book = this.dropBookNode;
-    if (!book) return;
-    this.game.flags.set(studioScareFlag("dropBook"), true);
-    const start = book.getAbsolutePosition().clone();
-    this.vacuum(1.3, 0.24);
-    const piece = this.dynamic("drop_book", book, this.box(book), 0.9, (at, speed) => {
-      this.play("thud", at, Math.min(1, 0.65 + speed / 6));
-      this.score().pressure(0.32);
-    });
-    piece.body?.setLinearVelocity(new Vector3(-1.15, 0.35, 0.15));
-    piece.body?.setAngularVelocity(new Vector3(2.8, 1.4, -3.5));
-    this.play("creak", start, 0.42);
     this.falls.push({
       time: 0,
       cues: [
-        { at: 0.95, play: () => this.strike(piece, book.getAbsolutePosition().clone(), 3.8) },
-        { at: 2.6, play: () => this.layStill(["drop_book"]) },
+        {
+          at: 0.42,
+          play: () => {
+            if (this.frostedGhostActive) this.play("throatRattle", glassAt, 0.82);
+          },
+        },
+        {
+          at: 1.55,
+          play: () => {
+            if (this.frostedGhostActive) this.clearFrostedGhost(true);
+          },
+        },
+      ],
+    });
+  }
+
+  private clearFrostedGhost(withBlink: boolean): void {
+    if (!this.frostedGhostActive) return;
+    this.frostedGhostActive = false;
+    this.lights.setBathShadowCasters(null);
+    this.preay?.watch(null);
+    this.preay?.setEnabled(false);
+    this.setFigureLayer(UNSEEN);
+    if (withBlink) {
+      const bulbAt = this.bathBulbAt ?? runtime(1.68, 15.45, 2.52);
+      this.lights.setBathBulbLevel(0);
+      this.play("elecFlicker", bulbAt, 0.85);
+      this.falls.push({
+        time: 0,
+        cues: [{ at: 0.22, play: () => this.lights.setBathBulbLevel(1) }],
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------- Beat 3: Bathroom Shadow & Sound Trap (No Visible Ghost, No Mirror Crack)
+
+  private triggerBathMirrorHaunt(): void {
+    this.game.flags.set(studioScareFlag("bathMirror"), true);
+    const mirrorAt = this.bathMirrorAt ?? runtime(1.72, 16.712, 1.57);
+    const bulbAt = this.bathBulbAt ?? runtime(1.68, 15.45, 2.52);
+    const bathDoor = this.doors.get("haunt_bath_door");
+
+    // 1. Slam the solid bathroom door shut behind Sora and jam the brass latch for 3.2 seconds.
+    if (bathDoor) {
+      bathDoor.lockedUntil = this.time + 3.2;
+      if (Math.abs(bathDoor.angle - bathDoor.closedRad) > 0.08) {
+        this.hauntDoorTo("haunt_bath_door", "closed", 6.2);
+      } else {
+        this.play("doorSlam", bathDoor.closedCenter, 0.96);
+      }
+    }
+    this.play("windowSlam", bathDoor?.closedCenter ?? mirrorAt, 0.84);
+    this.play("deadAirDrop", mirrorAt, 0.92);
+    this.vacuum(2.8, 0.1);
+    this.lights.flickerBathBulb(2.65);
+    this.play("elecFlicker", bulbAt, 0.86);
+    this.score().pressure(0.62);
+
+    this.falls.push({
+      time: 0,
+      cues: [
+        {
+          at: 0.24,
+          play: () => {
+            // 2. Unseen caster throws a looming human shadow across the closed door & south wall
+            //    reflected right inside the live tarnished mirror — no visible 3D ghost model.
+            if (this.preay) {
+              this.mirrorGhostActive = true;
+              this.setFigureLayer(UNSEEN);
+              this.preay.place(runtime(1.86, 15.32, FLOOR), Math.PI);
+              this.preay.release();
+              this.preay.standStill(0);
+              this.preay.setEnabled(true);
+              for (const mesh of this.figure) mesh.computeWorldMatrix(true);
+              this.lights.setBathShadowCasters(this.figure);
+              this.lights.strikeFrom(
+                runtime(1.42, 16.38, 1.32),
+                runtime(2.26, 14.12, 1.58),
+                this.figure,
+                { pulses: [0, 0.32, 0.68], decay: 0.24 },
+                0.65,
+                new Color3(1, 0.84, 0.56),
+              );
+            }
+            this.play("erhuDread", mirrorAt, 0.9);
+            this.play("throatRattle", runtime(1.8, 15.45, 1.52), 0.88);
+          },
+        },
+        {
+          at: 1.18,
+          play: () => {
+            // 3. Second arc: wet footsteps rush behind Sora as a towering reaching shadow snaps
+            //    across the green bathroom tiles right beside the mirror + hot breath on her neck.
+            if (this.preay && this.mirrorGhostActive) {
+              this.setFigureLayer(UNSEEN);
+              this.preay.place(runtime(1.74, 15.62, FLOOR), Math.PI);
+              this.preay.perform("reach", 0.96);
+              this.preay.standStill(0);
+              for (const mesh of this.figure) mesh.computeWorldMatrix(true);
+              this.lights.strikeFrom(
+                runtime(1.08, 14.32, 1.32),
+                runtime(2.28, 16.74, 1.65),
+                this.figure,
+                { pulses: [0, 0.2, 0.48], decay: 0.2 },
+                0.78,
+                new Color3(0.95, 0.82, 0.58),
+              );
+            }
+            this.play("wetStepsClose", runtime(1.72, 15.65, FLOOR), 0.92);
+            this.play("elecFlicker", bulbAt, 0.92);
+            const eye = this.game.camera.globalPosition;
+            const behind = eye.subtract(
+              this.game.camera.getDirection(Vector3.Forward()).scale(0.35),
+            );
+            this.play("neckBreath", behind, 0.96);
+            this.play("soraGasp", eye, 0.82);
+            this.score().sting("shock", 0.86);
+            this.game.atmosphere.scare();
+          },
+        },
+        {
+          at: 2.02,
+          play: () => {
+            // 4. Brief bulb blackout: shadow vanishes cleanly before the dim bulb buzzes back.
+            this.mirrorGhostActive = false;
+            this.lights.setBathShadowCasters(null);
+            this.preay?.watch(null);
+            this.preay?.setEnabled(false);
+            this.setFigureLayer(UNSEEN);
+            this.lights.setBathBulbLevel(0);
+            this.play("elecFlicker", bulbAt, 0.8);
+          },
+        },
+        {
+          at: 2.28,
+          play: () => {
+            this.lights.setBathBulbLevel(0.85);
+            if (!this.done("bathTank")) this.triggerBathTankHaunt();
+          },
+        },
+        {
+          at: 3.22,
+          play: () => {
+            // Soft click as the haunted latch finally lets go
+            if (bathDoor) this.play("doorLatch", bathDoor.closedCenter, 0.72);
+          },
+        },
+      ],
+    });
+  }
+
+  private triggerBathTankHaunt(): void {
+    this.game.flags.set(studioScareFlag("bathTank"), true);
+    const tankAt = this.bathTankAt ?? runtime(0.5, 16.24, 0.72);
+    this.bathVisuals?.triggerTankRipples();
+    this.play("waterStir", tankAt, 0.8);
+
+    const dipper = this.bathDipperNode;
+    if (dipper) {
+      const basePos = dipper.position.clone();
+      const baseRot = dipper.rotationQuaternion?.clone() ?? Quaternion.Identity();
+      const fall: Fall = {
+        time: 0,
+        cues: [{ at: 0.18, play: () => this.play("thud", dipper.getAbsolutePosition(), 0.34) }],
+        step: (t) => {
+          const rock = Math.sin(t * 14) * Math.exp(-t * 2.4) * 0.14;
+          const nudge = Math.min(1, t / 0.45) * 0.012;
+          dipper.position.set(basePos.x + nudge, basePos.y, basePos.z);
+          dipper.rotationQuaternion = baseRot.multiply(
+            Quaternion.RotationAxis(new Vector3(0, 0, 1), rock),
+          );
+          if (t >= 1.8) fall.step = undefined;
+        },
+      };
+      this.falls.push(fall);
+    }
+  }
+
+  // ---------------------------------------------------------------- Beat 4a: Sacred Altar Omen & Bed Breath
+
+  /**
+   * Asian folk omen as Sora nears the bed for her satchel:
+   * altar incense smoke bends horizontally toward her, the 3 altar candles snuff out
+   * one by one in cold silence, and low raspy breathing rises from beneath the iron bed.
+   */
+  private triggerBedAndAltarOmen(): void {
+    this.game.flags.set(studioScareFlag("bedBreath"), true);
+    const underBed = runtime(3.65, 11.4, 0.22);
+    this.vacuum(2.2, 0.2);
+    this.play("deadAirDrop", underBed, 0.7);
+    this.play("neckBreath", underBed, 0.92);
+    this.flames?.setAltarOmenSmoke(0.95, -0.78, 0.62);
+    this.flames?.pulseDraught(0.65, -0.75, 0.55);
+    this.score().pressure(0.46);
+
+    // Sequential sacred omen: the 3 altar candles die 0 -> 1 -> 2 as if someone walked past!
+    this.falls.push({
+      time: 0,
+      cues: [
+        { at: 0.15, play: () => this.flames?.extinguishAltarCandle(0, true) },
+        {
+          at: 0.68,
+          play: () => {
+            this.flames?.extinguishAltarCandle(1, true);
+            this.play("throatRattle", underBed, 0.72);
+          },
+        },
+        { at: 1.25, play: () => this.flames?.extinguishAltarCandle(2, true) },
       ],
     });
   }
@@ -1021,22 +1213,20 @@ export class StudioScares {
     d.speed = 6.2;
     d.closingLatch = "slam";
     this.flames?.pulseDraught(1.0, 0.1, -1.0);
-    this.score().sting("drop", 0.62);
+    this.score().sting("drop", 0.66);
     this.falls.push({
       time: 0,
       cues: [
         {
           at: 0.14,
           play: () => {
-            this.play("thunder", runtime(1.2, -2.0, 2.2), 0.78);
+            this.play("thunder", runtime(1.2, -2.0, 2.2), 0.82);
             this.lights.strike();
           },
         },
       ],
     });
   }
-
-  // ---------------------------------------------------------------- Phase 2 bathroom haunts
 
   private setFaucetRunning(on: boolean): void {
     this.faucetRunning = on;
@@ -1047,77 +1237,78 @@ export class StudioScares {
     }
   }
 
-  private triggerBathMirrorHaunt(): void {
-    this.game.flags.set(studioScareFlag("bathMirror"), true);
-    const mirrorAt = this.bathMirrorAt ?? runtime(1.72, 16.712, 1.57);
-    const bulbAt = this.bathBulbAt ?? runtime(1.68, 15.45, 2.52);
-    this.vacuum(1.8, 0.18);
-    this.lights.flickerBathBulb(1.85);
-    this.play("bulbFlicker", bulbAt, 0.82);
-    this.score().pressure(0.4);
+  // ---------------------------------------------------------------- solid Havok door system
 
-    this.falls.push({
-      time: 0,
-      cues: [
-        {
-          at: 0.34,
-          play: () => {
-            // Realistic human arm & slender fingers shadow creeps across the tarnished mirror glass!
-            this.bathVisuals?.startMirrorArmCreep();
-            this.score().sting("drop", 0.74);
-            this.game.atmosphere.scare();
-            const eye = this.game.camera.globalPosition;
-            const behind = eye.subtract(
-              this.game.camera.getDirection(Vector3.Forward()).scale(0.5),
-            );
-            this.play("breath", behind, 0.9);
-          },
-        },
-        {
-          at: 0.96,
-          play: () => {
-            // As the arm shadow drags downward and vanishes, the damp handprint emerges on the glass
-            this.bathVisuals?.revealHandprint(false);
-          },
-        },
-        {
-          at: 1.55,
-          play: () => {
-            this.play("knock", mirrorAt.add(new Vector3(0, 0, 2.4)), 0.45);
-          },
-        },
-      ],
-    });
-  }
-
-  private triggerBathTankHaunt(): void {
-    this.game.flags.set(studioScareFlag("bathTank"), true);
-    const tankAt = this.bathTankAt ?? runtime(0.5, 16.24, 0.72);
-    this.bathVisuals?.triggerTankRipples();
-    this.play("waterStir", tankAt, 0.75);
-
-    const dipper = this.bathDipperNode;
-    if (dipper) {
-      const basePos = dipper.position.clone();
-      const baseRot = dipper.rotationQuaternion?.clone() ?? Quaternion.Identity();
-      const fall: Fall = {
-        time: 0,
-        cues: [{ at: 0.18, play: () => this.play("thud", dipper.getAbsolutePosition(), 0.32) }],
-        step: (t) => {
-          const rock = Math.sin(t * 14) * Math.exp(-t * 2.4) * 0.16;
-          const nudge = Math.min(1, t / 0.45) * 0.014;
-          dipper.position.set(basePos.x + nudge, basePos.y, basePos.z);
-          dipper.rotationQuaternion = baseRot.multiply(
-            Quaternion.RotationAxis(new Vector3(0, 0, 1), rock),
-          );
-          if (t >= 1.8) fall.step = undefined;
-        },
-      };
-      this.falls.push(fall);
+  private setupDoorCollider(state: DoorState): void {
+    const node = state.node;
+    node.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), state.closedRad);
+    node.computeWorldMatrix(true);
+    const inv = node.getWorldMatrix().clone().invert();
+    const children = node.getChildMeshes(false);
+    const leafMeshes = children.filter(
+      (m) =>
+        m.getTotalVertices() > 0 &&
+        !/(knob|handle|lockplate|lockcase|keyhole|bolt|hinge|plate_|kick|espagnolette|guide)/i.test(
+          m.name,
+        ),
+    );
+    const source = leafMeshes.length ? leafMeshes : children;
+    const min = new Vector3(Infinity, Infinity, Infinity);
+    const max = new Vector3(-Infinity, -Infinity, -Infinity);
+    const pt = new Vector3();
+    for (const mesh of source) {
+      if (mesh.getTotalVertices() === 0) continue;
+      mesh.computeWorldMatrix(true);
+      for (const v of mesh.getBoundingInfo().boundingBox.vectorsWorld) {
+        Vector3.TransformCoordinatesToRef(v, inv, pt);
+        min.minimizeInPlace(pt);
+        max.maximizeInPlace(pt);
+      }
     }
-  }
+    if (!Number.isFinite(min.x)) return;
 
-  // ---------------------------------------------------------------- unified door animation
+    // Guarantee a solid 10 cm slab thickness on the leaf's thin axis and 2 cm jamb overlap
+    // on the wide axis so Havok's player capsule can never squeeze or tunnel through any closed/ajar door.
+    const dx = max.x - min.x;
+    const dz = max.z - min.z;
+    if (dx < dz) {
+      const pad = Math.max(0, (0.1 - dx) / 2);
+      min.x -= pad;
+      max.x += pad;
+      min.z -= 0.01;
+      max.z += 0.01;
+    } else {
+      const pad = Math.max(0, (0.1 - dz) / 2);
+      min.z -= pad;
+      max.z += pad;
+      min.x -= 0.01;
+      max.x += 0.01;
+    }
+    state.leafMin.copyFrom(min);
+    state.leafMax.copyFrom(max);
+    const [closedCenter, , closedExtents] = orientedBox(min, max, node.getWorldMatrix());
+    state.closedCenter.copyFrom(closedCenter);
+    state.closedHalfWidth = Math.max(closedExtents.x, closedExtents.z) / 2;
+
+    if (!this.scene.getPhysicsEngine()) return;
+    node.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), state.angle);
+    node.computeWorldMatrix(true);
+    const [center, rotation, extents] = orientedBox(min, max, node.getWorldMatrix());
+    const colNode = new TransformNode(`col_${state.id}_body`, this.scene);
+    colNode.metadata = { surface: "teak" };
+    colNode.position.copyFrom(center);
+    colNode.rotationQuaternion = rotation.clone();
+    colNode.computeWorldMatrix(true);
+    const shape = new PhysicsShapeBox(Vector3.Zero(), Quaternion.Identity(), extents, this.scene);
+    shape.material = { friction: 0.4, restitution: 0 };
+    // STATIC + disablePreStep=false (TELEPORT) gives immovable wall priority against
+    // PhysicsCharacterController and updates cleanly on every swing with zero velocity drift.
+    const body = new PhysicsBody(colNode, PhysicsMotionType.STATIC, false, this.scene);
+    body.shape = shape;
+    body.disablePreStep = false;
+    state.colliderNode = colNode;
+    state.colliderBody = body;
+  }
 
   private hauntDoorTo(id: StudioDoorId, pose: "open" | "ajar" | "closed", speed: number): void {
     const d = this.doors.get(id);
@@ -1125,13 +1316,27 @@ export class StudioScares {
     d.target = pose === "open" ? d.openRad : pose === "ajar" ? d.ajarRad : d.closedRad;
     d.speed = speed;
     d.closingLatch = pose === "closed" ? (speed >= 3.5 ? "slam" : "normal") : "none";
-    this.play("doorCreak", d.node.getAbsolutePosition(), 0.74);
+    this.play("doorCreak", d.node.getAbsolutePosition(), 0.78);
+  }
+
+  private playerInDoorway(d: DoorState): boolean {
+    if (d.id === "haunt_balcony_door") return false;
+    const feet = this.game.player.feet;
+    return (
+      Math.abs(feet.z - d.closedCenter.z) < 0.32 &&
+      Math.abs(feet.x - d.closedCenter.x) < d.closedHalfWidth + 0.14
+    );
   }
 
   private stepDoors(dt: number): void {
     for (const d of this.doors.values()) {
       const diff = d.target - d.angle;
       if (Math.abs(diff) < 0.002) continue;
+      // Never pinch or crush Sora if she is standing directly inside the doorway threshold.
+      const closing = Math.abs(d.target - d.closedRad) < Math.abs(d.angle - d.closedRad);
+      if (closing && Math.abs(d.angle - d.closedRad) < 0.72 && this.playerInDoorway(d)) {
+        continue;
+      }
       const step = Math.sign(diff) * Math.min(Math.abs(diff), dt * d.speed);
       d.angle += step;
       this.applyDoorAngle(d);
@@ -1151,17 +1356,24 @@ export class StudioScares {
 
   private applyDoorAngle(d: DoorState): void {
     d.node.rotationQuaternion = Quaternion.RotationAxis(Vector3.Up(), d.angle);
+    if (d.colliderNode && d.colliderBody && Number.isFinite(d.leafMin.x)) {
+      d.node.computeWorldMatrix(true);
+      const [center, rotation] = orientedBox(d.leafMin, d.leafMax, d.node.getWorldMatrix());
+      d.colliderNode.position.copyFrom(center);
+      d.colliderNode.rotationQuaternion = rotation.clone();
+      d.colliderNode.computeWorldMatrix(true);
+    }
   }
 
-  // ---------------------------------------------------------------- Phase 4 haunts
+  // ---------------------------------------------------------------- Beat 6: Phase 4 Post-Call Stalker & Stair Rush
 
-  private stepPhase4(dt: number, eye: Vector3, forward: Vector3, kitComplete: boolean): void {
+  private stepPhase4(eye: Vector3, forward: Vector3, kitComplete: boolean): void {
     const blenderY = -eye.z;
-    // 1. Cascading lights dying & doors quietly closing room-by-room behind Sora!
+    // 1. Cascading lights dying & solid doors quietly shutting behind Sora
     if (!this.phase4BathKilled && blenderY < 12.8) {
       this.phase4BathKilled = true;
       this.lights.flickerBathBulb(0.85);
-      this.play("bulbFlicker", this.bathBulbAt ?? runtime(1.68, 15.45, 2.52), 0.72);
+      this.play("elecFlicker", this.bathBulbAt ?? runtime(1.68, 15.45, 2.52), 0.78);
       if (this.isDoorOpen("haunt_bath_door")) {
         this.hauntDoorTo("haunt_bath_door", "closed", 0.95);
       }
@@ -1181,89 +1393,138 @@ export class StudioScares {
     if (!this.phase4BedroomClosed && blenderY < 8.6) {
       this.phase4BedroomClosed = true;
       if (this.isDoorOpen("haunt_bedroom_door")) {
-        this.hauntDoorTo("haunt_bedroom_door", "ajar", 0.82);
+        this.hauntDoorTo("haunt_bedroom_door", "ajar", 0.75);
       }
     }
-    if (!this.phase4HallFlickered && blenderY < 7.2) {
+    if (!this.phase4HallFlickered && blenderY < 7.4) {
       this.phase4HallFlickered = true;
-      this.lights.setHallBulbLevel(0.45, 2.4);
-      this.play("bulbFlicker", runtime(1.95, 8.0, 2.02), 0.58);
-      this.flames?.pulseDraught(0.85, -0.4, 0.9);
+      this.lights.setHallBulbLevel(0.42, 2.8);
+      this.play("elecFlicker", runtime(1.95, 8.0, 2.02), 0.74);
+      this.flames?.pulseDraught(0.9, -0.4, 0.9);
     }
 
-    // 2. Brief far-hall apparition flash under the sputtering airwell bulb
+    // 2. Post-call corridor shadow & creeping door (pure shadow + sound, no visible ghost model)
     const hallAt = runtime(0.65, 9.18, 1.45);
     if (
       this.preay &&
       !this.done("hallFlash") &&
-      !this.watcherActive &&
+      !this.mirrorGhostActive &&
+      !this.frostedGhostActive &&
+      !this.hallStalkerActive &&
       hallFlashDue(eye, forward, hallAt, true)
     ) {
-      this.game.flags.set(studioScareFlag("hallFlash"), true);
-      this.lights.setHallBulbLevel(0.4, 1.1);
-      this.play("bulbFlicker", runtime(1.95, 8.0, 2.02), 0.65);
-      this.setFigureLayer(VISIBLE);
-      const feet = runtime(0.65, 9.18, FLOOR);
-      this.preay.place(feet, Math.atan2(eye.x - feet.x, eye.z - feet.z));
-      this.preay.release();
-      this.preay.standStill(0);
-      this.preay.setEnabled(true);
-      this.score().sting("drop", 0.65);
-      this.hideFigureAt = this.time + 0.48;
+      this.triggerHallStalker();
     }
 
-    // 3. Peripheral Doorframe Watcher: Preay peeks around the back-room doorframe when Sora looks north
-    const watcherAt = runtime(1.06, 9.42, 1.45);
-    if (
-      this.preay &&
-      this.done("hallFlash") &&
-      !this.done("doorWatcher") &&
-      !this.watcherActive &&
-      this.hideFigureAt < 0 &&
-      doorWatcherDue(eye, forward, watcherAt, true)
-    ) {
-      this.game.flags.set(studioScareFlag("doorWatcher"), true);
-      this.watcherActive = true;
-      this.watcherSlip = 0;
-      this.setFigureLayer(VISIBLE);
-      const startFeet = runtime(1.06, 9.46, FLOOR);
-      this.preay.place(startFeet, Math.atan2(eye.x - startFeet.x, eye.z - startFeet.z));
-      this.preay.release();
-      this.preay.standStill(0);
-      this.preay.setEnabled(true);
-      this.play("creak", startFeet, 0.58);
-      this.score().sting("drop", 0.55);
-    }
-    if (this.watcherActive && this.preay) {
-      this.watcherSlip += dt;
-      const slip = Math.max(0, Math.min(1, (this.watcherSlip - 0.14) / 0.42));
-      const x = 1.06 + slip * 0.58;
-      this.preay.position.set(-x, FLOOR, -9.46 - slip * 0.25);
-      this.preay.standStill(dt);
-      if (slip >= 1) {
-        this.watcherActive = false;
-        this.preay.setEnabled(false);
-        this.setFigureLayer(UNSEEN);
-      }
-    }
-
-    // 4. Final Stair-Gate Push: hurried footsteps rushing from the front studio behind Sora
+    // 3. Final Stair-Gate Rush: sprinting bare footsteps closing behind Sora + violent partition door slam!
     if (
       this.stairDoorAt &&
       !this.done("stairSteps") &&
       stairStepsDue(eye, this.stairDoorAt, true, kitComplete)
     ) {
       this.game.flags.set(studioScareFlag("stairSteps"), true);
-      this.score().pressure(0.75);
-      this.play("stepsFast", runtime(1.4, 4.4, 0.1), 0.9);
+      this.score().pressure(0.85);
+      this.play("stepsFast", runtime(1.3, 4.6, 0.1), 0.96);
       this.falls.push({
         time: 0,
-        cues: [{ at: 0.95, play: () => this.play("breath", runtime(0.95, 5.7, 1.45), 0.62) }],
+        cues: [
+          {
+            at: 0.52,
+            play: () => {
+              if (this.isDoorOpen("haunt_partition_door")) {
+                this.hauntDoorTo("haunt_partition_door", "closed", 6.4);
+              }
+              this.play("windowSlam", runtime(0.65, 6.08, 1.2), 0.92);
+              this.game.atmosphere.scare();
+            },
+          },
+          {
+            at: 0.78,
+            play: () => {
+              const cur = this.game.camera.globalPosition;
+              const behind = cur.subtract(
+                this.game.camera.getDirection(Vector3.Forward()).scale(0.4),
+              );
+              this.play("neckBreath", behind, 0.94);
+              this.play("soraGasp", cur, 0.76);
+            },
+          },
+        ],
       });
     }
   }
 
-  // ---------------------------------------------------------------- ambient house director
+  private triggerHallStalker(): void {
+    const preay = this.preay;
+    if (!preay) return;
+    this.game.flags.set(studioScareFlag("hallFlash"), true);
+    this.hallStalkerActive = true;
+    const bulbAt = runtime(1.95, 8.0, 2.02);
+    const farFeet = runtime(0.65, 9.18, FLOOR);
+
+    this.vacuum(2.1, 0.16);
+    this.lights.setHallBulbLevel(0.32, 2.0);
+    this.play("elecFlicker", bulbAt, 0.84);
+    this.play("erhuDread", farFeet, 0.9);
+    this.play("throatRattle", farFeet.add(new Vector3(0, 1.45, 0)), 0.84);
+    this.play("whisper", farFeet.add(new Vector3(0, 1.4, 0)), 0.72);
+    if (this.isDoorOpen("haunt_bedroom_door")) {
+      this.hauntDoorTo("haunt_bedroom_door", "ajar", 0.65);
+    }
+
+    this.falls.push({
+      time: 0,
+      cues: [
+        {
+          at: 0.52,
+          play: () => {
+            // Brief warm surge throws a towering reaching shadow across the dark hall doorway & wall
+            this.setFigureLayer(UNSEEN);
+            preay.place(runtime(1.18, 7.95, FLOOR), Math.PI);
+            preay.perform("reach", 0.96);
+            preay.standStill(0);
+            preay.setEnabled(true);
+            for (const mesh of this.figure) mesh.computeWorldMatrix(true);
+            this.lights.strikeFrom(
+              runtime(2.1, 6.45, 1.38),
+              runtime(0.35, 9.2, 1.65),
+              this.figure,
+              { pulses: [0, 0.16], decay: 0.13 },
+              1.25,
+              new Color3(1, 0.78, 0.5),
+            );
+            this.play("elecFlicker", bulbAt, 0.92);
+          },
+        },
+        {
+          at: 0.72,
+          play: () => {
+            const cur = this.game.camera.globalPosition;
+            const behind = cur.subtract(
+              this.game.camera.getDirection(Vector3.Forward()).scale(0.38),
+            );
+            this.play("wetStepsClose", behind, 0.9);
+            this.play("neckBreath", behind, 0.96);
+            this.play("soraGasp", cur, 0.84);
+            this.score().sting("shock", 0.84);
+            this.game.atmosphere.scare();
+          },
+        },
+        {
+          at: 1.35,
+          play: () => {
+            this.hallStalkerActive = false;
+            preay.watch(null);
+            preay.setEnabled(false);
+            this.setFigureLayer(UNSEEN);
+            this.lights.setHallBulbLevel(0.55, 0.4);
+          },
+        },
+      ],
+    });
+  }
+
+  // ---------------------------------------------------------------- sparse ambient house dread
 
   private stepAmbientHouseSounds(
     phase: 1 | 2 | 3 | 4,
@@ -1274,64 +1535,54 @@ export class StudioScares {
     if (this.time < this.nextAmbientAt || !this.sfx.has("creak")) return;
     const roll = Math.random();
     if (phase === 1) {
-      if (roll < 0.42) {
-        this.play("knock", runtime(2.5, 13.7, 1.0), 0.55);
-      } else {
-        this.play(
-          "creak",
-          eye.add(new Vector3((Math.random() - 0.5) * 3, 1.7, (Math.random() - 0.5) * 3)),
-          0.55,
-        );
-      }
+      // Phase 1 stays mostly silent: only a rare distant structural settle
+      this.play(
+        "creak",
+        eye.add(new Vector3((Math.random() - 0.5) * 3.2, 1.8, (Math.random() - 0.5) * 3.2)),
+        0.42,
+      );
     } else if (phase === 2) {
-      if (roll < 0.35 && !inBathroom(eye)) {
+      if (roll < 0.5 && !inBathroom(eye)) {
         this.play("stepsSlow", runtime(1.6, 15.2, 0.1), 0.52);
-      } else if (roll < 0.7) {
-        this.play("knock", runtime(2.4, 14.1, 1.1), 0.62);
       } else {
-        this.play("creak", eye.add(new Vector3((Math.random() - 0.5) * 2.4, 1.6, -1.8)), 0.65);
+        this.play("knock", runtime(2.4, 14.1, 1.1), 0.55);
       }
     } else {
-      if (!ringing && roll < 0.42) {
+      if (!ringing && roll < 0.45) {
         const behind = eye.subtract(forward.scale(0.85)).add(new Vector3(0, 0.04, 0));
-        this.play("whisper", behind, 0.62);
-      } else if (roll < 0.75) {
-        this.play("stepsSlow", runtime(1.3, 10.6, 0.1), 0.64);
+        this.play("whisper", behind, 0.6);
       } else {
-        this.play(
-          "creak",
-          eye.add(new Vector3((Math.random() - 0.5) * 2.5, 1.6, (Math.random() - 0.5) * 2.5)),
-          0.68,
-        );
+        this.play("stepsSlow", runtime(1.3, 10.6, 0.1), 0.62);
       }
     }
-    const baseGap = phase >= 3 ? 21 : phase === 2 ? 17 : 18;
-    this.nextAmbientAt = this.time + baseGap + Math.random() * 13;
+    const baseGap = phase >= 3 ? 32 : phase === 2 ? 36 : 44;
+    this.nextAmbientAt = this.time + baseGap + Math.random() * 18;
   }
 
-  // ---------------------------------------------------------------- the picture
+  // ---------------------------------------------------------------- Beat 1b: the picture
 
   /** Off its nail, out from the wall, after a brief silence vacuum and wood creak. */
   private pictureFalls(): void {
+    if (this.done("picture")) return;
     this.game.flags.set(studioScareFlag("picture"), true);
     const node = this.pictureNode();
     if (!node) return;
-    this.vacuum(1.6, 0.2);
-    this.play("creak", node.position, 0.45);
-    this.flames?.pulseDraught(0.6, 0.7, -0.5);
+    this.vacuum(1.6, 0.18);
+    this.play("creak", node.position, 0.48);
+    this.flames?.pulseDraught(0.65, 0.7, -0.5);
     this.falls.push({
       time: 0,
       cues: [
         {
-          at: 0.52,
+          at: 0.42,
           play: () => {
             const out = this.awayFromWall(node);
             const piece = this.dynamic("picture", node, this.box(node), 1.6, (at, speed) =>
               this.pictureHits(at, speed),
             );
-            piece.body?.setLinearVelocity(out.scale(0.3));
-            piece.body?.setAngularVelocity(Vector3.Cross(Vector3.Up(), out).scale(1.8));
-            this.play("thud", node.position, 0.35);
+            piece.body?.setLinearVelocity(out.scale(0.36));
+            piece.body?.setAngularVelocity(Vector3.Cross(Vector3.Up(), out).scale(2.1));
+            this.play("thud", node.position, 0.4);
             this.falls.push({
               time: 0,
               cues: [
@@ -1349,8 +1600,8 @@ export class StudioScares {
   }
 
   private pictureHits(at: Vector3, speed: number): void {
-    this.play("picture", at, Math.min(1, 0.45 + speed / 8));
-    this.score().pressure(0.3);
+    this.play("picture", at, Math.min(1, 0.55 + speed / 7));
+    this.score().pressure(0.34);
     const glass = this.scene.getMeshByName("fall_picture_glass");
     if (glass) glass.isVisible = false;
     const pieces = this.brokenGlass("picture_glass", 7, at.add(new Vector3(0, 0.04, 0)), 11);
@@ -1396,7 +1647,7 @@ export class StudioScares {
     }
   }
 
-  // ---------------------------------------------------------------- the shadow
+  // ---------------------------------------------------------------- Beat 1a: Partition Shadow + Double-Tap
 
   private shadowFalls(shot: ShadowShot): void {
     const preay = this.preay;
@@ -1408,6 +1659,9 @@ export class StudioScares {
     preay.standStill(0);
     preay.setEnabled(true);
     for (const mesh of this.figure) mesh.computeWorldMatrix(true);
+
+    this.vacuum(1.8, 0.14);
+    this.lights.setHallBulbLevel(0.05, 0.45);
     this.lights.strikeFrom(
       shot.light,
       shot.wall,
@@ -1415,30 +1669,52 @@ export class StudioScares {
       { pulses: SHADOW.pulses, decay: SHADOW.decay },
       SHADOW.gain,
     );
-    this.score().sting("shock", 0.82);
+    this.score().sting("shock", 0.85);
     this.game.atmosphere.scare();
-    this.flames?.pulseDraught(0.9, 0.2, 0.95);
-    this.play("thunder", shot.light);
+    this.flames?.pulseDraught(0.95, 0.2, 0.95);
+    this.play("deadAirDrop", shot.wall, 0.88);
+    this.play("erhuDread", shot.wall, 0.84);
+    this.play("thunder", shot.light, 0.92);
+
     const eye = this.game.camera.globalPosition;
-    const behind = eye.subtract(this.game.camera.getDirection(Vector3.Forward()).scale(0.6));
+    const behind = eye.subtract(this.game.camera.getDirection(Vector3.Forward()).scale(0.38));
     this.falls.push({
       time: 0,
-      cues: [{ at: 0.35, play: () => this.play("breath", behind, 0.85) }],
+      cues: [
+        {
+          at: 0.18,
+          play: () => {
+            this.play("neckBreath", behind, 0.96);
+            this.play("soraGasp", this.game.camera.globalPosition, 0.78);
+          },
+        },
+        {
+          at: 0.65,
+          play: () => this.lights.setHallBulbLevel(1, 0),
+        },
+        {
+          // Double-tap surprise: just as Sora spins around to an empty room, the framed picture crashes!
+          at: 1.35,
+          play: () => {
+            if (!this.done("picture") && this.pictureAt) this.pictureFalls();
+          },
+        },
+      ],
     });
-    this.hideFigureAt = this.time + 1.2;
+    this.hideFigureAt = this.time + 1.15;
   }
 
-  // ---------------------------------------------------------------- the altar
+  // ---------------------------------------------------------------- Beat 4b: Altar Collapse + Double-Strobe Blackout Approach
 
   private altarFalls(): void {
     this.altar = "falling";
     this.game.flags.set(studioScareFlag("altar"), true);
     const parts = this.altarParts();
     const score = this.score();
-    this.vacuum(ALTAR.powerCut + POWER_CUT.length, 0.14);
+    this.vacuum(ALTAR.powerCut + POWER_CUT.length + 0.3, 0.1);
     this.flames?.pulseDraught(1.0, 0.4, 0.9);
     const lead = score.lead("shock");
-    score.sting("shock", 0.95);
+    score.sting("shock", 0.96);
     const tearAt = this.group("fall_altar_bracket")?.getAbsolutePosition().clone() ?? this.altarAt;
     let angle = 0,
       spin = 0,
@@ -1452,12 +1728,13 @@ export class StudioScares {
           at: lead,
           play: () => {
             this.play("tear", tearAt ?? Vector3.Zero());
+            this.play("deadAirDrop", tearAt ?? Vector3.Zero(), 0.92);
             this.game.atmosphere.scare();
             this.flames?.extinguish("altar", true);
             this.letGo();
           },
         },
-        { at: lead + 0.6, play: () => this.heartbeat(true) },
+        { at: lead + 0.55, play: () => this.heartbeat(true) },
         {
           at: cut,
           play: () => {
@@ -1466,26 +1743,63 @@ export class StudioScares {
           },
         },
         {
-          at: cut + 0.52,
+          // Blackout Flash 1: storm lightning throws a towering reaching shadow across the north
+          // bedroom wall beside the smashed altar — unseen caster, zero visible ghost model.
+          at: cut + 0.36,
           play: () => {
             if (this.preay) {
-              const eye = this.game.camera.globalPosition;
-              const doorFeet = runtime(0.62, 9.28, FLOOR);
-              this.setFigureLayer(VISIBLE);
-              this.preay.place(doorFeet, Math.atan2(eye.x - doorFeet.x, eye.z - doorFeet.z));
-              this.preay.release();
+              this.setFigureLayer(UNSEEN);
+              this.preay.place(runtime(1.62, 11.45, FLOOR), Math.PI);
+              this.preay.perform("reach", 0.94);
               this.preay.standStill(0);
               this.preay.setEnabled(true);
+              for (const mesh of this.figure) mesh.computeWorldMatrix(true);
+              this.lights.strikeFrom(
+                runtime(2.15, 9.55, 1.42),
+                runtime(1.15, 13.98, 1.62),
+                this.figure,
+                { pulses: [0, 0.18], decay: 0.12 },
+                2.8,
+              );
+            } else {
+              this.lights.strike();
             }
-            this.lights.strike();
-            this.play("thunder", runtime(2.2, 1.0, 2.4), 0.9);
+            this.play("thunder", runtime(2.2, 1.0, 2.4), 0.94);
           },
         },
         {
-          at: cut + Math.min(POWER_RETURN - 0.08, 1.05),
+          // Pitch dark between flashes: wet bare footsteps sprint across the tiles straight toward Sora.
+          at: cut + 0.58,
           play: () => {
+            const midRoom = runtime(1.65, 11.1, FLOOR);
+            this.play("wetStepsClose", midRoom, 0.96);
+            this.play("throatRattle", midRoom.add(new Vector3(0, 1.45, 0)), 0.88);
+          },
+        },
+        {
+          // 1.28 s electrical snap-back flash: no visible ghost — only the bedroom door swinging ajar & erhu dread.
+          at: cut + 1.26,
+          play: () => {
+            this.preay?.watch(null);
             this.preay?.setEnabled(false);
             this.setFigureLayer(UNSEEN);
+            if (this.isDoorOpen("haunt_bedroom_door")) {
+              this.hauntDoorTo("haunt_bedroom_door", "ajar", 2.8);
+            }
+            this.play("erhuDread", this.game.camera.globalPosition, 0.94);
+            this.play("soraGasp", this.game.camera.globalPosition, 0.86);
+            this.game.atmosphere.scare();
+          },
+        },
+        {
+          // Lights die for 110 ms -> cold wet breath right behind Sora's ear before power stabilizes.
+          at: cut + 1.38,
+          play: () => {
+            const eye = this.game.camera.globalPosition;
+            const behind = eye.subtract(
+              this.game.camera.getDirection(Vector3.Forward()).scale(0.35),
+            );
+            this.play("neckBreath", behind, 0.96);
           },
         },
         {

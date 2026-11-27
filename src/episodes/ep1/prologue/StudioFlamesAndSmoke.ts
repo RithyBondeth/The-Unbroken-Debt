@@ -86,6 +86,10 @@ export class StudioFlamesAndSmoke {
   private draught = 0;
   private draughtX = 0.6;
   private draughtZ = 0.8;
+  /** Unnatural spirit-omen pull on the altar incense smoke (pulls horizontally toward Sora/doorway). */
+  private omenSmoke = 0;
+  private omenDirX = 0.7;
+  private omenDirZ = 0.7;
   private time = 0;
 
   constructor(private readonly scene: Scene) {
@@ -322,6 +326,35 @@ export class StudioFlamesAndSmoke {
     this.draughtZ = dirZ;
   }
 
+  /**
+   * Asian folk omen: pulls the altar incense smoke unnaturally sideways/horizontally
+   * toward a spirit or the doorway instead of rising straight up.
+   */
+  setAltarOmenSmoke(strength: number, dirX = 0.7, dirZ = 0.7): void {
+    this.omenSmoke = Math.max(0, Math.min(1, strength));
+    const len = Math.hypot(dirX, dirZ) || 1;
+    this.omenDirX = dirX / len;
+    this.omenDirZ = dirZ / len;
+  }
+
+  /** Snuffs out a single altar candle by index (0, 1, or 2) with curling grey wick smoke. */
+  extinguishAltarCandle(index: number, emitSnuffSmoke = true): void {
+    const altarCandles = this.candles.filter((c) => c.group === "altar");
+    const target = altarCandles[index];
+    if (!target || !target.lit) return;
+    target.lit = false;
+    target.flame.isVisible = false;
+    target.halo.isVisible = false;
+    if (emitSnuffSmoke) target.snuffSmokeLeft = 4.6;
+    const remaining = altarCandles.filter((c) => c.lit).length;
+    if (remaining === 0) {
+      this.altarLit = false;
+      if (this.altarCandleLight) this.altarCandleLight.intensity = 0;
+    } else if (this.altarCandleLight) {
+      this.altarCandleBase = 0.72 * (remaining / Math.max(1, altarCandles.length));
+    }
+  }
+
   /** Snuffs out a candle/incense group with a realistic burst of curling extinguished-wick smoke. */
   extinguish(group: FlameGroup, emitSnuffSmoke = true): void {
     for (const c of this.candles) {
@@ -441,15 +474,18 @@ export class StudioFlamesAndSmoke {
       inc.emberHalo.scaling.set(breath, breath, 1);
 
       inc.smokeAcc += dt;
-      if (inc.smokeAcc >= 0.18) {
+      if (inc.smokeAcc >= (inc.group === "altar" && this.omenSmoke > 0.2 ? 0.13 : 0.18)) {
         inc.smokeAcc = 0;
+        const omen = inc.group === "altar" ? this.omenSmoke : 0;
         this.spawnWisp(inc.anchor.add(new Vector3(0, 0.004, 0)), {
-          life: 3.4,
-          rise: 0.15,
+          life: omen > 0.2 ? 2.8 : 3.4,
+          rise: 0.15 * (1 - omen * 0.72),
           baseSize: 0.015,
           endSize: 0.135,
-          alpha: 0.24,
-          curlAmp: 0.032,
+          alpha: omen > 0.2 ? 0.3 : 0.24,
+          curlAmp: 0.032 * (1 - omen * 0.65),
+          driftX: omen > 0.05 ? this.omenDirX * 0.26 * omen : undefined,
+          driftZ: omen > 0.05 ? this.omenDirZ * 0.26 * omen : undefined,
         });
       }
     }
@@ -492,6 +528,8 @@ export class StudioFlamesAndSmoke {
       endSize: number;
       alpha: number;
       curlAmp: number;
+      driftX?: number;
+      driftZ?: number;
     },
     initialAge = 0,
   ): void {
@@ -508,8 +546,8 @@ export class StudioFlamesAndSmoke {
     slot.curlAmp = opts.curlAmp * (0.8 + Math.random() * 0.45);
     slot.curlFreq = 1.8 + Math.random() * 1.5;
     slot.phase = Math.random() * Math.PI * 2;
-    slot.driftX = (Math.random() - 0.5) * 0.022;
-    slot.driftZ = (Math.random() - 0.5) * 0.022;
+    slot.driftX = opts.driftX ?? (Math.random() - 0.5) * 0.022;
+    slot.driftZ = opts.driftZ ?? (Math.random() - 0.5) * 0.022;
     slot.spin = (Math.random() - 0.5) * 0.6;
     slot.mesh.position.copyFrom(at);
     slot.mesh.scaling.set(opts.baseSize, opts.baseSize, 1);
