@@ -205,79 +205,12 @@ def bamboo(b, m, base, top, r0, r1, rng, node=0.38):
 
 
 def well(coll, m, ground, rng):
-    """The well inside the south gate, built new; the other two go."""
+    """The well inside the south gate; the other two go. Built by village_well.py (the
+    user, Nov 26, 2026: the plaster drum and smooth pole read as a cartoon)."""
+    import village_well
+
     RK.delete(RK.roots(re.compile(r"^(well_[01]_|col_well_[01]$|ng_well_|col_ng_well$)")))
-    x, y = WELL
-    g = ground(x, y)
-    b = Batch("well")
-    R, r_in, hgt = 0.82, 0.56, 0.62              # the curb's outer and inner radius, its height
-    # A round curb of brick under lime plaster, the plaster fallen away in patches near the
-    # ground, a worn timber collar on its lip; down inside, the brick shaft and black water.
-    wob = rng.uniform(0, math.tau)
-    rad = lambda a, h: 1 + 0.012 * math.sin(3 * a + wob) + 0.006 * math.sin(7 * a + 2 * wob)
-    b.lathe(m["plaster"], [(R, g - 0.1), (R, g + hgt - 0.04), (R - 0.02, g + hgt)], xf=place(x, y, 0), segments=48, tile=0.6,
-            radial=rad, cap=False)
-    b.lathe(m["brick"], [(R + 0.004, g - 0.1), (R + 0.006, g + 0.2), (R + 0.004, g + 0.26)], xf=place(x, y, 0), segments=48, tile=0.5,
-            radial=lambda a, h: rad(a, h) * (1.0 if math.sin(2 * a + wob) > -0.2 else 0.985), cap=False)
-    b.lathe(m["brick"], [(r_in, g + hgt - 0.02), (r_in, g - 1.6)], xf=place(x, y, 0), segments=40, tile=0.5, cap=False)
-    b.lathe(m["cement"], [(R + 0.02, g + hgt - 0.02), (R + 0.025, g + hgt + 0.05), (R - 0.01, g + hgt + 0.065), (r_in + 0.01, g + hgt + 0.065),
-                          (r_in - 0.015, g + hgt + 0.05), (r_in - 0.015, g + hgt - 0.02)], xf=place(x, y, 0), segments=48, tile=0.6, radial=rad)
-    b.lathe(m["dark_water"], [(r_in, g - 1.25), (0, g - 1.25)], xf=place(x, y, 0), segments=32, tile=0.5, cap=False)
-    b.lathe(m["void"], [(r_in, g - 1.6), (0, g - 1.6)], xf=place(x, y, 0), segments=32, tile=0.5, cap=False)
-    top = g + hgt + 0.06
-    s = R
-    # Black streaks down the plaster from its lip, a green band of moss at its foot.
-    b.lathe(m["moss_band"], [(R + 0.008, g - 0.02), (R + 0.007, g + 0.12)], xf=place(x, y, 0), segments=48, tile=0.4, radial=rad, cap=False)
-    RK.ground_decal(coll, "well_wet_ground", m["wet_ground"], ground, x - 0.25, y + 0.2, 3.2, 2.8, 0.4, lift=0.01, n=10)
-    # The sweep: a forked post, the bamboo pole pivoting in its fork, stones at its short
-    # end in a rattan basket, the long end over the well with the rope to the bucket.
-    px, py = x + 1.5, y - 0.4
-    pg = ground(px, py)
-    fork_z = pg + 2.15
-    b.tube(m["timber"], [(px, py, pg - 0.4), (px + 0.02, py, fork_z - 0.12)], [0.085, 0.07], sides=9)
-    for sgn in (-1, 1):
-        b.tube(m["timber"], [(px + 0.02, py, fork_z - 0.14), (px + 0.02, py + sgn * 0.12, fork_z + 0.12)], [0.05, 0.038], sides=7)
-    b.tube(m["nail"] if "nail" in m else m["timber"], [(px + 0.02, py - 0.13, fork_z), (px + 0.02, py + 0.13, fork_z)], 0.012, sides=6)
-    long_end = Vector((x + 0.05, y + 0.02, fork_z + 1.05))
-    pivot = Vector((px + 0.02, py, fork_z))
-    d = (pivot - long_end).normalized()
-    short_end = pivot + d * 1.7
-    bamboo(b, m, long_end, short_end, 0.032, 0.05, rng)
-    for k in range(9):                            # the counterweight: stones lashed in a basket
-        sp = short_end - d * rng.uniform(0.0, 0.25) + Vector((rng.normal(0, 0.06), rng.normal(0, 0.06), -0.12 + rng.normal(0, 0.05)))
-        b.box(m["stone"], (rng.uniform(0.1, 0.17),) * 2 + (rng.uniform(0.08, 0.12),), tuple(sp), chamfer=0.02, jitter=0.006, rng=rng)
-    for k in range(5):
-        b.tube(m["coir"], [tuple(short_end - d * 0.3 + Vector((0, 0, 0.02))), tuple(short_end + Vector((0, 0.12 * (k - 2) / 2, -0.2)))],
-               0.006, sides=4)
-    bucket_z = top + 0.02
-    rope = [tuple(long_end), (x + 0.05, y + 0.02, long_end.z - 0.6), (x + 0.12, y + 0.1, bucket_z + 0.35)]
-    b.tube(m["coir"], rope, 0.007, sides=5)
-    # Talismans: a strip of red cloth and a white thread wound round the post.
-    for k in range(6):
-        zz = pg + 1.0 + k * 0.012
-        b.tube(m["cloth_red"], [(px + 0.08 * math.cos(a), py + 0.08 * math.sin(a), zz + 0.004 * a) for a in np.linspace(0, math.tau, 9)],
-               0.006, sides=4)
-    built = b.build(coll)
-    ring = built.get(m["plaster"])
-    if ring is not None:
-        for k in range(4):
-            a = k * math.pi / 2 + 0.3
-            out = Vector((math.cos(a), math.sin(a), 0))
-            side = Vector((-math.sin(a), math.cos(a), 0)) * 0.5
-            c = Vector((x, y, 0)) + out * (R + 0.4)
-            d = RK.decal(coll, f"well_streaks_{k}", m["streaks"], [tuple(c - side + Vector((0, 0, g + 0.02))), tuple(c + side + Vector((0, 0, g + 0.02))),
-                                                                  tuple(c + side + Vector((0, 0, g + hgt))), tuple(c - side + Vector((0, 0, g + hgt)))], n=8)
-            RK.press(d, ring, -out, 0.004)
-    scans = RK.Scans()
-    scans.put(coll, "wooden_bucket_01", None, "well_bucket", Matrix.Translation((x + 0.12, y + 0.1, top)) @ Matrix.Rotation(0.6, 4, "Z"),
-              size=0.3, along=2, tris=5000)
-    jar = scans.put(coll, "water_jar", None, "well_jar", Matrix.Translation((x - 1.15, y + 0.65, ground(x - 1.15, y + 0.65) - 0.02)) @
-                    Matrix.Rotation(1.3, 4, "Z"), size=0.78, along=2, tris=8000)
-    scans.put(coll, "wooden_stool_02", None, "well_stool", Matrix.Translation((x - 0.9, y - 0.75, ground(x - 0.9, y - 0.75))) @
-              Matrix.Rotation(0.4, 4, "Z"), size=0.24, along=2, tris=5000)
-    collider("well", coll, x - s, x + s, y - s, y + s, g - 0.1, top)
-    collider("well_post", coll, px - 0.1, px + 0.1, py - 0.1, py + 0.1, pg, fork_z)
-    collider("well_jar", coll, x - 1.5, x - 0.8, y + 0.3, y + 1.0, g - 0.1, g + 0.75)
+    village_well.build(coll, ground)
     print("[village] well built new; old wells out", flush=True)
 
 

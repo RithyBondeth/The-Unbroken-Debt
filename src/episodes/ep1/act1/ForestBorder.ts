@@ -71,13 +71,8 @@ const TEMPLATES: Record<Species, string[][]> = {
     `pachira_aquatica_01_bark_${v}.001`,
     `pachira_aquatica_01_leaves_${v}.001`,
   ]),
-  shrub: [
-    ["shrub_02_a.001"],
-    ["shrub_02_c.001"],
-    ["shrub_03_a.001"],
-    ["shrub_03_c.001"],
-    ["shrub_03_d.001"],
-  ],
+  // (No shrub_02: its leggy stalks read as toys, the user, Nov 26, 2026.)
+  shrub: [["shrub_03_a.001"], ["shrub_03_c.001"], ["shrub_03_d.001"]],
   fern: [["fern_02_a.001"], ["fern_02_b.001"], ["fern_02_c.001"], ["fern_02_d.001"]],
 };
 /**

@@ -147,12 +147,24 @@ def roof_rects():
     return out
 
 
-def fill_weight(x, side):
-    """1 where a shop's fill raises the far bank to the shoulder's height, easing out."""
+def pad_weight(px, py, side):
+    """1 on the earth pad a shop stands on (its rooms, veranda and steps, a little round),
+    falling to 0 within 0.35 m of the pad's edge: a raised platform with a short steep
+    side, not a long shallow ramp lying nearly level with the forest floor (where the two
+    surfaces crossed, the game drew the bank as dark blots in the grass)."""
     w = 0.0
     for sp in SHOPS:
-        if sp["side"] == side:
-            w = max(w, 1.0 - smoothstep(sp["hw"] + 0.6, sp["hw"] + 2.4, abs(x - sp["x"])))
+        if sp["side"] != side:
+            continue
+        ox, oy, yaw = shop_frame(sp)
+        c, s_ = math.cos(-yaw), math.sin(-yaw)
+        dx, dy = px - ox, py - oy
+        lx, ly = c * dx - s_ * dy, s_ * dx + c * dy
+        if lx < -4.2 or lx > 3.2 or abs(ly) > sp["hw"] + 0.9:
+            continue
+        across = 1.0 - smoothstep(sp["hw"] + 0.25, sp["hw"] + 0.6, abs(ly))
+        back = 1.0 - smoothstep(-3.55, -3.9, lx) if lx < -3.55 else 1.0
+        w = max(w, across * back)
     return w
 
 
@@ -173,6 +185,7 @@ def build(coll, ground):
     cleared = clear_ground(ground)
     m = materials()
     road(coll, ground, base, m)
+    gravel(coll, ground, base, m, np.random.default_rng(SEED + 3))
     culvert(coll, ground, base, m, rng)
     insulators, gaps = shops(coll, ground, base, m)
     boards(coll, ground, base, m)
@@ -181,6 +194,7 @@ def build(coll, ground):
     verge(coll, ground, base, m, rng)
     backdrop(coll, ground, np.random.default_rng(SEED + 1))
     intruders = clear_intruders(base)
+    no_shrub_02()
     colliders(coll, ground, base, gaps)
     print(f"[village_road] cleared {cleared} (+{intruders} leaning into shops), objects {len(coll.objects)}", flush=True)
 
@@ -213,6 +227,58 @@ class Base:
 
     def __call__(self, x):
         return float(np.interp(x, self.xs, self.h))
+
+
+def _potholes():
+    """Dry holes worn in the carriageway, in and beside the wheel tracks, often in twos and
+    threes (no water stands in them: the user wants rain, not water)."""
+    rng = np.random.default_rng(SEED + 7)
+    out = []
+    x = -REACH + 2.0
+    while x < REACH - 2.0:
+        x += float(rng.uniform(2.2, 6.5)) if abs(x) < WALK_X + 4 else float(rng.uniform(5.0, 11.0))
+        side = 1.0 if rng.random() < 0.5 else -1.0
+        r = float(rng.uniform(0.3, 0.62))
+        lt = side * float(rng.uniform(0.35, min(1.15, HALF - 0.25 - r)))
+        out.append((x, lt, r, float(rng.uniform(0.035, 0.075)) * (0.6 + 0.4 * r / 0.45), float(rng.uniform(0, 6.283))))
+        for _k in range(int(rng.choice([0, 0, 1, 2]))):
+            r2 = r * float(rng.uniform(0.55, 0.85))
+            lt2 = float(np.clip(lt + rng.uniform(-0.45, 0.45), -(HALF - 0.25 - r2), HALF - 0.25 - r2))
+            out.append((x + float(rng.uniform(0.55, 1.3)), lt2, r2, out[-1][3] * float(rng.uniform(0.6, 0.9)),
+                        float(rng.uniform(0, 6.283))))
+    out.sort()
+    return out
+
+
+POTHOLES = _potholes()
+_PH_X = [p[0] for p in POTHOLES]
+
+
+def pothole(x, lt):
+    """How deep the holes are at (x, lateral) (m, positive down; a slight lip round each), how
+    far inside the nearest one the point is (0 at its edge, 1 at its middle), and how near
+    the broken crust just outside one (1 on it)."""
+    import bisect
+
+    depth, inside, rim = 0.0, 0.0, 0.0
+    i = bisect.bisect_left(_PH_X, x - 0.9)
+    while i < len(POTHOLES) and POTHOLES[i][0] < x + 0.9:
+        px, pl, r, d, ph = POTHOLES[i]
+        i += 1
+        dx, dl = x - px, lt - pl
+        rr = math.hypot(dx, dl)
+        if rr > r * 1.5:
+            continue
+        th = math.atan2(dl, dx)
+        re = r * (1.0 + 0.16 * math.sin(3 * th + ph) + 0.09 * math.sin(5 * th - 2 * ph))
+        t = rr / re
+        if t < 1.0:
+            # A flat-bottomed bowl, steep at the edge where the crust has broken away.
+            depth += d * (1.0 - smoothstep(0.55, 1.0, t)) * (0.85 + 0.15 * math.cos(t * 3.0))
+            inside = max(inside, 1.0 - t)
+        depth -= 0.007 * math.exp(-(((t - 1.08) / 0.13) ** 2))
+        rim = max(rim, math.exp(-(((t - 1.2) / 0.22) ** 2)))
+    return depth, inside, rim
 
 
 PLANTS = ("treewall_", "prop_", "fs_", "grass_", "weed_", "fern", "shrub", "bark_debris", "dry_branches", "pachira",
@@ -265,6 +331,20 @@ def clear_ground(ground):
                 bpy.data.objects.remove(c, do_unlink=True)
             gone += 1
     return gone
+
+
+def no_shrub_02():
+    """Every shrub_02 in the village goes (the user, Nov 26, 2026: "Remove all of this kind
+    of grasses"): the leggy, sparse-leaved stalks read as toys. The game's forest border
+    no longer clones it either (ForestBorder.ts)."""
+    import bpy
+
+    gone = [o for o in bpy.data.objects if "shrub_02" in o.name]
+    for o in gone:
+        for c in [o] + list(o.children_recursive):
+            if c.name in bpy.data.objects:
+                bpy.data.objects.remove(c, do_unlink=True)
+    print(f"[village_road] shrub_02 removed: {len(gone)}", flush=True)
 
 
 def clear_intruders(base):
@@ -358,7 +438,8 @@ def materials():
     m["bamboo_wall"]["tile"] = 0.9
     m["laterite"] = library_material("red_laterite_soil_stones", "M_vroad_laterite", tint=(0.5, 0.39, 0.31), tile=1.8)
     m["bank"] = library_material("brown_mud_leaves_01", "M_vroad_bank", tint=(0.62, 0.56, 0.5), tile=2.0)
-    for k in ("laterite", "bank"):
+    m["gravel"] = library_material("red_laterite_soil_stones", "M_vroad_gravel", tint=(0.66, 0.5, 0.4), tile=0.45)
+    for k in ("laterite", "bank", "gravel"):
         _vertex_colour_multiply(m[k])
     # The driving scene's glows are set for headlights and a moving car; on a dark road
     # Sora stands still on, they glare: windows, the noodle cart's case, the tubes and the
@@ -385,32 +466,65 @@ def _road_height(x, lt, ground, base):
         meander = 0.10 * math.sin(x * 0.14) + 0.05 * math.cos(x * 0.31)
         ls = abs(lt - meander * math.exp(-((lt / 2.3) ** 2)))
         taper = min(1.0, (2.62 - a) / 0.35)
-        rut = 0.052 * math.exp(-(((ls - 0.74) / 0.2) ** 2)) * (1 + 0.22 * math.sin(x * 0.19 + side))
-        berm = 0.018 * math.exp(-(((ls - 1.02) / 0.12) ** 2)) + 0.012 * math.exp(-(((ls - 0.46) / 0.1) ** 2))
+        # Two wheel tracks of the ox carts and the odd truck, deeper where the wet seasons
+        # have churned them, wandering a little; a fainter third where wheels ran wide.
+        track = 0.74 + 0.05 * math.sin(x * 0.27 + side) + 0.03 * math.sin(x * 0.83 - side)
+        churn = 0.5 + 0.5 * math.sin(x * 0.11 + 0.8 * side) * math.sin(x * 0.047 + 1.3)
+        rut = (0.032 + 0.05 * churn) * math.exp(-(((ls - track) / (0.17 + 0.05 * churn)) ** 2))
+        rut += 0.016 * math.exp(-(((ls - 1.32) / 0.13) ** 2)) * (0.5 + 0.5 * math.sin(x * 0.21 - side))
+        berm = 0.02 * math.exp(-(((ls - track - 0.29) / 0.12) ** 2)) + 0.013 * math.exp(-(((ls - track + 0.3) / 0.1) ** 2))
         grain = 0.007 * math.sin(x * 1.8 + lt * 3) + 0.004 * math.sin(x * 4.3 - lt * 7.1) + 0.0025 * math.sin(x * 11.7 + lt * 5.3)
-        z += (berm - rut + grain) * taper
+        # In the ruts the mud was trodden by the oxen and dried in clods.
+        clods = 0.008 * churn * math.exp(-(((ls - track) / 0.2) ** 2)) * math.sin(x * 9.1 + lt * 13.0) * math.sin(x * 6.3 - lt * 4.0)
+        z += (berm - rut + grain + clods) * taper - pothole(x, lt)[0]
     local = ground(*at(x, lt))
+    if a >= 3.45:
+        # The terrain round the vertex as well as under it: between the road's vertices (0.9 m
+        # apart past the walls) a bump of the terrain can rise through the bank's faces.
+        h = 0.45 if abs(x) > 34.0 else 0.11
+        near = [local] + [ground(*at(x + dx, lt + dl)) for dx, dl in ((h, 0.0), (-h, 0.0), (0.0, 0.09), (0.0, -0.09))]
+        hi, lo = max(near), min(near)
+    else:
+        hi = lo = local
+    f = 0.0
     if a > 3.75:
-        # Past the ditch's bottom the bank follows the forest floor, not the road's level.
+        # Past the ditch's bottom the bank follows the forest floor, not the road's level;
+        # beyond the spoil bank its toe runs down into the forest floor, so the terrain takes
+        # over along one ragged line. The shops stand on earth pads with short steep sides.
         w = smoothstep(3.75, 4.6, a)
         z = (1 - w) * z + w * (local + profile(lt))
-        f = fill_weight(x, side)
-        if f > 0 and a > 4.4:
-            fill = b + FILL - 0.015 * (a - 4.6) - 0.3 * smoothstep(10.6, 11.5, a)
-            z = (1 - f) * z + f * max(fill, local - 0.03)
-    if side > 0 and a > SHOULDER:
-        c = causeway_weight(x)
-        if c > 0:
-            track = local + 0.012
-            cw = b + profile(SHOULDER) + (track - b - profile(SHOULDER)) * smoothstep(SHOULDER, 6.0, a)
-            if a > 6.0:
-                cw = local + 0.012 - 0.04 * smoothstep(6.0, 7.2, a)
-            z = (1 - c) * z + c * cw
+        wob = 0.18 * math.sin(x * 0.9 + side) + 0.1 * math.sin(x * 2.3 - 1.0)
+        z -= 0.32 * smoothstep(5.45 + wob, 6.2 + wob, a)
+        if a > 4.4:
+            f = pad_weight(*at(x, lt), side)
+            if f > 0:
+                fill = b + FILL - 0.015 * (a - 4.6)
+                z = (1 - f) * z + f * max(fill, local + 0.03)
+    c = causeway_weight(x) if side > 0 and a > SHOULDER else 0.0
+    if c > 0:
+        tz = local + 0.03
+        cw = b + profile(SHOULDER) + (tz - b - profile(SHOULDER)) * smoothstep(SHOULDER, 5.8, a)
+        if a > 5.8:
+            cw = local + 0.03 - 0.33 * smoothstep(5.8, 6.4, a)
+        z = (1 - c) * z + c * cw
+    # Never lying level with the forest floor, where the game can't tell which is in front:
+    # on top of it by a clear margin wherever the bank shows, or well under it (`ground` is
+    # the terrain as drawn, its triangles: laid 1 cm over a bilinear reading, the bank sank
+    # under it in patches the game showed as dark blots; the user, Nov 26, 2026: "Fix these
+    # kind of road").
     if a < 3.45:
         z = max(z, local + 0.04)
-    elif a < 7.0:
-        z = max(z, local + 0.01)
+    elif a < 5.3 or f >= 0.5 or (c >= 0.5 and a < 5.8):
+        z = max(z, hi + 0.025)
+    elif z < hi + 0.04:
+        z = min(z, lo - 0.1)
     return z
+
+
+def surface_z(x, lt, ground, base):
+    """The ground a thing set down at (x, lateral) stands on: the road's bank, or the
+    forest floor where the bank has gone under it."""
+    return max(_road_height(x, lt, ground, base), ground(*at(x, lt)))
 
 
 def _road_colour(x, lt, rng_noise):
@@ -425,13 +539,23 @@ def _road_colour(x, lt, rng_noise):
         r, g, b = r * (1 - w) + c[0] * w, g * (1 - w) + c[1] * w, b * (1 - w) + c[2] * w
 
     if a < 2.7:
-        mix((0.55, 0.52, 0.5), 0.85 * math.exp(-(((ls - 0.74) / 0.26) ** 2)))
+        track = 0.74 + 0.05 * math.sin(x * 0.27 + (1 if lt >= 0 else -1)) + 0.03 * math.sin(x * 0.83 - (1 if lt >= 0 else -1))
+        mix((0.55, 0.52, 0.5), 0.85 * math.exp(-(((ls - track) / 0.24) ** 2)))
         mix((0.74, 0.8, 0.62), 0.35 * math.exp(-((lt / 0.32) ** 2)) * (0.5 + 0.5 * math.sin(x * 0.37)))
         # Dark wet patches where the rain lies on the crown a while (no standing water).
         mix((0.6, 0.57, 0.54), 0.55 * smoothstep(0.62, 0.85, rng_noise))
+        # The holes: damp silt washed into them, darker toward the middle, a paler dry lip.
+        _d, inside, _rim = pothole(x, lt)
+        if inside > 0:
+            mix((0.42, 0.39, 0.37), min(1.0, 0.45 + inside))
+        # Dust and fine gravel on the crown and the berms, paler where the wheels don't run.
+        mix((1.0, 0.98, 0.95), 0.6 * smoothstep(0.55, 0.8, _noise2(x * 2.3, lt * 3.1)) * (1 - math.exp(-(((ls - track) / 0.3) ** 2))))
     mix((0.66, 0.72, 0.56), 0.8 * smoothstep(2.35, 3.0, a) * (1 - smoothstep(3.6, 3.9, a)))
     mix((0.36, 0.35, 0.33), 0.9 * math.exp(-(((a - 4.05) / 0.33) ** 2)))
-    mix((0.7, 0.74, 0.6), 0.5 * smoothstep(4.5, 5.2, a))
+    mix((0.7, 0.74, 0.6), 0.5 * smoothstep(4.5, 5.2, a) * (1 - smoothstep(5.0, 5.6, a)))
+    # Toward its toe the bank darkens to the forest floor's wet mud, so where the terrain
+    # takes over there is no pale edge.
+    mix((0.46, 0.43, 0.4), 0.85 * smoothstep(5.0, 5.9, a))
     if lt > SHOULDER:
         mix((0.62, 0.56, 0.5), 0.6 * causeway_weight(x))
     return r, g, b
@@ -448,10 +572,10 @@ def road(coll, ground, base, m):
     metres at each material's tile."""
     import bpy
 
-    carriage = [round(v, 3) for v in np.arange(-HALF, HALF + 0.001, 0.18)]
+    carriage = [round(v, 3) for v in np.arange(-HALF, HALF + 0.001, 0.15)]
     outer = [p for p, _z in PROFILE if p > HALF]
     lats = sorted(set([-p for p in outer] + carriage + outer))
-    xs = list(np.arange(-REACH, -34.0, 0.9)) + list(np.arange(-34.0, 34.0, 0.3)) + list(np.arange(34.0, REACH + 0.01, 0.9))
+    xs = list(np.arange(-REACH, -34.0, 0.9)) + list(np.arange(-34.0, 34.0, 0.2)) + list(np.arange(34.0, REACH + 0.01, 0.9))
     verts, cols, uvs_v = [], [], []
     for x in xs:
         for lt in lats:
@@ -467,6 +591,11 @@ def road(coll, ground, base, m):
             faces.append((a, a + n, a + n + 1, a + 1))
             mid = abs(lats[i] + lats[i + 1]) / 2
             slots.append(0 if mid < SHOULDER + 0.12 else 1)
+    # Faces lying wholly under the forest floor are left out: nothing would see them.
+    hidden = [verts[i][2] < ground(verts[i][0], verts[i][1]) - 0.04 for i in range(len(verts))]
+    keep = [k for k, f in enumerate(faces) if not all(hidden[i] for i in f)]
+    faces = [faces[k] for k in keep]
+    slots = [slots[k] for k in keep]
     me = bpy.data.meshes.new("vroad_road")
     me.from_pydata(verts, [], faces)
     me.materials.append(m["laterite"])
@@ -489,6 +618,102 @@ def road(coll, ground, base, m):
     obj = bpy.data.objects.new("vroad_road", me)
     coll.objects.link(obj)
     print(f"[village_road] road {len(verts)} verts, {len(faces)} quads", flush=True)
+    return obj
+
+
+def gravel(coll, ground, base, m, rng):
+    """Laterite gravel the wheels have worked out of the road: pebbles over the crown and the
+    berms, thrown to the shoulders' edge and heaped round the holes' broken crust, few in the
+    ruts and the holes; fist-sized lumps along the carriageway's edges. Each sits 40% of its
+    height into the road, under the lowest point beneath it, so none rests on top like a toy
+    (the user, Nov 26, 2026: "more realistic, detailed, and feel like natural")."""
+    import bmesh
+    import bpy
+    from mathutils import Matrix, Vector
+
+    def proto(sub):
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
+        vs = [tuple(v.co) for v in bm.verts]
+        fs = [tuple(v.index for v in f.verts) for f in bm.faces]
+        bm.free()
+        return vs, fs
+
+    small, big = proto(1), proto(2)
+    palette = [(0.95, 0.74, 0.6), (0.82, 0.6, 0.48), (0.66, 0.5, 0.42), (1.0, 0.86, 0.72), (0.56, 0.44, 0.38),
+               (0.88, 0.86, 0.82)]
+    weights = np.array([0.26, 0.24, 0.18, 0.12, 0.14, 0.06])
+    verts, faces, fcols = [], [], []
+
+    def stone(x, lt, size, shape):
+        pv, pf = shape
+        sx, sy = size * float(rng.uniform(0.8, 1.3)), size * float(rng.uniform(0.65, 1.05))
+        sz = size * float(rng.uniform(0.42, 0.72))
+        rot = Matrix.Rotation(float(rng.uniform(0, 6.283)), 3, "Z") @ Matrix.Rotation(float(rng.normal(0, 0.22)), 3, "X")
+        reach = 0.5 * max(sx, sy)
+        lowest = min(surface_z(x + dx, lt + dl, ground, base)
+                     for dx, dl in ((0, 0), (reach, 0), (-reach, 0), (0, reach), (0, -reach)))
+        px, py = at(x, lt)
+        centre = Vector((px, py, lowest - 0.4 * sz + 0.5 * sz))
+        o = len(verts)
+        bumps = rng.normal(0, 0.11, len(pv))
+        for (vx, vy, vz), k in zip(pv, bumps):
+            verts.append(tuple(centre + rot @ (Vector((vx * sx / 2, vy * sy / 2, vz * sz / 2)) * (1.0 + float(k)))))
+        c = palette[int(rng.choice(len(palette), p=weights / weights.sum()))]
+        shade = float(rng.uniform(0.85, 1.08))
+        for f in pf:
+            faces.append(tuple(o + i for i in f))
+            fcols.append((min(1.0, c[0] * shade), min(1.0, c[1] * shade), min(1.0, c[2] * shade)))
+
+    n = 0
+    for _ in range(7000):
+        x = float(rng.uniform(-WALK_X - 3.0, WALK_X + 3.0))
+        lt = float(rng.uniform(-3.3, 3.3))
+        a = abs(lt)
+        side = 1 if lt >= 0 else -1
+        meander = 0.10 * math.sin(x * 0.14) + 0.05 * math.cos(x * 0.31)
+        ls = abs(lt - meander * math.exp(-((lt / 2.3) ** 2)))
+        track = 0.74 + 0.05 * math.sin(x * 0.27 + side) + 0.03 * math.sin(x * 0.83 - side)
+        _d, inside, rim = pothole(x, lt)
+        dens = 0.42 * (1.0 - 0.8 * math.exp(-(((ls - track) / 0.2) ** 2)))
+        if a > 2.3:
+            dens = 0.6 if a < 3.15 else 0.22
+        dens = max(dens, 0.9 * rim * (1.0 - inside))
+        if inside > 0.1:
+            dens = 0.08
+        if rng.random() > dens:
+            continue
+        size = float(np.clip(rng.lognormal(math.log(0.028), 0.38), 0.013, 0.07))
+        stone(x, lt, size, small)
+        n += 1
+    lumps = 0
+    for _ in range(420):
+        x = float(rng.uniform(-WALK_X - 3.0, WALK_X + 3.0))
+        side = 1 if rng.random() < 0.5 else -1
+        edge = rng.random() < 0.8
+        lt = side * float(rng.uniform(2.35, 3.25) if edge else rng.uniform(0.0, 2.2))
+        if pothole(x, lt)[1] > 0 or (side > 0 and lt > SHOULDER - 0.2 and causeway_weight(x) > 0.02):
+            continue
+        if rng.random() > (0.45 if edge else 0.18):
+            continue
+        stone(x, lt, float(rng.uniform(0.07, 0.17) if edge else rng.uniform(0.05, 0.1)), big)
+        lumps += 1
+    me = bpy.data.meshes.new("vroad_gravel")
+    me.from_pydata(verts, [], faces)
+    me.materials.append(m["gravel"])
+    col = me.color_attributes.new(name="Col", type="BYTE_COLOR", domain="CORNER")
+    for poly, c in zip(me.polygons, fcols):
+        for li in poly.loop_indices:
+            col.data[li].color = (*c, 1.0)
+    me.color_attributes.active_color = col
+    me.color_attributes.render_color_index = list(me.color_attributes).index(col)
+    for poly in me.polygons:
+        poly.use_smooth = True
+    me.update()
+    obj = bpy.data.objects.new("vroad_gravel", me)
+    coll.objects.link(obj)
+    m["world_uvs"](obj)
+    print(f"[village_road] gravel {n} pebbles, {lumps} lumps, {len(faces)} tris", flush=True)
     return obj
 
 
@@ -789,7 +1014,7 @@ def verge(coll, ground, base, m, rng):
 
     grass = VN.poly_haven("grass_medium_01") + VN.poly_haven("grass_medium_02")
     ferns = VN.poly_haven("fern_02")
-    shrubs = VN.poly_haven("shrub_02") + VN.poly_haven("shrub_04")
+    shrubs = VN.poly_haven("shrub_03") + VN.poly_haven("shrub_04")
     litter = VN.poly_haven("dry_branches_medium_01") + VN.poly_haven("bark_debris_01")
     spots = [(at(x, s * 5.3), 1.1) for s, x, *_ in BOARDS] + [(at(x, 5.6), 0.7) for x in POLES]
 
@@ -803,12 +1028,15 @@ def verge(coll, ground, base, m, rng):
             return False
         return all(math.hypot(px - sx, py - sy) > r for (sx, sy), r in spots)
 
-    def put(src, x, lt, s, yaw=None):
+    def put(src, x, lt, s, yaw=None, sink=0.02):
         # Named vroad_*: the game's snapToGround (groundSnap.GROUNDED) would otherwise lower
         # verge grass and litter from the raised bank to the forest floor under it.
         px, py = at(x, lt)
-        # A few centimetres in: a tuft's base is flat and the bank slopes under it.
-        z = _road_height(x, lt, ground, base) - 0.07
+        # On the lowest of the bank under the tuft (its base is flat, the bank slopes under
+        # it), a little in (VN.put sinks 2 cm more): set 9 cm into the bank's middle, most
+        # tufts were buried to their tips.
+        r = 0.12 * s
+        z = min(surface_z(x + dx, lt + dl, ground, base) for dx, dl in ((0, 0), (r, 0), (-r, 0), (0, r), (0, -r))) - sink
         o = VN.put(coll, src, px, py, lambda *_: z, float(rng.uniform(0, 6.283)) if yaw is None else yaw, s)
         o.name = "vroad_" + o.name
 
@@ -819,7 +1047,7 @@ def verge(coll, ground, base, m, rng):
             # Tufts at the shoulder's break and down the ditch's sides.
             lt = side * float(rng.uniform(3.0, 3.5))
             if free(x, lt) and rng.random() < 0.8:
-                put(grass[int(rng.integers(len(grass)))], x, lt, float(rng.uniform(0.6, 1.1)))
+                put(grass[int(rng.integers(len(grass)))], x, lt, float(rng.uniform(0.85, 1.45)))
                 n += 1
             lt = side * float(rng.uniform(4.55, 6.6))
             if free(x, lt):
@@ -832,6 +1060,24 @@ def verge(coll, ground, base, m, rng):
                     put(shrubs[int(rng.integers(len(shrubs)))], x, lt, float(rng.uniform(0.55, 0.95)))
                 n += 1
         x += float(rng.uniform(0.55, 1.1)) if abs(x) < 36 else float(rng.uniform(1.4, 2.6))
+    # Grass on the crown between the wheel tracks and along the carriageway's edges, where
+    # neither wheels nor feet run: low, in clumps, with bare stretches between.
+    crown = 0
+    x = -WALK_X - 2.0
+    while x < WALK_X + 2.0:
+        x += float(rng.uniform(0.8, 3.2))
+        meander = 0.10 * math.sin(x * 0.14) + 0.05 * math.cos(x * 0.31)
+        if rng.random() < 0.6:
+            lt = meander + float(rng.normal(0, 0.1))
+            if pothole(x, lt)[1] == 0 and free(x, lt):
+                put(grass[int(rng.integers(len(grass)))], x, lt, float(rng.uniform(0.65, 1.05)))
+                crown += 1
+        if rng.random() < 0.55:
+            lt = (1 if rng.random() < 0.5 else -1) * float(rng.uniform(2.3, 2.8))
+            if pothole(x, lt)[1] == 0 and free(x, lt):
+                put(grass[int(rng.integers(len(grass)))], x, lt, float(rng.uniform(0.75, 1.15)))
+                crown += 1
+    n += crown
     # Bananas and a sugar palm or two behind and between the shops, as round any roadside house.
     fl = VN.flora()
     banana, palm = fl["banana_clump"][1], fl["sugar_palm"][1]
@@ -870,7 +1116,7 @@ def backdrop(coll, ground, rng):
     kinds = [("tree", 0.55), ("banana", 0.22), ("palm", 0.15), ("dead", 0.08)]
     p = np.array([w for _k, w in kinds])
     dead = bpy_object("forest_tree_gn_dead") or fl["forest_tree_gn"][1]
-    shrubs = VN.poly_haven("shrub_02") + VN.poly_haven("shrub_04") + VN.poly_haven("fern_02")
+    shrubs = VN.poly_haven("shrub_03") + VN.poly_haven("shrub_04") + VN.poly_haven("fern_02")
     placed = []
 
     def ok(x, y, r):
