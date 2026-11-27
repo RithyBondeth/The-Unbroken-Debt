@@ -26,6 +26,7 @@ export type StudioScareId =
   | "fan"
   | "book"
   | "bathFaucet"
+  | "bathFrosted"
   | "bathMirror"
   | "bathTank"
   | "bathDoor"
@@ -51,12 +52,21 @@ export interface StudioDoorConfig {
 }
 
 export const STUDIO_DOORS: Record<StudioDoorId, StudioDoorConfig> = {
-  haunt_partition_door: { openDeg: 88, closedDeg: 0, ajarDeg: 24, initialDeg: 88 },
-  haunt_bedroom_door: { openDeg: 88, closedDeg: 0, ajarDeg: 26, initialDeg: 88 },
-  haunt_bath_door: { openDeg: 132, closedDeg: 0, ajarDeg: 36, initialDeg: 132 },
+  haunt_partition_door: { openDeg: 88, closedDeg: 0, ajarDeg: 16, initialDeg: 88 },
+  // Bedroom starts closed & solid so Sora must press E to open it before entering the back room.
+  haunt_bedroom_door: { openDeg: 88, closedDeg: 0, ajarDeg: 14, initialDeg: 0 },
+  // Bathroom starts closed & solid: running water & the frosted-glass shadow pull Sora to open it.
+  haunt_bath_door: { openDeg: 132, closedDeg: 0, ajarDeg: 18, initialDeg: 0 },
   // West balcony French casement swings inward (+42° around east stile hinge = -42° in Blender Z)
   haunt_balcony_door: { openDeg: -42, closedDeg: 0, ajarDeg: -16, initialDeg: 0 },
 };
+
+/** True when a hinged door is swung wide enough to count as walkably open (ajar doors stay closed to E). */
+export function isDoorWalkablyOpen(angleRad: number, openRad: number, closedRad: number): boolean {
+  const span = Math.abs(openRad - closedRad);
+  if (span < 1e-4) return false;
+  return Math.abs(angleRad - closedRad) > span * 0.55;
+}
 
 export type StudioSpaceName = "studio" | "studioBack" | "bathroom";
 export type StudioHauntPhase = 1 | 2 | 3 | 4;
@@ -203,6 +213,19 @@ export function bookSlideDue(time: number, eye: Vector3, forward: Vector3, book:
   const d = Math.hypot(book.x - eye.x, book.z - eye.z);
   if (d < 1.1 || d > 4.6) return false;
   return angleTo(eye, forward, book) >= 95;
+}
+
+/** Phase 2: Sora is in the back bedroom facing the closed frosted-glass bathroom door. */
+export function bathFrostedDue(
+  eye: Vector3,
+  forward: Vector3,
+  bathDoor: Vector3,
+  doorClosed: boolean,
+): boolean {
+  if (!doorClosed || !inBackRoom(eye) || inBathroom(eye)) return false;
+  const d = Math.hypot(bathDoor.x - eye.x, bathDoor.z - eye.z);
+  if (d < 0.9 || d > 4.2) return false;
+  return angleTo(eye, forward, bathDoor) <= 42;
 }
 
 /** Phase 2: Sora steps into the bathroom and faces the antique foxed mirror. */

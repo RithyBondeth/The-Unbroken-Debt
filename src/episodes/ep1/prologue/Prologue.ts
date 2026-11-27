@@ -262,6 +262,10 @@ export class Prologue {
     game.bus.on("interact:focus", ({ id }) => {
       if (id === DRAWER && !this.drawerOpen) game.hints.show("hint.drawer", 8);
       if (id === "matchbox") game.hints.show("hint.takeMatches", 8);
+      if (id === "interact_sketchbook") game.hints.show("hint.takeSketchbook", 6);
+      if (id === "interact_satchel") game.hints.show("hint.takeSatchel", 6);
+      if (id === "interact_lamp") game.hints.show("hint.takeLamp", 6);
+      if (id === "letters") game.hints.show("hint.takeLetters", 6);
       if (id === PHONE) {
         game.hints.hide();
         if (this.ringing) game.hints.show("hint.phone", 8);
@@ -276,16 +280,20 @@ export class Prologue {
         game.hints.show(this.stairGateHint(), 6);
       }
       if (isStudioDoor(id)) {
-        const open = this.scares?.isDoorOpen?.(id) ?? false;
-        const key: StringKey =
-          id === "haunt_balcony_door"
-            ? open
-              ? "hint.balconyDoorClose"
-              : "hint.balconyDoorOpen"
-            : open
-              ? "hint.doorClose"
-              : "hint.doorOpen";
-        game.hints.show(key, 5);
+        if (this.scares?.isDoorLocked?.(id)) {
+          game.hints.show("hint.doorStuck", 3);
+        } else {
+          const open = this.scares?.isDoorOpen?.(id) ?? false;
+          const key: StringKey =
+            id === "haunt_balcony_door"
+              ? open
+                ? "hint.balconyDoorClose"
+                : "hint.balconyDoorOpen"
+              : open
+                ? "hint.doorClose"
+                : "hint.doorOpen";
+          game.hints.show(key, 5);
+        }
       }
     });
   }
@@ -461,6 +469,7 @@ export class Prologue {
     this.play("scream");
     this.score.sting("shock", 0.72);
     this.lights.strike();
+    this.scares?.onPhoneCallClimax?.();
     await cutOff;
     await this.wait(1.6);
     // The line dies: a blow of pressure, then stunned hush as the rain returns.
@@ -562,16 +571,21 @@ export class Prologue {
       return;
     }
     if (isStudioDoor(id)) {
-      const opened = this.scares?.toggleDoor?.(id) ?? false;
-      const key: StringKey =
-        id === "haunt_balcony_door"
-          ? opened
-            ? "hint.balconyDoorClose"
-            : "hint.balconyDoorOpen"
-          : opened
-            ? "hint.doorClose"
-            : "hint.doorOpen";
-      game.hints.show(key, 4);
+      const result = this.scares?.toggleDoor?.(id) ?? "closed";
+      if (result === "locked") {
+        game.hints.show("hint.doorStuck", 3);
+      } else {
+        const opened = result === "opened";
+        const key: StringKey =
+          id === "haunt_balcony_door"
+            ? opened
+              ? "hint.balconyDoorClose"
+              : "hint.balconyDoorOpen"
+            : opened
+              ? "hint.doorClose"
+              : "hint.doorOpen";
+        game.hints.show(key, 4);
+      }
       return;
     }
     if (id === DOOR) {

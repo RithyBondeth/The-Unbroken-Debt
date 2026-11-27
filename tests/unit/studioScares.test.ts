@@ -10,6 +10,7 @@ import {
   angleTo,
   balconyKnockDue,
   bathDoorDue,
+  bathFrostedDue,
   bathMirrorDue,
   bathTankDue,
   bedBreathDue,
@@ -23,6 +24,7 @@ import {
   hallFlashDue,
   inBackRoom,
   inBathroom,
+  isDoorWalkablyOpen,
   phantomRingDue,
   pictureDue,
   runtime,
@@ -32,6 +34,8 @@ import {
   studioScareFlag,
   studioSpaceAt,
 } from "@/episodes/ep1/data/studioScares";
+import * as studioSounds from "@/episodes/ep1/audio/studioSounds";
+import { seededRandom } from "@/audio/synth";
 import { Lightning } from "@/render/weather/Lightning";
 
 /** Sora's eye at Blender (x, y), looking along Blender (dx, dy). */
@@ -277,5 +281,41 @@ describe("4-phase studio haunt director and bathroom acoustics", () => {
     expect(STUDIO_DOORS.haunt_bath_door.openDeg).toBe(132);
     expect(STUDIO_DOORS.haunt_balcony_door.initialDeg).toBe(0);
     expect(STUDIO_DOORS.haunt_balcony_door.openDeg).toBeLessThan(0);
+    // Bedroom and bathroom doors start closed & solid so Sora must press E to open them.
+    expect(STUDIO_DOORS.haunt_bedroom_door.initialDeg).toBe(0);
+    expect(STUDIO_DOORS.haunt_bath_door.initialDeg).toBe(0);
+    // Closed and ajar doors count as not walkably open so E always opens them wide first.
+    const deg = Math.PI / 180;
+    expect(isDoorWalkablyOpen(0, 88 * deg, 0)).toBe(false);
+    expect(isDoorWalkablyOpen(26 * deg, 88 * deg, 0)).toBe(false);
+    expect(isDoorWalkablyOpen(88 * deg, 88 * deg, 0)).toBe(true);
+    expect(isDoorWalkablyOpen(-16 * deg, -42 * deg, 0)).toBe(false);
+    expect(isDoorWalkablyOpen(-42 * deg, -42 * deg, 0)).toBe(true);
+  });
+
+  it("gates the frosted-glass bathroom silhouette and synthesizes Asian horror studio SFX cleanly", () => {
+    const bathDoor = runtime(2.42, 14.15, 1.1);
+    expect(bathFrostedDue(eyeAt(2.4, 12.2), NORTH, bathDoor, true)).toBe(true);
+    expect(bathFrostedDue(eyeAt(2.4, 12.2), NORTH, bathDoor, false)).toBe(false);
+    expect(bathFrostedDue(eyeAt(2.4, 12.2), SOUTH, bathDoor, true)).toBe(false);
+    expect(bathFrostedDue(eyeAt(2.4, 15.0), NORTH, bathDoor, true)).toBe(false);
+
+    for (const make of [
+      studioSounds.erhuDread,
+      studioSounds.throatRattle,
+      studioSounds.wetStepsClose,
+      studioSounds.lockedRattle,
+      studioSounds.deadAirDrop,
+    ]) {
+      const buf = make(22050, seededRandom(1932));
+      expect(buf.length).toBeGreaterThan(8000);
+      let peak = 0;
+      for (let i = 0; i < buf.length; i++) {
+        expect(Number.isFinite(buf[i])).toBe(true);
+        peak = Math.max(peak, Math.abs(buf[i]));
+      }
+      expect(peak).toBeGreaterThan(0.5);
+      expect(peak).toBeLessThanOrEqual(1);
+    }
   });
 });

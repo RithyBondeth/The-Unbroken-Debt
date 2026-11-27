@@ -2981,8 +2981,6 @@ def back_room():
     suit_top = surface_z(1.62, y0 + 0.26, 1.0)
     book("bedside_book", frame((math.cos(0.18), math.sin(0.18), 0), (-math.sin(0.18), math.cos(0.18), 0), (1.62, y0 + 0.26, suit_top)),
          0.16, 0.23, 0.032, cover="BK17_DRACULA")
-    for k, x in enumerate((3.2, 3.36)):
-        box(f"slipper_{k}", area, x - 0.05, x + 0.05, y1 - 2.35, y1 - 2.11, 0.0, 0.025, m["leather"], tilt=(0, 0, rng.uniform(-0.2, 0.2)), edge=0.01)
     framed_picture(2, "POSTER90_8", (W - 0.013, y1 - 2.6, 1.7), (0, -1, 0), 0.5)
     pinned_poster(5, "POSTER90_6", (2.7, y0 + 0.014, 1.7), (-1, 0, 0), 0.42, tilt=0.015)
     # Cracks: from the shutters' corner up to the ceiling, over the wardrobe, and up from
@@ -3048,12 +3046,26 @@ def back_room():
     ALTAR["vase"] = lib("ceramic_vase_02", (ax0 + 0.08, y1 - 0.15, az + 0.04), 0, collide=False, scale=0.5, budget=1500)
     # A lacquered folding screen half-open beside the bed.
     lib("chinese_screen_panels", (2.7, y0 + 1.2, 0), 205, budget=2500)
-    # 1930s bedroom light switch by the doorway wired cleanly up cleats to the unlit ceiling pendant!
-    vintage_wall_switch(area, m, turned, "bedroom_switch", (1.36, y0, 1.30), (math.pi / 2, 0, math.pi), toggle_angle_deg=-26)
-    tube("bedroom_wiring", area, [(1.36, y0 + 0.008, 1.348), (1.36, y0 + 0.008, H - 0.02), (2.3, (y0 + y1) / 2, H - 0.02)], 0.0035, m["cord"], sides=5)
+    # 1930s bedroom light switch by the doorway, mounted flush on the south limewash lining (y0 + 0.012)
+    # and wired cleanly up porcelain cleats to the ceiling pendant!
+    wy = y0 + 0.012
+    vintage_wall_switch(area, m, turned, "bedroom_switch", (1.36, wy, 1.30), (math.pi / 2, 0, math.pi), toggle_angle_deg=-26)
+    tube(
+        "bedroom_wiring",
+        area,
+        [
+            (1.36, wy + 0.008, 1.348),
+            (1.36, wy + 0.008, H - 0.174),
+            (2.3, (y0 + y1) / 2, H - 0.174),
+            (2.3, (y0 + y1) / 2, H - 0.02),
+        ],
+        0.0042,
+        m["cord"],
+        sides=6,
+    )
     for k, z_ in enumerate((1.95, 2.65)):
         cl = turned(f"bedroom_cleat_{k}", [(0.0, 0.0), (0.012, 0.0), (0.012, 0.02), (0.008, 0.024), (0.0, 0.024)], 0, 0, 0, m["porcelain"], segments=10)
-        cl.location = (1.36, y0, z_)
+        cl.location = (1.36, wy, z_)
         cl.rotation_euler = (-math.pi / 2, 0, 0)
     # A bare bulb with an enamel shade hanging from the ceiling (off).
     tube("back_room_pendant_flex", area, [(2.3, (y0 + y1) / 2, H), (2.3, (y0 + y1) / 2, H - 0.7)], 0.003, m["cord"], sides=5)
