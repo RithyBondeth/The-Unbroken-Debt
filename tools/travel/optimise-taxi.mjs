@@ -54,25 +54,25 @@ const CAR_RELIEF = [
   "brown_leather_N",
   "red_dirt_mud_01_N",
 ];
-// The people are seen at arm's length: the photoscanned driver (head, shirt, hands) and
-// Sora's own legs keep 2048 px colour and relief; the driver's face keeps UASTC colour
-// (ETC1S blocks smear pores and stubble).
+// The people are seen at arm's length: the sculpted driver (his skin and his clothes) and
+// Sora's own legs keep 2048 px colour, and his skin its 2048 px relief; his skin keeps
+// UASTC colour (ETC1S blocks smear stubble, brows and eyes).
 // (The CLI's --pattern cannot exclude names, so the 1024 px cap runs through the API.)
 // (A name is tested, and the empty URI must not pass: hence the trailing ".")
 const NOT_PEOPLE =
-  /^(?!rp_|T_taxi_driver_head_|T_taxi_driver_clothes$|T_taxi_driver_hands_BC|T_taxi_driver_krama_BC|T_taxi_sora_(?:blouse|trousers|skin_BC|watch_dial_BC|watch_strap_BC)|T_taxi_khmer_posters)./;
+  /^(?!rp_|T_taxi_driver_skin_(?:BC|N)$|T_taxi_driver_cloth_BC$|T_taxi_driver_krama_BC|T_taxi_sora_(?:blouse|trousers|skin_BC|watch_dial_BC|watch_strap_BC)|T_taxi_khmer_posters)./;
 const PEOPLE_2K = [
   "rp_*",
-  "T_taxi_driver_head_BC",
-  "T_taxi_driver_clothes",
-  "T_taxi_driver_hands_BC",
+  "T_taxi_driver_skin_BC",
+  "T_taxi_driver_skin_N",
+  "T_taxi_driver_cloth_BC",
   "T_taxi_driver_krama_BC",
   "T_taxi_sora_blouse",
   "T_taxi_sora_trousers",
   "T_taxi_sora_skin_BC",
 ];
 const CRISP_UASTC = [
-  "T_taxi_driver_head_BC",
+  "T_taxi_driver_skin_BC",
   "T_taxi_sora_watch_dial_BC",
   "T_taxi_sora_watch_strap_BC",
   "T_taxi_driver_krama_BC",
@@ -147,17 +147,6 @@ try {
     if (kind === "cabin") {
       for (const pattern of PEOPLE_2K)
         gltf("resize", work, work, "--width", "2048", "--height", "2048", "--pattern", pattern);
-      gltf(
-        "resize",
-        work,
-        work,
-        "--width",
-        "1024",
-        "--height",
-        "1024",
-        "--pattern",
-        "T_taxi_driver_head_[NR]",
-      );
     }
     // The driver's shirt folds and combed hair read at 512 and 256 px; their relief
     // maps are the cabin's heaviest.
@@ -198,7 +187,7 @@ try {
       for (const pattern of FAR_SCANS)
         gltf("resize", work, work, "--width", "256", "--height", "256", "--pattern", pattern);
     }
-    // The driver's face, his krama's woven tile & Sora's watch dial first: already KTX2 UASTC, so ETC1S leaves them crisp.
+    // The driver's skin, the rear seat's krama tile & Sora's watch dial first: already KTX2 UASTC, so ETC1S leaves them crisp.
     // (The scanned felt cap is plain wool: 1024 px ETC1S holds it.)
     if (kind === "cabin") {
       for (const pattern of CRISP_UASTC) gltf("uastc", work, work, "--pattern", pattern);

@@ -214,8 +214,10 @@ function makeRainRippleNormals(scene: Scene): RawTexture {
  * Tileable 128x128 detailMap (R=albedo, G=normalY, B=roughness, A=normalX) of cotton drill: a 2/1
  * twill's diagonal ribs over uneven yarns. Up close the driver's shirt and waistcoat read as woven
  * cloth rather than smooth plaster; `repeat` sets how many weave tiles cover one UV unit.
+ * `plain` gives a plain over-under weave instead, with no diagonal ribs (on a UV atlas the
+ * ribs turn with every island).
  */
-function makeClothWeave(scene: Scene, name: string, repeat: number): RawTexture {
+function makeClothWeave(scene: Scene, name: string, repeat: number, plain = false): RawTexture {
   const size = 128;
   const height = new Float32Array(size * size);
   const tone = new Float32Array(size * size);
@@ -225,8 +227,10 @@ function makeClothWeave(scene: Scene, name: string, repeat: number): RawTexture 
   };
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      // Yarns every 2 texels; twill ribs climb one yarn per row.
-      const rib = Math.sin((((x + y) % 6) / 6) * Math.PI * 2);
+      // Yarns every 2 texels; twill ribs climb one yarn per row (plain: warp and weft alternate).
+      const rib = plain
+        ? Math.sin((x / 2) * Math.PI) * Math.sin((y / 2) * Math.PI) * 0.6
+        : Math.sin((((x + y) % 6) / 6) * Math.PI * 2);
       const warp = Math.sin(((x % 2) + 0.5) * Math.PI);
       const slub = (hash(x >> 1, 1) - 0.5) * 0.5 + (hash(y >> 1, 2) - 0.5) * 0.5;
       height[y * size + x] = rib * 0.55 + warp * 0.25 + slub * 0.35;
@@ -1269,13 +1273,47 @@ export class TaxiVisuals {
           // Work-worn hands: drier than the face, so the cabin light never glints off them.
           material.roughness = 0.62;
           material.specularIntensity = 0.16;
+        } else if (material.name === "M_taxi_driver_skin") {
+          // The sculpted driver's face, neck and hands: the baked map holds oily nose and
+          // forehead, dry stubble and hair, wet eyes and lips, so it is used as it is.
+          material.roughness = 1;
+          material.specularIntensity = 0.24;
+          // His relief is baked against Blender's tangents and the game derives its own, so
+          // at full strength it facets the cheeks: it is kept faint.
+          if (material.bumpTexture) material.bumpTexture.level = 0.4;
         } else {
           material.roughness = 0.52;
           material.specularIntensity = 0.26;
         }
         material.metallic = 0;
       }
-      if (
+      if (material.name === "M_taxi_driver_cloth") {
+        // His cap, shirt, vest and trousers: the baked map carries each cloth's roughness; a fine
+        // plain weave shows only up close (no diagonal twill ribs across the atlas).
+        material.metallic = 0;
+        material.roughness = 1;
+        material.specularIntensity = 0.06;
+        material.sheen.isEnabled = true;
+        material.sheen.intensity = 0.22;
+        material.sheen.roughness = 0.7;
+        material.sheen.color.set(0.85, 0.82, 0.76);
+        material.detailMap.isEnabled = true;
+        material.detailMap.texture = makeClothWeave(scene, `${material.name}_weave`, 70, true);
+        material.detailMap.diffuseBlendLevel = 0.1;
+        material.detailMap.bumpLevel = 0.3;
+        material.detailMap.roughnessBlendLevel = 0.15;
+        // Baked relief kept faint (its tangents are Blender's; the game derives its own).
+        if (material.bumpTexture) material.bumpTexture.level = 0.35;
+      } else if (material.name === "M_taxi_driver_leather") {
+        // His belt and tall boots: old polished leather, duller in the creases (baked).
+        material.metallic = 0;
+        material.roughness = 1;
+        if (material.bumpTexture) material.bumpTexture.level = 0.4;
+        material.specularIntensity = 0.45;
+        material.clearCoat.isEnabled = true;
+        material.clearCoat.intensity = 0.25;
+        material.clearCoat.roughness = 0.38;
+      } else if (
         /^M_taxi_(driver_clothes_scan|driver_shirt_scan|sora_trousers_scan|sora_blouse_scan)$/.test(
           material.name,
         ) ||
