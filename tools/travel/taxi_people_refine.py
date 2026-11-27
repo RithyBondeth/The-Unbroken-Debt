@@ -50,6 +50,10 @@ LEATHER_N = ROOT / "art-source/library/materials/brown_leather/brown_leather_N.j
 WHEEL_CENTER = Vector((0.2641, -0.2722, 0.7636))
 WHEEL_NORMAL = Vector((0.0, 0.7676, 0.6410)).normalized()
 WHEEL_RADIUS = 0.198
+# The rim mesh's tube centre line, measured from `taxi_steering_wheel_rim` (its tube is 12.7 mm).
+RIM_CENTRELINE = 0.1974
+# With the scanned hands his sleeves are rolled up: the cut sits this far up the forearm from the wrist.
+SLEEVE_ROLL_UP = 0.085
 
 # Pristine taxi_driver_head.glb landmarks (in its own pre-placement metres frame, facing -Y)
 HEAD_NECK_BASE = Vector((-0.004, 0.030, 1.790))
@@ -703,7 +707,40 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
     # Fill tiny upper scan pinholes (never the bottom neck opening)
     pin_edges = [e for e in bm.edges if e.is_boundary and min(v.co.z for v in e.verts) > 1.86]
     if pin_edges:
-        bmesh.ops.holes_fill(bm, edges=pin_edges, sides=32)
+        filled = bmesh.ops.holes_fill(bm, edges=pin_edges, sides=32).get("faces", [])
+        if filled:
+            # A filled hole's corners came from different atlas islands, so each patch smeared a strip of
+            # unrelated scan texture across his cheek (two "scratches"). Give every patch the texel right
+            # beside it, then raise a centre point and relax it so the patch follows the cheek's curve.
+            from mathutils.kdtree import KDTree as _KD
+
+            uv_fill = bm.loops.layers.uv.active
+            fill_set = set(filled)
+            src = [lp for f in bm.faces if f not in fill_set for lp in f.loops]
+            kd_fill = _KD(len(src))
+            for i, lp in enumerate(src):
+                kd_fill.insert(lp.vert.co, i)
+            kd_fill.balance()
+            for f in filled:
+                _, i, _ = kd_fill.find(f.calc_center_median())
+                uv_here = src[i][uv_fill].uv.copy()
+                for lp in f.loops:
+                    lp[uv_fill].uv = uv_here
+            poked = bmesh.ops.poke(bm, faces=filled)
+            relax = set(poked.get("verts", []))
+            for f in poked.get("faces", []):
+                relax.update(f.verts)
+            ring_v = {nb for v in relax for e in v.link_edges for nb in (e.other_vert(v),)}
+            relax |= {v for v in ring_v if not v.is_boundary}
+            for _ in range(8):
+                for fac in (0.5, -0.53):
+                    disp = {}
+                    for v in relax:
+                        nbs = [e.other_vert(v) for e in v.link_edges]
+                        if nbs:
+                            disp[v] = (sum((nb.co for nb in nbs), Vector()) / len(nbs) - v.co) * fac
+                    for v, d_v in disp.items():
+                        v.co += d_v
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     # Build BVH BEFORE tucking the old cap so our sculpted 1930s flat cap measures his true skull!
     head_bvh_raw = BVHTree.FromBMesh(bm)
@@ -777,7 +814,8 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
             n_img.pack()
     for n in hm.node_tree.nodes:
         if n.type == "NORMAL_MAP":
-            n.inputs["Strength"].default_value = 0.55
+            # (0.55 lit the jaw's UV seam as a bright scratch; the smoothed jaw carries the form.)
+            n.inputs["Strength"].default_value = 0.40
 
     # Also lift roughness on back/side hair UV zone so dark hair behind ears looks soft & matte (never shiny rubber!)
     orm_img = next((n.image for n in hm.node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "Non-Color" and "_N" not in n.image.name), None)
@@ -845,6 +883,29 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
                         if np.any(is_mauve_or_cap):
                             patch[is_mauve_or_cap] = patch[is_mauve_or_cap] * 0.08 + hair_col * 0.92
                             bpx[v_min : v_max + 1, u_min : u_max + 1, :3] = patch
+        # One natural skin: the old bake's curve left his face spray-tan orange.
+        import taxi_driver_wardrobe as wardrobe
+
+        bpx[..., :3], _ = wardrobe.regrade_skin(bpx[..., :3])
+        uv_seams = bm.loops.layers.uv.active
+        if uv_seams is not None:
+            npx2 = None
+            if n_img is not None:
+                npx2 = np.empty(n_img.size[0] * n_img.size[1] * 4, np.float32)
+                n_img.pixels.foreach_get(npx2)
+                npx2 = npx2.reshape(n_img.size[1], n_img.size[0], 4)
+            # Seams over the face and neck (not the cap-covered crown).
+            wardrobe.heal_uv_seams(bm, uv_seams, bpx, npx2, region=lambda c: c.z < 1.99)
+            # The scan's two diagonal creases on each cheek (shadows of the scanned man's hoodie strings,
+            # baked into shape, colour and relief) read as scars: relax and repaint them.
+            creases = [Vector((x, y, z)) for (x, y, z) in (
+                (-0.084, -0.050, 1.962), (-0.080, -0.070, 1.938),  # his right cheek, ear to jaw
+                (0.076, -0.050, 1.962), (0.072, -0.070, 1.938),    # the left, mirrored about the head's axis
+            )]
+            wardrobe.repaint_skin_patch(bm, uv_seams, bpx, npx2, creases, radius=0.026, head=head, image=bc_img)
+            if npx2 is not None:
+                n_img.pixels.foreach_set(npx2.astype(np.float32).ravel())
+                n_img.pack()
         bc_img.pixels.foreach_set(bpx.astype(np.float32).ravel())
         bc_img.pack()
 
@@ -871,7 +932,9 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
 
     # Sample exact 360° jaw-rim skin color from T_taxi_driver_head_BC so neck color matches invisibly!
     n_ang_tex = 128
-    base_skin = np.array([0.585, 0.355, 0.245], np.float32)
+    import taxi_driver_wardrobe as wardrobe
+
+    base_skin = (wardrobe.SKIN_CHROMA * 0.40).astype(np.float32)
     rim_rgb = np.tile(base_skin, (n_ang_tex, 1))
     if bc_img is not None:
         bw, bh = bc_img.size
@@ -930,7 +993,12 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
     neck_lines = 1.0 - 0.032 * (
         np.exp(-(((v_g - 0.62) / 0.012) ** 2)) + 0.7 * np.exp(-(((v_g - 0.44) / 0.014) ** 2))
     ) * (0.4 + 0.6 * front_m)
-    pore = rng.normal(0.0, 0.0055, (th, tw)).astype(np.float32)
+    pore = rng.normal(0.0, 0.0055, (th, tw)).astype(np.float32) * 0.3
+    if bc_img is not None:
+        # His own jaw skin (pores, fine stubble, creases), tiled 4 x 4 round the neck.
+        tile = wardrobe.skin_patch_from_face(head, bc_img, (ax + 0.055, -0.035, 1.875), radius=0.014, size=256)
+        reps = np.tile(tile, (4, 4))[:th, :tw]
+        n_rgb = n_rgb * reps[..., None]
     stubble_m = _smoothstep(0.74, 0.94, v_g) * _smoothstep(0.995, 0.95, v_g) * _smoothstep(-0.20, 0.35, np.cos(ang_g))
     stubble = (rng.random((th, tw)).astype(np.float32) < 0.08).astype(np.float32) * -0.042 * stubble_m
     n_rgb = np.clip(n_rgb * (submental_ao * collar_ao * scm * neck_lines)[..., None] + pore[..., None] + stubble[..., None], 0.02, 0.96)
@@ -980,8 +1048,8 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
             rx += 0.020 * (trap_t ** 1.5) * (0.35 + 0.65 * side_w)
             ry += 0.015 * (trap_t ** 1.5) * (c_back ** 1.5)
             # Subtle sternocleidomastoid ridge + slight thyroid cartilage (Adam's apple) contour
-            scm_bump = 0.0020 * math.exp(-(((abs(ang) - 0.78) / 0.25) ** 2)) * math.sin(t_col * math.pi)
-            adams = 0.0024 * (c_front ** 5) * math.exp(-(((t_col - 0.62) / 0.14) ** 2))
+            scm_bump = 0.0042 * math.exp(-(((abs(ang) - 0.78) / 0.22) ** 2)) * math.sin(t_col * math.pi)
+            adams = 0.0042 * (c_front ** 6) * math.exp(-(((t_col - 0.64) / 0.11) ** 2))
             nape_h = -0.0032 * (c_back ** 1.6) * math.exp(-(((t_col - 0.58) / 0.24) ** 2))
             stump = -0.016 * (0.45 + 0.55 * c_front) * (_sstep(0.32, 0.0, vf) ** 1.3)
             r_an = math.hypot(rx * sx, ry * sy) + scm_bump + adams + nape_h + stump
@@ -1048,7 +1116,15 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
     head.data.update()
 
     # 5. Build the sculpted 1930s Herringbone Flat Driving Cap in pristine head-local coordinates!
-    cap_obj = _build_1930s_flat_cap(head_bvh_raw, (ax, ay), coll)
+    import taxi_driver_wardrobe as wardrobe
+
+    if wardrobe.CAP_SCAN.exists():
+        # The photoscanned wool flat cap, warped onto his hat line; the scalp tucks in under it.
+        cap_obj = wardrobe.build_scanned_flat_cap(head_bvh_raw, (ax, ay), coll)
+        wardrobe.tuck_head_under_cap(head, cap_obj, (ax, ay))
+        wardrobe.smooth_neck(head)
+    else:
+        cap_obj = _build_1930s_flat_cap(head_bvh_raw, (ax, ay), coll)
     head_bvh_raw = None
 
     # 6. Build the 5 exact runtime shape keys (`look_road`, `look_sora`, `nod`, `talk`, `blink`)
@@ -1114,6 +1190,8 @@ def rebuild_driver_head_and_cap(coll, neck_world_pos):
         Matrix.Translation(neck_world_pos + Vector((0.0, -0.026, -0.040 - 0.056)))
         @ Matrix.Rotation(math.radians(HEAD_REST_YAW), 4, "Z")
         @ Matrix.Rotation(math.radians(3.5), 4, "X")
+        # 93%: the scanned head on Eric's shoulders read large, doll-like.
+        @ Matrix.Scale(0.93, 4)
         @ Matrix.Translation(-HEAD_NECK_BASE)
     )
     head.data.transform(T_cabin, shape_keys=True)
@@ -1319,6 +1397,25 @@ def _pose_driver_hands_on_wheel(rig, wheel_turn=0.0, grip_tense=0.0, breathe=0.0
             wrist = wrist + delta * 0.85
 
 
+def _pose_driver_arms_to_wrists(rig, frames, wheel_turn=0.0, grip_tense=0.0, breathe=0.0, lean_peer=0.0):
+    """Seat the spine like `_pose_driver_hands_on_wheel`, then reach each arm to the wrist of the
+    photoscanned hand gripping the rim (`frames[side] = (wrist, knuckle direction, palm normal)`) and
+    turn the scan's own hand bone the same way so the sleeve's forearm twist follows the grip."""
+    s1, s2, s3, neck_b, head_b = [rig.bone(p) for p in ("spine_01", "spine_02", "spine_03", "neck_", "head_")]
+    fwd_lean = lean_peer * 0.042 + grip_tense * 0.008 - breathe * 0.014
+    for nm, ch, base_lean in [(s1, s2, 0.02), (s2, s3, -0.02), (s3, neck_b, -0.06), (neck_b, head_b, -0.14)]:
+        j = rig.joint(nm)
+        rig.aim(nm, ch, j + Vector((0.0, base_lean - fwd_lean, 1.0)))
+    for side, sign in (("l", 1.0), ("r", -1.0)):
+        wrist, fwd, palm = (Vector(tuple(map(float, x))) for x in frames[side])
+        sh = rig.joint(rig.bone(f"upperarm_{side}"))
+        pole = sh + Vector((sign * (0.28 - 0.02 * grip_tense), 0.16, -0.90))
+        rig.reach(rig.bone(f"upperarm_{side}"), rig.bone(f"lowerarm_{side}"), rig.bone(f"hand_{side}"), wrist, pole)
+        hand = rig.bone(f"hand_{side}")
+        rig.aim(hand, rig.bone(f"middle_01_{side}"), rig.joint(hand) + fwd)
+        rig.roll_hand_with_twist(side, palm)
+
+
 def _add_driver_shirt_collar_and_krama(coll, neck_pos, body_obj, head_obj, plain, world_uvs_fn):
     """Build:
     1) A tailored 1930s open-collar linen shirt collar peeking naturally above his waistcoat/under the krama.
@@ -1327,6 +1424,20 @@ def _add_driver_shirt_collar_and_krama(coll, neck_pos, body_obj, head_obj, plain
     """
     _clear_objects("taxi_driver_krama", "taxi_driver_shirt_collar")
     if body_obj is None or neck_pos is None:
+        return
+
+    import taxi_driver_wardrobe as wardrobe
+
+    if head_obj is not None and wardrobe.HAND_SCAN.exists():
+        # A crisp cotton stand collar, then a full-size krama cloth-simulated round his neck and down
+        # his chest; both follow his breathing and leaning through the body's shape keys.
+        cuff_mat = bpy.data.materials.get("M_cab_driver_cuff_cotton") or bpy.data.materials.get("M_taxi_driver_clothes_scan")
+        # The scan's own shirt, tie and waistcoat show in the V: real cloth reads better than any
+        # generated collar, and the krama covers the neck opening.
+        _clear_objects("taxi_driver_shirt_front", "taxi_driver_shirt_buttons")
+        krama = wardrobe.build_rolled_krama(coll, body_obj, [body_obj, head_obj], (neck_pos.x, neck_pos.y))
+        for obj in (krama,):
+            wardrobe.bind_to_body(obj, body_obj, ["breathe", "lean_peer"])
         return
 
     # 1. Build KDTree over driver's actual upper torso/shoulders FIRST so BOTH the slim 1930s shirt collar
@@ -1542,6 +1653,182 @@ def _add_driver_shirt_collar_and_krama(coll, neck_pos, body_obj, head_obj, plain
     krama_obj.data.update()
 
 
+WHEEL_PARTS = ("taxi_steering_wheel_rim", "taxi_steering_wheel_spokes", "taxi_steering_wheel_chrome")
+
+
+def _rim_cut_into_fists(bm, mw, hidden, C, F):
+    """His forearms lie along the rim, so a cut made only where some pose buries it leaves ends that
+    show in the others. On each side the cut becomes one arc of the wheel running from its far end into
+    the middle of that hand's fist, so both ends stay hidden (in the sleeve, in the fist) as he moves;
+    the hands ride the wheel, so the arc holds in the wheel's own frame as it turns."""
+    R0 = Vector((1.0, 0.0, 0.0))
+    R0 = (R0 - F * R0.dot(F)).normalized()
+    U0 = F.cross(R0).normalized()
+    if U0.z < 0:
+        U0 = -U0
+
+    def ang(p):
+        r = p - C
+        a = math.degrees(math.atan2(r.dot(U0), r.dot(R0)))
+        return a if a > -100.0 else a + 360.0  # left side -100..100, right side 100..260
+
+    a_of = {v: ang(mw @ v.co) for v in bm.verts}
+    more = set()
+    for side in ("l", "r"):
+        on_side = (lambda a: a <= 100.0) if side == "l" else (lambda a: a > 100.0)
+        cut = [a_of[v] for v in hidden if on_side(a_of[v])]
+        if not cut:
+            continue
+        # The middle of his fist sits at the grip's clock angle (the left hand above the horizontal on
+        # his left, the right one just below it on his right).
+        import taxi_driver_wardrobe as wardrobe
+
+        clock = wardrobe.DRIVER_GRIP[side][0]
+        mid = clock if side == "l" else 180.0 - clock
+        lo, hi = min(cut), max(cut)
+        # Keep the end farther from the fist; the near end goes to the middle of the fist (never past
+        # it, where a gap would show beyond his hand).
+        if abs(mid - lo) > abs(hi - mid):
+            hi = mid
+        else:
+            lo = mid
+        more |= {v for v in bm.verts if on_side(a_of[v]) and lo <= a_of[v] <= hi}
+        print("TAXI_WHEEL_RIM_ARC", side, round(lo, 1), round(hi, 1), "fist at", mid)
+    return more
+
+
+def _restore_full_mesh(obj):
+    """Give `obj` a fresh copy of its untouched mesh (`<name>__full`, kept in the blend), so a build
+    that hides parts of it starts from the whole mesh every time."""
+    name = obj.name
+    full = bpy.data.meshes.get(name + "__full")
+    if full is None:
+        full = obj.data.copy()
+        full.name = name + "__full"
+        full.use_fake_user = True
+    old = obj.data
+    obj.data = full.copy()
+    if old.users == 0:
+        bpy.data.meshes.remove(old)
+    obj.data.name = name
+    obj.data.use_fake_user = False
+
+
+def _islands(bm):
+    seen = set()
+    for f0 in bm.faces:
+        if f0 in seen:
+            continue
+        island, st = [], [f0]
+        seen.add(f0)
+        while st:
+            g = st.pop()
+            island.append(g)
+            for e in g.edges:
+                for nf in e.link_faces:
+                    if nf not in seen:
+                        seen.add(nf)
+                        st.append(nf)
+        yield island
+
+
+def _trim_spokes_at_sleeve(bm, mw, inside, C, F, into=0.004):
+    """Slice each spoke that runs into his sleeve just inside it (`into` past where his sleeve first
+    covers it with his arms at rest) and cap the cut; the part beyond, under his arm, goes."""
+    if not inside:
+        return
+    mw_inv = mw.inverted()
+    for island in list(_islands(bm)):
+        verts = {v for f in island for v in f.verts}
+        hit = [v for v in verts if v in inside]
+        if not hit:
+            continue
+        radial = lambda v: ((mw @ v.co - C) - F * (mw @ v.co - C).dot(F))
+        d = sum((radial(v) for v in verts), Vector()).normalized()
+        r_cut = min(radial(v).length for v in hit) + into
+        co_l = mw_inv @ (C + d * r_cut)
+        no_l = (mw_inv.to_3x3() @ d).normalized()
+        geom = list(verts) + list({e for f in island for e in f.edges}) + list(island)
+        res = bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=co_l, plane_no=no_l, clear_outer=True)
+        cut_edges = [e for e in res["geom_cut"] if isinstance(e, bmesh.types.BMEdge) and e.is_valid and e.is_boundary]
+        if cut_edges:
+            bmesh.ops.holes_fill(bm, edges=cut_edges, sides=0)
+        print("TAXI_WHEEL_SPOKE_TRIMMED", round(r_cut, 3))
+
+
+def cut_wheel_inside_driver(clear=0.0005, turns=None):
+    """Hide only the bits of the steering wheel that would show through the driver's sleeves: rim,
+    spoke and spoke-cap faces lying inside (or within `clear` of) his clothes in any of his shapes,
+    each shape against the wheel turned as that shape holds it (`steer_left` +0.16 rad, `steer_right`
+    -0.16, the rest straight). The rest of the wheel stays. Each part keeps
+    an untouched copy (`<name>__full`, saved in the blend) and is cut from it afresh on every build."""
+    body = bpy.data.objects.get("taxi_driver_body_scan")
+    if body is None:
+        return
+    me_b = body.data
+    polys = [tuple(p.vertices) for p in me_b.polygons]
+    turns = turns or {"steer_left": 0.16, "steer_right": -0.16}
+    layers = [("Basis", np.array([v.co[:] for v in me_b.vertices]))]
+    if me_b.shape_keys:
+        layers += [(kb.name, np.array([d.co[:] for d in kb.data])) for kb in me_b.shape_keys.key_blocks if kb.name != "Basis"]
+    mw_b = body.matrix_world
+    C, F = WHEEL_CENTER.copy(), WHEEL_NORMAL.normalized()
+    # (a wheel turned by t sits rotated about its column by -t, as `_pose_driver_hands_on_wheel` turns it)
+    left = Vector((1.0, 0.0, 0.0))
+    left = (left - F * left.dot(F)).normalized()
+    poses = [(BVHTree.FromPolygons([mw_b @ Vector(c) for c in co], polys), Matrix.Rotation(-turns.get(n, 0.0), 4, F)) for n, co in layers]
+    total = 0
+    for name in WHEEL_PARTS:
+        obj = bpy.data.objects.get(name)
+        if obj is None or obj.type != "MESH":
+            continue
+        _restore_full_mesh(obj)
+        mw = obj.matrix_world
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        hidden = set()
+        rest_inside = {}  # vertex -> inside his sleeve with his arms at rest (the wheel straight)
+        for v in bm.verts:
+            p0 = mw @ v.co
+            # Only on his left: that forearm lies along the rim. The right cuff only grazes it in a few
+            # shapes, and cutting there opened a gap under his near hand, in plain view from Sora's seat.
+            if (p0 - C).dot(left) <= 0.0:
+                continue
+            for (bvh, R), (lay, _) in zip(poses, layers):
+                p = C + (R @ (p0 - C).to_4d()).to_3d()
+                hit = bvh.find_nearest(p, 0.03)
+                if hit[0] is None:
+                    continue
+                if (p - hit[0]).length < clear or (p - hit[0]).dot(hit[1]) < 0.0:
+                    hidden.add(v)
+                    if lay not in turns:
+                        rest_inside[v] = True
+                    else:
+                        break
+        if name.endswith("_spokes"):
+            # A spoke keeps its whole length up to where it goes into his sleeve at rest, sliced there
+            # and capped (its segments are long: cutting whole faces took the spoke back to the hub).
+            _trim_spokes_at_sleeve(bm, mw, rest_inside, C, F)
+            hidden = set()
+        if name.endswith("_rim") and hidden:
+            hidden |= _rim_cut_into_fists(bm, mw, hidden, C, F)
+        kill = {f for f in bm.faces if any(v in hidden for v in f.verts)}
+        # A spoke cap only partly cut would leave a floating chrome fragment: it goes whole.
+        for island in _islands(bm):
+            if name.endswith("_chrome") and len(island) < 400 and any(g in kill for g in island):
+                kill.update(island)
+        kill = list(kill)
+        if kill:
+            bmesh.ops.delete(bm, geom=kill, context="FACES")
+            bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(obj.data)
+        bm.free()
+        obj.data.update()
+        total += len(kill)
+        print("TAXI_WHEEL_CUT_INSIDE_DRIVER", name, len(kill))
+    return total
+
+
 def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     """Rebuild the driver's body cleanly with:
     - Ergonomic natural 9:45 & 2:15 steering wheel grip + smooth `lowerarm_twist` pronation
@@ -1561,6 +1848,8 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
         "taxi_driver_cuff_buttons",
         "taxi_driver_shirt_collar",
         "taxi_driver_krama",
+        "taxi_driver_hand_l",
+        "taxi_driver_hand_r",
     )
 
     arm, body, imported = _import_glb_rigged(scan_path)
@@ -1576,6 +1865,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
         "l": (rig.joint(rig.bone("lowerarm_l")), rig.joint(rig.bone("hand_l"))),
         "r": (rig.joint(rig.bone("lowerarm_r")), rig.joint(rig.bone("hand_r"))),
     }
+    elbow_rest = {s: rig.joint(rig.bone(f"lowerarm_{s}")).copy() for s in ("l", "r")}
 
     # 1. Seated Rosalie driving posture with REAL RELAXED HUMAN SHOULDER HEIGHT (shoulders at z~0.855, NOT shrugged
     #    up into his ears at z=0.920 -> exposes a natural human neck & lets collar + krama sit cleanly on his shoulders!)
@@ -1616,6 +1906,23 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     # Add clean 1-level Catmull-Clark Subdivision AFTER Armature so Eric's low-poly 734-vert hands become
     # silky-smooth ~3,000-vert anatomical hands (ZERO faceted knuckles, ZERO triangle-diagonal clay lumps!)
     # AND preserve identical vertex indices across Basis + all 5 skeletal morphs!
+    # Bent elbows: the wheel sits close, so his elbows fold to about 70 degrees and plain skinning
+    # collapsed the inside of each sleeve (the forearm pushed through the upper arm in a hard edge and
+    # a balloon). A corrective smooth against the scan's rest shape relaxes the elbows in every pose
+    # while keeping the cloth's own folds.
+    vg_cs = body.vertex_groups.new(name="cs_elbows")
+    for i, p in enumerate(rest):
+        w_cs = max(_sstep(0.17, 0.07, (p - elbow_rest[s]).length) for s in ("l", "r"))
+        if w_cs > 0.0:
+            vg_cs.add([i], w_cs, "REPLACE")
+    cs_mod = body.modifiers.new(name="ElbowRelax", type="CORRECTIVE_SMOOTH")
+    cs_mod.vertex_group = vg_cs.name
+    cs_mod.factor = 0.6
+    cs_mod.iterations = 14
+    cs_mod.smooth_type = "LENGTH_WEIGHTED"
+    cs_mod.rest_source = "ORCO"
+    cs_mod.scale = 1.0
+
     sub_mod = body.modifiers.new(name="SubsurfHands", type="SUBSURF")
     sub_mod.subdivision_type = "CATMULL_CLARK"
     sub_mod.levels = 1
@@ -1661,8 +1968,55 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
         is_hand = (rc - w_r).length < 0.24 and perp < 0.115 and along_w > 0.020
         p.material_index = 1 if is_hand else 0
 
+    # Photoscanned hands (taxi_driver_wardrobe): each solves its own grip on the rim and the arms
+    # reach to their wrists; Eric's low-poly hands are cut away at the cuff below.
+    import taxi_driver_wardrobe as wardrobe
+
+    scan_hands = None
+    if wardrobe.HAND_SCAN.exists():
+        rim = wardrobe.Rim(WHEEL_CENTER, WHEEL_NORMAL, RIM_CENTRELINE)
+        # The scanned forearm runs 3.5 cm up inside the rolled sleeve.
+        keep_len = 0.008 + SLEEVE_ROLL_UP + 0.035
+        scan_hands = {"r": wardrobe.ScanHand(mirror=False, keep_len=keep_len), "l": wardrobe.ScanHand(mirror=True, keep_len=keep_len)}
+        scan_hand_src_mat = scan_hands["r"].material
+        for h in scan_hands.values():
+            bpy.data.objects.remove(h.src_obj, do_unlink=True)
+    hand_shapes = {}
+    arm_joints = {}
+
+    def _record_arms(name):
+        arm_joints[name] = {
+            side: tuple(rig.joint(rig.bone(b)).copy() for b in (f"upperarm_{side}", f"lowerarm_{side}", f"hand_{side}"))
+            for side in ("l", "r")
+        }
+
+    def _pose(kw, name, tap=0.0):
+        """Pose arms (and the scanned hands) for one morph; records the hands' vertices under `name`."""
+        if scan_hands is None:
+            _pose_driver_hands_on_wheel(rig, **kw)
+            _record_arms(name)
+            return
+        grips = {}
+        for side, h in scan_hands.items():
+            clock, elbow, loose = wardrobe.DRIVER_GRIP[side]
+            grips[side] = wardrobe.solve_grip(
+                h, rim, side, clock, elbow, turn=kw["wheel_turn"], tense=kw["grip_tense"],
+                tap=tap if side == "r" else 0.0, looseness=loose,
+            )[:2]
+        _pose_driver_arms_to_wrists(rig, {s: wardrobe.wrist_frame(scan_hands[s], g[0]) for s, g in grips.items()}, **kw)
+        shapes = {}
+        for side, (G, loc) in grips.items():
+            fa = rig.joint(rig.bone(f"lowerarm_{side}")) - rig.joint(rig.bone(f"hand_{side}"))
+            G_fa = wardrobe.place_forearm(scan_hands[side], G, np.array(fa.normalized()[:]))
+            shapes[side] = wardrobe.posed_hand(scan_hands[side], rim, G, G_fa, loc)
+        hand_shapes[name] = shapes
+        _record_arms(name)
+
     # 2. Pose neutral Basis + capture 5 tight, non-destructive skeletal driving morphs BEFORE baking!
-    _pose_driver_hands_on_wheel(rig, wheel_turn=0.0, grip_tense=0.0, breathe=0.0, lean_peer=0.0)
+    if scan_hands is not None:
+        _pose(dict(wheel_turn=0.0, grip_tense=0.0, breathe=0.0, lean_peer=0.0), "grip", tap=1.0)
+        rig.restore(neutral_legs_snap)
+    _pose(dict(wheel_turn=0.0, grip_tense=0.0, breathe=0.0, lean_peer=0.0), "Basis")
     basis_snap = rig.snapshot()
     drv_wrists_basis = {
         "l": (
@@ -1678,6 +2032,14 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     }
     wrist_M_basis = {"l": _wrist_frame("l"), "r": _wrist_frame("r")}
 
+    def _cuff_frame(side):
+        """(wrist, cut axis toward the hand, cut-plane point) of a sleeve end. With the scanned hands the
+        sleeves are rolled to mid-forearm, cut square to the forearm; otherwise the cuff sits at the wrist."""
+        wp_b, ax_b, hand_b = drv_wrists_basis[side]
+        if scan_hands is not None:
+            return wp_b, ax_b.copy(), wp_b - ax_b * (0.008 + SLEEVE_ROLL_UP)
+        return wp_b, (ax_b * 0.65 + hand_b * 0.35).normalized(), wp_b - ax_b * 0.008
+
     # Tight, purely additive steering & expression morphs (matching TaxiVisuals.ts wheelAngle clamp +-0.16 rad!)
     morph_specs = [
         ("steer_left",  dict(wheel_turn=+0.16, grip_tense=0.0,  breathe=0.0, lean_peer=0.0)),
@@ -1690,7 +2052,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     wrist_M_morphs = {}
     for m_name, kw in morph_specs:
         rig.restore(neutral_legs_snap)
-        _pose_driver_hands_on_wheel(rig, **kw)
+        _pose(kw, m_name)
         morph_verts_raw[m_name] = _eval_world_verts()
         wrist_M_morphs[m_name] = {"l": _wrist_frame("l"), "r": _wrist_frame("r")}
 
@@ -1733,6 +2095,8 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     weave_rgb = _load_tiled_np(LINEN_BC, w_c, h_c, repeats=38, is_srgb=True) if LINEN_BC.exists() else np.full((h_c, w_c, 3), 0.55, np.float32)
     weave_lum = weave_rgb @ np.array([0.3, 0.59, 0.11], np.float32)
     weave_fac = np.clip(weave_lum / max(1e-3, float(np.mean(weave_lum))), 0.84, 1.16)
+    # A linen weave squeezed into a whole-body atlas only aliases into speckle ("felt"): keep a trace.
+    weave_fac = 1.0 + (weave_fac - 1.0) * 0.12
 
     # Crisp woven 1930s linen shirt & rich tactile worsted-wool waistcoat (preserving real scan fold relief
     # on BOTH waistcoat AND shirt so his back NEVER looks like flat smooth plastic!)
@@ -1742,7 +2106,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     cream = np.array((0.46, 0.41, 0.34), np.float32) * np.clip(0.76 + 0.30 * (shade / max(1e-3, mean_sh)) + cloth_hi * 1.1, 0.64, 1.14)[..., None] * weave_fac[..., None]
     # Add crisp worsted-twill micro-weave + scan fold shading onto the dark waistcoat so it reads like real woven wool!
     yy_w, xx_w = np.mgrid[0:h_c, 0:w_c].astype(np.float32)
-    wool_twill = 0.90 + 0.10 * np.sin((xx_w + yy_w) * 0.95) * (0.7 + 0.3 * np.sin((xx_w - yy_w) * 0.45))
+    wool_twill = np.ones_like(xx_w)  # the old drawn twill read as fuzz; the scan's own folds carry the cloth
     suit_shade = np.clip(0.82 + 0.32 * (shade / max(1e-3, float(np.median(shade[~white_m])) if (~white_m).any() else 0.25)) + cloth_hi * 1.4, 0.60, 1.24)[..., None]
     suit = np.array((0.215, 0.188, 0.162), np.float32) * suit_shade * (0.62 + 0.38 * weave_fac[..., None]) * wool_twill[..., None]
     cloth_out = suit * (1.0 - shirt_sel[..., None]) + cream * shirt_sel[..., None]
@@ -1766,7 +2130,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     wn, hn = 1024, 1024
     scan_n = _resize_np(raw_n_img, wn, hn) if raw_n_img else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 2), np.float32)])
     linen_n = _load_tiled_np(LINEN_N, wn, hn, repeats=38, is_srgb=False) if LINEN_N.exists() else np.dstack([np.full((hn, wn, 2), 0.5, np.float32), np.ones((hn, wn, 1), np.float32)])
-    drv_cloth_n = _pack_image("T_taxi_driver_clothes_N", _blend_normals(scan_n, linen_n, 0.48, 0.48), is_srgb=False)
+    drv_cloth_n = _pack_image("T_taxi_driver_clothes_N", _blend_normals(scan_n, linen_n, 0.85, 0.10), is_srgb=False)
 
     # Crisp knuckle/crease + epidermal pore normal for driver hands
     h_n = rng_h.normal(0.0, 0.026, (hn, wn)).astype(np.float32)
@@ -1834,9 +2198,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     # forearm/hand axis!) so the ENTIRE bare wrist, palm, back of hand & fingers are 100% bare warm human skin
     # (ZERO dark fingerless-glove patch on his palm, ZERO zigzag teeth, ZERO floating cardboard rings!)
     for side in ("l", "r"):
-        wp_b, ax_b, hand_b = drv_wrists_basis[side]
-        cuff_ax = (ax_b * 0.65 + hand_b * 0.35).normalized()
-        cuff_plane = wp_b - ax_b * 0.008
+        wp_b, cuff_ax, cuff_plane = _cuff_frame(side)
         wrist_faces = [
             f for f in bm.faces
             if abs((f.calc_center_median() - cuff_plane).dot(cuff_ax)) < 0.028
@@ -1862,12 +2224,79 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
             if -0.06 < al_p < 0.24 and (rel_p - cuff_ax * al_p).length < 0.095:
                 f.material_index = 1 if al_p >= 0.0 else 0
 
+    if scan_hands is not None:
+        # Eric's hands go: the photoscanned hands fill the sleeves. The open sleeve end gets a
+        # folded hem (3.5 mm of cloth) and a lining running 2.5 cm back up the sleeve.
+        bm.faces.ensure_lookup_table()
+        planes = []
+        for side in ("l", "r"):
+            planes.append(_cuff_frame(side))
+        cut, regained = [], []
+        for f in bm.faces:
+            fc = f.calc_center_median()
+            beyond = False
+            for wp_b, c_ax, c_pl in planes:
+                rel = fc - c_pl
+                al = rel.dot(c_ax)
+                if al > 0.0 and (rel - c_ax * al).length < 0.14 and (fc - wp_b).length < 0.32:
+                    beyond = True
+                    break
+            if beyond:
+                cut.append(f)
+            elif f.material_index == 1:
+                f.material_index = 0
+                regained.append(f)
+        # Sleeve faces once tagged as hand still map Eric's skin in the atlas: give each corner
+        # the UV of the nearest true sleeve corner so the cloth runs on unbroken.
+        uv_l = bm.loops.layers.uv.active
+        regained_set = set(regained)
+        if regained and uv_l is not None:
+            from mathutils.kdtree import KDTree as _KD
+
+            near = [
+                lp for f in bm.faces if f not in regained_set and f not in cut and f.material_index == 0
+                for lp in f.loops
+                if min((lp.vert.co - pl[0]).length for pl in planes) < 0.30
+            ]
+            kd_uv = _KD(len(near))
+            for i, lp in enumerate(near):
+                kd_uv.insert(lp.vert.co, i)
+            kd_uv.balance()
+            for f in regained:
+                for lp in f.loops:
+                    _, i, _ = kd_uv.find(lp.vert.co)
+                    lp[uv_l].uv = near[i][uv_l].uv.copy()
+        bmesh.ops.delete(bm, geom=cut, context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        # Any loose piece of Eric's old fingers lying wholly past a cuff goes too.
+        bm.faces.ensure_lookup_table()
+        seen, stray = set(), []
+        for f in bm.faces:
+            if f.index in seen:
+                continue
+            comp, st = [], [f]
+            seen.add(f.index)
+            while st:
+                g = st.pop()
+                comp.append(g)
+                for e in g.edges:
+                    for nf in e.link_faces:
+                        if nf.index not in seen:
+                            seen.add(nf.index)
+                            st.append(nf)
+            if len(comp) < 6000:
+                for wp_b, c_ax, c_pl in planes:
+                    if all((g.calc_center_median() - c_pl).dot(c_ax) > -0.01 for g in comp):
+                        stray += comp
+                        break
+        if stray:
+            bmesh.ops.delete(bm, geom=stray, context="FACES")
+            bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+
     # Tailor Eric's baggy forearms + crisp subtle integrated 3D rolled shirt-cuff hem right behind `cuff_plane`!
     wrist_smooth_v = []
     for side in ("l", "r"):
-        wp_b, ax_b, hand_b = drv_wrists_basis[side]
-        cuff_ax = (ax_b * 0.65 + hand_b * 0.35).normalized()
-        cuff_plane = wp_b - ax_b * 0.008
+        wp_b, cuff_ax, cuff_plane = _cuff_frame(side)
         for v in bm.verts:
             rel = v.co - cuff_plane
             along = rel.dot(cuff_ax)
@@ -1891,7 +2320,9 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
                             w_s = _sstep(-0.11, -0.03, along)
                             d_rad -= (r_len - target_r) * 0.45 * w_s
                         # Subtle crisp 2.2mm tailored shirt cuff thickness right behind the wrist crease (-2.6cm .. 0)!
-                        if -0.028 < along < -0.0005:
+                        # (Not with the scanned hands: on the cut's uneven vertices this lip came out
+                        # as a zigzag; their sleeve ends get a real folded hem instead.)
+                        if scan_hands is None and -0.028 < along < -0.0005:
                             cuff_lip = _sstep(-0.028, -0.016, along) * _sstep(-0.0005, -0.004, along)
                             d_rad += 0.0024 * cuff_lip
                         if abs(d_rad) > 1e-6 and r_len > 1e-4:
@@ -1911,6 +2342,195 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
                 v.co += d_v
                 for sk in sk_layers:
                     v[sk] = v[sk] + d_v
+
+    # Tailored sleeves: the scanned businessman's shirt is cut very full and swelled into a balloon at
+    # the bent elbow. Ease every sleeve vertex toward its arm bone, to a real shirt sleeve's width
+    # (5.6 cm round the upper arm to 4.4 cm at the forearm), in each shape with that shape's own arm.
+    if arm_joints.get("Basis"):
+
+        def _seg_param(p, a, b):
+            ab = b - a
+            t = max(0.0, min(1.0, (p - a).dot(ab) / max(1e-9, ab.length_squared)))
+            return t, a + ab * t
+
+        layer_by_name = {lay.name: lay for lay in sk_layers}
+        sleeve = []
+        for v in bm.verts:
+            if not all(f.material_index == 0 for f in v.link_faces):
+                continue
+            for side in ("l", "r"):
+                sh, el, wr = arm_joints["Basis"][side]
+                t_u, q_u = _seg_param(v.co, sh, el)
+                t_f, q_f = _seg_param(v.co, el, wr)
+                d_u, d_f = (v.co - q_u).length, (v.co - q_f).length
+                if min(d_u, d_f) > 0.12:
+                    continue
+                # Fade in past the shoulder (keep the torso), and out over the cuff's last 7 cm.
+                fore_len = (wr - el).length
+                if d_u <= d_f:
+                    w = _sstep(0.18, 0.40, t_u)
+                else:
+                    w = _sstep(fore_len - 0.04, fore_len - 0.085, t_f * fore_len)
+                if w > 0.0:
+                    sleeve.append((v, side, w))
+                    break
+        for v, side, w in sleeve:
+            for lay_name in [None] + [lay.name for lay in sk_layers]:
+                joints = arm_joints.get(lay_name or "Basis") or arm_joints["Basis"]
+                sh, el, wr = joints[side]
+                co = v.co if lay_name is None else v[layer_by_name[lay_name]]
+                t_u, q_u = _seg_param(co, sh, el)
+                t_f, q_f = _seg_param(co, el, wr)
+                if (co - q_u).length <= (co - q_f).length:
+                    q, r_t = q_u, 0.056 - 0.006 * t_u
+                else:
+                    q, r_t = q_f, 0.050 - 0.006 * t_f
+                radial = co - q
+                r = radial.length
+                if r > r_t and r > 1e-6:
+                    new = q + radial * ((r_t + (r - r_t) * 0.30) / r)
+                    new = co.lerp(new, w)
+                    if lay_name is None:
+                        v.co = new
+                    else:
+                        v[layer_by_name[lay_name]] = new
+        sleeve_v = {v for v, _, _ in sleeve}
+        for _ in range(3):
+            disp = {}
+            for v in sleeve_v:
+                nbs = [e.other_vert(v) for e in v.link_edges]
+                if nbs:
+                    disp[v] = (sum((nb.co for nb in nbs), Vector()) / len(nbs) - v.co) * 0.25
+            for v, d_v in disp.items():
+                v.co += d_v
+                for sk in sk_layers:
+                    v[sk] = v[sk] + d_v
+        print("TAXI_SLEEVES_TAILORED", len(sleeve))
+
+    if scan_hands is not None:
+        # The sleeve ends' folded hem and lining, grown only now that the forearms are tailored (the
+        # tailoring would push a hem built earlier out through the sleeve).
+        roll_layer = bm.faces.layers.int.get("sleeve_roll") or bm.faces.layers.int.new("sleeve_roll")
+        for side in ("l", "r"):
+            wp_b, cuff_ax, cuff_plane = _cuff_frame(side)
+            rim_edges = [
+                e for e in bm.edges
+                if e.is_boundary and all(abs((v.co - cuff_plane).dot(cuff_ax)) < 0.03 and (v.co - cuff_plane).length < 0.09 for v in e.verts)
+            ]
+            if not rim_edges:
+                continue
+            # A shirt cuff is roomier than the wrist: wherever the posed scanned wrist would cut through
+            # the sleeve's last 6.5 cm, let the sleeve out to 5 mm clear of it (all shapes alike).
+            hb = hand_shapes["Basis"][side][scan_hands[side].keep]
+            ax_np = np.array(cuff_ax[:])
+            rel_h = hb - np.array(cuff_plane[:])
+            al_h = rel_h @ ax_np
+            rad_h = rel_h - np.outer(al_h, ax_np)
+            r_h = np.linalg.norm(rad_h, axis=1)
+            ref = Vector((0.0, 0.0, 1.0)) if abs(cuff_ax.z) < 0.9 else Vector((1.0, 0.0, 0.0))
+            e1 = (ref - cuff_ax * ref.dot(cuff_ax)).normalized()
+            e2 = cuff_ax.cross(e1)
+            ang_h = np.arctan2(rad_h @ np.array(e2[:]), rad_h @ np.array(e1[:]))
+            in_slab = (al_h > -0.075) & (al_h < 0.012)
+            let_out = {}
+            for v in bm.verts:
+                rel = v.co - cuff_plane
+                along = rel.dot(cuff_ax)
+                if not (-0.065 < along < 0.001):
+                    continue
+                radial = rel - cuff_ax * along
+                r_v = radial.length
+                if r_v > 0.075 or r_v < 1e-5:
+                    continue
+                a_v = math.atan2(radial.dot(e2), radial.dot(e1))
+                near = in_slab & (np.abs(al_h - along) < 0.007) & (np.abs((ang_h - a_v + math.pi) % math.tau - math.pi) < 0.35)
+                if near.any():
+                    need = float(r_h[near].max()) + 0.005
+                    if r_v < need:
+                        let_out[v] = radial.normalized() * (need - r_v)
+            for _ in range(3):
+                spread = {}
+                for v, d_v in let_out.items():
+                    for e in v.link_edges:
+                        u = e.other_vert(v)
+                        if u not in let_out:
+                            spread[u] = spread.get(u, Vector()) + d_v * 0.25
+                for u, d_v in spread.items():
+                    let_out[u] = d_v
+            for v, d_v in let_out.items():
+                v.co += d_v
+                for sk in sk_layers:
+                    v[sk] = v[sk] + d_v
+            print("TAXI_CUFF_LET_OUT", side, len(let_out))
+            # A clean round edge first: ease each edge vertex toward its neighbours along the cut.
+            rim_v = {v for e in rim_edges for v in e.verts}
+            for _ in range(10):
+                disp = {}
+                for v in rim_v:
+                    nbs = [e.other_vert(v) for e in v.link_edges if e.is_boundary and e.other_vert(v) in rim_v]
+                    if len(nbs) == 2:
+                        d_v = ((nbs[0].co + nbs[1].co) * 0.5 - v.co) * 0.5
+                        disp[v] = d_v - cuff_ax * d_v.dot(cuff_ax)
+                for v, d_v in disp.items():
+                    v.co += d_v
+                    for sk in sk_layers:
+                        v[sk] = v[sk] + d_v
+            # The rolled-up sleeve: the opening's edge is rolled outward and back up the arm into a soft
+            # cotton band about 4 cm wide and 1 cm proud, thicker in some places than others, as a sleeve
+            # pushed up by hand. Rings grow round the opening's own centre (folding toward the wrist joint
+            # once turned part of a hem outward as a flap).
+            open_v = {v for e in rim_edges for v in e.verts}
+            open_c = sum((v.co for v in open_v), Vector()) / max(1, len(open_v))
+            ref = Vector((0.0, 0.0, 1.0)) if abs(cuff_ax.z) < 0.9 else Vector((1.0, 0.0, 0.0))
+            e1 = (ref - cuff_ax * ref.dot(cuff_ax)).normalized()
+            e2 = cuff_ax.cross(e1)
+            ph = 0.7 if side == "l" else 2.3
+            # (radially out, up the arm) from the opening's edge, metres
+            profile = [(0.0, 0.0), (0.0035, -0.0035), (0.0080, -0.0012), (0.0105, 0.0075), (0.0112, 0.0190),
+                       (0.0098, 0.0300), (0.0060, 0.0368), (0.0018, 0.0384), (-0.0008, 0.0362)]
+            arc = [0.0]
+            for (a0, b0), (a1, b1) in zip(profile, profile[1:]):
+                arc.append(arc[-1] + math.hypot(a1 - a0, b1 - b0))
+            ring_of, ang_of = {}, {}
+            for v in open_v:
+                rel = v.co - open_c
+                ring_of[v] = 0
+                ang_of[v] = math.atan2(rel.dot(e2), rel.dot(e1))
+            roll_faces = []
+            for step in range(1, len(profile)):
+                d_out = profile[step][0] - profile[step - 1][0]
+                d_up = profile[step][1] - profile[step - 1][1]
+                src_v = {v for e in rim_edges for v in e.verts}
+                by_pos = {tuple(round(c, 7) for c in v.co): v for v in src_v}
+                ext = bmesh.ops.extrude_edge_only(bm, edges=rim_edges)
+                new_v = [g for g in ext["geom"] if isinstance(g, bmesh.types.BMVert)]
+                for v in new_v:
+                    src = by_pos.get(tuple(round(c, 7) for c in v.co))
+                    rel = v.co - open_c
+                    radial = rel - cuff_ax * rel.dot(cuff_ax)
+                    a_ = ang_of.get(src, math.atan2(rel.dot(e2), rel.dot(e1)))
+                    lump = 1.0 + 0.22 * math.sin(2.0 * a_ + ph) + 0.12 * math.sin(5.0 * a_ + 2.0 * ph)
+                    d_v = (radial.normalized() * d_out * lump if radial.length > 1e-6 else Vector()) - cuff_ax * d_up
+                    v.co += d_v
+                    ring_of[v], ang_of[v] = step, a_
+                    # New vertices carry no shape-key data: copy the edge they grew from, then offset.
+                    for sk in sk_layers:
+                        v[sk] = (src[sk] if src is not None else v.co - d_v) + d_v
+                roll_faces += [g for g in ext["geom"] if isinstance(g, bmesh.types.BMFace)]
+                rim_edges = [g for g in ext["geom"] if isinstance(g, bmesh.types.BMEdge) and g.is_boundary]
+            # Its own cotton (the scan atlas would only smear along the band): u round the sleeve, v
+            # along the roll, 6 cm per repeat.
+            r_mean = sum(((v.co - open_c) - cuff_ax * (v.co - open_c).dot(cuff_ax)).length for v in open_v) / max(1, len(open_v))
+            uv_r = bm.loops.layers.uv.active
+            for f in roll_faces:
+                f[roll_layer] = 1
+                angs = [ang_of.get(lp.vert, 0.0) for lp in f.loops]
+                base = angs[0]
+                for lp, a_ in zip(f.loops, angs):
+                    a_ = base + ((a_ - base + math.pi) % math.tau - math.pi)  # no wrap across the seam
+                    lp[uv_r].uv = (a_ * r_mean / 0.06, arc[ring_of.get(lp.vert, 0)] / 0.06)
+            print("TAXI_SLEEVE_ROLLED", side, len(roll_faces))
+
 
     # GENTLE SOFT-TISSUE RIM CONTACT GUARD:
     # Only gently cushions finger/palm pad skin vertices grazing the 12.7mm rim surface (`0.008 < d_tube < 0.0133`)
@@ -1932,6 +2552,7 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
                     v.co += push
                     for sk in sk_layers:
                         v[sk] = v[sk] + push
+
 
     bm.faces.ensure_lookup_table()
     visited = set()
@@ -1957,9 +2578,12 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
         bmesh.ops.delete(bm, geom=tiny_faces, context="FACES")
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
     # Smoothly shape the upper-back shoulders into a natural downward slope (NO flat tabletop shelf clamp!)
+    def _at_neck(co):
+        return math.hypot(co.x - 0.264, co.y - 0.030) < 0.14 and co.z > 0.78
+
     for v in bm.verts:
         if all(f.material_index == 0 for f in v.link_faces) and v.co.z > 0.76:
-            if v.is_boundary and v.co.z > 0.845:
+            if v.is_boundary and v.co.z > 0.845 and _at_neck(v.co):
                 dz_b = (v.co.z - 0.845) * 0.82
                 dx_b = (0.264 - v.co.x) * 0.25
                 dy_b = (0.030 - v.co.y) * 0.25
@@ -1973,7 +2597,58 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
                 v.co.z -= dz_tuck
                 for sk in sk_layers:
                     v[sk] = Vector((v[sk].x, v[sk].y, v[sk].z - dz_tuck))
+    # The neck opening as one smooth loop: each edge vertex eases toward its two neighbours along the
+    # opening (no shards), then the ring just inside blends in.
+    neck_rim = [v for v in bm.verts if v.is_boundary and _at_neck(v.co)]
+    rim_set = set(neck_rim)
+    for _ in range(24):
+        disp = {}
+        for v in neck_rim:
+            nbs = [e.other_vert(v) for e in v.link_edges if e.is_boundary and e.other_vert(v) in rim_set]
+            if len(nbs) == 2:
+                disp[v] = ((nbs[0].co + nbs[1].co) * 0.5 - v.co) * 0.5
+        for v, d_v in disp.items():
+            v.co += d_v
+            for sk in sk_layers:
+                v[sk] = v[sk] + d_v
+    inner = {e.other_vert(v) for v in neck_rim for e in v.link_edges} - rim_set
+    for _ in range(4):
+        disp = {}
+        for v in inner:
+            nbs = [e.other_vert(v) for e in v.link_edges]
+            if nbs:
+                disp[v] = (sum((nb.co for nb in nbs), Vector()) / len(nbs) - v.co) * 0.3
+        for v, d_v in disp.items():
+            v.co += d_v
+            for sk in sk_layers:
+                v[sk] = v[sk] + d_v
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # Recalculating guesses "outside" for an open shell, and the rolled sleeves (open bands tucked into
+    # the sleeves) tipped the guess: the whole body came out inside-out, hollow in game. Check the torso
+    # faces his front, back and sides; each connected piece is flipped on its own if it points inward.
+    bm.faces.ensure_lookup_table()
+    seen = set()
+    for f0 in bm.faces:
+        if f0.index in seen:
+            continue
+        comp, st = [], [f0]
+        seen.add(f0.index)
+        while st:
+            g = st.pop()
+            comp.append(g)
+            for e in g.edges:
+                for nf in e.link_faces:
+                    if nf.index not in seen:
+                        seen.add(nf.index)
+                        st.append(nf)
+        score = 0.0
+        for g in comp:
+            c = g.calc_center_median()
+            if 0.55 < c.z < 0.88 and abs(c.x - 0.26) < 0.17:
+                score += g.normal.dot(Vector((c.x - 0.26, c.y - 0.03, 0.0))) * g.calc_area()
+        if score < 0.0:
+            bmesh.ops.reverse_faces(bm, faces=comp)
+            print("TAXI_BODY_TURNED_OUTWARD", len(comp))
     bmesh.update_edit_mesh(body.data)
     bpy.ops.object.mode_set(mode="OBJECT")
     if len(body.data.materials) > 2:
@@ -1982,12 +2657,66 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
         p.use_smooth = True
     body.data.update()
 
+    if scan_hands is not None:
+        # The photoscanned hands as their own meshes, carrying every arm morph plus `grip` (the near
+        # hand's two fingers lifting off the rim, tapped by the runtime while he talks).
+        if len(body.data.materials) > 1:
+            body.data.materials.pop(index=1)
+        h_mat = wardrobe.hand_material(scan_hand_src_mat, face_uvs=scan_hands["r"].face_uvs)
+        for side, h in scan_hands.items():
+            _clear_objects(f"taxi_driver_hand_{side}")
+            obj = wardrobe.hand_mesh(h, hand_shapes["Basis"][side], f"taxi_driver_hand_{side}", h_mat, coll)
+            obj.shape_key_add(name="Basis", from_mix=False)
+            names = [m for m, _ in morph_specs] + (["grip"] if side == "r" else [])
+            for m_name in names:
+                kb = obj.shape_key_add(name=m_name, from_mix=False)
+                kb.data.foreach_set("co", hand_shapes[m_name][side][h.keep].astype(np.float32).ravel())
+                kb.value = 0.0
+            obj.data["credit"] = str(wardrobe.HAND_CREDIT)
+
     # 6. Woven cotton collar material (`M_cab_driver_cuff_cotton`) — cuffs are now cleanly integrated directly
     #    into `taxi_driver_body_scan` via razor-straight circular wrist bisect (ZERO detached floating boxes!)
     cuff_w_arr = np.broadcast_to(weave_fac[:512, :512, None], (512, 512, 3)) * np.array((0.46, 0.41, 0.34), np.float32)
     cuff_bc_img = _pack_image("T_cab_driver_cuff_BC", cuff_w_arr, is_srgb=True)
     cuff_mat = _make_pbr("M_cab_driver_cuff_cotton", cuff_bc_img, bpy.data.images.load(str(LINEN_N), check_existing=True) if LINEN_N.exists() else drv_cloth_n, rough=0.88, normal_strength=0.45)
     cuff_mat["tile"] = 0.27
+    roll_attr = body.data.attributes.get("sleeve_roll")
+    if roll_attr is not None:
+        # The rolled sleeve bands wear the cuff cotton, toned to the shirt's own colour at the sleeves.
+        clothes_bc = next(
+            (n.image for n in body.data.materials[0].node_tree.nodes if n.type == "TEX_IMAGE" and n.image and n.image.colorspace_settings.name == "sRGB"),
+            None,
+        ) if body.data.materials and body.data.materials[0].use_nodes else None
+        flags = np.zeros(len(body.data.polygons), np.int32)
+        roll_attr.data.foreach_get("value", flags)
+        if clothes_bc is not None:
+            cw, ch_ = clothes_bc.size
+            px = np.empty(cw * ch_ * 4, np.float32)
+            clothes_bc.pixels.foreach_get(px)
+            px = px.reshape(ch_, cw, 4)
+            uvl = body.data.uv_layers.active.data
+            samp = []
+            for p in body.data.polygons:
+                if flags[p.index]:
+                    continue
+                c = p.center
+                if any((c - _cuff_frame(sd)[2]).length < 0.10 for sd in ("l", "r")):
+                    for li in p.loop_indices:
+                        u_, v_ = uvl[li].uv
+                        samp.append(px[int((v_ % 1.0) * (ch_ - 1)), int((u_ % 1.0) * (cw - 1)), :3])
+            if samp:
+                shirt = np.median(np.array(samp), axis=0)
+                roll_rgb = np.broadcast_to(weave_fac[:512, :512, None], (512, 512, 3)) * shirt[None, None, :]
+                cuff_mat = _make_pbr("M_cab_driver_cuff_cotton", _pack_image("T_cab_driver_cuff_BC", roll_rgb, is_srgb=True),
+                                     bpy.data.images.load(str(LINEN_N), check_existing=True) if LINEN_N.exists() else drv_cloth_n,
+                                     rough=0.88, normal_strength=0.45)
+                print("TAXI_SLEEVE_ROLL_COLOUR", shirt.round(3))
+        body.data.materials.append(cuff_mat)
+        slot = len(body.data.materials) - 1
+        for p in body.data.polygons:
+            if flags[p.index]:
+                p.material_index = slot
+        body.data.attributes.remove(roll_attr)
 
     # 7. Inner dark neck seal (`taxi_driver_sleeves_scan` keeps taxiAssets.test.ts contract intact!)
     m_inner_col = _make_pbr("M_cab_driver_collar", rough=0.96, color=(0.012, 0.011, 0.010))
@@ -1995,7 +2724,8 @@ def rebuild_driver_body_and_clothes(coll, neck_target, plain, world_uvs_fn):
     nc = Vector((0.264, 0.056, 0.848))
     segs = 28
     rings = []
-    for dz, rx, ry in [(-0.022, 0.044, 0.046), (0.0, 0.042, 0.044), (0.020, 0.040, 0.042), (0.020, 0.034, 0.036), (-0.020, 0.038, 0.040)]:
+    # (85% since the head and neck went to 93%: the seal stays hidden inside the neck.)
+    for dz, rx, ry in [(-0.022, 0.037, 0.039), (0.0, 0.036, 0.037), (0.020, 0.034, 0.036), (0.020, 0.029, 0.031), (-0.020, 0.032, 0.034)]:
         rings.append([bm_ic.verts.new(nc + Vector((math.cos(k / segs * math.tau) * rx, math.sin(k / segs * math.tau) * ry, dz))) for k in range(segs)])
     for i in range(len(rings)):
         rA, rB = rings[i], rings[(i + 1) % len(rings)]
@@ -2565,6 +3295,7 @@ def rebuild_sora_hands_and_watch(coll, world_uvs_fn):
         "l": (rig.joint(rig.bone("lowerarm_l")), rig.joint(rig.bone("hand_l"))),
         "r": (rig.joint(rig.bone("lowerarm_r")), rig.joint(rig.bone("hand_r"))),
     }
+    elbow_rest = {s: rig.joint(rig.bone(f"lowerarm_{s}")).copy() for s in ("l", "r")}
 
     # 1. Seated position & legs resting on floorboards (keeping both shoes cleanly visible from Sora's eyes!)
     sora_hip = Vector((-0.27, 0.08, 0.39))

@@ -211,6 +211,51 @@ function makeRainRippleNormals(scene: Scene): RawTexture {
 }
 
 /**
+ * Tileable 128x128 detailMap (R=albedo, G=normalY, B=roughness, A=normalX) of cotton drill: a 2/1
+ * twill's diagonal ribs over uneven yarns. Up close the driver's shirt and waistcoat read as woven
+ * cloth rather than smooth plaster; `repeat` sets how many weave tiles cover one UV unit.
+ */
+function makeClothWeave(scene: Scene, name: string, repeat: number): RawTexture {
+  const size = 128;
+  const height = new Float32Array(size * size);
+  const tone = new Float32Array(size * size);
+  const hash = (i: number, seed: number) => {
+    const n = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      // Yarns every 2 texels; twill ribs climb one yarn per row.
+      const rib = Math.sin((((x + y) % 6) / 6) * Math.PI * 2);
+      const warp = Math.sin(((x % 2) + 0.5) * Math.PI);
+      const slub = (hash(x >> 1, 1) - 0.5) * 0.5 + (hash(y >> 1, 2) - 0.5) * 0.5;
+      height[y * size + x] = rib * 0.55 + warp * 0.25 + slub * 0.35;
+      tone[y * size + x] = slub * 0.8 + rib * 0.15;
+    }
+  }
+  const rgba = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const at = (xx: number, yy: number) =>
+        height[((yy + size) % size) * size + ((xx + size) % size)];
+      const nx = -(at(x + 1, y) - at(x - 1, y)) * 0.9;
+      const ny = -(at(x, y + 1) - at(x, y - 1)) * 0.9;
+      const len = Math.hypot(nx, ny, 1);
+      const i = (y * size + x) * 4;
+      rgba[i] = Math.round(128 + tone[y * size + x] * 36);
+      rgba[i + 1] = Math.round(127.5 + (ny / len) * 127.5);
+      rgba[i + 2] = Math.round(128 + height[y * size + x] * 18);
+      rgba[i + 3] = Math.round(127.5 + (nx / len) * 127.5);
+    }
+  }
+  const tex = RawTexture.CreateRGBATexture(rgba, size, size, scene, true, false);
+  tex.wrapU = tex.wrapV = RawTexture.WRAP_ADDRESSMODE;
+  tex.uScale = tex.vScale = repeat;
+  tex.name = name;
+  return tex;
+}
+
+/**
  * Tileable 256x256 Babylon PBR detailMap (R=albedo, G=normalY, B=roughness, A=normalX)
  * adding crisp close-range laterite gravel grit, mud lumps, and longitudinal tire-tread striations.
  */
@@ -1207,10 +1252,11 @@ export class TaxiVisuals {
             : material.name === "M_taxi_sora_skin_scan"
               ? 0.24
               : 0.22;
+        // Blood under brown skin, not the old orange glow.
         material.subSurface.tintColor =
           material.name === "M_taxi_sora_skin_scan"
             ? new Color3(0.86, 0.46, 0.34)
-            : new Color3(0.88, 0.42, 0.28);
+            : new Color3(0.78, 0.36, 0.28);
         if (material.name === "M_taxi_driver_head_scan") {
           material.specularIntensity = 0.26;
         } else if (material.name === "M_taxi_driver_neck_skin") {
@@ -1219,6 +1265,10 @@ export class TaxiVisuals {
         } else if (material.name === "M_taxi_sora_skin_scan") {
           material.roughness = 0.48;
           material.specularIntensity = 0.28;
+        } else if (material.name === "M_taxi_driver_hands_scan") {
+          // Work-worn hands: drier than the face, so the cabin light never glints off them.
+          material.roughness = 0.62;
+          material.specularIntensity = 0.16;
         } else {
           material.roughness = 0.52;
           material.specularIntensity = 0.26;
@@ -1239,6 +1289,19 @@ export class TaxiVisuals {
         material.sheen.intensity = material.name === "M_cab_driver_cap" ? 0.28 : 0.24;
         material.sheen.roughness = 0.7;
         material.sheen.color.set(0.85, 0.82, 0.76);
+        // Woven cotton drill up close (the shirt, waistcoat, collar and cuffs, not the felt cap).
+        if (material.name !== "M_cab_driver_cap" && material.name !== "M_cab_driver_krama") {
+          material.detailMap.isEnabled = true;
+          material.detailMap.texture = makeClothWeave(
+            scene,
+            `${material.name}_weave`,
+            // Whole-body scan atlases need a finer repeat than the cotton parts with their own UVs.
+            /_scan$/.test(material.name) ? 52 : 11,
+          );
+          material.detailMap.diffuseBlendLevel = 0.22;
+          material.detailMap.bumpLevel = 0.55;
+          material.detailMap.roughnessBlendLevel = 0.25;
+        }
       }
       if (material.name === "M_taxi_sora_nails") {
         material.metallic = 0;

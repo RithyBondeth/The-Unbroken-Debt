@@ -3597,6 +3597,10 @@ if __name__ == "__main__":
     # Refresh wiper header mounts + rebuild driver (head, cap, grip, krama) & Sora (hands, nails, watch)
     _refresh_wiper_header_mounts(coll, m)
     _smooth_people_and_cabin_polish(coll, m, plain, world_uvs)
+    # Only the bits of the wheel that would show through his sleeves are hidden; the rest stays.
+    import taxi_people_refine
+
+    taxi_people_refine.cut_wheel_inside_driver()
     # Sync rear folded krama to the upgraded krama material
     rk = bpy.data.objects.get("taxi_rear_folded_krama")
     km = bpy.data.materials.get("M_cab_driver_krama")
