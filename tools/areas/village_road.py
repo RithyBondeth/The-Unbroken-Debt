@@ -1300,7 +1300,17 @@ def colliders(coll, ground, base, gaps):
         step_y = 0.0 if moto else -0.35
         half = 1.45 if moto else 0.72
         deck = 0.178
-        _local_box(coll, f"vroad_shop_{idx}_in", M, -3.5, 0.12, -hw - 0.14, hw + 0.14, -0.7, 3.7)
+        if sp["open_front"] and not sp["dim"]:
+            # Hollow walkable interior: seamless floor, back wall, side walls, and doorway flanks
+            door_half = 0.94
+            _local_box(coll, f"vroad_shop_{idx}_in_floor", M, -3.5, 0.16, -hw - 0.1, hw + 0.1, -0.7, deck + 0.006)
+            _local_box(coll, f"vroad_shop_{idx}_in_back", M, -3.5, -3.22, -hw - 0.14, hw + 0.14, -0.7, 3.7)
+            _local_box(coll, f"vroad_shop_{idx}_in_l", M, -3.5, 0.14, -hw - 0.14, -hw + 0.04, -0.7, 3.7)
+            _local_box(coll, f"vroad_shop_{idx}_in_r", M, -3.5, 0.14, hw - 0.04, hw + 0.14, -0.7, 3.7)
+            _local_box(coll, f"vroad_shop_{idx}_in_fl", M, -0.08, 0.14, -hw - 0.14, -door_half, -0.7, 3.7)
+            _local_box(coll, f"vroad_shop_{idx}_in_fr", M, -0.08, 0.14, door_half, hw + 0.14, -0.7, 3.7)
+        else:
+            _local_box(coll, f"vroad_shop_{idx}_in", M, -3.5, 0.12, -hw - 0.14, hw + 0.14, -0.7, 3.7)
         _local_box(coll, f"vroad_shop_{idx}_deck", M, 0.12, 1.96, -hw, hw, -0.7, deck)
         _local_box(coll, f"vroad_shop_{idx}_side_l", M, 0.1, 1.98, -hw - 0.14, -hw, deck - 0.05, 2.5)
         _local_box(coll, f"vroad_shop_{idx}_side_r", M, 0.1, 1.98, hw, hw + 0.14, deck - 0.05, 2.5)

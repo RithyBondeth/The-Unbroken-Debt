@@ -31,12 +31,21 @@ it("does not confuse placed tray with collected ingredients and transcribes the 
   const notes = notebookClues(new Set(["SB-03b"]));
   expect(notes[0].text).toContain("back: candle");
 });
-it("leaves arrival peaceful and shows the listening passage only after it starts", () => {
+it("tracks the new village puzzle chain from sealed gate through well, wards, and stopped clock", () => {
   const { flags, items } = setup();
-  flags.load({ "ep1.checkpoint": "CP1", "ep1.early.required": true });
+  flags.load({ "ep1.checkpoint": "CP1", "ep1.village.puzzlesActive": true });
+  expect(currentObjective(flags, items).title).toBe("Open the sealed farm gate");
+  flags.set("ep1.puzzle.gate.open", true);
   expect(currentObjective(flags, items).title).toBe("Find Mak Yey’s instructions");
-  flags.set("ep1.early.started", true);
-  expect(currentObjective(flags, items).title).toBe("Keep the vigil in darkness");
-  flags.set("ep1.early.complete", true);
-  expect(currentObjective(flags, items).title).toBe("Find Mak Yey’s instructions");
+  flags.set("ep1.vigil.started", true);
+  flags.set("ep1.betel.done", true);
+  expect(currentObjective(flags, items).title).toBe("Haul the brick village well");
+  flags.set("ep1.puzzle.well.complete", true);
+  expect(currentObjective(flags, items).title).toBe("Restore the three compound wards");
+  flags.set("ep1.puzzle.ward.neakta", true);
+  flags.set("ep1.puzzle.ward.stupas", true);
+  flags.set("ep1.puzzle.ward.ruin", true);
+  expect(currentObjective(flags, items).title).toBe("Set the stopped hall clock");
+  flags.set("ep1.puzzle.clock.solved", true);
+  expect(currentObjective(flags, items).title).toBe("Keep the vigil");
 });

@@ -3,68 +3,76 @@ import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import type { AudioSystem } from "@/audio/AudioSystem";
 import { rattlingBreath, seededRandom, wetStep } from "@/audio/synth";
 import { sniff } from "./houseSounds";
+import { ep1AudioUrls } from "./VillageAudio";
 
-/** Seconds from one breath to the next at rest: slow, heavy, about 17 a minute. */
-const BREATH_CYCLE = 3.6;
-/** Its head is about this far above its feet. */
-const HEAD = 1.7;
+const HEAD = 1.62;
 
 /**
- * The shadow form's body as it moves (S1-025, S1-031; Audio Design Document,
- * section 5): wet drags laid under each footstep, its rattling breath
- * following it, faster when it hunts, and a sniff where it searches. Only
- * ever played where the form really is ("sound tells the truth").
+ * Preay's intimate, spatialized vocal & movement presence (Acts II–III & village stalks):
+ * backed by real mastered CC0 wet throat-rattle, close-mic breath, neck-crack, and wet drag
+ * recordings (replacing the old metallic synth buzz), with procedural fallback offline.
  */
 export class StalkerVoice {
   private readonly drags: StaticSound[] = [];
   private breath: StaticSound | null = null;
+  private rattle: StaticSound | null = null;
   private sniffSound: StaticSound | null = null;
   private breathing = false;
   private next = 0;
+  private rattleCooldown = 0;
 
-  constructor(private readonly volume = 0.55) {}
+  constructor(private readonly volume = 0.62) {}
 
   async load(audio: AudioSystem | null, name: string, seed: number): Promise<void> {
     if (!audio) return;
     const rate = audio.context.sampleRate;
     const at = Vector3.Zero();
+
+    const [recBreath, recRattle, recWhisper, recSplash] = await Promise.all([
+      audio.load(ep1AudioUrls("sfx_ep1_preay_breath_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_rattle")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_whisper_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_taxi_mud_splash_1")),
+    ]);
+
     for (let k = 0; k < 3; k++) {
       const drag = await audio.spatialSound(
         `${name}_drag_${k}`,
-        audio.buffer(wetStep(rate, seededRandom(seed + k)), rate),
+        recSplash ?? audio.buffer(wetStep(rate, seededRandom(seed + k)), rate),
         "threat",
         at,
-        { minDistance: 2, volume: this.volume * 0.7 },
+        { panning: "HRTF", minDistance: 2, maxDistance: 28, volume: this.volume * 0.62 },
       );
-      drag.playbackRate = 0.82 + k * 0.05;
+      drag.playbackRate = 0.78 + k * 0.06;
       this.drags.push(drag);
     }
-    // Two different breaths, each followed by the pause before the next.
-    const cycle = Math.round(BREATH_CYCLE * rate);
-    const loop = new Float32Array(cycle * 2);
-    loop.set(rattlingBreath(rate, seededRandom(seed + 10)), Math.round(0.3 * rate));
-    loop.set(rattlingBreath(rate, seededRandom(seed + 11)), cycle + Math.round(0.5 * rate));
+
     this.breath = await audio.spatialSound(
       `${name}_breath`,
-      audio.buffer(loop, rate),
+      recBreath ?? audio.buffer(rattlingBreath(rate, seededRandom(seed + 10)), rate),
       "threat",
       at,
-      {
-        loop: true,
-        minDistance: 1.5,
-        volume: 0,
-      },
+      { panning: "HRTF", loop: true, minDistance: 1.4, maxDistance: 22, volume: 0 },
     );
+
+    if (recRattle) {
+      this.rattle = await audio.spatialSound(`${name}_rattle`, recRattle, "threat", at, {
+        panning: "HRTF",
+        minDistance: 1.5,
+        maxDistance: 24,
+        volume: this.volume * 0.9,
+      });
+    }
+
     this.sniffSound = await audio.spatialSound(
       `${name}_sniff`,
-      audio.buffer(sniff(rate, seededRandom(seed + 12)), rate),
+      recWhisper ?? audio.buffer(sniff(rate, seededRandom(seed + 12)), rate),
       "threat",
       at,
-      { minDistance: 1.5, volume: this.volume },
+      { panning: "HRTF", minDistance: 1.6, maxDistance: 22, volume: this.volume * 0.85 },
     );
   }
 
-  /** A wet drag under the step it has just taken at `feet`. */
   step(feet: Vector3): void {
     const drag = this.drags[this.next++ % Math.max(1, this.drags.length)];
     if (!drag) return;
@@ -72,10 +80,6 @@ export class StalkerVoice {
     drag.play();
   }
 
-  /**
-   * Keeps its breath on it while it is out (`feet`), quickening and louder as
-   * `urgency` goes from 0 (walking) to 1 (chasing); null stops it.
-   */
   breathe(feet: Vector3 | null, urgency = 0, presence = 1): void {
     const breath = this.breath;
     if (!breath) return;
@@ -84,23 +88,37 @@ export class StalkerVoice {
       this.breathing = false;
       return;
     }
-    breath.spatial.position = feet.add(new Vector3(0, HEAD, 0));
-    breath.volume = this.volume * (0.7 + 0.5 * urgency) * Math.max(0, Math.min(1, presence));
-    breath.playbackRate = 1 + 0.35 * urgency;
+    const headPos = feet.add(new Vector3(0, HEAD, 0));
+    breath.spatial.position = headPos;
+    breath.volume = this.volume * (0.55 + 0.55 * urgency) * Math.max(0, Math.min(1, presence));
+    breath.playbackRate = 0.92 + 0.36 * urgency;
     if (!this.breathing) breath.play();
     this.breathing = true;
+    this.rattleCooldown -= 0.016;
+    if (this.rattle && urgency > 0.35 && this.rattleCooldown <= 0) {
+      this.rattleCooldown = 4.2 + Math.random() * 3.5;
+      this.rattle.spatial.position = headPos.clone();
+      this.rattle.volume = this.volume * (0.7 + 0.3 * urgency) * presence;
+      this.rattle.play();
+    }
   }
 
-  /** It stops and scents the air where it lost her. */
   sniffAt(feet: Vector3): void {
-    if (!this.sniffSound) return;
-    this.sniffSound.spatial.position = feet.add(new Vector3(0, HEAD - 0.1, 0));
-    this.sniffSound.play();
+    const pos = feet.add(new Vector3(0, HEAD - 0.1, 0));
+    if (this.rattle) {
+      this.rattle.spatial.position = pos.clone();
+      this.rattle.play();
+    }
+    if (this.sniffSound) {
+      this.sniffSound.spatial.position = pos;
+      this.sniffSound.play();
+    }
   }
 
   stop(): void {
     this.breathe(null);
     for (const drag of this.drags) drag.stop();
+    this.rattle?.stop();
     this.sniffSound?.stop();
   }
 }

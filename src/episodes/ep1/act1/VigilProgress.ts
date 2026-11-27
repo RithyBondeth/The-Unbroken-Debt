@@ -1,5 +1,4 @@
 import type { Flags } from "@/core/Flags";
-import { passageRequired } from "./vigilPassage";
 
 /** A1-12: an incense cycle may pass even if Sora renews the sticks early. */
 export class VigilProgress {
@@ -20,10 +19,13 @@ export class VigilProgress {
   }
 
   ready(underTent: boolean, handsFree: boolean): boolean {
+    const villageClockDone =
+      !this.flags.get("ep1.village.puzzlesActive", false) ||
+      this.flags.get("ep1.puzzle.clock.solved", false);
     return (
       underTent &&
       handsFree &&
-      !passageRequired(this.flags) &&
+      villageClockDone &&
       this.flags.get("ep1.betel.done", false) &&
       (!this.flags.get("ep1.arrival.phoneFlow", false) ||
         this.flags.get("ep1.arrival.matchesTaken", false)) &&

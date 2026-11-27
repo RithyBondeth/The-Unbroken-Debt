@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Episode 1 Village Haunted Scenes Review</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      #game {
+        position: fixed;
+        inset: auto 0;
+        top: 50%;
+        width: 100vw;
+        height: 56.25vw;
+        max-height: 100vh;
+        transform: translateY(-50%);
+      }
+      #controls {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        z-index: 4000;
+      }
+      #controls button {
+        padding: 4px 8px;
+        font-size: 11px;
+        background: rgba(24, 21, 18, 0.86);
+        color: #ebe2ce;
+        border: 1px solid rgba(202, 182, 146, 0.35);
+        cursor: pointer;
+      }
+      #status {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(14, 12, 10, 0.88);
+        color: #ebe2ce;
+        padding: 8px 10px;
+        font-size: 11px;
+        z-index: 4000;
+        white-space: pre-wrap;
+      }
+      body.capturing #controls,
+      body.capturing #status,
+      body.capturing .perf-overlay {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Village Haunted Scenes Review"></canvas>
+    <div id="overlay"></div>
+    <nav id="controls" aria-label="Haunted scene controls"></nav>
+    <output id="status">Loading Episode 1 Village…</output>
+    <script type="module" src="./village-haunts.ts"></script>
+  </body>
+</html>

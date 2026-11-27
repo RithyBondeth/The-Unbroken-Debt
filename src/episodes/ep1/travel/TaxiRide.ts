@@ -13,6 +13,7 @@ import { TAXI_CONVERSATION, taxiConversationAt, taxiVoiceUrls } from "./taxiConv
 import { TaxiSoundscape, taxiAnxietyLevel, taxiThrottle } from "./TaxiSoundscape";
 import { taxiElectrics, taxiFlinch, taxiLightning, taxiVacuumDuck } from "./taxiApparitions";
 import { taxiSpeed, taxiWiperAngle } from "./taxiMotion";
+import { EpisodeClockUi } from "../clock/EpisodeClock";
 
 const TAXI_SECONDS = 72;
 
@@ -45,6 +46,7 @@ export class TaxiRide {
   private speaking: StaticSound | null = null;
   private score = new DreadScore(null);
   private skip: HTMLButtonElement | null = null;
+  private clock: EpisodeClockUi | null = null;
 
   constructor(private readonly game: Game) {}
 
@@ -75,8 +77,11 @@ export class TaxiRide {
     await this.makeSounds();
     for (const loop of this.allLoops()) loop.sound.play();
     this.dread?.begin(this.elapsed);
+    this.clock = new EpisodeClockUi(g.flags, () => this.running && !this.ending && !g.paused);
+    g.scene.onDisposeObservable.addOnce(() => this.clock?.dispose());
     await g.fade.to(0, 2);
     this.running = true;
+    this.clock.announce("22:45", "Road Out of Town", false);
     try {
       if (localStorage.getItem("boon-sop.taxi.seen") === "1") {
         this.skip = document.createElement("button");
@@ -115,6 +120,8 @@ export class TaxiRide {
     this.visuals.update(dt, t, flash);
     this.windAudio.update(dt);
     this.dread?.update(t);
+    this.clock?.update(dt);
+    if (flinch > 0.35) this.clock?.glitch(6);
 
     // Smooth Web Audio bus vacuum ducking + subtle post-shock stunned-ear hush!
     const shockHush = flinch > 0.35 ? (flinch - 0.35) * 0.32 : 0;
@@ -228,7 +235,7 @@ export class TaxiRide {
       "ep1.travel.complete": true,
       "ep1.checkpoint": "CP1",
       "ep1.clock": "23:30",
-      "ep1.early.required": true,
+      "ep1.village.puzzlesActive": true,
       "ep1.arrival.road": true,
     });
     while (true) {

@@ -54,4 +54,37 @@ export const ITEMS: Record<string, ItemInfo> = {
     name: "Blessed matches",
     note: "{n}, blessed by Yay Mey. Keep them for when I need them most.",
   },
+  // Redesigned Village Puzzles & Obstacles
+  iron_crowbar: {
+    name: "Rusted iron pry-bar",
+    note: "From the roadside moto shop. Heavy enough to force barred fence planks.",
+  },
+  well_weight: {
+    name: "Laterite counterweight stone",
+    note: "Lashed stone from the buffalo byre for balancing the brick well’s bamboo sweep.",
+  },
+  well_hook: {
+    name: "Iron grapple hook & rope",
+    note: "Found in the servants’ hut past the kitchen fence gap. Fits the well sweep.",
+  },
+  clock_pendulum: {
+    name: "Sok’s brass clock pendulum",
+    note: "Hauled from the brick well tangled in wet black hair. Fits the stopped 20:12 hall clock.",
+  },
+  well_water: {
+    name: "Bowl of cold well water",
+    note: "Drawn from the family well. Cool water for the land guardian’s shrine.",
+  },
+  sacred_thread: {
+    name: "White cotton thread",
+    note: "Undyed sai sin cotton coil from the kitchen house for the ancestral stupas.",
+  },
+  ward_marigold: {
+    name: "Marigold offering dish",
+    note: "Fresh blossoms in a brass saucer for the ruined first house hearth.",
+  },
+  torn_drawing_half: {
+    name: "Torn half of Mother’s drawing",
+    note: "Recovered from the servants’ hut: Right — areca nuts. Front — incense.",
+  },
 };

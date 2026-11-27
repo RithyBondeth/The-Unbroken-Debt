@@ -42,18 +42,9 @@ async function review(): Promise<void> {
     view = "forest",
     captured = "",
     lastUpdate = 0;
-  let autoTurn = false,
-    elapsed = 0,
-    lastPhase = "waiting";
-  const trace: string[] = [];
   // Controls in the embedded browser substitute for pointer-lock mouse input,
   // as in the ritual fixture. Hidden tabs and the pause button still cancel cues.
   Object.defineProperty(game.input, "pointerLocked", { configurable: true, get: () => !paused });
-  const aim = (at: Vector3) => {
-    const d = at.subtract(game.camera.globalPosition);
-    game.player.yaw = Math.atan2(d.x, d.z);
-    game.player.pitch = Math.atan2(-d.y, Math.hypot(d.x, d.z));
-  };
   const views: Record<string, [Vector3, Vector3]> = {
     forest: [new Vector3(-0.5, 0, 35.5), new Vector3(-1, 0.8, 26)],
     "mist-detail": [new Vector3(0, 0, 35), new Vector3(-5.4, 0.25, 34)],
@@ -88,9 +79,9 @@ async function review(): Promise<void> {
       audio.attachListener(game.camera);
       await audio.unlock();
       await act.night.makeSounds();
-      await act.forest.makeSounds();
+      await act.villageAudio.load();
       const space = new Soundscape(game, () =>
-        Math.max(act.night.threatSilence, act.forest.silence),
+        Math.max(act.night.threatSilence, act.villageAudio.silence),
       );
       await space.makeSounds();
       game.scene.onBeforeRenderObservable.add(() => space.update(game.deltaSeconds));
@@ -112,18 +103,15 @@ async function review(): Promise<void> {
       }
     }
   });
-  button("Rehearse forest sequence", () => {
-    show("forest");
-    act.forest.previewSequence();
+  button("Summon Rice-Field Krasue", () => {
+    show("paddy");
+    act.krasue.summon(0);
   });
-  button("Verify turn response", () => {
-    autoTurn = true;
-    trace.length = 0;
-    show("forest");
-    act.forest.previewSequence();
+  button("Trigger Preay ambush", () => {
+    act.horror.triggerProvokedPreay(game.player.feet.add(new Vector3(0, 0, -5)));
   });
-  button("Turn toward rustle", () => {
-    if (act.forest.source) aim(act.forest.source);
+  button("Glance Watch (T)", () => {
+    act.clock.glanceWatch();
   });
   button("Toggle dialogue interruption", () => {
     if (game.subtitles.active) game.subtitles.hide();
@@ -143,25 +131,12 @@ async function review(): Promise<void> {
     });
   });
   game.scene.onAfterRenderObservable.add(() => {
-    elapsed += game.deltaSeconds;
-    const phase = act.forest.director.phase;
-    if (phase !== lastPhase) {
-      trace.push(
-        `${phase}@${elapsed.toFixed(1)}s (presence ${act.apparitions.active}, threat ${game.threatActive}, hidden ${document.hidden})`,
-      );
-      lastPhase = phase;
-    }
-    if (autoTurn && phase === "movement" && act.forest.source) {
-      aim(act.forest.source);
-      autoTurn = false;
-    }
     if (performance.now() - lastUpdate < 150) return;
     lastUpdate = performance.now();
-    const source = act.forest.source;
     output.textContent =
       `${view} · ${game.preset.name} · mist ${mist ? "on" : "off"} · ${game.audio ? "audio enabled" : "silent visual review"}\n` +
-      `sequence ${act.forest.director.phase} · hush ${act.forest.silence.toFixed(2)} · input ${paused ? "paused" : "active"}\n` +
-      `source ${source ? `${source.x.toFixed(1)}, ${source.z.toFixed(1)}` : "none"} · dialogue ${game.subtitles.active}\n${trace.slice(-5).join("\n")}\n${captured}`;
+      `horror ${act.horror.active ? "active" : "calm"} · chill ${act.horror.preayChill.toFixed(2)} · krasue ${act.krasue.brain.state} · clock ${act.clock.state.displayTime}\n` +
+      `hush ${act.villageAudio.silence.toFixed(2)} · input ${paused ? "paused" : "active"} · dialogue ${game.subtitles.active}\n${captured}`;
   });
   show(params.get("view") && views[params.get("view")!] ? params.get("view")! : "forest");
 }

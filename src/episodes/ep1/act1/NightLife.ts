@@ -1,5 +1,4 @@
 import type { Scene } from "@babylonjs/core/scene";
-import type { AbstractSound } from "@babylonjs/core/AudioV2/abstractAudio/abstractSound";
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -12,31 +11,11 @@ import { ParticleSystem } from "@babylonjs/core/Particles/particleSystem";
 import type { Game } from "@/core/Game";
 import type { Area } from "@/core/areaLoader";
 import { seededRandom } from "@/audio/synth";
-import {
-  chantDrone,
-  cricketsLoop,
-  crowCaws,
-  dogBarks,
-  dogHowl,
-  frogsLoop,
-  geckoCall,
-  owlHoot,
-  branchSnap,
-} from "@/audio/sounds/nightSounds";
+import { ep2AudioUrls } from "../audio/VillageAudio";
 import "@babylonjs/core/Particles/particleSystemComponent";
 
-/**
- * The funeral recitation (smot) from the pavilion, streamed: Opus first, AAC for
- * browsers without it (Audio Design Document 10). Made from the recording in
- * art-source/audio/ep1 (Cultural Guide: real chanting only with permission).
- * Without the files the pavilion plays a wordless placeholder drone.
- */
-const SMOT_URLS = ["assets/ep1/audio/amb_ep1_smot.ogg", "assets/ep1/audio/amb_ep1_smot.m4a"];
-
-/** Seconds between the distant calls: a dog, the owl, crows, the gecko. */
-const CALL_GAP: [number, number] = [9, 22];
-
-const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+/** Seconds between distant rural night calls (Cambodian village dogs, owl, Tokay gecko, bamboo creaks). */
+const CALL_GAP: [number, number] = [10, 24];
 
 interface Bat {
   node: TransformNode;
@@ -47,27 +26,25 @@ interface Bat {
   phase: number;
 }
 
+interface WildlifeLoop {
+  sound: StaticSound;
+  base: number;
+}
+
 /**
- * The village's night (Audio Design Document, section 4): frogs in the flooded
- * fields, crickets everywhere, calls from far off (dogs, an owl, crows, a gecko
- * under the eaves), the funeral recitation from the pavilion; bats over the
- * yard, moths round the tent's lanterns, flies over the offerings.
+ * The village's living night, redesigned with real mastered Southeast Asian CC0
+ * field recordings (flooded paddy frogs, tropical night crickets, distant Cambodian
+ * street dogs, Tokay gecko, scops owl, bamboo & tree creaks) — with the old unverified
+ * `amb_ep1_smot` MP3 loop completely removed.
  */
 export class NightLife {
-  /** The insects fall quiet before A2-01; ceremonial chanting is left alone. */
+  /** Ambient wildlife drops silent before major scares and Act II handover. */
   threatSilence = 0;
-  private readonly loops: StaticSound[] = [];
-  private readonly calls: { sound: StaticSound; near: Vector3[] }[] = [];
-  stopForDawn(): void {
-    this.threatSilence = 1;
-    this.chant?.stop();
-    this.loops.forEach((sound) => sound.stop());
-  }
-
-  private chant: AbstractSound | null = null;
+  private readonly loops: WildlifeLoop[] = [];
+  private readonly calls: { sounds: StaticSound[]; near: Vector3[] }[] = [];
   private readonly bats: Bat[] = [];
   private time = 0;
-  private nextCall = 6;
+  private nextCall = 7;
   private presenceQuiet = 0;
   private readonly rand = seededRandom(1932);
 
@@ -81,116 +58,106 @@ export class NightLife {
     const markers = area.level.markers;
     for (const [id, marker] of markers)
       if (id.startsWith("flies")) this.flies(scene, marker.position);
-    // Moths round the funeral's bare bulb under the house (and the old tent's lamps).
     for (const [id, flame] of area.level.flames)
       if (id.startsWith("tent_") || id === "fu_bulb") this.moths(scene, flame.position);
+  }
+
+  stopForDawn(): void {
+    this.threatSilence = 1;
+    for (const l of this.loops) l.sound.stop();
   }
 
   async makeSounds(): Promise<void> {
     const audio = this.game.audio;
     if (!audio) return;
-    const rate = audio.context.sampleRate;
     const pos = (x: number, y: number, z: number) => new Vector3(-x, z, -y); // Blender to Babylon
-    const loop = async (
+
+    const addLoop = async (
       name: string,
-      samples: Float32Array,
+      ep2Clip: string,
       at: Vector3,
       volume: number,
       minDistance: number,
     ) => {
-      const sound = await audio.spatialSound(name, audio.buffer(samples, rate), "ambience", at, {
+      const buffer = await audio.load(ep2AudioUrls(ep2Clip));
+      if (!buffer) return;
+      const sound = await audio.spatialSound(name, buffer, "ambience", at, {
         loop: true,
+        distanceModel: "linear",
         minDistance,
+        maxDistance: 58,
         volume,
       });
       sound.play();
-      this.loops.push(sound);
+      this.loops.push({ sound, base: volume });
     };
-    // Frogs across the flooded fields south of the road, and in the pond: a bed
-    // well under the recitation.
-    await loop("frogs_w", frogsLoop(rate, seededRandom(41)), pos(-20, -72, 0), 0.35, 10);
-    await loop("frogs_e", frogsLoop(rate, seededRandom(42)), pos(20, -75, 0), 0.35, 10);
-    await loop("frogs_pond", frogsLoop(rate, seededRandom(43)), pos(-20, 19, 0), 0.2, 5);
-    await loop("crickets_n", cricketsLoop(rate, seededRandom(44)), pos(-10, 10, 0.5), 0.2, 10);
-    await loop("crickets_s", cricketsLoop(rate, seededRandom(45)), pos(8, -30, 0.5), 0.2, 10);
-    // Each call's volume brings it to about -28 LUFS at its near distance (the
-    // synthesised calls differ by 10 dB as made: the howl and the owl run hot).
-    const call = async (name: string, samples: Float32Array, volume: number, near: Vector3[]) => {
-      const sound = await audio.spatialSound(
-        name,
-        audio.buffer(samples, rate),
-        "ambience",
-        near[0],
-        { minDistance: 8, maxDistance: 80, volume },
-      );
-      this.calls.push({ sound, near });
-    };
-    const far = [pos(-34, 2, 1), pos(32, 14, 1), pos(-26, 30, 1), pos(28, -24, 1)];
-    await call("dog_howl", dogHowl(rate, seededRandom(46)), 0.16, far);
-    await call("dog_barks", dogBarks(rate, seededRandom(47)), 0.31, far);
-    await call("owl", owlHoot(rate, seededRandom(48)), 0.18, [
-      pos(-7, -35, 9),
-      pos(15, 10, 12),
-      pos(-20, 14, 10),
-    ]);
-    await call("crows", crowCaws(rate, seededRandom(49)), 0.29, [
-      pos(-5, -15, 8),
-      pos(6, -24, 8),
-      pos(-14, -48, 8),
-    ]);
-    await call("gecko", geckoCall(rate, seededRandom(50)), 0.25, [
-      pos(-5, 18.8, 4.5),
-      pos(5, 9.2, 4.5),
-    ]);
-    // Something moving out in the trees: a dead branch snapping, never where you look.
-    await call("branch", branchSnap(rate, seededRandom(52)), 0.6, [
-      pos(-12, -30, 0.2),
-      pos(10, -18, 0.2),
-      pos(-18, 6, 0.2),
-      pos(16, 2, 0.2),
-    ]);
-    // The recitation out of the loudspeaker horns on the pole in the yard (funeral_under:
-    // Blender (4.2, 3.6), 8.5 m up), the whole night through: the real smot if supplied,
-    // else the placeholder. Full within the yard, still there at the gate, faint from the
-    // road (about -34 LUFS at 50 m).
-    const tent = new Vector3(-4.24, 8.7, -3.62);
-    const options = { loop: true, minDistance: 10, maxDistance: 120 };
-    this.chant = (await this.hasSmot())
-      ? await audio.spatialStream("smot", SMOT_URLS.map(asset), "ambience", tent, {
-          ...options,
-          volume: 1,
-        })
-      : await audio.spatialSound(
-          "smot",
-          audio.buffer(chantDrone(rate, seededRandom(51)), rate),
-          "ambience",
-          tent,
-          { ...options, volume: 0.35 },
-        );
-    this.chant.play();
-  }
 
-  /** Whether the recording is there (the dev server answers a missing file with the page). */
-  private async hasSmot(): Promise<boolean> {
-    try {
-      const response = await fetch(asset(SMOT_URLS[0]), { method: "HEAD" });
-      return response.ok && (response.headers.get("content-type") ?? "").startsWith("audio");
-    } catch {
-      return false;
-    }
+    // Real Southeast Asian paddy frogs, pond water, and tropical night crickets
+    // (canopy wind is owned solely by WindAudio so there are zero stacked wind beds)
+    await Promise.all([
+      addLoop("village_frogs_w", "amb_ep2_frogs_a", pos(-22, -24, 0), 0.28, 12),
+      addLoop("village_frogs_e", "amb_ep2_frogs_b", pos(24, -22, 0), 0.26, 12),
+      addLoop("village_pond_water", "amb_ep2_pond", pos(-38, 12, 0), 0.2, 8),
+      addLoop("village_insects_n", "amb_ep2_insects_a", pos(-10, 26, 0.8), 0.18, 12),
+      addLoop("village_insects_s", "amb_ep2_insects_b", pos(8, -42, 0.8), 0.18, 12),
+    ]);
+
+    const addCallGroup = async (
+      groupName: string,
+      clips: string[],
+      volume: number,
+      near: Vector3[],
+    ) => {
+      const sounds: StaticSound[] = [];
+      for (const clip of clips) {
+        const buffer = await audio.load(ep2AudioUrls(clip));
+        if (!buffer) continue;
+        sounds.push(
+          await audio.spatialSound(`${groupName}_${clip}`, buffer, "ambience", near[0], {
+            minDistance: 8,
+            maxDistance: 85,
+            volume,
+          }),
+        );
+      }
+      if (sounds.length) this.calls.push({ sounds, near });
+    };
+
+    const farDogs = [pos(-36, -42, 1), pos(34, -36, 1), pos(-30, 32, 1), pos(32, 14, 1)];
+    await Promise.all([
+      addCallGroup(
+        "cambodian_dogs",
+        ["sfx_ep2_dog_1", "sfx_ep2_dog_2", "sfx_ep2_dog_3", "sfx_ep2_dog_4"],
+        0.24,
+        farDogs,
+      ),
+      addCallGroup("scops_owl", ["sfx_ep2_owl_1", "sfx_ep2_owl_2", "sfx_ep2_owl_3"], 0.22, [
+        pos(-7, -35, 9),
+        pos(15, 10, 12),
+        pos(-22, 16, 10),
+      ]),
+      addCallGroup("tokay_gecko", ["sfx_ep2_gecko_1", "sfx_ep2_gecko_2"], 0.24, [
+        pos(-5, 18.8, 4.5),
+        pos(5, 9.2, 4.5),
+        pos(-24, 18, 4.2),
+      ]),
+      addCallGroup(
+        "bamboo_creak",
+        ["sfx_ep2_creak_bamboo_1", "sfx_ep2_creak_bamboo_2", "sfx_ep2_creak_tree_1"],
+        0.28,
+        [pos(-14, -26, 2.0), pos(12, -16, 2.0), pos(-18, 8, 2.0), pos(18, 6, 2.0)],
+      ),
+    ]);
   }
 
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
-    const volumes = [0.35, 0.35, 0.2, 0.2, 0.2];
-    this.presenceQuiet +=
-      ((this.game.threatActive ? 0.88 : this.localSilence() * 0.85) - this.presenceQuiet) *
-      (1 - Math.exp(-dt / 1.2));
-    this.loops.forEach(
-      (sound, i) =>
-        (sound.volume = volumes[i] * (1 - Math.max(this.threatSilence, this.presenceQuiet))),
-    );
+    const quietTarget = this.game.threatActive ? 0.92 : this.localSilence() * 0.9;
+    this.presenceQuiet += (quietTarget - this.presenceQuiet) * (1 - Math.exp(-dt / 0.8));
+    const keep = Math.max(0, 1 - Math.max(this.threatSilence, this.presenceQuiet));
+    for (const l of this.loops) l.sound.volume = l.base * keep;
+
     for (const bat of this.bats) {
       const a = t * bat.speed + bat.phase;
       bat.node.position.set(
@@ -203,6 +170,7 @@ export class NightLife {
       bat.wings[0].rotation.z = flap;
       bat.wings[1].rotation.z = -flap;
     }
+
     if (
       this.threatSilence === 0 &&
       !this.game.threatActive &&
@@ -210,14 +178,16 @@ export class NightLife {
       t >= this.nextCall &&
       this.calls.length
     ) {
-      const call = this.calls[Math.floor(this.rand() * this.calls.length)];
-      call.sound.spatial.position = call.near[Math.floor(this.rand() * call.near.length)].clone();
-      call.sound.play();
+      const group = this.calls[Math.floor(this.rand() * this.calls.length)];
+      const sound = group.sounds[Math.floor(this.rand() * group.sounds.length)];
+      sound.spatial.position = group.near[Math.floor(this.rand() * group.near.length)].clone();
+      sound.playbackRate = 0.94 + this.rand() * 0.12;
+      sound.play();
       this.nextCall = t + CALL_GAP[0] + this.rand() * (CALL_GAP[1] - CALL_GAP[0]);
     }
   }
 
-  /** Bats circling over the courtyard and the pavilion's light. */
+  /** Bats circling over the courtyard and roofs. */
   private makeBats(scene: Scene): void {
     const skin = new StandardMaterial("M_bat", scene);
     skin.diffuseColor = new Color3(0.04, 0.035, 0.03);
@@ -273,7 +243,6 @@ export class NightLife {
     }
   }
 
-  /** Moths blundering round a lantern. */
   private moths(scene: Scene, at: Vector3): void {
     const ps = new ParticleSystem("moths", 12, scene);
     ps.particleTexture = speck(scene, "T_moth", "rgba(230,215,190,1)");
@@ -297,7 +266,6 @@ export class NightLife {
     ps.start();
   }
 
-  /** Flies buzzing over rotting offerings. */
   private flies(scene: Scene, at: Vector3): void {
     const ps = new ParticleSystem("flies", 30, scene);
     ps.particleTexture = speck(scene, "T_fly", "rgba(20,18,16,1)");
@@ -321,7 +289,6 @@ export class NightLife {
   }
 }
 
-/** A small soft dot for insects. */
 function speck(scene: Scene, name: string, colour: string): DynamicTexture {
   const texture = new DynamicTexture(name, { width: 16, height: 16 }, scene, false);
   const ctx = texture.getContext();
