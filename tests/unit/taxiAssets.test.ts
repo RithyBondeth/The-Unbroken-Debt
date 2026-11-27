@@ -19,27 +19,18 @@ beforeAll(async () => {
   ]);
 });
 describe("authored taxi assets", () => {
-  it("ships shaped trim, textured upholstery and a photoscanned seated driver instead of primitive stand-ins", () => {
+  it("ships shaped trim, textured upholstery and a sculpted seated driver instead of primitive stand-ins", () => {
     const mats = cabin.getRoot().listMaterials();
     // The scanned Rosalie's own interior and door linings, the walnut fascia and the driver.
-    for (const name of [
-      "M_internal",
-      "M_door",
-      "M_taxi_dashboard_walnut",
-      "M_taxi_driver_clothes_scan",
-    ]) {
+    for (const name of ["M_internal", "M_door", "M_taxi_dashboard_walnut", "M_taxi_driver_cloth"]) {
       const material = mats.find((m) => m.getName() === name)!;
       expect(material, name).toBeDefined();
       expect(material.getNormalTexture(), name).toBeTruthy();
       expect(material.getBaseColorTexture(), name).toBeTruthy();
     }
-    // The whole scanned driver: body, cloth-simulated sleeves and photoscanned head.
+    // The whole driver is the studio's one sculpted mesh.
     let vertices = 0;
-    for (const part of [
-      "taxi_driver_body_scan",
-      "taxi_driver_sleeves_scan",
-      "taxi_driver_head_scan",
-    ]) {
+    for (const part of ["taxi_driver_body_scan"]) {
       const mesh = cabin
         .getRoot()
         .listNodes()
@@ -69,18 +60,19 @@ describe("authored taxi assets", () => {
       mats.some((m) => /forest_leaf|tree_leaves/.test(m.getName()) && m.getBaseColorTexture()),
     ).toBe(true);
   });
-  it("keeps the driver's scanned face facing outward, with his glances, speech and blink", () => {
+  it("keeps the driver's head facing outward, with his glances, speech and steering", () => {
     const node = cabin
       .getRoot()
       .listNodes()
-      .find((n) => n.getName() === "taxi_driver_head_scan")!;
+      .find((n) => n.getName() === "taxi_driver_body_scan")!;
     expect(node).toBeDefined();
     const w = node.getWorldMatrix(),
       samples: { p: number[]; n: number[] }[] = [];
     for (const primitive of node.getMesh()!.listPrimitives()) {
+      if (primitive.getMaterial()!.getName() !== "M_taxi_driver_skin") continue;
       const positions = primitive.getAttribute("POSITION")!,
         normals = primitive.getAttribute("NORMAL")!;
-      for (let i = 0; i < positions.getCount(); i += 7) {
+      for (let i = 0; i < positions.getCount(); i += 3) {
         const v = positions.getElement(i, []),
           n = normals.getElement(i, []);
         const p = [
@@ -88,8 +80,8 @@ describe("authored taxi assets", () => {
           v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
           v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
         ];
-        // The skull, above the neck carried down into the collar.
-        if (p[1] < 1.08) continue;
+        // His face and head, above the collar (his hands are skin too, far lower).
+        if (p[1] < 1.0) continue;
         const normal = [
           n[0] * w[0] + n[1] * w[4] + n[2] * w[8],
           n[0] * w[1] + n[1] * w[5] + n[2] * w[9],
@@ -99,6 +91,7 @@ describe("authored taxi assets", () => {
         samples.push({ p, n: normal.map((x) => x / length) });
       }
     }
+    expect(samples.length).toBeGreaterThan(500);
     const centre = [0, 1, 2].map(
       (j) => samples.reduce((sum, s) => sum + s.p[j], 0) / samples.length,
     );
@@ -108,28 +101,30 @@ describe("authored taxi assets", () => {
         0,
       ) / samples.length;
     expect(outward).toBeGreaterThan(0.015);
-    // A real photoscan: dense, with its own colour, relief and gloss maps.
-    expect(
-      node
-        .getMesh()!
-        .listPrimitives()
-        .reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0),
-    ).toBeGreaterThan(20_000);
-    const face = cabin
-      .getRoot()
-      .listMaterials()
-      .find((m) => m.getName() === "M_taxi_driver_head_scan")!;
-    expect(face.getBaseColorTexture()).toBeTruthy();
-    expect(face.getNormalTexture()).toBeTruthy();
-    expect(face.getMetallicRoughnessTexture()).toBeTruthy();
-    expect(face.getMetallicFactor()).toBe(0);
-    // Shapes the runtime plays: glances, a nod, speech and blinking.
+    // Skin, cloth and leather, each with its own colour, relief and gloss baked from the sculpt.
+    for (const name of ["M_taxi_driver_skin", "M_taxi_driver_cloth", "M_taxi_driver_leather"]) {
+      const material = cabin
+        .getRoot()
+        .listMaterials()
+        .find((m) => m.getName() === name)!;
+      expect(material, name).toBeDefined();
+      expect(material.getBaseColorTexture(), name).toBeTruthy();
+      expect(material.getNormalTexture(), name).toBeTruthy();
+      expect(material.getMetallicRoughnessTexture(), name).toBeTruthy();
+      expect(material.getMetallicFactor(), name).toBe(0);
+    }
+    // Shapes the runtime plays: the hands turn the wheel and clench, he breathes and leans,
+    // glances at the road and at Sora, nods and talks.
     expect((node.getMesh()!.getExtras() as { targetNames?: string[] }).targetNames).toEqual([
+      "steer_left",
+      "steer_right",
+      "grip_tense",
+      "breathe",
+      "lean_peer",
       "look_road",
       "look_sora",
       "nod",
       "talk",
-      "blink",
     ]);
   });
   it("keeps the road and standing-water normals facing the headlights", () => {
@@ -357,13 +352,8 @@ describe("authored taxi assets", () => {
       .getRoot()
       .listNodes()
       .map((n) => n.getName());
-    // The driver is photoscanned throughout: head, body, and cloth-simulated sleeves.
-    for (const name of [
-      "taxi_driver_head_scan",
-      "taxi_driver_body_scan",
-      "taxi_driver_sleeves_scan",
-    ])
-      expect(names).toContain(name);
+    // The driver is one sculpted mesh.
+    expect(names).toContain("taxi_driver_body_scan");
     // The cabin is furnished like a working taxi, not a box.
     for (const piece of [
       /headliner/,
@@ -380,7 +370,7 @@ describe("authored taxi assets", () => {
       cabin
         .getRoot()
         .listMaterials()
-        .find((m) => m.getName() === "M_taxi_driver_clothes_scan")
+        .find((m) => m.getName() === "M_taxi_driver_cloth")
         ?.getNormalTexture(),
     ).toBeTruthy();
     const trees = road
@@ -430,42 +420,56 @@ describe("authored taxi assets", () => {
     expect(charmChildren).toContain("taxi_charm_rosewood_beads");
     expect(charmChildren).toContain("taxi_charm_takrut");
     expect(cabinNames).toContain("taxi_steering_wheel_pivot");
-    expect(cabinNames).toContain("taxi_driver_krama");
+    // The driver wears no krama now; a folded one still lies on the back seat.
+    expect(cabinNames).not.toContain("taxi_driver_krama");
+    expect(cabinNames).toContain("taxi_rear_folded_krama");
     expect(roadNames).toContain("taxi_road_khmer_posters");
     for (const name of ["taxi_meter_case", "taxi_rear_lotus_bud"])
       expect(cabinNames).toContain(name);
   });
-  it("dresses the driver in a scanned cap, photoscanned hands that steer and a cloth krama", () => {
+  it("seats the sculpted driver with both fists closed round the cabin's own rim", () => {
     const nodes = cabin.getRoot().listNodes();
-    const mesh = (name: string) => nodes.find((n) => n.getName() === name)?.getMesh();
-    const count = (name: string) =>
-      mesh(name)!
-        .listPrimitives()
-        .reduce((sum, p) => sum + p.getAttribute("POSITION")!.getCount(), 0);
-    const targets = (name: string) =>
-      (mesh(name)!.getExtras() as { targetNames?: string[] }).targetNames ?? [];
-    // Both hands are the photoscan (not the body's 734-vertex hands), and every arm shape
-    // the runtime plays moves them; the near hand also lifts two fingers to tap the rim.
-    for (const side of ["l", "r"]) {
-      const name = `taxi_driver_hand_${side}`;
-      expect(mesh(name), name).toBeDefined();
-      expect(count(name)).toBeGreaterThan(6_000);
-      for (const shape of ["steer_left", "steer_right", "grip_tense", "breathe", "lean_peer"])
-        expect(targets(name)).toContain(shape);
+    // The old scanned parts are gone: one mesh is the whole man.
+    for (const old of [
+      "taxi_driver_head_scan",
+      "taxi_driver_cap",
+      "taxi_driver_hand_l",
+      "taxi_driver_hand_r",
+      "taxi_driver_krama",
+      "taxi_driver_sleeves_scan",
+    ])
+      expect(
+        nodes.some((n) => n.getName() === old),
+        old,
+      ).toBe(false);
+    const node = nodes.find((n) => n.getName() === "taxi_driver_body_scan")!;
+    const w = node.getWorldMatrix();
+    // The Rosalie's wheel in glTF space (y-up): its centre, its column axis and rim radius.
+    const centre = new Vector3(0.2641, 0.7636, 0.2722),
+      axis = new Vector3(0, 0.641, -0.7676).normalize(),
+      rimRadius = 0.1974;
+    let gripping = 0,
+      inside = 0;
+    for (const primitive of node.getMesh()!.listPrimitives()) {
+      if (primitive.getMaterial()!.getName() !== "M_taxi_driver_skin") continue;
+      const positions = primitive.getAttribute("POSITION")!;
+      for (let i = 0; i < positions.getCount(); i++) {
+        const v = positions.getElement(i, []);
+        const p = new Vector3(
+          v[0] * w[0] + v[1] * w[4] + v[2] * w[8] + w[12],
+          v[0] * w[1] + v[1] * w[5] + v[2] * w[9] + w[13],
+          v[0] * w[2] + v[1] * w[6] + v[2] * w[10] + w[14],
+        ).subtract(centre);
+        const h = Vector3.Dot(p, axis);
+        const radial = p.subtract(axis.scale(h)).length();
+        const tube = Math.hypot(h, radial - rimRadius);
+        if (tube < 0.03) gripping++;
+        if (tube < 0.0105) inside++;
+      }
     }
-    expect(targets("taxi_driver_hand_r")).toContain("grip");
-    const hands = cabin
-      .getRoot()
-      .listMaterials()
-      .find((m) => m.getName() === "M_taxi_driver_hands_scan")!;
-    expect(hands.getBaseColorTexture()).toBeTruthy();
-    expect(hands.getNormalTexture()).toBeTruthy();
-    // The cap is the wool flat-cap scan riding his head's turns, not a lofted shell.
-    expect(count("taxi_driver_cap")).toBeGreaterThan(5_000);
-    expect(targets("taxi_driver_cap")).toEqual(["look_road", "look_sora", "nod", "talk", "blink"]);
-    // The krama is a full cloth hanging down his chest, breathing with him.
-    expect(count("taxi_driver_krama")).toBeGreaterThan(5_000);
-    expect(targets("taxi_driver_krama")).toEqual(["breathe", "lean_peer"]);
+    // Both hands wrap the rim, and no finger sinks into the 12.7 mm bakelite tube.
+    expect(gripping).toBeGreaterThan(400);
+    expect(inside / gripping).toBeLessThan(0.02);
   });
   it("turns the driver's clothes outward (the game culls back faces)", () => {
     // Once the whole body shell came out inside-out: in game his shoulders read hollow.
@@ -483,7 +487,7 @@ describe("authored taxi assets", () => {
     let outward = 0,
       total = 0;
     for (const primitive of node.getMesh()!.listPrimitives()) {
-      if (primitive.getMaterial()!.getName() !== "M_taxi_driver_clothes_scan") continue;
+      if (primitive.getMaterial()!.getName() !== "M_taxi_driver_cloth") continue;
       const p = primitive.getAttribute("POSITION")!,
         ix = primitive.getIndices()!;
       for (let i = 0; i < ix.getCount(); i += 3) {
@@ -492,11 +496,13 @@ describe("authored taxi assets", () => {
           .add(b)
           .add(c)
           .scale(1 / 3);
-        // His torso, between the hips and the collar (glTF is y-up; he sits round x 0.26, z -0.03).
-        if (centre.y < 0.55 || centre.y > 0.88 || Math.abs(centre.x - 0.26) > 0.17) continue;
+        // His torso, between the belt and the collar (glTF is y-up; he sits round x 0.27, z -0.105).
+        // (Only his trunk: his forearms reach far out in front of it.)
+        if (centre.y < 0.6 || centre.y > 0.9 || Math.abs(centre.x - 0.27) > 0.15) continue;
+        if (Math.abs(centre.z + 0.105) > 0.16) continue;
         const n = Vector3.Cross(b.subtract(a), c.subtract(a));
         const area = n.length() / 2;
-        const away = new Vector3(centre.x - 0.26, 0, centre.z + 0.03);
+        const away = new Vector3(centre.x - 0.27, 0, centre.z + 0.105);
         total += area;
         if (Vector3.Dot(n, away) > 0) outward += area;
       }

@@ -575,6 +575,33 @@ def _upgrade_interior_props(coll, m, plain, world_uvs_fn):
     _bm_obj("taxi_meter_flag", bm_flag, m["red_enamel"], coll, smooth=True)
 
 
+def _strip_scan_gear_knob():
+    """The scan's own gear lever went long ago, but its black knob stayed, floating at the driver's
+    right elbow between the seats: remove that bakelite island (centre x 0, y -0.085, z 0.70)."""
+    sm = bpy.data.objects.get("SM_internal_M_internal_0")
+    if sm is None:
+        return 0
+    slots = [i for i, mt in enumerate(sm.data.materials) if mt and mt.name.startswith("M_taxi_bakelite")]
+    bm = bmesh.new()
+    bm.from_mesh(sm.data)
+    mw = sm.matrix_world
+    kill = []
+    for f in bm.faces:
+        if f.material_index not in slots:
+            continue
+        c = mw @ f.calc_center_median()
+        if abs(c.x) < 0.045 and -0.125 < c.y < -0.045 and 0.655 < c.z < 0.76:
+            kill.append(f)
+    if kill:
+        bmesh.ops.delete(bm, geom=kill, context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(sm.data)
+        sm.data.update()
+    bm.free()
+    print("TAXI_SCAN_GEAR_KNOB_REMOVED", len(kill))
+    return len(kill)
+
+
 def _upgrade_footwell_and_console(coll, m, plain, world_uvs_fn):
     """Museum-grade 1933 Citroën Rosalie front footwell, center transmission tunnel, sculpted gearshift,
     ratchet handbrake, ribbed firewall & insulation pad, under-dash parcel shelf + torch/map/wiring,
@@ -597,6 +624,7 @@ def _upgrade_footwell_and_console(coll, m, plain, world_uvs_fn):
             bm.to_mesh(sm.data)
             sm.data.update()
         bm.free()
+    _strip_scan_gear_knob()
 
     m_felt = plain("M_cab_firewall_felt", (0.036, 0.028, 0.022), 0.94, 0.0)
     m_copper = plain("M_cab_copper_conduit", (0.42, 0.20, 0.10), 0.36, 0.88)
@@ -3594,7 +3622,8 @@ if __name__ == "__main__":
         if sm and sm.users == 0:
             bpy.data.materials.remove(sm)
     m = _materials(library_material, plain)
-    # Refresh wiper header mounts + rebuild driver (head, cap, grip, krama) & Sora (hands, nails, watch)
+    _strip_scan_gear_knob()
+    # Refresh wiper header mounts + rebuild the driver & Sora (hands, nails, watch)
     _refresh_wiper_header_mounts(coll, m)
     _smooth_people_and_cabin_polish(coll, m, plain, world_uvs)
     # Only the bits of the wheel that would show through his sleeves are hidden; the rest stays.

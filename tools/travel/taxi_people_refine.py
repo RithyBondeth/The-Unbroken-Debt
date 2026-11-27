@@ -1765,6 +1765,13 @@ def cut_wheel_inside_driver(clear=0.0005, turns=None):
     body = bpy.data.objects.get("taxi_driver_body_scan")
     if body is None:
         return
+    if body.get("tripo"):
+        # The sculpted driver's fists close round the whole rim: the wheel stays whole.
+        for name in WHEEL_PARTS:
+            obj = bpy.data.objects.get(name)
+            if obj is not None and obj.type == "MESH":
+                _restore_full_mesh(obj)
+        return 0
     me_b = body.data
     polys = [tuple(p.vertices) for p in me_b.polygons]
     turns = turns or {"steer_left": 0.16, "steer_right": -0.16}
@@ -3738,7 +3745,13 @@ def rebuild_sora_hands_and_watch(coll, world_uvs_fn):
 def apply_people_realism(coll, plain, world_uvs_fn, neck_pos=None):
     """Master entrypoint called by taxi_cabin_details.py to rebuild BOTH driver and Sora."""
     neck = neck_pos if neck_pos is not None else Vector((0.268, 0.056, 0.922))
-    rebuild_driver_head_and_cap(coll, neck)
-    rebuild_driver_body_and_clothes(coll, neck, plain, world_uvs_fn)
+    import taxi_driver_tripo
+
+    if taxi_driver_tripo.SOURCE.exists():
+        # The studio's own sculpt of the driver, fitted, coloured and given his shapes.
+        taxi_driver_tripo.build_driver(coll)
+    else:
+        rebuild_driver_head_and_cap(coll, neck)
+        rebuild_driver_body_and_clothes(coll, neck, plain, world_uvs_fn)
     rebuild_sora_hands_and_watch(coll, world_uvs_fn)
     print("TAXI_PEOPLE_REALISM_APPLIED_OK")
