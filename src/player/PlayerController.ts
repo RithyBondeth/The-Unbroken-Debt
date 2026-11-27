@@ -50,9 +50,16 @@ export class PlayerController {
   headBobEnabled = true;
   /** When false, input is ignored (scripted sequences, menus). */
   inputEnabled = true;
+  /** 0–1 subtle handheld adrenaline tremor while dread / a nearby ghost presses in. */
+  dreadTremor = 0;
 
   yaw = 0;
   pitch = 0;
+
+  private joltTime = 0;
+  private joltStrength = 0;
+  private joltRollDir = 1;
+  private tremorClock = 0;
 
   private readonly controller: PhysicsCharacterController;
   private readonly physics: PhysicsEngine;
@@ -158,6 +165,16 @@ export class PlayerController {
 
   addLadder(ladder: Ladder): void {
     this.ladders.push(ladder);
+  }
+
+  /**
+   * Brief, visceral first-person flinch & damped handheld tremor on a close scare or blackout cut.
+   * Additive on camera rotation only — never steals player look input.
+   */
+  jolt(strength = 0.8, rollDir?: -1 | 1): void {
+    this.joltStrength = Math.max(this.joltStrength, Math.min(1.2, Math.max(0.15, strength)));
+    this.joltTime = 0.44;
+    this.joltRollDir = rollDir ?? (Math.random() < 0.5 ? -1 : 1);
   }
 
   teleport(feet: Vector3, yaw = this.yaw): void {
@@ -422,12 +439,29 @@ export class PlayerController {
     const rightX = Math.cos(this.yaw);
     const rightZ = -Math.sin(this.yaw);
 
+    this.tremorClock += dt;
+    let kickPitch = 0;
+    let kickYaw = 0;
+    let kickRoll = 0;
+    if (this.joltTime > 0) {
+      this.joltTime = Math.max(0, this.joltTime - dt);
+      const env = (this.joltTime / 0.44) ** 1.6 * this.joltStrength;
+      kickPitch = -0.042 * env + Math.sin(this.tremorClock * 58) * 0.014 * env;
+      kickYaw = Math.cos(this.tremorClock * 47) * 0.016 * env;
+      kickRoll = 0.048 * env * this.joltRollDir + Math.sin(this.tremorClock * 41) * 0.012 * env;
+    }
+    if (this.dreadTremor > 0.05) {
+      const tr = Math.min(1, this.dreadTremor) * 0.0045;
+      kickPitch += Math.sin(this.tremorClock * 11.3) * tr;
+      kickRoll += Math.cos(this.tremorClock * 8.7) * tr * 1.1;
+    }
+
     this.camera.position.set(
       p.x + rightX * sway,
       this.eyeY + bobOffsetY(this.stride.phase, bob),
       p.z + rightZ * sway,
     );
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.camera.rotation.set(this.pitch + kickPitch, this.yaw + kickYaw, kickRoll);
   }
 
   private footstep(feetY: number): void {

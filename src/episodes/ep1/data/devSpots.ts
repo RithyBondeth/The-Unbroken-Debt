@@ -19,4 +19,14 @@ export const DEV_SPOTS: Readonly<Record<string, { feet: [number, number, number]
     corridor: { feet: [0, 2.5, -24.0], yaw: Math.PI },
     /** Sok's study, facing the photograph over his cabinet. */
     study: { feet: [4.2, 2.5, -25.6], yaw: 0.47 },
+    /** South compound gate, directly facing the chained 3-dial brass padlock. */
+    gate: { feet: [0, 0, 41.3], yaw: Math.PI },
+    /** Roadside laterite street facing the Noodle, Barber, and Moto shops. */
+    shops: { feet: [0, 0.1, 52.0], yaw: 0 },
+    /** Detailed brick village well inside the south gate. */
+    well: { feet: [-7.9, 0, 33.4], yaw: -Math.PI / 2 },
+    /** Track overlook facing west across the flooded rice paddies (Krasue flight path). */
+    paddies: { feet: [4.0, 0, 30.0], yaw: 1.2 },
+    /** Upstairs hall directly facing the stopped 20:12 wall pendulum clock. */
+    clock: { feet: [-2.4, 2.5, -13.5], yaw: -Math.PI / 2 },
   };

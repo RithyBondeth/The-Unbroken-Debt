@@ -34,6 +34,10 @@ export const PANNING: Record<BusName, "HRTF" | "equalpower" | null> = {
 export interface SpatialOptions {
   /** Overrides the bus's panning model (the S4 pointing test compares both). */
   panning?: "HRTF" | "equalpower";
+  /** Attenuation curve: "linear" hits true 0 at maxDistance; "inverse" carries further. */
+  distanceModel?: "inverse" | "linear" | "exponential";
+  /** Rolloff rate for distance attenuation (default 1). */
+  rolloffFactor?: number;
   /** Full volume within this distance, in metres. */
   minDistance?: number;
   maxDistance?: number;
@@ -41,12 +45,15 @@ export interface SpatialOptions {
   volume?: number;
 }
 
-/** Buses sent into the space's reverb, and how much (UI, music and the room's own bed stay dry). */
+/**
+ * Buses sent into the space's reverb, and how much.
+ * Open-air field recordings on `ambience` stay dry so real outdoor acoustics are never
+ * smeared into noisy wash; `sfx`, `threat`, and `voice` get crisp, restrained spatial glue.
+ */
 const REVERB_SENDS: Partial<Record<BusName, number>> = {
-  sfx: 1,
-  threat: 1,
-  voice: 0.8,
-  ambience: 0.35,
+  sfx: 0.52,
+  threat: 0.62,
+  voice: 0.45,
 };
 
 /**
@@ -124,7 +131,15 @@ export class AudioSystem {
     const context = (engine as unknown as { _audioContext: BaseAudioContext })._audioContext;
     const master = AudioSystem.limit(engine, context);
     const acoustics = AudioSystem.wire(engine, buses, context);
-    return new AudioSystem(engine, buses, context, acoustics, master);
+    const sys = new AudioSystem(engine, buses, context, acoustics, master);
+    if (!audioContext && typeof window !== "undefined") {
+      const resumeOnGesture = () => {
+        if (context.state === "suspended") void sys.unlock().catch(() => undefined);
+      };
+      window.addEventListener("pointerdown", resumeOnGesture, { passive: true });
+      window.addEventListener("keydown", resumeOnGesture, { passive: true });
+    }
+    return sys;
   }
 
   /**
@@ -351,10 +366,10 @@ export class AudioSystem {
       spatialEnabled: true,
       spatialPanningModel: options.panning ?? PANNING[bus] ?? "equalpower",
       spatialPosition: position.clone(),
-      spatialDistanceModel: "inverse" as const,
+      spatialDistanceModel: options.distanceModel ?? ("inverse" as const),
       spatialMinDistance: options.minDistance ?? 1,
       spatialMaxDistance: options.maxDistance ?? 40,
-      spatialRolloffFactor: 1,
+      spatialRolloffFactor: options.rolloffFactor ?? 1,
       loop: options.loop ?? false,
       volume: options.volume ?? 1,
     };

@@ -274,7 +274,7 @@ async function run() {
   assert(act.vigil.lamp.oil >= 0.49, `${cp} guarantees half a tank on reload`);
   if (step === "act1") {
     assert(cp === "CP1" && game.inventory.count("matches") === 10, "CP1 retains the prologue kit");
-    assert(!act.early.active && !game.threatActive, "arrival has no chase or cart obstacle");
+    assert(!act.horror.active && !game.threatActive, "arrival has no chase or cart obstacle");
     await new SaveStore(undefined, "boon-sop-journey-CP1").save("slot1", game.resumedSave!);
     key("KeyF");
     await wait(() => act.vigil.lamp.burning, "first lamp match");
@@ -338,16 +338,7 @@ async function run() {
     act.beats.progress.update(660);
     await free();
     game.player.teleport(new Vector3(0, 0, -2), Math.PI);
-    await wait(() => act.early.active, "listening passage after the vigil");
-    if (act.vigil.lamp.burning) key("KeyF");
-    key("KeyC");
-    await wait(
-      () => game.flags.get("ep1.early.complete", false) && !act.early.active,
-      "presence passes the gate",
-      60000,
-    );
-    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" }));
-    assert(game.checkpoints.last?.flags["ep1.early.complete"] === true, "passage completion saved");
+    game.flags.set("ep1.puzzle.clock.solved", true);
     await wait(() => game.flags.get("ep1.sok.unlocked", false) && !game.cutscene, "Act II opening");
     await checkpoint("CP2", "investigate");
     return;

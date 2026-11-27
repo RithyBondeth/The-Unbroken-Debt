@@ -4,7 +4,14 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { LoadAssetContainerAsync } from "@babylonjs/core/Loading/sceneLoader";
 import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { DynamicTexture } from "@babylonjs/core/Materials/Textures/dynamicTexture";
+import { Constants } from "@babylonjs/core/Engines/constants";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
 import { Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { CreatePlane } from "@babylonjs/core/Meshes/Builders/planeBuilder";
+import { CreateSphere } from "@babylonjs/core/Meshes/Builders/sphereBuilder";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { realiseInstances } from "@/core/areaLoader";
 import { krasueScreamMouth } from "@/shared/entities/krasueExpression";
@@ -62,9 +69,15 @@ export class KrasueFlyer {
   readonly root: TransformNode;
   readonly meshes: AbstractMesh[];
   readonly ready = true;
-  /** The light that travels with it (the world around the windows, and itself). */
+  /** The bioluminescent organ light that travels with it (green when drifting, red when alerted). */
   readonly glow: PointLight;
+  /** 0 = sickly emerald-green (drifting/feeding over rice paddies), 1 = deep blood-red (alerted). */
+  redness = 0;
   mouthOpen = 0;
+  private readonly glowCore: Mesh;
+  private readonly glowHalo: Mesh;
+  private readonly glowCoreMat: StandardMaterial;
+  private readonly glowHaloMat: StandardMaterial;
   private readonly glide = new KrasueGlide();
   private readonly chains: Chain[] = [];
   private readonly head: TransformNode;
@@ -203,15 +216,59 @@ export class KrasueFlyer {
     rim.renderPriority = 10;
     rim.includedOnlyMeshes = this.meshes;
     // The glow it carries: never disabled (that would rebuild every lit material's
-    // shader), only dimmed to nothing while it is away.
+    // shader), only dimmed to nothing while it is away. Shifts from emerald-green to blood-red.
     this.glow = new PointLight("krasue_glow", Vector3.Zero(), scene);
-    this.glow.diffuse.set(0.48, 0.72, 0.58);
-    this.glow.specular.set(0.3, 0.42, 0.34);
+    this.glow.diffuse.set(0.24, 0.94, 0.44);
+    this.glow.specular.set(0.2, 0.72, 0.34);
     this.glow.intensity = 0;
-    this.glow.range = 5.5;
+    this.glow.range = 15;
     this.glow.renderPriority = 2;
     this.glow.shadowEnabled = false;
     this.glow.includedOnlyMeshes = [...this.meshes];
+
+    // Bioluminescent organ core + soft radial-gradient misty billboard halo (zero hard circle edge)
+    const coreMat = new StandardMaterial("M_krasue_organ_core", scene);
+    coreMat.disableLighting = true;
+    coreMat.diffuseColor = Color3.Black();
+    coreMat.emissiveColor = new Color3(0.32, 1.0, 0.52);
+    coreMat.alpha = 0.85;
+    this.glowCoreMat = coreMat;
+    this.glowCore = CreateSphere("krasue_organ_core", { diameter: 0.22, segments: 12 }, scene);
+    this.glowCore.parent = this.root;
+    this.glowCore.position.set(0, -0.56, 0.08);
+    this.glowCore.material = coreMat;
+    this.glowCore.isPickable = false;
+
+    const haloTex = new DynamicTexture("T_krasue_halo_soft", 128, scene, true);
+    const hctx = haloTex.getContext();
+    const grad = hctx.createRadialGradient(64, 64, 2, 64, 64, 62);
+    grad.addColorStop(0, "rgba(255,255,255,0.92)");
+    grad.addColorStop(0.28, "rgba(255,255,255,0.44)");
+    grad.addColorStop(0.62, "rgba(255,255,255,0.11)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    hctx.fillStyle = grad;
+    hctx.fillRect(0, 0, 128, 128);
+    haloTex.hasAlpha = true;
+    haloTex.update();
+
+    const haloMat = new StandardMaterial("M_krasue_organ_halo", scene);
+    haloMat.disableLighting = true;
+    haloMat.diffuseColor = Color3.Black();
+    haloMat.opacityTexture = haloTex;
+    haloMat.emissiveTexture = haloTex;
+    haloMat.emissiveColor = new Color3(0.18, 0.95, 0.38);
+    haloMat.alpha = 0.65;
+    haloMat.alphaMode = Constants.ALPHA_ADD;
+    haloMat.disableDepthWrite = true;
+    haloMat.backFaceCulling = false;
+    this.glowHaloMat = haloMat;
+    this.glowHalo = CreatePlane("krasue_organ_halo", { size: 2.15 }, scene);
+    this.glowHalo.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    this.glowHalo.parent = this.root;
+    this.glowHalo.position.set(0, -0.56, 0.06);
+    this.glowHalo.material = haloMat;
+    this.glowHalo.isPickable = false;
+
     scene.onBeforeRenderObservable.add(() => {
       if (!this.root.isEnabled()) this.glow.intensity = 0;
     });
@@ -285,12 +342,30 @@ export class KrasueFlyer {
     this.simulate(dt, time, fresh);
     this.breathe(time, attack);
 
-    // The glow comes up as it nears out of the dark, and breathes; the eyes burn
-    // brighter while it watches and flare as it shrieks.
-    this.visible = Math.min(1, this.visible + dt * 1.8);
-    const flicker =
-      0.9 + 0.07 * Math.sin(time * 2.3) + 0.03 * Math.sin(time * 5.9 + 1.3 * Math.sin(time * 0.7));
-    this.glow.intensity = this.visible * (0.7 + 0.3 * this.watch) * flicker;
+    // Heartbeat-pulsed emerald-green -> blood-red organ bioluminescence visible across the paddies
+    this.visible = Math.min(1, this.visible + dt * 1.4);
+    const beatRate = 1.15 + 0.95 * this.redness + (attack ? 0.5 : 0);
+    const beatPhase = (time * beatRate) % 1;
+    const pulse =
+      0.72 +
+      0.42 * Math.exp(-(((beatPhase - 0.1) / 0.065) ** 2)) +
+      0.24 * Math.exp(-(((beatPhase - 0.3) / 0.08) ** 2)) +
+      0.06 * Math.sin(time * 5.3);
+    const r = Math.max(0, Math.min(1, this.redness));
+    // Emerald-green (0.20, 0.96, 0.44) -> Blood-red (1.0, 0.12, 0.08)
+    const cr = 0.2 + 0.8 * r;
+    const cg = 0.96 - 0.84 * r;
+    const cb = 0.44 - 0.36 * r;
+    this.glow.diffuse.set(cr, cg, cb);
+    this.glow.specular.set(cr * 0.7, cg * 0.7, cb * 0.7);
+    this.glow.intensity = this.visible * (1.8 + 1.4 * r + 0.6 * this.watch) * pulse;
+    this.glowCoreMat.emissiveColor.set(cr * 1.35 * pulse, cg * 1.35 * pulse, cb * 1.35 * pulse);
+    this.glowCoreMat.alpha = this.visible * 0.9;
+    this.glowHaloMat.emissiveColor.set(cr * pulse, cg * pulse, cb * pulse);
+    this.glowHaloMat.alpha = this.visible * (0.48 + 0.26 * r) * pulse;
+    const haloScale = 0.92 + 0.35 * pulse + 0.28 * r;
+    this.glowHalo.scaling.setAll(haloScale);
+    this.glowCore.scaling.setAll(0.88 + 0.24 * pulse);
     Vector3.TransformCoordinatesFromFloatsToRef(
       0,
       -0.62,
@@ -298,7 +373,7 @@ export class KrasueFlyer {
       this.root.getWorldMatrix(),
       this.glow.position,
     );
-    const eyes = 0.28 + 0.6 * this.watch + 0.9 * this.mouthOpen;
+    const eyes = 0.3 + 0.65 * this.watch + 0.9 * this.mouthOpen;
     for (const material of this.materials) material.emissiveIntensity = eyes;
   }
 

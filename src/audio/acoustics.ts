@@ -106,8 +106,8 @@ export const SPACES: Record<AcousticSpace, Space> = {
       [0.016, 0.3],
       [0.021, 0.2],
     ],
-    wet: 0.3,
-    occlusion: [1300, 0.65],
+    wet: 0.24,
+    occlusion: [1150, 0.56],
   },
   // Shut in a wardrobe among the clothes (S1-026): close, dead, and the world
   // outside the door muffled.
@@ -118,8 +118,8 @@ export const SPACES: Record<AcousticSpace, Space> = {
       [0.0015, 0.5],
       [0.003, 0.35],
     ],
-    wet: 0.22,
-    occlusion: [800, 0.5],
+    wet: 0.18,
+    occlusion: [760, 0.44],
   },
   // Low and semi-open: mud below, boards a metre above. Boxy, a flutter between
   // floor and ceiling, and the open sides let the tail out fast.
@@ -127,39 +127,38 @@ export const SPACES: Record<AcousticSpace, Space> = {
     rt60: [0.45, 0.28, 0.12],
     preDelay: 0.002,
     early: [
-      [0.003, 0.6],
-      [0.006, 0.45],
-      [0.009, 0.34],
-      [0.012, 0.25],
-      [0.015, 0.18],
-      [0.018, 0.12],
+      [0.003, 0.48],
+      [0.006, 0.36],
+      [0.009, 0.26],
+      [0.012, 0.2],
+      [0.015, 0.14],
+      [0.018, 0.1],
     ],
-    wet: 0.32,
-    occlusion: [5000, 0.85],
+    wet: 0.25,
+    occlusion: [4200, 0.8],
   },
   // A cloth pavilion: little to reflect, and the cloth swallows the highs.
   tent: {
     rt60: [0.32, 0.24, 0.1],
     preDelay: 0.006,
     early: [
-      [0.01, 0.3],
-      [0.017, 0.2],
+      [0.01, 0.28],
+      [0.017, 0.18],
     ],
-    wet: 0.16,
-    occlusion: [12000, 0.95],
+    wet: 0.14,
+    occlusion: [11000, 0.92],
   },
-  // A village at night in the rain: slapback from the houses and the treeline,
-  // a long, dark tail scattered by wet foliage.
+  // A village at night in the rain: restrained wet-foliage slapback, crisp clarity.
   outdoors: {
     rt60: [1.5, 1.0, 0.35],
     preDelay: 0.02,
     early: [
-      [0.045, 0.35],
-      [0.09, 0.25],
-      [0.14, 0.2],
-      [0.21, 0.14],
+      [0.045, 0.24],
+      [0.09, 0.18],
+      [0.14, 0.13],
+      [0.21, 0.09],
     ],
-    wet: 0.2,
+    wet: 0.13,
     occlusion: [20000, 1],
   },
   // Episode 2's pagoda garden: no rain, old trees close round a walled yard. Soft

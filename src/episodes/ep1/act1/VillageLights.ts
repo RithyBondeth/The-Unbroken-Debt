@@ -238,12 +238,41 @@ export class VillageLights {
 
   /** The air Sora stirs (data/draught.ts): a candle she sweeps past gutters and dims. */
   draught: Draught | null = null;
+  /** 0–1 cold proximity aura from Preay/Headless Ghost: chills & sputters Sora's kerosene lamp. */
+  coldAura = 0;
+  private blackoutRemaining = 0;
+  private blackoutDuration = 0.45;
+  private flickerBurstRemaining = 0;
   private readonly gusts: number[] = [];
+  private readonly warmLamp = Color3.FromHexString("#FFD4A0");
+  private readonly chillLamp = Color3.FromHexString("#A8C4D8");
+
+  /**
+   * Brief pitch-black lamp & nearby-bulb blackout cut for Asian horror vanishes/lunges:
+   * drops Sora's flame to near-zero embers for `seconds`, then sputters back alive.
+   */
+  blackout(seconds = 0.44): void {
+    this.blackoutDuration = Math.max(0.2, seconds);
+    this.blackoutRemaining = Math.max(this.blackoutRemaining, this.blackoutDuration);
+    this.flickerBurstRemaining = Math.max(this.flickerBurstRemaining, this.blackoutDuration + 0.55);
+  }
+
+  /** Violent electrical/wick stutter burst without full blackout (doorway crossings, whispers). */
+  flickerBurst(seconds = 0.9): void {
+    this.flickerBurstRemaining = Math.max(this.flickerBurstRemaining, seconds);
+  }
 
   update(dt: number): void {
     this.time += dt;
     const t = this.time;
     const draught = this.draught;
+    if (this.blackoutRemaining > 0)
+      this.blackoutRemaining = Math.max(0, this.blackoutRemaining - dt);
+    if (this.flickerBurstRemaining > 0)
+      this.flickerBurstRemaining = Math.max(0, this.flickerBurstRemaining - dt);
+    const inBlackout = this.blackoutRemaining > 0;
+    const burst = this.flickerBurstRemaining > 0;
+    const eyePos = this.camera.globalPosition;
     // Flames are never steady (Art Bible); each one out of step with the others. The
     // funeral's (under the house now: fu_) dim as the corner incense burns down and go
     // out in A2-01's gust, but for the fire pot, which sinks to its embers. The bulb
@@ -269,6 +298,13 @@ export class VillageLights {
         this.gusts[i] = g;
         flicker *= 1 - g * (0.4 + 0.2 * Math.sin(t * 31 + p * 3));
       }
+      if ((inBlackout || burst) && Vector3.DistanceSquared(eyePos, light.position) < 225) {
+        flicker *= inBlackout
+          ? 0.04
+          : Math.sin(t * 58 + p) > -0.15
+            ? 0.22 + 0.78 * Math.abs(Math.sin(t * 31 + p))
+            : 0.06;
+      }
       light.intensity =
         base *
         (this.practicalLevels.get(light.name) ?? 1) *
@@ -278,12 +314,26 @@ export class VillageLights {
     });
     this.chooseFogLights();
     // Strong enough for a warm pool round Sora that the dark eats a few metres out.
+    // When Preay/Headless Ghost's cold aura closes in, the lamp chills, shrinks, and sputters irregularly.
     const shade = Math.max(SHADE_FLOOR, Math.min(1, (this.lookingAt / SHADE_FROM) ** 2));
     this.shade += (shade - this.shade) * Math.min(1, dt * 5);
+    const chill = Math.max(0, Math.min(1, this.coldAura));
+    Color3.LerpToRef(this.warmLamp, this.chillLamp, chill * 0.78, this.lamp.diffuse);
+    let sputter =
+      chill > 0.05
+        ? 1 - chill * (0.42 + 0.42 * Math.abs(Math.sin(t * 27.3) * Math.cos(t * 41.7)))
+        : 1;
+    if (inBlackout) {
+      sputter = 0.02;
+    } else if (burst) {
+      const stutter = Math.sin(t * 64) * Math.cos(t * 29);
+      sputter *= stutter > -0.25 ? 0.55 + 0.45 * Math.abs(stutter) : 0.12;
+    }
     this.lamp.intensity =
       LAMP_INTENSITY *
       this.lampFlame *
       this.shade *
+      sputter *
       (0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1));
     this.flash.intensity = this.storm.update(dt) * 3;
     if (!this.atDawn) {

@@ -569,6 +569,7 @@ export class Game {
     void (this.audio?.context as AudioContext | undefined)?.suspend?.();
     if (document.pointerLockElement) document.exitPointerLock();
     const last = this.checkpoints.last;
+    const ep1Clock = this.episode === 1 ? this.flags.get<string>("ep1.clock", "") : "";
     this.pauseMenu.open({
       resume: () => this.resume(),
       restart: last
@@ -579,6 +580,7 @@ export class Game {
               .catch(() => this.reload(true))
         : null,
       quit: () => this.reload(false),
+      clock: ep1Clock ? `${ep1Clock} · Episode 1` : undefined,
     });
   }
 

@@ -69,7 +69,7 @@ async function run(): Promise<void> {
   await wait(() => !game.cutscene, 180000);
   await wait(() => game.flags.get("ep1.arrival.road", false));
   assert(!game.flags.get("ep1.vigil.started", false), "incense timer waits for duties");
-  assert(!act.early.active && !game.threatActive, "arrival is free of a forced encounter");
+  assert(!act.horror.active && !game.threatActive, "arrival is free of a forced encounter");
   assert(!game.scene.meshes.some((m) => m.name.startsWith("road_cart_")), "opening carts removed");
   game.player.teleport(new Vector3(0, 0, -2), Math.PI);
   const arrivalUse = (id: string) => game.bus.emit("interact:use", { id });
@@ -156,21 +156,7 @@ async function run(): Promise<void> {
   await wait(() => !game.sketchbook?.isBusy);
   if (game.sketchbook?.isOpen) game.sketchbook.toggle();
   game.player.teleport(new Vector3(0, 0, -2), Math.PI);
-  await wait(() => act.early.active);
-  const incenseAtPassage = act.vigil.incense.fraction;
-  assert(!game.flags.get("ep1.act2.started", false), "listening passage precedes Act II");
-  if (act.vigil.lamp.burning) window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
-  window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyC" }));
-  await wait(() => game.flags.get("ep1.early.complete", false) && !act.early.active, 60000);
-  window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyC" }));
-  assert(
-    game.checkpoints.last?.flags["ep1.early.complete"] === true,
-    "passage completed and saved",
-  );
-  assert(
-    Math.abs(act.vigil.incense.fraction - incenseAtPassage) < 0.002,
-    "forced passage does not consume incense upkeep",
-  );
+  game.flags.set("ep1.puzzle.clock.solved", true);
   await wait(() => game.flags.get("ep1.act2.started", false));
   report("Playing A2-01: wildlife silence → gust → upstairs footsteps → door.");
   await wait(() => game.flags.get("ep1.sok.unlocked", false));

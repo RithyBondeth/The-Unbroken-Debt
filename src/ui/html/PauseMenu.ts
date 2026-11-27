@@ -8,6 +8,8 @@ export interface PauseActions {
   /** Back to the last checkpoint; absent when there is none yet. */
   restart: (() => void) | null;
   quit(): void;
+  /** Optional Episode 1 Night Clock string (e.g. "23:45 · The Farmstead"). */
+  clock?: string;
 }
 
 /** Lines the dark says while the game waits. */
@@ -25,6 +27,7 @@ export class PauseMenu {
   private readonly controls = document.createElement("dl");
   private readonly confirm = document.createElement("div");
   private readonly whisper = document.createElement("p");
+  private readonly clockLine = document.createElement("p");
   private readonly eyes = document.createElement("div");
   private sound: EntryAmbience | null = null;
   private eyeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -58,6 +61,9 @@ export class PauseMenu {
     title.textContent = t("pause.title");
     title.dataset.text = title.textContent;
     this.whisper.className = "pause-whisper";
+    this.clockLine.className = "pause-eyebrow";
+    this.clockLine.style.fontVariantNumeric = "tabular-nums";
+    this.clockLine.hidden = true;
 
     this.menu.className = "pause-menu";
     this.menu.setAttribute("aria-label", t("pause.title"));
@@ -70,6 +76,7 @@ export class PauseMenu {
       ["Shift", "Hurry"],
       ["C / Ctrl", "Crouch"],
       ["F", "Light or put out the lamp"],
+      ["T", "Glance at watch (night clock)"],
       ["Q", "Notebook: objective, map, clues and people"],
       ["Tab", "Satchel"],
       ["Esc", "Pause"],
@@ -79,7 +86,15 @@ export class PauseMenu {
     this.confirm.className = "pause-confirm";
     this.confirm.hidden = true;
 
-    panel.append(eyebrow, title, this.whisper, this.menu, this.controls, this.confirm);
+    panel.append(
+      eyebrow,
+      this.clockLine,
+      title,
+      this.whisper,
+      this.menu,
+      this.controls,
+      this.confirm,
+    );
     const hint = document.createElement("p");
     hint.className = "pause-hint";
     hint.innerHTML = `<kbd>Esc</kbd> ${t("pause.resumeHint")}`;
@@ -112,6 +127,8 @@ export class PauseMenu {
     this.returnFocus = document.activeElement as HTMLElement | null;
     const key = WHISPERS[Math.floor(Math.random() * WHISPERS.length)];
     this.whisper.textContent = t(key);
+    this.clockLine.textContent = actions.clock ?? "";
+    this.clockLine.hidden = !actions.clock;
     this.showMenu();
     this.node.hidden = false;
     // Restart the entrance each time the menu opens.

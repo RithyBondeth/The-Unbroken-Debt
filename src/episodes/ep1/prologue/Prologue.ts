@@ -27,6 +27,7 @@ import { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial";
 import type { SaveData } from "@/systems/saves/SaveData";
 import { SavePoint } from "@/systems/saves/SavePoint";
 import { warmSceneViews } from "@/render/warmSceneViews";
+import { EpisodeClockUi } from "../clock/EpisodeClock";
 
 const ILLUSTRATION = "interact_illustration";
 const DRAWER = "interact_drawer";
@@ -83,6 +84,7 @@ export class Prologue {
   private wasFlashing = false;
   private readonly taking = new Set<string>();
   private readonly objectives = new Objectives();
+  private clock: EpisodeClockUi | null = null;
   details!: StudioDetails;
   scares!: StudioScares;
 
@@ -342,6 +344,12 @@ export class Prologue {
     game.atmosphere.maxExposure = 3.1;
     game.atmosphere.nightSightIntensity = 1.8;
     game.addFlameLights(this.lights.deskLamp, this.lights.candle);
+    if (!game.flags.has("ep1.clock")) game.flags.set("ep1.clock", "20:00");
+    this.clock = new EpisodeClockUi(
+      game.flags,
+      () => !game.paused && !game.cutscene && !game.satchel.isOpen && !game.sketchbook?.isOpen,
+    );
+    game.scene.onDisposeObservable.addOnce(() => this.clock?.dispose());
     game.scene.onBeforeRenderObservable.add(() => this.update(game.deltaSeconds));
     if (import.meta.env.DEV) (window as unknown as { prologue: Prologue }).prologue = this;
     await this.run();
@@ -357,6 +365,7 @@ export class Prologue {
     this.score.update(dt);
     this.bell.update(dt);
     this.scares.update(dt, this.ringing);
+    this.clock?.update(dt);
     // Smoothly shift room reverb & street-rain occlusion between front studio, back room & tiled bathroom.
     game.audio?.setSpace(studioSpaceAt(game.camera.globalPosition), 1.6);
     // In the power cut the dark is total: no eyes adjusting, no night sight.
@@ -391,6 +400,7 @@ export class Prologue {
     // P01: rain, the storm and the desk lamp; Sora at her drafting table, the Wat
     // Phnom illustration inked to the middle. Look and move hints if she sits still.
     void game.fade.to(0, 1.25);
+    this.clock?.announce(game.flags.has("ep1.clock.stopped") ? "20:12" : "20:00", undefined, false);
     game.cutscene = false;
     game.interaction.allow = () => true;
     void this.idleHints();
@@ -414,6 +424,8 @@ export class Prologue {
         this.lights.strike();
         void this.ink.spill(2.4);
         game.flags.set("ep1.clock.stopped", "20:12");
+        this.clock?.announce("20:12", "The Clock Stopped", false);
+        this.clock?.glitch(12);
         // Written into the book quietly: it must not open over the ringing phone.
         const book = game.sketchbook;
         if (book && !book.written.has(INK_BLOT_ENTRY))

@@ -21,6 +21,7 @@ import { DocumentReader } from "@/ui/html/DocumentReader";
 import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
 import { PhoneBell } from "../audio/PhoneBell";
+import { ep1AudioUrls } from "../audio/VillageAudio";
 import { checkpointName } from "@/systems/saves/Checkpoints";
 import { inFuneralRoom, inHall } from "../data/funeral";
 
@@ -88,13 +89,19 @@ export class ActOneBeats {
     if (!audio) return;
     const rate = audio.context.sampleRate;
     const at = this.sok.marker.position;
+    const [recRing, recCreak, recStep1, recStep2] = await Promise.all([
+      audio.load(ep1AudioUrls("sfx_ep1_studio_phone_ring")),
+      audio.load(ep1AudioUrls("sfx_ep1_studio_creak_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_step_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_step_2")),
+    ]);
     this.bell = new PhoneBell(
       await audio.spatialSound(
         "arrival_phone_ring",
-        audio.buffer(phoneRing(rate, seededRandom(96)), rate),
+        recRing ?? audio.buffer(phoneRing(rate, seededRandom(96)), rate),
         "sfx",
         this.arrivalModels.phone.position,
-        { minDistance: 4, volume: 0.55, loop: true },
+        { distanceModel: "linear", minDistance: 4, maxDistance: 28, volume: 0.62, loop: true },
       ),
     );
     this.line = await audio.spatialSound(
@@ -102,7 +109,7 @@ export class ActOneBeats {
       audio.buffer(lineStatic(rate, seededRandom(97)), rate),
       "sfx",
       this.arrivalModels.phone.position,
-      { minDistance: 2, volume: 0.16, loop: true },
+      { distanceModel: "linear", minDistance: 1.5, maxDistance: 8, volume: 0.14, loop: true },
     );
     this.gust = await audio.spatialSound(
       "cold_gust",
@@ -113,19 +120,20 @@ export class ActOneBeats {
     );
     this.creak = await audio.spatialSound(
       "upstairs_creak",
-      audio.buffer(boardCreak(rate, seededRandom(92)), rate),
+      recCreak ?? audio.buffer(boardCreak(rate, seededRandom(92)), rate),
       "threat",
       at,
-      { minDistance: 6, volume: 0.6 },
+      { minDistance: 6, volume: 0.72 },
     );
+    const stepClips = [recStep1, recStep2, recStep1];
     for (let k = 0; k < 3; k++)
       this.steps.push(
         await audio.spatialSound(
           `upstairs_step_${k}`,
-          audio.buffer(wetStep(rate, seededRandom(93 + k)), rate),
+          stepClips[k] ?? audio.buffer(wetStep(rate, seededRandom(93 + k)), rate),
           "threat",
           at,
-          { minDistance: 7, volume: 0.85 },
+          { panning: "HRTF", minDistance: 7, volume: 0.88 },
         ),
       );
   }

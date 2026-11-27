@@ -1,74 +1,49 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
-import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
-import type { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import type { Game } from "@/core/Game";
 import type { Vigil } from "../act1/Vigil";
-import type { SaveData } from "@/systems/saves/SaveData";
-import { seededRandom } from "@/audio/synth";
 import { setControlText } from "@/ui/html/controlText";
-import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "../data/krasue";
-import { krasueLament, krasueShriek, krasueSting } from "@/audio/sounds/krasueSounds";
+import { exposedToPaddies } from "../data/krasue";
+import type { VillageAudio } from "../audio/VillageAudio";
 import { KrasueBrain } from "./KrasueBrain";
 import { KrasueFlyer } from "./KrasueFlyer";
 import "@/ui/html/krasue.css";
 
 /**
- * Repeatable kitchen obstacle, independent of story progress and audio
- * availability. The Krasue is never seen idling by the house: it waits far out
- * over the fields and only swoops in, with a sting, when Sora lingers at a
- * kitchen window.
+ * Redesigned Rice-Field Krasue (អាប) encounter:
+ * Floats over the flooded rice paddies with a heartbeat-pulsed green/red organ light.
+ * Calm emerald-green while feeding over the fields; shifts blood-red and banks closer
+ * if Sora keeps her kerosene lamp open while exposed. Dousing the lamp (`F`) or taking
+ * shelter lets it drift back into the palms; ignoring the red warning causes a close
+ * pass that snuffs Sora's lamp with an ear-ringing shriek.
  */
 export class KrasueEncounter {
   readonly brain = new KrasueBrain();
   readonly model: KrasueFlyer;
   private readonly warning = document.createElement("div");
   private readonly forward = new Vector3();
-  private readonly sightHit = new PhysicsRaycastResult();
-  private lament: StaticSound | null = null;
-  private shriek: StaticSound | null = null;
-  private sting: StaticSound | null = null;
-  private lastArrival = 0;
-  private soundOn = false;
-  private recovering = false;
-  private ownsThreat = false;
-  private stopped = false;
-  private lastSighting = 0;
-  private screamAt = -Infinity;
-  private message = "";
+  private hum: StaticSound | null = null;
+  private humOn = false;
   private volume = 0;
+  private lastAlert = 0;
+  private lastPass = 0;
+  private screamAt = -Infinity;
+  private stopped = false;
+  private message = "";
   private readonly abort = new AbortController();
-
-  get debugSight(): string {
-    const hit = this.sightHit;
-    return `${this.brain.state} · sight blocker: ${hit.hasHit ? (hit.body?.transformNode.name ?? "unknown") : "none"} · distance ${hit.hitDistance.toFixed(2)}`;
-  }
-
-  get activeScreams(): number {
-    return this.shriek?.activeInstancesCount ?? 0;
-  }
 
   constructor(
     private readonly game: Game,
     private readonly vigil: Vigil,
-    private readonly capture: () => SaveData,
+    private readonly villageAudio: VillageAudio | null = null,
   ) {
     this.model = new KrasueFlyer(game.scene);
-    // Its glow reaches the walls, frames and ground round the kitchen windows.
-    this.model.lightAround(
-      (game.scene?.meshes ?? []).filter((m) => {
-        if (m.getTotalVertices() === 0 || this.model.meshes.includes(m)) return false;
-        const sphere = m.getBoundingInfo().boundingSphere;
-        return KRASUE_WINDOWS.some(
-          (w) => Vector3.Distance(sphere.centerWorld, w.center) - sphere.radiusWorld < 6,
-        );
-      }),
-    );
     this.warning.className = "krasue-warning";
     this.warning.setAttribute("role", "status");
     this.warning.hidden = true;
     document.body.append(this.warning);
+
     document.addEventListener(
       "visibilitychange",
       () => {
@@ -87,149 +62,114 @@ export class KrasueEncounter {
       this.stop();
       this.abort.abort();
       this.warning.remove();
-      this.lament?.dispose();
-      this.shriek?.dispose();
-      this.sting?.dispose();
+      this.hum?.dispose();
     });
   }
 
   async makeSounds(): Promise<void> {
-    const audio = this.game.audio;
-    if (!audio) return;
-    const rate = audio.context.sampleRate;
-    this.lament = await audio.spatialSound(
-      "krasue_lament",
-      audio.buffer(krasueLament(rate, seededRandom(739)), rate),
-      "threat",
+    if (!this.villageAudio) return;
+    this.hum = await this.villageAudio.createSpatialLoop(
+      "krasue_paddy_hum",
+      "amb_ep1_krasue_hum",
       this.brain.position,
-      { loop: true, minDistance: 2, maxDistance: 14, volume: 0 },
-    );
-    this.shriek = await audio.spatialSound(
-      "krasue_shriek",
-      audio.buffer(krasueShriek(rate, seededRandom(741)), rate),
       "threat",
-      this.brain.position,
-      { minDistance: 2, maxDistance: 16, volume: 0.5 },
-    );
-    this.sting = await audio.spatialSound(
-      "krasue_sting",
-      audio.buffer(krasueSting(rate, seededRandom(743)), rate),
-      "threat",
-      this.brain.position,
-      // Loud from far off: the scare lands as it swoops, not once it has arrived.
-      { minDistance: 30, maxDistance: 60, volume: 0.75 },
+      { panning: "HRTF", minDistance: 6, maxDistance: 58, volume: 0 },
     );
   }
 
+  /** Forces an immediate rice-field flight pass (for story milestones or dev QA). */
+  summon(pathIndex?: number): void {
+    if (!this.stopped) this.brain.summon(pathIndex);
+  }
+
   update(dt: number, protectedMoment = false): void {
-    if (this.stopped || this.recovering) return;
-    if (!this.model.ready) {
-      this.reset();
-      return;
-    }
+    if (this.stopped) return;
     const g = this.game;
-    const eye = g.camera.globalPosition;
-    // Pausing preserves the encounter, but never advances an attack off-screen.
     if (document.hidden || !g.input.pointerLocked) {
       this.silence();
       return;
     }
-    if (
-      g.cutscene ||
-      protectedMoment ||
-      (g.threatActive && !this.ownsThreat) ||
-      g.flags.get("ep1.seal1.broken", false)
-    ) {
-      this.reset();
+    if (g.cutscene || protectedMoment || g.threatActive || g.flags.get("ep1.seal1.broken", false)) {
+      if (!this.brain.hidden) this.reset();
       return;
     }
-    const near = Vector3.DistanceSquared(eye, this.brain.window.center) < 100;
-    const inKitchen = inKrasueKitchen(eye);
+
+    const eye = g.camera.globalPosition;
+    const feet = g.player.feet;
     g.camera.getDirectionToRef(Axis.Z, this.forward);
-    const facing = inKitchen
-      ? KRASUE_WINDOWS.find((w) => Vector3.Dot(this.forward, w.normal) > 0.45)
-      : undefined;
-    if (facing) this.brain.selectWindow(facing);
-    const visible = !this.brain.hidden && this.canSeePlayer();
-    this.brain.update(dt, eye, visible, this.vigil.lamp.state === "open", facing !== undefined);
-    if (this.brain.arrivals !== this.lastArrival) {
-      if (this.sting) this.sting.spatial.position = this.brain.position.clone();
-      this.sting?.play();
-      this.lastArrival = this.brain.arrivals;
-    }
-    if (this.brain.active && !this.ownsThreat) {
-      this.ownsThreat = true;
-      g.threatActive = true;
-      g.stopInspecting();
-      g.satchel.close();
-      g.sketchbook?.close();
-      g.bus.emit("sequence:start", { id: "krasue-window" });
-    } else if (!this.brain.active) this.releaseThreat();
-    if (this.ownsThreat) g.threatActive = true;
-    this.model.root.setEnabled(!this.brain.hidden);
-    const attack = this.brain.state === "charging" || this.brain.state === "caught";
-    if (this.brain.sightings !== this.lastSighting) {
+
+    const toKrasue = this.brain.position.subtract(eye);
+    const dist = toKrasue.length();
+    const looking =
+      !this.brain.hidden &&
+      dist > 0.5 &&
+      Vector3.Dot(this.forward, toKrasue.scale(1 / dist)) > 0.72;
+    const exposed = exposedToPaddies(feet);
+    const lampOpen = this.vigil.lamp.state === "open";
+
+    this.brain.update(dt, eye, looking, lampOpen, exposed);
+
+    // Alert audio sting when glow turns blood-red
+    if (this.brain.alerts !== this.lastAlert) {
+      this.lastAlert = this.brain.alerts;
       this.screamAt = this.brain.elapsed;
-      if (this.shriek) this.shriek.spatial.position = this.brain.position.clone();
-      this.shriek?.play();
-      this.lastSighting = this.brain.sightings;
+      this.villageAudio?.play("krasueAlert", this.brain.position, 0.85, 0.94);
     }
-    this.model.keepOutside(this.brain.window.center, this.brain.window.normal);
+
+    // Close-range fly-by pass: blows out Sora's lamp + physical camera flinch + visceral audio hit
+    if (this.brain.passes !== this.lastPass) {
+      this.lastPass = this.brain.passes;
+      this.screamAt = this.brain.elapsed;
+      this.villageAudio?.play("krasueAlert", this.brain.position, 1.15, 1.1);
+      this.villageAudio?.play("shockHit", eye, 1.0);
+      this.villageAudio?.play("soraGasp", eye, 0.95);
+      this.game.player.jolt?.(1.05, 1);
+      this.game.atmosphere.scare();
+      if (this.vigil.lamp.burning) this.vigil.lamp.putOut();
+      void g.subtitles.say("Sora", "The light—it came straight for the lamp…", 3.5);
+    }
+
+    this.model.root.setEnabled(!this.brain.hidden);
+    this.model.redness = this.brain.redness;
+    const attacking = this.brain.state === "approaching" || this.brain.state === "pass";
     this.model.pose(
       this.brain.position,
-      this.brain.active ? eye : this.brain.window.center,
+      this.brain.active ? eye : this.brain.position.add(this.brain.direction.scale(6)),
       this.brain.elapsed,
-      attack,
+      attacking,
       this.brain.direction,
       this.brain.active,
       this.brain.elapsed - this.screamAt,
     );
-    const audible = !this.brain.hidden && (near || this.brain.active);
-    this.volume +=
-      ((audible ? (attack ? 0.2 : this.brain.active ? 0.25 : 0.13) : 0) - this.volume) *
-      Math.min(1, dt * 5);
-    if (this.lament) {
-      this.lament.volume = this.volume;
-      this.lament.spatial.position = this.brain.position.clone();
-      if (audible && !this.soundOn) {
-        this.lament.play();
-        this.soundOn = true;
-      } else if (!audible && this.volume < 0.002) this.silence();
-    }
-    if (this.shriek) this.shriek.spatial.position = this.brain.position.clone();
-    this.warning.hidden = !this.brain.active;
-    const message = attack
-      ? "It saw you. Get away from the window!"
-      : this.brain.state === "searching"
-        ? "Stay behind the wall. It is still searching."
-        : "Something is watching through the window.\nBack away. Break its line of sight.";
-    if (message !== this.message) {
-      setControlText(this.warning, message);
-      this.message = message;
-    }
-    if (this.brain.state === "caught") void this.kill();
-  }
 
-  canSeePlayer(): boolean {
-    const g = this.game,
-      eye = g.camera.globalPosition;
-    const from = this.brain.position;
-    if (g.hiding || !inKrasueKitchen(eye)) return false;
-    if (!throughKrasueWindow(from, eye, this.brain.window)) return false;
-    const delta = eye.subtract(from),
-      length = delta.length();
-    if (length < 0.01) return true;
-    // The physics broadphase checks the actual window/room colliders without
-    // intersecting millions of render triangles or the player's held lantern.
-    const physics = g.scene.getPhysicsEngine() as PhysicsEngine | null;
-    if (!physics) return false;
-    physics.raycastToRef(from, eye, this.sightHit);
-    return (
-      !this.sightHit.hasHit ||
-      this.sightHit.shape === g.player.collisionShape ||
-      this.sightHit.body?.shape === g.player.collisionShape ||
-      this.sightHit.hitDistance >= length - 0.1
-    );
+    // Spatialized organic lament hum audible clearly across the paddies
+    const audible = !this.brain.hidden && dist < 58;
+    const targetVol = audible ? (attacking ? 0.68 : this.brain.active ? 0.52 : 0.36) : 0;
+    this.volume += (targetVol - this.volume) * Math.min(1, dt * 3.5);
+    if (this.hum) {
+      this.hum.volume = this.volume;
+      this.hum.spatial.position = this.brain.position.clone();
+      this.hum.spatial.update?.();
+      if (audible && !this.humOn) {
+        this.hum.play();
+        this.humOn = true;
+      } else if (!audible && this.volume < 0.004) {
+        this.silence();
+      }
+    }
+
+    // Minimal diegetic warning only while Krasue has shifted blood-red and is actively hunting
+    const showWarn = this.brain.state === "alert" || this.brain.state === "approaching";
+    this.warning.hidden = !showWarn;
+    if (showWarn) {
+      const next = lampOpen
+        ? "Blood-red glow over the paddies — F douses the lamp."
+        : "Keep dark and look away until it drifts past.";
+      if (next !== this.message) {
+        this.message = next;
+        setControlText(this.warning, next);
+      }
+    }
   }
 
   stop(): void {
@@ -241,58 +181,15 @@ export class KrasueEncounter {
     this.brain.reset();
     this.model.root.setEnabled(false);
     this.warning.hidden = true;
-    this.lastSighting = this.brain.sightings;
-    this.lastArrival = this.brain.arrivals;
-    this.releaseThreat();
+    this.lastAlert = this.brain.alerts;
+    this.lastPass = this.brain.passes;
     this.silence();
-  }
-
-  private releaseThreat(): void {
-    if (!this.ownsThreat) return;
-    this.game.threatActive = false;
-    this.ownsThreat = false;
-    this.game.bus.emit("sequence:end", { id: "krasue-window" });
   }
 
   private silence(): void {
     this.screamAt = -Infinity;
-    this.lament?.stop();
-    this.shriek?.stop();
-    this.sting?.stop();
-    this.soundOn = false;
+    this.hum?.stop();
+    this.humOn = false;
     this.volume = 0;
-  }
-
-  private async kill(): Promise<void> {
-    if (this.recovering) return;
-    this.recovering = true;
-    const g = this.game;
-    g.bus.emit("player:caught", { by: "krasue" });
-    g.cutscene = true;
-    g.gated.holdStill = true;
-    g.gated.holdLook = true;
-    g.stopInspecting();
-    g.satchel.close();
-    g.sketchbook?.close();
-    this.warning.hidden = true;
-    // The lethal contact stays in the world briefly before the shared death/retry UI.
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    this.silence();
-    if (!g.checkpoints.last) {
-      // Legacy games may predate safe checkpoints. Retry outside the ambush room.
-      const save = this.capture();
-      Object.assign(save.flags, {
-        "checkpoint.location": "House · Kitchen passage",
-        "checkpoint.spawn.cp": save.checkpoint,
-        "checkpoint.spawn.x": 1,
-        "checkpoint.spawn.y": 2.5,
-        "checkpoint.spawn.z": -12,
-        "checkpoint.spawn.yaw": Math.PI / 2,
-      });
-      // Loading accepts this immutable fallback even if browser storage is full;
-      // the shared retry UI owns any later write failure and its retry button.
-      await g.checkpoints.load(save);
-    }
-    await g.retryFromCheckpoint();
   }
 }

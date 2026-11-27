@@ -49,7 +49,7 @@ async function boot() {
         Object.assign(data.flags, {
           "ep1.checkpoint": "CP1",
           "ep1.travel.complete": true,
-          "ep1.early.required": true,
+          "ep1.village.puzzlesActive": true,
           "ep1.arrival.road": true,
           "checkpoint.location": "Village · Flooded road",
         });
@@ -226,14 +226,11 @@ async function boot() {
       game.player.teleport(new Vector3(0, 0, 17), Math.PI);
       game.player.pitch = 0.02;
     });
-    button("Trigger a real catch", () => {
-      game.inventory.add("matches", 2);
-      game.flags.set("qa.afterCheckpoint", true);
-      game.player.teleport(
-        act.early.brain.position.add(act.early.brain.direction.scale(0.6)),
-        Math.PI,
-      );
-      game.gated.holdStill = true;
+    button("Trigger Preay ambush", () => {
+      act.horror.triggerProvokedPreay(game.player.feet.add(new Vector3(0, 0, -4)));
+    });
+    button("Summon Rice-Field Krasue", () => {
+      act.krasue.summon(0);
     });
     button("Reach safe courtyard", () => {
       game.notebook.close();
@@ -252,7 +249,7 @@ async function boot() {
     const feet = game.player.feet,
       last = game.checkpoints.last;
     const road = taxi ? game.scene.meshes.find((m) => m.material?.name === "M_wet_mud") : null;
-    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Passage required=${act.early.required} active=${act.early.active} brain=${act.early.brain.state} at=${act.early.brain.position.toString()} time=${act.early.brain.elapsed.toFixed(1)} threat=${game.threatActive} sight=${act.early.canSeeSora()} suspicion=${act.early.brain.suspicion.toFixed(2)} · passage survived=${game.flags.get("ep1.early.complete", false)}` : ""}`;
+    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Horror active=${act.horror.active} chill=${act.horror.preayChill.toFixed(2)} krasue=${act.krasue.brain.state} clock=${act.clock.state.displayTime} gateOpen=${game.flags.get("ep1.puzzle.gate.open", false)} clockSolved=${game.flags.get("ep1.puzzle.clock.solved", false)}` : ""}`;
     const spoken = document.querySelector(".story-subtitles:not([hidden])")?.textContent?.trim();
     if (taxi && spoken && !conversationTrace.some((line) => line.endsWith(spoken))) {
       conversationTrace.push(`${taxi.elapsed.toFixed(1)}s ${spoken}`);

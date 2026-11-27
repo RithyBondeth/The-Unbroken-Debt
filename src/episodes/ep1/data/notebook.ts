@@ -3,6 +3,7 @@ import type { Inventory } from "@/systems/inventory/Inventory";
 import { EP1_SKETCHBOOK } from "./sketchbook";
 import { SLOTS, KANHA_LAYOUT } from "./betel";
 import { ITEMS } from "./items";
+import { WARD_STATIONS, solvedWardCount } from "./villagePuzzles";
 
 export interface Objective {
   title: string;
@@ -57,10 +58,15 @@ export function currentObjective(f: Flags, items: Inventory): Objective {
       tasks,
     );
   }
-  if (yes("ep1.early.started") && !yes("ep1.early.complete") && !yes("ep1.act2.started"))
+  if (yes("ep1.village.puzzlesActive") && !yes("ep1.puzzle.gate.open") && !yes("ep1.act2.started"))
     return objective(
-      "Keep the vigil in darkness",
-      "A listening figure is crossing the gate. Put out the lamp with F, crouch with C and let its footsteps pass. If it notices you, break its view behind the pavilion.",
+      "Open the sealed farm gate",
+      "A 3-dial brass padlock seals the compound gate. Search the roadside stalls for the three digits, or pry the red-corded side fence with an iron crowbar.",
+      [
+        { text: "Noodle stall — rain-stained wall calendar", done: yes("ep1.clue.noodleCalendar") },
+        { text: "Barber shop — crackling valve radio", done: yes("ep1.clue.barberKnocks") },
+        { text: "Moto shop — kerosene ledger", done: yes("ep1.clue.motoLedger") },
+      ],
     );
   if (yes("ep1.seal1.broken"))
     return objective(
@@ -131,6 +137,37 @@ export function currentObjective(f: Flags, items: Inventory): Objective {
             : SLOTS.some((s) => f.get(`ep1.betel.slot.${s}`, "") === id)),
       })),
     );
+  if (yes("ep1.village.puzzlesActive") && !yes("ep1.puzzle.clock.solved")) {
+    if (!yes("ep1.puzzle.well.complete"))
+      return objective(
+        "Haul the brick village well",
+        "Find the counterweight stone by the byre and the iron grapple hook in the servants’ hut. Rig the well sweep, and douse your lamp (F) while holding still if something grabs the rope.",
+        [
+          {
+            text: "Laterite counterweight stone — yard-to-byre track",
+            done: items.has("well_weight") || yes("ep1.puzzle.well.weightAttached"),
+          },
+          {
+            text: "Iron grapple hook — servants’ hut beyond the kitchen",
+            done: items.has("well_hook") || yes("ep1.puzzle.well.hookAttached"),
+          },
+          { text: "Haul up the bucket and brass pendulum", done: yes("ep1.puzzle.well.complete") },
+        ],
+      );
+    if (solvedWardCount(f) < WARD_STATIONS.length)
+      return objective(
+        "Restore the three compound wards",
+        "Place the matching offering and exact incense stick count at each station: three sticks for sacred guardians and ancestors, one stick for the unquiet ruin.",
+        WARD_STATIONS.map((s) => ({
+          text: s.name,
+          done: yes(`ep1.puzzle.ward.${s.id}`),
+        })),
+      );
+    return objective(
+      "Set the stopped hall clock",
+      "Install the brass pendulum from the well into the upstairs hall clock (stopped at 20:12) and dial the deduced vigil hour (01:12).",
+    );
+  }
   return objective(
     "Keep the vigil",
     "Keep your lamp burning, replace spent incense and inspect the protective thread. Return beneath the pavilion after the vigil cycle.",
