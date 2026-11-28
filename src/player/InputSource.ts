@@ -47,6 +47,9 @@ export class KeyboardMouseInput implements InputSource {
   ) {
     this.sensitivity = sensitivity;
     const signal = this.abort.signal;
+    // iPhone Safari has no Pointer Lock API, and the game lets go of the pointer
+    // from many places: make letting go a no-op there instead of an exception.
+    if (typeof document.exitPointerLock !== "function") document.exitPointerLock = () => undefined;
 
     window.addEventListener("keydown", (e) => this.onKey(e, true), { signal });
     window.addEventListener("keyup", (e) => this.onKey(e, false), { signal });
@@ -165,7 +168,7 @@ export class KeyboardMouseInput implements InputSource {
       this.touchEngaged = true;
       return;
     }
-    if (this.pointerLocked) return;
+    if (this.pointerLocked || typeof this.canvas.requestPointerLock !== "function") return;
     try {
       await this.canvas.requestPointerLock({ unadjustedMovement: true });
     } catch {

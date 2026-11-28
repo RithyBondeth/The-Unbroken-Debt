@@ -18,6 +18,19 @@ Three causes, from largest to smallest.
    into the same two-frame cycle around zero. Sora crept on at about 0.35 m/s and
    the head-bob restarted. Now the gain is 1 and the configured 14 m/s² is the
    limit: speed ramps to 1.6 m/s in about 0.11 s and stops dead.
+   **Gameplay note:** the cycle also made Sora's speed depend on the frame rate.
+   Measured on Havok (4 s of steady input, flat floor), in m/s:
+
+   | Mode (configured) | 30 fps before | 60 fps before | 120 fps before | Now, any rate |
+   |---|---|---|---|---|
+   | Walk (1.6) | 0.90 | 1.29 | 1.48 | 1.60 |
+   | Crouch (0.9) | 0.90 | 0.89 | 1.06 | 0.90 |
+   | Hurry (3.4) | 3.13 | 3.40 | 3.56 | 3.40 |
+
+   The configured speeds now hold everywhere, so at 60 fps walking is about 24 %
+   faster than it was. Chases and stealth were played at the old pace: if they
+   now feel too easy, lower `walkSpeed` in `PlayerConfig.ts` (1.3 matches the
+   old 60 fps pace) rather than bringing the bug back.
 2. **TAA flipped on and off.** Babylon counts the camera as moved when its
    position or rotation differs *at all* from the last frame, and TAA only blends
    its history on frames where it hasn't moved. The eye-height, crouch, head-bob
