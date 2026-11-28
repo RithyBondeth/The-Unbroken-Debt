@@ -475,7 +475,7 @@ export class VillagePuzzles {
     g.gated.holdLook = true;
     g.satchel.close();
     g.sketchbook?.close();
-    if (document.pointerLockElement) document.exitPointerLock();
+    document.exitPointerLock();
     open(() => {
       g.cutscene = false;
       g.gated.holdStill = false;

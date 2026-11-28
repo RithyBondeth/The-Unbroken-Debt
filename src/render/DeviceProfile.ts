@@ -17,9 +17,14 @@ export interface DeviceSignals {
   maxTouchPoints: number;
   /** True when no input device can point precisely (no mouse or trackpad). */
   touchOnly: boolean;
+  /** Shorter side of the screen in CSS pixels (0 if unknown): tells phones from tablets. */
+  screenShort: number;
 }
 
+/** "mobile": a phone or tablet whose browser has no WebGPU (the message names the ones that do). */
 export type BlockReason = "no-webgpu" | "software-renderer" | "mobile";
+
+export type FormFactor = "desktop" | "tablet" | "phone";
 
 export interface DeviceProfile {
   /** Null when the game can run; otherwise why it can't. */
@@ -30,17 +35,21 @@ export interface DeviceProfile {
   integrated: boolean;
   /** Human-readable summary for logs and the settings screen. */
   label: string;
+  /** Phones and tablets play with touch controls and start on lighter settings. */
+  formFactor: FormFactor;
 }
 
 /**
  * Decides whether the game runs on this device and which preset it starts on.
- * Policy (Development Plan, device scaling decision, October 2026): every
- * laptop and desktop with WebGPU plays, scaled by preset; phones and tablets
- * (including iPad) see the requirements page for Episode 1.
+ * Policy (Development Plan, device scaling decision, October 2026, widened in
+ * November 2026): every laptop, desktop, phone and tablet with hardware WebGPU
+ * plays, scaled by preset. Phones and tablets play with touch controls on the
+ * Low preset, at a lower render height (graphicsSettings.ts).
  */
 export function classifyDevice(s: DeviceSignals): DeviceProfile {
   const label =
     [s.vendor, s.architecture, s.description].filter(Boolean).join(" · ") || "unknown GPU";
+  const formFactor = formFactorOf(s);
   const result = (
     blocked: BlockReason | null,
     quality: QualityName,
@@ -50,28 +59,42 @@ export function classifyDevice(s: DeviceSignals): DeviceProfile {
     quality,
     integrated,
     label,
+    formFactor,
   });
 
-  if (isPhoneOrTablet(s)) return result("mobile", "low", true);
-  if (!s.webgpu) return result("no-webgpu", "low", false);
+  if (!s.webgpu) return result(formFactor === "desktop" ? "no-webgpu" : "mobile", "low", false);
   if (
     s.isFallbackAdapter ||
     /swiftshader|llvmpipe|software/.test(`${s.vendor} ${s.architecture} ${s.description}`)
   ) {
     return result("software-renderer", "low", false);
   }
+  // Phone and tablet GPUs share memory and power with everything else: Low, and
+  // the settings menu goes up from there.
+  if (formFactor !== "desktop") return result(null, "low", true);
 
   const { quality, integrated } = guessTier(s.vendor, s.architecture, s.description);
   return result(null, quality, integrated);
 }
 
-function isPhoneOrTablet(s: DeviceSignals): boolean {
-  if (s.uaMobile === true) return true;
-  if (/iPhone|iPad|iPod|Android|Mobile/i.test(s.userAgent)) return true;
-  // iPadOS Safari reports a Mac user agent; a "Mac" with a touch screen is an iPad.
-  if (/Macintosh/.test(s.userAgent) && s.maxTouchPoints > 1) return true;
-  // No mouse or trackpad at all: the game's controls can't work.
-  return s.touchOnly;
+/** Phones under 600 CSS pixels on their short side; tablets above. */
+const PHONE_MAX_SHORT_SIDE = 600;
+
+export function formFactorOf(s: DeviceSignals): FormFactor {
+  const ua = s.userAgent;
+  const small = s.screenShort > 0 && s.screenShort < PHONE_MAX_SHORT_SIDE;
+  if (/iPhone|iPod/.test(ua)) return "phone";
+  if (/iPad/.test(ua)) return "tablet";
+  // iPadOS Safari (and an iPhone asking for the desktop site) reports a Mac user
+  // agent; a "Mac" with a touch screen is one of them.
+  if (/Macintosh/.test(ua) && s.maxTouchPoints > 1) return small ? "phone" : "tablet";
+  // Android phones say "Mobile"; Android tablets don't.
+  if (/Android/.test(ua)) return /Mobile/.test(ua) || s.uaMobile === true ? "phone" : "tablet";
+  if (s.uaMobile === true || /Mobile/.test(ua))
+    return small || s.screenShort === 0 ? "phone" : "tablet";
+  // No mouse or trackpad at all (a Windows or ChromeOS tablet): touch controls.
+  if (s.touchOnly) return small ? "phone" : "tablet";
+  return "desktop";
 }
 
 /**

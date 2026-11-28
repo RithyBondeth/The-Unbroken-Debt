@@ -138,6 +138,9 @@ export class AudioSystem {
       };
       window.addEventListener("pointerdown", resumeOnGesture, { passive: true });
       window.addEventListener("keydown", resumeOnGesture, { passive: true });
+      // A touch only counts as a gesture that may start sound when it lifts (iOS).
+      window.addEventListener("pointerup", resumeOnGesture, { passive: true });
+      window.addEventListener("touchend", resumeOnGesture, { passive: true });
     }
     return sys;
   }

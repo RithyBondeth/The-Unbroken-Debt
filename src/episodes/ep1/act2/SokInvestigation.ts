@@ -163,7 +163,7 @@ export class SokInvestigation {
       game.gated.holdStill = true;
       game.gated.holdLook = true;
       game.hints.hide();
-      if (document.pointerLockElement) document.exitPointerLock();
+      document.exitPointerLock();
       this.reader.show(0, () => {
         game.cutscene = false;
         game.gated.holdStill = false;

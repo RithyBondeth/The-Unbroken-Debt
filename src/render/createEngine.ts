@@ -8,12 +8,20 @@ import "@babylonjs/core/Engines/WebGPU/Extensions";
 /**
  * Creates the WebGPU engine. The game requires WebGPU (no WebGL2 fallback);
  * returns null when it is unavailable so the caller can show the requirements page.
+ *
+ * `handheld` (phones and tablets) drops multisampling on the canvas: every frame
+ * reaches it as one full-screen post-process quad, which multisampling can't
+ * smooth (FXAA and TAA do that earlier), so the 4× target only cost memory and
+ * bandwidth that a phone's GPU is shortest of.
  */
-export async function createEngine(canvas: HTMLCanvasElement): Promise<WebGPUEngine | null> {
+export async function createEngine(
+  canvas: HTMLCanvasElement,
+  { handheld = false }: { handheld?: boolean } = {},
+): Promise<WebGPUEngine | null> {
   if (!(await WebGPUEngine.IsSupportedAsync)) return null;
 
   const engine = new WebGPUEngine(canvas, {
-    antialias: true,
+    antialias: !handheld,
     adaptToDeviceRatio: true,
     powerPreference: "high-performance",
     // High-end target: request every adapter feature (timestamp queries for GPU

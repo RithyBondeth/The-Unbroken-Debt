@@ -143,8 +143,9 @@ function errorKey(error: unknown): string {
 }
 
 /**
- * Display refreshes per rendered frame: render every refresh up to about 75 Hz,
- * every second one on 120–165 Hz panels (60–82 fps). Pure, for tests.
+ * Display refreshes per rendered frame: at a 60 fps target, every refresh up to
+ * about 75 Hz and every second one on 120–165 Hz panels (60–82 fps); at 30 fps,
+ * every second refresh at 60 Hz. A target of 0 renders every refresh. Pure, for tests.
  */
 export function refreshesPerFrame(refreshMs: number, targetMs = 1000 / 60): number {
   if (!(refreshMs > 0)) return 1;
@@ -152,33 +153,40 @@ export function refreshesPerFrame(refreshMs: number, targetMs = 1000 / 60): numb
 }
 
 /**
- * Steady frame pacing on high-refresh displays (the engine's frame requester).
+ * Steady frame pacing on high-refresh displays, and the frame-rate cap (the
+ * engine's frame requester).
  *
  * On a 120 Hz MacBook the studio took 8 ms on some frames and just over 8 ms on
  * others, so frames alternated between 8.3 and 16.7 ms on screen: the picture
  * shook as the player turned (November 2026). Rendering on every second refresh
- * gives an even 16.7 ms instead. The engine's own clock (delta time, animation
- * ratio, particles) only sees rendered frames, so nothing runs slow. `?fps=max`
- * renders every refresh, as before.
+ * gives an even 16.7 ms instead. The same holds a 30 fps cap on a phone: every
+ * second refresh at 60 Hz, every fourth at 120 Hz. The engine's own clock (delta
+ * time, animation ratio, particles) only sees rendered frames, so nothing runs
+ * slow. A target of 0 (`?fps=max`, or "Unlimited" in the settings) renders every refresh.
  */
 export class FramePacer {
   /** Read and written by Babylon to cancel the loop. */
   requestID?: number;
-  private ticks = 0;
   private every = 1;
+  private lastRender = 0;
+  private refreshMs = 0;
   private readonly samples: number[] = [];
   private lastTick = 0;
+  private targetMs: number;
 
-  constructor(private readonly enabled = true) {}
+  /** @param targetFps frames per second to aim for; 0 renders on every refresh */
+  constructor(targetFps = 60) {
+    this.targetMs = targetFps > 0 ? 1000 / targetFps : 0;
+  }
 
   readonly requestAnimationFrame = (render: FrameRequestCallback): number => {
     const tick = (now: number) => {
-      if (this.enabled) this.measure(now);
-      this.ticks++;
-      if (this.ticks % this.every !== 0) {
+      this.measure(now);
+      if (!this.due(now)) {
         this.requestID = window.requestAnimationFrame(tick);
         return;
       }
+      this.lastRender = now;
       render(now);
     };
     this.requestID = window.requestAnimationFrame(tick);
@@ -194,6 +202,27 @@ export class FramePacer {
     return this.every;
   }
 
+  /** Frames per second aimed for (0: every refresh). Can change while playing. */
+  set targetFps(fps: number) {
+    this.targetMs = fps > 0 ? 1000 / fps : 0;
+    if (this.refreshMs > 0) this.every = refreshesPerFrame(this.refreshMs, this.targetMs);
+  }
+
+  /** Frame budget the pacing gives, in ms, once the display has been measured. */
+  get frameMs(): number {
+    return this.refreshMs > 0 ? this.refreshMs * this.every : this.targetMs || 1000 / 60;
+  }
+
+  /**
+   * By time, not by counting callbacks: a frame that overran a refresh produces
+   * no callback for it, and counting would then skip a whole extra frame (a 30 fps
+   * cap falling to 20). Half a refresh of slack absorbs callback timing jitter.
+   */
+  private due(now: number): boolean {
+    if (this.every <= 1 || this.lastRender === 0) return true;
+    return now - this.lastRender >= this.frameMs - this.refreshMs * 0.5;
+  }
+
   /** Measures the display's refresh interval over the first second, then fixes the pace. */
   private measure(now: number): void {
     if (this.samples.length >= 60) return;
@@ -201,8 +230,9 @@ export class FramePacer {
     this.lastTick = now;
     if (this.samples.length === 60) {
       const sorted = [...this.samples].sort((a, b) => a - b);
-      // Half the refreshes are skipped once pacing starts, so measure while it is off.
-      this.every = refreshesPerFrame(sorted[Math.floor(sorted.length * 0.25)]);
+      // Refreshes are skipped once pacing starts, so measure while it is off.
+      this.refreshMs = sorted[Math.floor(sorted.length * 0.25)];
+      this.every = refreshesPerFrame(this.refreshMs, this.targetMs);
     }
   }
 }

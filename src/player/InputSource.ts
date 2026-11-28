@@ -9,10 +9,19 @@ export interface InputSource {
   dispose(): void;
 }
 
+/** Touch-drag look is this much faster than the same distance of mouse movement. */
+export const TOUCH_LOOK_SCALE = 1.6;
+
 /**
- * Keyboard and mouse. Bindings use physical key codes so they work on any
- * layout (Controls and Interface, section 10). Mouse look needs pointer lock,
- * requested when the canvas is clicked.
+ * Keyboard and mouse, and the on-screen touch controls on phones and tablets.
+ * Bindings use physical key codes so they work on any layout (Controls and
+ * Interface, section 10). Mouse look needs pointer lock, requested when the
+ * canvas is clicked.
+ *
+ * Touch has no pointer lock. With touch enabled, "locked" means engaged: the
+ * player has touched the controls since the game last let go of the pointer
+ * (opening the sketchbook, a reader or a cutscene calls exitPointerLock), so
+ * every system that waits for the pointer to be captured works the same way.
  */
 export class KeyboardMouseInput implements InputSource {
   sensitivity: number;
@@ -25,6 +34,12 @@ export class KeyboardMouseInput implements InputSource {
   private lookX = 0;
   private lookY = 0;
   private readonly abort = new AbortController();
+  private touch = false;
+  private touchEngaged = false;
+  private touchMoveX = 0;
+  private touchMoveZ = 0;
+  private touchHurry = false;
+  private touchCrouch = false;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -57,19 +72,67 @@ export class KeyboardMouseInput implements InputSource {
     this.held.clear();
     this.lookX = 0;
     this.lookY = 0;
+    this.touchMoveX = 0;
+    this.touchMoveZ = 0;
+    this.touchHurry = false;
   }
 
   get pointerLocked(): boolean {
-    return document.pointerLockElement === this.canvas;
+    return document.pointerLockElement === this.canvas || (this.touch && this.touchEngaged);
+  }
+
+  /** Whether the on-screen touch controls drive Sora. */
+  get touchEnabled(): boolean {
+    return this.touch;
+  }
+
+  /**
+   * Turns touch play on. Every place that lets go of the pointer for a menu or a
+   * cutscene calls `document.exitPointerLock()`; with touch that also ends the
+   * engagement, until the player touches the controls again.
+   */
+  enableTouch(): void {
+    if (this.touch) return;
+    this.touch = true;
+    const exit = document.exitPointerLock?.bind(document);
+    document.exitPointerLock = () => {
+      this.touchEngaged = false;
+      exit?.();
+    };
+  }
+
+  /** The virtual stick: x strafes, z walks (-1 to 1 each); `hurry` when pushed to the rim. */
+  setTouchMove(x: number, z: number, hurry: boolean): void {
+    this.touchMoveX = x;
+    this.touchMoveZ = z;
+    this.touchHurry = hurry;
+  }
+
+  /** A drag on the look area, in CSS pixels. */
+  addTouchLook(dx: number, dy: number): void {
+    this.lookX += dx * TOUCH_LOOK_SCALE;
+    this.lookY += dy * TOUCH_LOOK_SCALE;
+  }
+
+  /** The crouch button is a toggle: holding a thumb on it while walking is awkward. */
+  toggleTouchCrouch(): boolean {
+    this.touchCrouch = !this.touchCrouch;
+    return this.touchCrouch;
+  }
+
+  get touchCrouched(): boolean {
+    return this.touchCrouch;
   }
 
   readMove(out: MoveIntent): MoveIntent {
     const h = this.held;
-    out.x = (h.has("KeyD") ? 1 : 0) - (h.has("KeyA") ? 1 : 0);
-    out.z = (h.has("KeyW") ? 1 : 0) - (h.has("KeyS") ? 1 : 0);
-    out.hurry = h.has("ShiftLeft") || h.has("ShiftRight");
+    const keyX = (h.has("KeyD") ? 1 : 0) - (h.has("KeyA") ? 1 : 0);
+    const keyZ = (h.has("KeyW") ? 1 : 0) - (h.has("KeyS") ? 1 : 0);
+    out.x = Math.max(-1, Math.min(1, keyX + this.touchMoveX));
+    out.z = Math.max(-1, Math.min(1, keyZ + this.touchMoveZ));
+    out.hurry = h.has("ShiftLeft") || h.has("ShiftRight") || this.touchHurry;
     const crouchHeld = h.has("KeyC") || h.has("ControlLeft");
-    out.crouch = this.crouchToggle ? this.crouchLatched : crouchHeld;
+    out.crouch = (this.crouchToggle ? this.crouchLatched : crouchHeld) || this.touchCrouch;
     return out;
   }
 
@@ -97,6 +160,11 @@ export class KeyboardMouseInput implements InputSource {
 
   /** Mouse look needs pointer lock, requested from a player activation gesture. */
   async lockPointer(): Promise<void> {
+    if (this.touch) {
+      // Touch play has nothing to capture: being asked is enough to engage.
+      this.touchEngaged = true;
+      return;
+    }
     if (this.pointerLocked) return;
     try {
       await this.canvas.requestPointerLock({ unadjustedMovement: true });

@@ -22,6 +22,7 @@ async function readSignals(): Promise<DeviceSignals> {
     maxTouchPoints: nav.maxTouchPoints ?? 0,
     touchOnly:
       matchMedia("(any-pointer: coarse)").matches && !matchMedia("(any-pointer: fine)").matches,
+    screenShort: Math.min(screen.width, screen.height) || 0,
   };
 
   if (!("gpu" in nav)) return signals;
