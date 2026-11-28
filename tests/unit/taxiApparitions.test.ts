@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
-  TAXI_PASSES,
+  SPIRIT_SPRINT_SPEED,
+  TAXI_BONNET,
   TAXI_MIRROR,
+  TAXI_PASSES,
   TAXI_STANDER,
   TAXI_WINDOW,
-  taxiMirrorRiderAt,
   taxiElectrics,
-  taxiMistLevel,
-  taxiSpiritAt,
-  taxiLightning,
-  SPIRIT_WALK_SPEED,
-  taxiPass,
   taxiFlinch,
+  taxiLightning,
+  taxiMirrorRiderAt,
+  taxiMistLevel,
+  taxiPass,
   taxiPassBeat,
+  taxiSpiritAt,
   taxiSwerve,
+  taxiVacuumDuck,
 } from "@/episodes/ep1/travel/taxiApparitions";
-import { taxiNightLevels, taxiThrottle } from "@/episodes/ep1/travel/TaxiSoundscape";
+import {
+  taxiAnxietyLevel,
+  taxiNightLevels,
+  taxiThrottle,
+} from "@/episodes/ep1/travel/TaxiSoundscape";
 import { taxiDistance, taxiRoadX } from "@/episodes/ep1/travel/taxiMotion";
 import { TAXI_CONVERSATION } from "@/episodes/ep1/travel/taxiConversation";
 
@@ -33,7 +39,7 @@ function lateral(x: number, z: number): number {
   return best * side;
 }
 
-describe("the Neak Ta's two passes", () => {
+describe("the Preay's two passes", () => {
   it("runs two passes that never overlap", () => {
     expect(TAXI_PASSES.map((p) => p.kind)).toEqual(["crossing", "overtake"]);
     for (const [a, b] of TAXI_PASSES.slice(0, -1).map((p, i) => [p, TAXI_PASSES[i + 1]] as const))
@@ -44,26 +50,26 @@ describe("the Neak Ta's two passes", () => {
     }
   });
 
-  it("drags itself across the road ahead at a person's pace, and is gone when the lamps come back", () => {
+  it("sprints across the road ahead at terrifying speed, and is gone when the lamps come back", () => {
     const pass = taxiPass("crossing"),
       beat = taxiPassBeat(pass);
     const start = taxiSpiritAt(pass.start + 0.001)!,
       level = taxiSpiritAt(beat)!,
       end = taxiSpiritAt(pass.start + pass.seconds - 0.001)!;
     expect(start.kind).toBe("crossing");
-    expect(start.clip).toBe("walk");
-    // From the left of the track towards Sora's side, no faster than the performer walked.
-    expect(lateral(start.x, start.z)).toBeLessThan(-0.5);
+    expect(start.clip).toBe("hurry");
+    // From the left of the track towards Sora's side at blistering sprint speed.
+    expect(lateral(start.x, start.z)).toBeLessThan(-1.5);
     expect(lateral(end.x, end.z)).toBeGreaterThan(lateral(start.x, start.z));
     const covered = Math.hypot(end.x - start.x, end.z - start.z);
-    expect(covered / pass.seconds).toBeLessThanOrEqual(SPIRIT_WALK_SPEED + 0.01);
-    // In the lamps, nine metres off the bonnet, when the lightning shows it.
+    expect(covered / pass.seconds).toBeGreaterThanOrEqual(SPIRIT_SPRINT_SPEED - 0.5);
+    // In the lamps, eight metres off the bonnet, when the lightning shows it.
     const ahead = level.z - taxiDistance(beat);
-    expect(ahead).toBeGreaterThan(6);
+    expect(ahead).toBeGreaterThan(5);
     expect(ahead).toBeLessThan(12);
     expect(taxiLightning(beat)).toBeCloseTo(1, 5);
     // The lamps blink as he brakes; when they come back, nothing.
-    expect(taxiElectrics(beat + 0.5)).toBe(0);
+    expect(taxiElectrics(beat + 0.45)).toBe(0);
     expect(taxiSpiritAt(beat + 0.7)).toBeNull();
   });
 
@@ -100,28 +106,44 @@ describe("the Neak Ta's two passes", () => {
     expect(taxiSwerve(beat - 0.1)).toBe(0);
     let peak = 0;
     for (let t = beat; t < beat + 3; t += 0.01) peak = Math.max(peak, Math.abs(taxiSwerve(t)));
-    expect(peak).toBeGreaterThan(0.03);
-    expect(peak).toBeLessThan(0.1);
+    expect(peak).toBeGreaterThan(0.05);
+    expect(peak).toBeLessThan(0.14);
     expect(taxiSwerve(beat + 3)).toBe(0);
-    expect(taxiFlinch(beat + 0.3)).toBeGreaterThan(0.5);
+    expect(taxiFlinch(beat + 0.15)).toBeGreaterThan(0.5);
     expect(taxiFlinch(20)).toBe(0);
   });
 });
 
 describe("what the road shows besides the passes", () => {
-  it("stands among the first trunks on Sora's side, only breathing and turning its head", () => {
+  it("stands among the first trunks on Sora's side, then snaps closer on a lightning blink", () => {
     expect(taxiSpiritAt(TAXI_STANDER.from - 0.1)).toBeNull();
     const far = taxiSpiritAt(TAXI_STANDER.from + 1)!,
-      near = taxiSpiritAt(TAXI_STANDER.level)!;
+      beforeSnap = taxiSpiritAt(TAXI_STANDER.snapAt - 0.3)!,
+      snapped = taxiSpiritAt(TAXI_STANDER.snapAt)!;
     expect(far.kind).toBe("stander");
     expect(far.clip).toBe("stand");
-    // It never moves from its place beyond the track's edge.
-    expect([far.x, far.z]).toEqual([near.x, near.z]);
-    expect(lateral(near.x, near.z)).toBeGreaterThan(4.2);
-    expect(near.z - taxiDistance(TAXI_STANDER.level)).toBeCloseTo(0, 1);
+    // Holds still beyond the track edge before snapping 2.1 m closer in the lightning blink.
+    expect([far.x, far.z]).toEqual([beforeSnap.x, beforeSnap.z]);
+    expect(lateral(beforeSnap.x, beforeSnap.z)).toBeGreaterThan(4.2);
+    expect(lateral(snapped.x, snapped.z)).toBeLessThan(lateral(beforeSnap.x, beforeSnap.z) - 1.5);
+    expect(snapped.clip).toBe("reach");
+    expect(snapped.visible).toBe(true);
+    expect(taxiLightning(TAXI_STANDER.snapAt)).toBeGreaterThan(0.8);
     // Its head comes round to follow the car.
-    expect(near.look).toBeGreaterThan(far.look);
+    expect(beforeSnap.look).toBeGreaterThan(far.look);
     expect(taxiSpiritAt(TAXI_STANDER.until + 0.1)).toBeNull();
+  });
+
+  it("flashes an unexpected final bonnet silhouette while braking, then vanishes instantly", () => {
+    expect(taxiSpiritAt(TAXI_BONNET.start - 0.05)).toBeNull();
+    const hit = taxiSpiritAt(TAXI_BONNET.beat)!;
+    expect(hit.kind).toBe("bonnet");
+    expect(hit.visible).toBe(true);
+    expect(hit.clip).toBe("reach");
+    expect(hit.z - taxiDistance(TAXI_BONNET.beat)).toBeGreaterThan(2.5);
+    expect(hit.z - taxiDistance(TAXI_BONNET.beat)).toBeLessThan(5);
+    expect(taxiLightning(TAXI_BONNET.beat)).toBeCloseTo(1, 5);
+    expect(taxiSpiritAt(TAXI_BONNET.end + 0.05)).toBeNull();
   });
 
   it("runs level with Sora's window in the dark after the slap, before the car brakes", () => {
@@ -141,14 +163,26 @@ describe("what the road shows besides the passes", () => {
       expect(TAXI_WINDOW.beat < line.at || TAXI_WINDOW.beat > line.at + 1).toBe(true);
   });
 
-  it("kills the lamps just before the crossing and the face, and nowhere else", () => {
+  it("kills the lamps just before the crossing, window face and final bonnet flash", () => {
     const cross = taxiPassBeat(taxiPass("crossing"));
-    for (const t of [5, 20, 30, 45, 57.9, 65, 71]) expect(taxiElectrics(t)).toBe(1);
+    for (const t of [5, 20, 30, 45, 57.9, 64, 71]) expect(taxiElectrics(t)).toBe(1);
     expect(taxiElectrics(cross - 0.3)).toBe(0);
     // Back on as the lightning shows it in the road.
     expect(taxiElectrics(cross)).toBe(1);
     expect(taxiElectrics(TAXI_WINDOW.beat)).toBe(0);
     expect(taxiElectrics(TAXI_WINDOW.beat + 1.05)).toBe(1);
+    expect(taxiElectrics(TAXI_BONNET.start)).toBe(0);
+  });
+
+  it("ducks ambient sound into a silence vacuum right before major scares and spikes anxiety", () => {
+    const cross = taxiPassBeat(taxiPass("crossing"));
+    expect(taxiVacuumDuck(10)).toBe(0);
+    expect(taxiVacuumDuck(cross - 0.15)).toBeGreaterThan(0.65);
+    expect(taxiVacuumDuck(TAXI_MIRROR.lean.beat - 0.1)).toBeGreaterThan(0.7);
+    expect(taxiVacuumDuck(TAXI_WINDOW.beat - 0.12)).toBeGreaterThan(0.75);
+    expect(taxiVacuumDuck(TAXI_BONNET.beat - 0.1)).toBeGreaterThan(0.6);
+    expect(taxiAnxietyLevel(5)).toBe(0);
+    expect(taxiAnxietyLevel(TAXI_WINDOW.beat - 0.1)).toBeGreaterThan(0.8);
   });
 
   it("thickens the haze only a little round each of them, never into a wall", () => {

@@ -86,3 +86,21 @@ export function buildLut(p: GradeParams, size = 32): Uint8Array {
   }
   return data;
 }
+
+/** The grade part-way from `a` (t = 0) to `b` (t = 1): every value blended, tints channel by channel. */
+export function lerpGrade(a: GradeParams, b: GradeParams, t: number): GradeParams {
+  const k = Math.min(1, Math.max(0, t));
+  // Exactly `a` at 0 and `b` at 1.
+  const n = (x: number, y: number) => x * (1 - k) + y * k;
+  const band = (p: GradeParams["shadows"], q: GradeParams["shadows"]) => ({
+    tint: [n(p.tint[0], q.tint[0]), n(p.tint[1], q.tint[1]), n(p.tint[2], q.tint[2])] as Rgb,
+    strength: n(p.strength, q.strength),
+  });
+  return {
+    saturation: n(a.saturation, b.saturation),
+    shadows: band(a.shadows, b.shadows),
+    midtones: band(a.midtones, b.midtones),
+    highlights: band(a.highlights, b.highlights),
+    blackPoint: n(a.blackPoint, b.blackPoint),
+  };
+}

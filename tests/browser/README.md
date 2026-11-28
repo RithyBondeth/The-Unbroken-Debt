@@ -8,6 +8,14 @@ thunder rolls on their own. See `docs/production/act0-act1-dread-audio.md`.
 The **Wind** group plays the wind beds, a gust, each tree's voice and the taxi
 buffet; see `docs/production/forest-wind-and-omens.md`.
 
+## Touch controls
+
+Open `/tests/browser/touch.html` with touch emulation (the browser's device
+toolbar) or on a phone. No WebGPU needed: the real touch controls drive the real
+input, and a log shows the keys, clicks, movement and look they produce. The
+toolbar switches episode buttons, raises the sketchbook's page buttons and opens
+the pause menu's settings. See `docs/production/stability-and-mobile-2026-11-28.md`.
+
 ## Unified notebook
 
 Open `/tests/browser/notebook.html` and click to begin. **Verify flows** exercises
@@ -31,9 +39,11 @@ and recorded evidence are in `docs/production/opening-survival-checkpoints.md`.
 
 ## Studio and matchbox
 
-Open `/tests/browser/studio.html` for the actual studio's room, telephone, desk,
-drawer, matchbox, window and bed views. Press Enter to begin. The preview auto-inks the
-first illustration and uses an isolated database. E still uses real interaction
+Open `/tests/browser/studio.html` for the rebuilt shophouse floor (November 2026): the
+drawing table, writing desk and drawer, the period prints, the balcony doors, the airwell,
+telephone, lantern hook and stair gate, and the back room's bed and altar. Press Enter to
+begin. The opening drawing beat is gone; the illustration starts half inked. The fixture
+uses an isolated database. E still uses real interaction
 targets; movement keys leave close-up inspection. The detail pass and browser
 pickup evidence are in `docs/production/studio-detail-pass.md`.
 Use **Drawer hint** to focus the closed drawer and inspect the shared warm rim,

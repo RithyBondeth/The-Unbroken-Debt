@@ -101,7 +101,7 @@ export const EP1_SKETCHBOOK: SketchbookData = {
       id: "SB-A3-01",
       beat: "A3-01",
       section: "now",
-      text: "The thread snapped. The lamps are dying. Find the three key pieces in the jars beneath the house.",
+      text: "The thread snapped. The lamps are dying. Find the three key pieces in the jars beneath the house and in the rice barn.",
       drawing: { id: "jars", height: 36 },
     },
     {
@@ -178,7 +178,6 @@ export const EP1_SKETCHBOOK: SketchbookData = {
   ],
   mapLabels: [
     { text: "House", khmer: "ផ្ទះរោងដឿង", x: 30, y: 74 },
-    { text: "Funeral tent", khmer: "រោងបុណ្យ", x: 76, y: 128 },
     { text: "Under the house", khmer: "ក្រោមផ្ទះ", x: 22, y: 118 },
   ],
   loreCount: 4,

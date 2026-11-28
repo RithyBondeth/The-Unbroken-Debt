@@ -21,10 +21,12 @@ import { DocumentReader } from "@/ui/html/DocumentReader";
 import { BLESSED_MATCHES } from "../data/betel";
 import { phoneRing, lineStatic } from "../audio/prologueSounds";
 import { PhoneBell } from "../audio/PhoneBell";
+import { ep1AudioUrls } from "../audio/VillageAudio";
 import { checkpointName } from "@/systems/saves/Checkpoints";
+import { inFuneralRoom, inHall } from "../data/funeral";
 
-/** CP2's clear aisle at the south end of the pavilion, facing the house. */
-export const CP2_FEET = new Vector3(0, 0, -2);
+/** CP2: just inside the hall's front door, facing the altar and the coffin beyond it. */
+export const CP2_FEET = inHall(0, 0, -2);
 
 /** Arrival, optional Act I exploration, and the A1-12 → A2-02 handover. */
 export class ActOneBeats {
@@ -66,7 +68,8 @@ export class ActOneBeats {
     const door = (id: string, collider: string, lock: string) => {
       const marker = area.level.interactables.find((m) => m.name === id);
       if (!marker) throw new Error(`[Act I] missing ${id}`);
-      return new VillageDoor(game.scene, marker, collider, lock);
+      // Sok's study lies west of its door; the tool shed north of its own.
+      return new VillageDoor(game.scene, marker, collider, lock, -1);
     };
     this.sok = door("interact_door_sok", "col_door_sok", "door_sok_padlock");
     this.shed = door("interact_shed_door", "col_shed_door", "shed_padlock");
@@ -86,13 +89,19 @@ export class ActOneBeats {
     if (!audio) return;
     const rate = audio.context.sampleRate;
     const at = this.sok.marker.position;
+    const [recRing, recCreak, recStep1, recStep2] = await Promise.all([
+      audio.load(ep1AudioUrls("sfx_ep1_studio_phone_ring")),
+      audio.load(ep1AudioUrls("sfx_ep1_studio_creak_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_step_1")),
+      audio.load(ep1AudioUrls("sfx_ep1_preay_step_2")),
+    ]);
     this.bell = new PhoneBell(
       await audio.spatialSound(
         "arrival_phone_ring",
-        audio.buffer(phoneRing(rate, seededRandom(96)), rate),
+        recRing ?? audio.buffer(phoneRing(rate, seededRandom(96)), rate),
         "sfx",
         this.arrivalModels.phone.position,
-        { minDistance: 4, volume: 0.55, loop: true },
+        { distanceModel: "linear", minDistance: 4, maxDistance: 28, volume: 0.62, loop: true },
       ),
     );
     this.line = await audio.spatialSound(
@@ -100,7 +109,7 @@ export class ActOneBeats {
       audio.buffer(lineStatic(rate, seededRandom(97)), rate),
       "sfx",
       this.arrivalModels.phone.position,
-      { minDistance: 2, volume: 0.16, loop: true },
+      { distanceModel: "linear", minDistance: 1.5, maxDistance: 8, volume: 0.14, loop: true },
     );
     this.gust = await audio.spatialSound(
       "cold_gust",
@@ -111,19 +120,20 @@ export class ActOneBeats {
     );
     this.creak = await audio.spatialSound(
       "upstairs_creak",
-      audio.buffer(boardCreak(rate, seededRandom(92)), rate),
+      recCreak ?? audio.buffer(boardCreak(rate, seededRandom(92)), rate),
       "threat",
       at,
-      { minDistance: 6, volume: 0.6 },
+      { minDistance: 6, volume: 0.72 },
     );
+    const stepClips = [recStep1, recStep2, recStep1];
     for (let k = 0; k < 3; k++)
       this.steps.push(
         await audio.spatialSound(
           `upstairs_step_${k}`,
-          audio.buffer(wetStep(rate, seededRandom(93 + k)), rate),
+          stepClips[k] ?? audio.buffer(wetStep(rate, seededRandom(93 + k)), rate),
           "threat",
           at,
-          { minDistance: 7, volume: 0.85 },
+          { panning: "HRTF", minDistance: 7, volume: 0.88 },
         ),
       );
   }
@@ -148,7 +158,7 @@ export class ActOneBeats {
     const game = this.game;
     const feet = game.player.feet;
     this.arrivalModels.updateTelephoneCord(game.hands.phoneCordPoint);
-    // A1-02: let the first view of the tent breathe without taking movement or look.
+    // A1-02: let the first view of the house breathe without taking movement or look.
     if (
       !game.cutscene &&
       !game.flags.get("ep1.arrival.courtyard", false) &&
@@ -194,9 +204,9 @@ export class ActOneBeats {
       this.startOpening();
   }
 
+  /** With the coffin, in the hall (data/funeral.ts). */
   private underTent(): boolean {
-    const p = this.game.player.feet;
-    return Math.abs(p.x) < 3.8 && p.z < -1 && p.z > -7 && p.y < 0.5;
+    return inFuneralRoom(this.game.player.feet);
   }
 
   /** Both relatives speak through the hall telephone; an interrupted call can be replayed. */
@@ -340,9 +350,10 @@ export class ActOneBeats {
       for (const flame of this.flames) flame.visibility = 1 - snuff;
     }
     while (this.nextStep < timing.stepTimes.length && t >= timing.stepTimes[this.nextStep]) {
-      // The sound crosses the actual upper hall towards Sok's door, at floor height.
+      // Heavy steps cross the hall's floor right over the funeral (the farmstead house, Nov 22,
+      // 2026): in by the altar's east door and over the coffin towards the front, at floor height.
       const k = this.nextStep++;
-      const at = new Vector3(1.5 - k * 0.9, 2.55, -13.45);
+      const at = new Vector3(-2.4 + k * 0.8, 2.55, -17.2 + k * 0.76);
       const sound = this.steps[k % Math.max(1, this.steps.length)];
       if (sound) {
         sound.spatial.position = at;

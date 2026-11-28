@@ -12,7 +12,16 @@ export class LowGroundMist {
   readonly system: ParticleSystem;
   private readonly texture: DynamicTexture;
 
-  constructor(scene: Scene, pockets: readonly MistPocket[]) {
+  /**
+   * `spawn`, when given, places each wisp instead of the pockets (a mist map's own
+   * sampler: Episode 1's forest mist), and `count` sets how many there are at once.
+   */
+  constructor(
+    scene: Scene,
+    pockets: readonly MistPocket[],
+    spawn?: (random: () => number, position: Vector3) => void,
+    count = 40,
+  ) {
     const random = seededRandom(7821);
     this.texture = new DynamicTexture("low_ground_mist", 128, scene, true);
     const ctx = this.texture.getContext();
@@ -31,11 +40,15 @@ export class LowGroundMist {
     ctx.putImageData(pixels, 0, 0);
     this.texture.hasAlpha = true;
     this.texture.update(false);
-    const system = (this.system = new ParticleSystem("low_ground_mist", 40, scene));
+    const system = (this.system = new ParticleSystem("low_ground_mist", count, scene));
     system.particleTexture = this.texture;
     system.blendMode = ParticleSystem.BLENDMODE_STANDARD;
     system.emitter = Vector3.Zero();
     system.startPositionFunction = (_world, position) => {
+      if (spawn) {
+        spawn(random, position);
+        return;
+      }
       const p = pockets[Math.floor(random() * pockets.length)];
       const angle = random() * Math.PI * 2,
         radius = Math.sqrt(random()) * 0.55;
@@ -51,7 +64,7 @@ export class LowGroundMist {
     system.maxScaleY = 0.14;
     system.minLifeTime = 10;
     system.maxLifeTime = 15;
-    system.emitRate = 3;
+    system.emitRate = 3 * (count / 40);
     system.direction1.set(-0.03, 0, 0.015);
     system.direction2.set(0.015, 0, 0.025);
     system.minEmitPower = system.maxEmitPower = 1;

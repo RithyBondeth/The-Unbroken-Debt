@@ -25,13 +25,14 @@ export class DreadScore {
 
   constructor(private readonly audio: AudioSystem | null) {}
 
-  async load(): Promise<void> {
+  async load(bedUrls?: string[]): Promise<void> {
     const audio = this.audio;
     if (!audio) return;
     const rate = audio.context.sampleRate;
+    const recordedBed = bedUrls?.length ? await audio.load(bedUrls) : null;
     this.bed = await audio.sound(
       "dread_pressure",
-      audio.buffer(pressureBed(rate), rate),
+      recordedBed ?? audio.buffer(pressureBed(rate), rate),
       "music",
       0,
     );

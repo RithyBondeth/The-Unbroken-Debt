@@ -16,18 +16,18 @@ import type { Scene } from "@babylonjs/core/scene";
 import { seededRandom } from "@/audio/synth";
 import type { QualityPreset } from "@/render/qualityPresets";
 import { foliageKind } from "@/render/FoliageWind";
-import { plantPhase, type PlantSite, type TreeVoice } from "@/render/plantHeights";
+import { footOf, plantPhase, type PlantSite, type TreeVoice } from "@/render/plantHeights";
 import {
   GROUND_TILE,
+  GROW_FOREST,
   PLAY,
   ROAD_Z,
   TERRAIN,
+  WATER_Y,
   borderHeight,
-  inBelt,
   inBund,
   layoutBorder,
   onOuterRoad,
-  openGround,
   outside,
   type Card,
   type Layer,
@@ -37,7 +37,7 @@ import {
 import { CARD_COLUMNS, CARD_ROWS, paintForestCards } from "@/render/forestCards";
 
 /** One material's geometry from a village plant, its foot at the origin. */
-interface Part {
+export interface Part {
   material: Material;
   positions: Float32Array;
   normals: Float32Array;
@@ -60,6 +60,7 @@ interface Template {
  */
 const TEMPLATES: Record<Species, string[][]> = {
   broadleaf: [["tree_0"], ["tree_3"], ["tree_12"], ["tree_301"], ["tree_305"], ["tree_311"]],
+  fig: [["banyan"]],
   young: [["tree_10"], ["tree_11"], ["tree_317"]],
   sugarPalm: [["palm_0"], ["palm_3"], ["palm_6"]],
   coconut: [["coco_0"], ["coco_3"]],
@@ -70,21 +71,39 @@ const TEMPLATES: Record<Species, string[][]> = {
     `pachira_aquatica_01_bark_${v}.001`,
     `pachira_aquatica_01_leaves_${v}.001`,
   ]),
-  shrub: [
-    ["shrub_02_a.001"],
-    ["shrub_02_c.001"],
-    ["shrub_03_a.001"],
-    ["shrub_03_c.001"],
-    ["shrub_03_d.001"],
-  ],
+  // (No shrub_02: its leggy stalks read as toys, the user, Nov 26, 2026.)
+  shrub: [["shrub_03_a.001"], ["shrub_03_c.001"], ["shrub_03_d.001"]],
   fern: [["fern_02_a.001"], ["fern_02_b.001"], ["fern_02_c.001"], ["fern_02_d.001"]],
 };
+/**
+ * The user's scanned plants (tools/areas/village_nature.py exports one of each as
+ * `tpl_<scan>`, hidden): the forest within a few metres of the walls at full detail,
+ * past them the lighter LOD. Where a file predates them the village's own trees serve.
+ */
+const SCANNED: Partial<Record<Species, { near: string; far: string }>> = {
+  broadleaf: { near: "tpl_forest_tree_gn_lod1", far: "tpl_forest_tree_gn_lod2" },
+  fig: { near: "tpl_forest_banyan_lod2", far: "tpl_forest_banyan_lod2" },
+  young: { near: "tpl_forest_tree_gn_lod2", far: "tpl_forest_tree_gn_lod2" },
+  sugarPalm: { near: "tpl_sugar_palm_lod1", far: "tpl_sugar_palm_lod2" },
+  coconut: { near: "tpl_sugar_palm_lod1", far: "tpl_sugar_palm_lod2" },
+  banana: { near: "tpl_banana_clump_lod1", far: "tpl_banana_clump_lod2" },
+  // No leafless trees (the user, Nov 19): a "dead" plant is drawn as a living giant.
+  dead: { near: "tpl_forest_tree_gn_lod1", far: "tpl_forest_tree_gn_lod2" },
+};
+/** Scanned undergrowth set down in the village (floor cover), added to the library's own. */
+const UNDER: Partial<Record<Species, RegExp[]>> = {
+  shrub: [/^anthurium_botany_01\w*_n(\.\d+)?$/, /^nettle_plant\w*_n(\.\d+)?$/],
+  fern: [/^calathea_orbifolia_01\w*_n(\.\d+)?$/, /^periwinkle_plant\w*_n(\.\d+)?$/],
+};
+/** Beyond this distance outside the walls (m) the forest uses the lighter LODs. */
+const FAR = 6;
 const LOG = ["dead_tree_trunk.001"];
 const POLE = ["telegraph_2"];
 
 /** Trunk half-widths for colliders near where Sora walks (× the plant's scale, palms aside). */
 const TRUNK: Partial<Record<Species, number>> = {
   broadleaf: 0.4,
+  fig: 0.7,
   young: 0.4,
   sugarPalm: 0.22,
   coconut: 0.18,
@@ -96,6 +115,7 @@ const TRUNK: Partial<Record<Species, number>> = {
 /** How readily each species bends in the wind (FoliageWind reads height × this from uv6). */
 const FLEX: Record<Species, number> = {
   broadleaf: 0.85,
+  fig: 0.7,
   young: 1.2,
   sugarPalm: 0.75,
   coconut: 0.85,
@@ -110,6 +130,7 @@ const FLEX: Record<Species, number> = {
 /** What each species sounds like in the wind; undergrowth is too low to be heard. */
 const VOICE: Partial<Record<Species, TreeVoice>> = {
   broadleaf: "leafy",
+  fig: "leafy",
   young: "leafy",
   pachira: "leafy",
   sugarPalm: "palm",
@@ -160,6 +181,12 @@ export class ForestBorder {
   /** The trees of the border, for the sounds the wind draws from them. */
   readonly sites: PlantSite[] = [];
   private readonly templates = new Map<Species, Template[]>();
+  /** The lighter versions for the forest past the walls (the same as `templates` where none). */
+  private readonly farTemplates = new Map<Species, Template[]>();
+  /** The far-forest atlas rendered from the scans (`tpl_far_cards`), if the file has one. */
+  private farAtlas: Texture | null = null;
+  /** The scanned grass clump (`tpl_grass_clump`) for TallGrass, if the file has one. */
+  grassClump: Part | null = null;
   private log: Template | null = null;
   private pole: Template | null = null;
   private readonly obstacles: Box[] = [];
@@ -189,6 +216,10 @@ export class ForestBorder {
       if (!mesh.name.startsWith("col_") || mesh.name === "col_ground") continue;
       mesh.computeWorldMatrix(true);
       const box = mesh.getBoundingInfo().boundingBox;
+      // A floor the size of a field (the old paddies' wading floor) is ground, not an obstacle.
+      const footprint =
+        (box.maximumWorld.x - box.minimumWorld.x) * (box.maximumWorld.z - box.minimumWorld.z);
+      if (footprint > 400) continue;
       this.obstacles.push({
         minX: box.minimumWorld.x,
         maxX: box.maximumWorld.x,
@@ -199,9 +230,22 @@ export class ForestBorder {
     this.sampleTerrain(container);
 
     for (const [species, lists] of Object.entries(TEMPLATES) as [Species, string[][]][]) {
+      const scan = SCANNED[species];
+      const near = scan && this.template(byName, [scan.near]);
+      const far = scan && this.template(byName, [scan.far]);
+      if (near) {
+        this.templates.set(species, [near]);
+        this.farTemplates.set(species, [far ?? near]);
+        continue;
+      }
       const found = lists
         .map((names) => this.template(byName, names))
         .filter((t): t is Template => t !== null);
+      for (const pattern of UNDER[species] ?? []) {
+        const node = [...byName.keys()].find((name) => pattern.test(name));
+        const t = node && this.template(byName, [node]);
+        if (t) found.push(t);
+      }
       // Banana plants were cleared out of the forest (old growth): any left by the houses serve.
       if (found.length === 0)
         for (const node of byName.values()) {
@@ -209,9 +253,27 @@ export class ForestBorder {
           const t = this.template(byName, [node.name]);
           if (t) found.push(t);
         }
-      if (found.length === 0) console.warn(`[ForestBorder] no templates for ${species}`);
+      // No bamboo in Episode 1's countryside any more (the user, Nov 19): none expected.
+      if (found.length === 0 && species !== "bamboo")
+        console.warn(`[ForestBorder] no templates for ${species}`);
       this.templates.set(species, found);
+      this.farTemplates.set(species, found);
     }
+    // The scanned grass clump for TallGrass, its foot at the origin.
+    const grass = byName.get("tpl_grass_clump");
+    const grassMesh = grass && this.meshesOf(grass)[0];
+    const grassFoot = grass && footOf(grass);
+    if (grassMesh && grassFoot) this.grassClump = this.bakePart(grassMesh, grassFoot);
+    const cards = byName.get("tpl_far_cards");
+    const cardMaterial = cards && this.meshesOf(cards)[0]?.material;
+    if (cardMaterial instanceof PBRMaterial && cardMaterial.albedoTexture instanceof Texture)
+      this.farAtlas = cardMaterial.albedoTexture;
+    // The templates are copied; they never draw where they were exported.
+    const template = (node: Node) => /^tpl_/.test(this.placed(node).name);
+    for (const mesh of container.meshes.filter(template)) mesh.dispose(false, false);
+    container.meshes = container.meshes.filter((mesh) => !template(mesh));
+    for (const node of container.transformNodes.filter(template)) node.dispose(false, false);
+    container.transformNodes = container.transformNodes.filter((node) => !template(node));
     this.log = this.template(byName, LOG);
     this.pole = this.template(byName, POLE);
     // Where the existing line's end poles hold their wires.
@@ -236,16 +298,20 @@ export class ForestBorder {
       walkCanopy: low ? 0.45 : 1,
       clear: (x: number, z: number, r: number) => this.clear(x, z, r),
     };
-    const layout = layoutBorder(options);
+    // The compound's tree wall is in the area itself (GROW_FOREST): only the ground
+    // past the terrain and the walls are made here.
+    const layout = GROW_FOREST ? layoutBorder(options) : { plants: [], cards: [] };
     this.buildGround(options.farDepth + 6);
     const buckets = new Map<string, Bucket>();
     const trunks: Box[] = [];
     for (const plant of layout.plants) this.place(plant, buckets, trunks);
-    this.placeRoadblocks(buckets, trunks);
-    this.placeTelegraph(buckets, options.farDepth);
+    if (GROW_FOREST) {
+      this.placeRoadblocks(buckets, trunks);
+      this.placeTelegraph(buckets, options.farDepth);
+    }
     for (const bucket of buckets.values()) this.bake(bucket);
-    this.buildCards(layout.cards);
-    this.buildPuddles();
+    if (layout.cards.length) this.buildCards(layout.cards);
+    // (No puddles in the old forest belt: the countryside's water is the paddies.)
     this.buildColliders(trunks);
     this.stats.plants = layout.plants.length;
     this.stats.cards = layout.cards.length;
@@ -273,6 +339,13 @@ export class ForestBorder {
   }
 
   // ------------------------------------------------------------- capture
+
+  /** The object a mesh belongs to: its ancestor just below the file's root. */
+  private placed(node: Node): Node {
+    let n = node;
+    while (n.parent && n.parent.name !== "__root__") n = n.parent;
+    return n;
+  }
 
   private meshesOf(node: Node): Mesh[] {
     const all = node instanceof Mesh ? [node] : [];
@@ -348,9 +421,12 @@ export class ForestBorder {
     }
     const collider = byName.get(`col_${names[0]}`);
     // The foot is the plant's lowest point, so each copy stands on the ground it is
-    // placed on, whatever height the original stood at.
+    // placed on, whatever height the original stood at; a scan's foot is its origin
+    // (its roots run on below the ground).
     const foot = new Vector3((min.x + max.x) / 2, min.y, (min.z + max.z) / 2);
-    if (collider instanceof Mesh) {
+    const scanFoot = footOf(nodes[0]!);
+    if (scanFoot) foot.copyFrom(scanFoot);
+    else if (collider instanceof Mesh) {
       collider.computeWorldMatrix(true);
       const c = collider.getBoundingInfo().boundingBox.centerWorld;
       foot.set(c.x, min.y, c.z);
@@ -439,7 +515,8 @@ export class ForestBorder {
   }
 
   private place(plant: Plant, buckets: Map<string, Bucket>, trunks: Box[]): void {
-    const list = this.templates.get(plant.species);
+    const far = outside(PLAY, plant.x, plant.z) > FAR;
+    const list = (far ? this.farTemplates : this.templates).get(plant.species);
     if (!list?.length) return;
     const template = list[Math.min(list.length - 1, Math.floor(plant.pick * list.length))];
     const y = this.groundAt(plant.x, plant.z) - 0.03;
@@ -464,9 +541,10 @@ export class ForestBorder {
         voice,
       });
     const half = TRUNK[plant.species];
-    if (half && plant.layer !== "under" && outside(PLAY, plant.x, plant.z) < 1.5) {
+    if (half && plant.layer !== "under" && (plant.solid || outside(PLAY, plant.x, plant.z) < 1.5)) {
       const fixed =
         plant.species === "sugarPalm" || plant.species === "coconut" || plant.species === "dead";
+      // (A scan's trunk scales with it; the old palms' trunks did not.)
       const w = half * (fixed ? 1 : plant.scale);
       trunks.push({ minX: plant.x - w, maxX: plant.x + w, minZ: plant.z - w, maxZ: plant.z + w });
     }
@@ -543,7 +621,7 @@ export class ForestBorder {
         ["shrub", 2, -1.8, 1.8],
         ["fern", 0.6, -0.4, 1.3],
         ["shrub", 3.2, 0.8, 1.6],
-        ["bamboo", 3.6, -3.8, 0.9],
+        ["banana", 3.6, -3.8, 0.9],
       ];
       for (const [species, dx, dz, s] of brush) {
         const list = this.templates.get(species);
@@ -728,7 +806,45 @@ export class ForestBorder {
     const drawn = (cx: number, cz: number) =>
       (outside(TERRAIN, cx, cz) > 0 || (inBund(cx, cz) && Math.abs(cz - ROAD_Z) > 2.7)) &&
       !onOuterRoad(cx, cz);
-    this.grid("forest_border_ground", floor, xs, zs, height, drawn);
+    // The countryside past the walls: litter under the tree line and the hamlets, the
+    // paddies' mud under their water.
+    const wet = (cx: number, cz: number) => height(cx, cz) < WATER_Y + 0.02;
+    this.grid(
+      "forest_border_ground",
+      floor,
+      xs,
+      zs,
+      height,
+      (cx, cz) => drawn(cx, cz) && !wet(cx, cz),
+    );
+    this.grid(
+      "forest_border_paddy_floor",
+      mud,
+      xs,
+      zs,
+      height,
+      (cx, cz) => drawn(cx, cz) && wet(cx, cz),
+    );
+    const flood = this.materials.get("M_flood_water");
+    if (flood) {
+      const lowest = (cx: number, cz: number) =>
+        Math.min(
+          height(cx - 0.5, cz - 0.5),
+          height(cx + 0.5, cz - 0.5),
+          height(cx, cz),
+          height(cx - 0.5, cz + 0.5),
+          height(cx + 0.5, cz + 0.5),
+        );
+      this.grid(
+        "forest_border_water",
+        flood,
+        xs,
+        zs,
+        () => WATER_Y,
+        (cx, cz) =>
+          outside(TERRAIN, cx, cz) > 0 && !onOuterRoad(cx, cz) && lowest(cx, cz) < WATER_Y - 0.004,
+      ).receiveShadows = true;
+    }
     const road: number[] = [];
     for (let z = ROAD_Z - 2.5; z <= ROAD_Z + 2.5 + 1e-6; z += 0.25) road.push(z);
     const outer = (cx: number) => Math.abs(cx) > TERRAIN.maxX;
@@ -742,7 +858,7 @@ export class ForestBorder {
     zs: number[],
     height: (x: number, z: number) => number,
     drawn: (cx: number, cz: number) => boolean,
-  ): void {
+  ): Mesh {
     const nx = xs.length;
     const positions: number[] = [];
     const uvs: number[] = [];
@@ -772,6 +888,7 @@ export class ForestBorder {
       Uint32Array.from(indices),
     );
     mesh.receiveShadows = this.groundShadows;
+    return mesh;
   }
 
   /** Far trees: two crossed painted cards each, merged in large cells. */
@@ -793,7 +910,12 @@ export class ForestBorder {
     texture.update();
     this.atlas = texture;
     const material = new PBRMaterial("M_forest_far_cards", this.scene);
-    material.albedoTexture = texture;
+    // The atlas rendered from the scanned trees, where the file has it: the far tree
+    // line is the same forest as the near one.
+    if (this.farAtlas) {
+      this.farAtlas.hasAlpha = true;
+      material.albedoTexture = this.farAtlas;
+    } else material.albedoTexture = texture;
     material.useAlphaFromAlbedoTexture = true;
     material.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHATEST;
     material.alphaCutOff = 0.45;
@@ -873,55 +995,6 @@ export class ForestBorder {
       mesh.setVerticesData("uv6", heights, false, 2);
       mesh.receiveShadows = false;
     }
-  }
-
-  /** Standing water in hollows of the belt round the compound: the ground reads wet. */
-  private buildPuddles(): void {
-    const material = this.materials.get("M_puddle");
-    if (!material) return;
-    const random = seededRandom(6242050);
-    const positions: number[] = [];
-    const indices: number[] = [];
-    let made = 0;
-    for (let tries = 0; tries < 4000 && made < 18; tries++) {
-      const x = (random() - 0.5) * 70;
-      const z = -36 + random() * 42;
-      const r = 0.45 + random() * 0.8;
-      if (!inBelt(x, z) || !openGround(x, z, r) || !this.clear(x, z, r + 0.5)) continue;
-      // Water finds the lowest ground: level with the hollow, the rest under the bank.
-      let level = Infinity;
-      for (let k = 0; k < 8; k++) {
-        const a = (k / 8) * Math.PI * 2;
-        level = Math.min(
-          level,
-          this.terrainAt(x + Math.cos(a) * r * 0.6, z + Math.sin(a) * r * 0.6),
-        );
-      }
-      level = Math.min(level, this.terrainAt(x, z)) + 0.035;
-      const base = positions.length / 3;
-      positions.push(x, level, z);
-      const n = 16;
-      for (let i = 0; i < n; i++) {
-        const a = (i / n) * Math.PI * 2;
-        const k = r * (0.7 + 0.35 * random());
-        positions.push(x + Math.cos(a) * k, level, z + Math.sin(a) * k * (0.6 + 0.3 * random()));
-        indices.push(base, base + 1 + ((i + 1) % n), base + 1 + i);
-      }
-      made++;
-    }
-    if (!made) return;
-    const normals: number[] = [];
-    VertexData.ComputeNormals(positions, indices, normals);
-    const uvs = [];
-    for (let i = 0; i < positions.length; i += 3) uvs.push(positions[i] / 2, positions[i + 2] / 2);
-    this.mesh(
-      "forest_border_puddles",
-      material,
-      Float32Array.from(positions),
-      Float32Array.from(normals),
-      Float32Array.from(uvs),
-      Uint32Array.from(indices),
-    ).receiveShadows = true;
   }
 
   /**

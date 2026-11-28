@@ -25,6 +25,7 @@ import {
   type Vec2,
 } from "./movement";
 import { advanceStride, bobOffsetX, bobOffsetY, type StrideState } from "./headBob";
+import { approachExactly, followWithin, REST_DEADBAND, settleEye } from "./cameraRest";
 
 /**
  * A ladder the player can climb. In levels this will come from a `ladder_`
@@ -50,9 +51,21 @@ export class PlayerController {
   headBobEnabled = true;
   /** When false, input is ignored (scripted sequences, menus). */
   inputEnabled = true;
+  /** 0–1 subtle handheld adrenaline tremor while dread / a nearby ghost presses in. */
+  dreadTremor = 0;
+  /**
+   * Reduced camera motion (a graphics setting): no dread tremor, and scare
+   * jolts at a third of their strength. Head-bob has its own switch.
+   */
+  reducedMotion = false;
 
   yaw = 0;
   pitch = 0;
+
+  private joltTime = 0;
+  private joltStrength = 0;
+  private joltRollDir = 1;
+  private tremorClock = 0;
 
   private readonly controller: PhysicsCharacterController;
   private readonly physics: PhysicsEngine;
@@ -70,6 +83,9 @@ export class PlayerController {
   private eyeY: number;
   private horizontal: Vec2 = { x: 0, z: 0 };
   private _speed = 0;
+  /** Where the camera stands while Sora is still (see cameraRest.ts); null after a teleport. */
+  private readonly rest: Vec2 = { x: 0, z: 0 };
+  private restValid = false;
 
   // Scratch objects: no allocation per frame (TDD section 14).
   private readonly wish: Vec2 = { x: 0, z: 0 };
@@ -105,7 +121,15 @@ export class PlayerController {
     );
     this.controller.maxStepHeight = c.maxStepHeight;
     this.controller.maxSlopeCosine = Math.cos((c.maxSlopeDeg * Math.PI) / 180);
-    this.controller.acceleration = c.acceleration;
+    // Babylon's `acceleration` is a gain, the share of the speed difference made up
+    // each step (1 = all of it), and `maxAcceleration` the limit in m/s². The gain
+    // was set to 14: each step overshot the target fourteen-fold, clamped at the
+    // default 50 m/s², so speed flipped every frame (0.83 and 1.67 m/s for a 1.6 m/s
+    // walk) and never settled at rest, where Sora crept on at 0.35 m/s and the
+    // head-bob came back: the picture walked and shook with no key pressed
+    // (November 2026). The configured acceleration is the limit.
+    this.controller.acceleration = 1;
+    this.controller.maxAcceleration = c.acceleration;
     this.lastPosition.copyFrom(center);
 
     this.eyeHeight = c.standEyeHeight;
@@ -160,6 +184,16 @@ export class PlayerController {
     this.ladders.push(ladder);
   }
 
+  /**
+   * Brief, visceral first-person flinch & damped handheld tremor on a close scare or blackout cut.
+   * Additive on camera rotation only — never steals player look input.
+   */
+  jolt(strength = 0.8, rollDir?: -1 | 1): void {
+    this.joltStrength = Math.max(this.joltStrength, Math.min(1.2, Math.max(0.15, strength)));
+    this.joltTime = 0.44;
+    this.joltRollDir = rollDir ?? (Math.random() < 0.5 ? -1 : 1);
+  }
+
   teleport(feet: Vector3, yaw = this.yaw): void {
     this.controller.setPosition(feet.add(new Vector3(0, this.currentHeight() / 2, 0)));
     this.controller.setVelocity(Vector3.Zero());
@@ -168,6 +202,7 @@ export class PlayerController {
     this.yaw = yaw;
     this.eyeY = feet.y + this.eyeHeight;
     this._climbing = null;
+    this.restValid = false;
   }
 
   dispose(): void {
@@ -391,16 +426,38 @@ export class PlayerController {
     const feetY = p.y - this.currentHeight() / 2;
 
     const targetEye = this._stance === "crouch" ? c.crouchEyeHeight : c.standEyeHeight;
-    this.eyeHeight += (targetEye - this.eyeHeight) * smoothingFactor(dt, c.crouchTransition);
+    this.eyeHeight = approachExactly(
+      this.eyeHeight,
+      targetEye,
+      smoothingFactor(dt, c.crouchTransition),
+      1e-4,
+    );
+
+    // Standing still (or pressing into a wall): hold the camera exactly where it
+    // is against the capsule's sub-millimetre settling, so TAA can keep its history.
+    const onGround = this.supported && !this._climbing;
+    const atRest = onGround && (this.wishSpeed === 0 || this._speed < 0.1);
+    if (atRest && this.restValid) followWithin(this.rest, p.x, p.z, REST_DEADBAND);
+    else {
+      this.rest.x = p.x;
+      this.rest.z = p.z;
+      this.restValid = true;
+    }
 
     // Smooth vertical motion so step-ups don't snap the view; snap on big
     // changes (falls, teleports) so the camera never lags far behind.
     const eyeTarget = feetY + this.eyeHeight;
     if (Math.abs(eyeTarget - this.eyeY) > 0.5 || this._climbing) this.eyeY = eyeTarget;
-    else this.eyeY += (eyeTarget - this.eyeY) * smoothingFactor(dt, c.eyeSmoothing);
+    else
+      this.eyeY = settleEye(
+        this.eyeY,
+        eyeTarget,
+        smoothingFactor(dt, c.eyeSmoothing),
+        REST_DEADBAND,
+        atRest && this.eyeHeight === targetEye,
+      );
 
     // Head-bob and footsteps while walking on the ground.
-    const onGround = this.supported && !this._climbing;
     const moving = onGround && this._speed > 0.2;
     const stride =
       this._stance === "crouch" ? c.strideCrouch : this.intent.hurry ? c.strideHurry : c.strideWalk;
@@ -411,7 +468,13 @@ export class PlayerController {
         : this.intent.hurry
           ? c.bobHurry
           : c.bobWalk;
-    this.stride.amplitude += (bobTarget - this.stride.amplitude) * smoothingFactor(dt, 0.15);
+    // Lands exactly on 0 when Sora stops, instead of creeping towards it for minutes.
+    this.stride.amplitude = approachExactly(
+      this.stride.amplitude,
+      bobTarget,
+      smoothingFactor(dt, 0.15),
+      1e-5,
+    );
     if (moving) {
       advanceStride(this.stride, this._speed * dt, stride, this.stepResult);
       if (this.stepResult.stepped) this.footstep(feetY);
@@ -422,12 +485,32 @@ export class PlayerController {
     const rightX = Math.cos(this.yaw);
     const rightZ = -Math.sin(this.yaw);
 
+    this.tremorClock += dt;
+    let kickPitch = 0;
+    let kickYaw = 0;
+    let kickRoll = 0;
+    if (this.joltTime > 0) {
+      this.joltTime = Math.max(0, this.joltTime - dt);
+      const env =
+        (this.joltTime / 0.44) ** 1.6 * this.joltStrength * (this.reducedMotion ? 0.33 : 1);
+      kickPitch = -0.042 * env + Math.sin(this.tremorClock * 58) * 0.014 * env;
+      kickYaw = Math.cos(this.tremorClock * 47) * 0.016 * env;
+      kickRoll = 0.048 * env * this.joltRollDir + Math.sin(this.tremorClock * 41) * 0.012 * env;
+    }
+    if (this.dreadTremor > 0.05 && !this.reducedMotion) {
+      const tr = Math.min(1, this.dreadTremor) * 0.0045;
+      kickPitch += Math.sin(this.tremorClock * 11.3) * tr;
+      kickRoll += Math.cos(this.tremorClock * 8.7) * tr * 1.1;
+    }
+
+    // With no bob and no kick these are the same numbers as last frame, so the
+    // camera's view matrix is not rebuilt and TAA counts the frame as still.
     this.camera.position.set(
-      p.x + rightX * sway,
+      this.rest.x + rightX * sway,
       this.eyeY + bobOffsetY(this.stride.phase, bob),
-      p.z + rightZ * sway,
+      this.rest.z + rightZ * sway,
     );
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.camera.rotation.set(this.pitch + kickPitch, this.yaw + kickYaw, kickRoll);
   }
 
   private footstep(feetY: number): void {

@@ -19,6 +19,8 @@ art-source/library/*
 !art-source/library/scans/
 # Motion capture (CMU, free for commercial use): the source of the ghosts' clips.
 !art-source/library/mocap/
+# Posters the user supplied for the Ep1 studio (no download source): kept in LFS.
+!art-source/library/posters/
 
 # Reference images are for study only and may be copyrighted
 art-source/reference/*

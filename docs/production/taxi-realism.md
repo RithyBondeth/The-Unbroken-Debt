@@ -168,3 +168,126 @@ Advisor review: the mirror rider and the window prints extend the black Neak Ta'
 - **Window (60.18–61.02 s):** with the lamps dead, the lightning shows its face at the glass, looking down at her; a faint cold fill stands for lightning through the windscreen.
 
 The back-seat rider in the mirror still uses the shrine effigy (`ShadowFigure`).
+
+## Redesign, 17 Nov 2026: a real 1933 taxi, paddies, and real people
+
+**The taxi.** The cabin is a photoscanned 1933 Citroën Rosalie (RolloT, CC BY 4.0), prepared by `tools/travel/taxi_scans.py` and relined by region in `build-taxi.py` with Poly Haven photo textures. The runtime finds lamps, glass, wipers, mirror, dials and seats from `taxi_anchor_*` empties. The wipers hang from the top, the cluster has five dials, and the mirror shows the paddies.
+
+**The road.** The first 140 m run between flooded paddies: dikes, instanced rows of rice, a palm far card, three scanned stilt houses with a lit lamp, and a laterite embankment. The forest starts at 150 m, with a shrine and candle at 157.5 m and scanned mud ruts in the track.
+
+**The driver is a photoscan.**
+- **Face and head:** a real 8K photoscan of a man ("A-Pose - Male Full Body 3D Scan", OverseerThuror, CC BY 4.0), prepared by `tools/travel/taxi_driver_head.py`. From the 2.6-million-face scan it keeps the head and the bare neck. The hoodie comes off, and a fitted neck tube runs down into the collar. The baseball cap becomes a 1930s cloth cap: its brim is cut back to a short peak and its embroidered letters are smoothed away. Logos, eyelets and the strap are re-dyed as worn dark cotton twill, sweat-darkened at the band.
+- **Skin:** browned to a sun-dark Sino-Khmer tone with an RGB curve. The photo's pores, stubble and creases stay.
+- **Bake:** a 46,000-triangle game mesh is baked in Cycles from the full scan: 4096 px colour, 2048 relief, 1024 roughness. The roughness has wet eyes, lips, an oily nose and brow, matte hair and cotton. Ears, eyes, nose and lips are protected from decimation, so the thin ear bakes clean. UV islands are weighted so the face gets about five times the texture of the cap. Missed texels and island borders are filled from their neighbours, so no seam darkens in the mips.
+- **Shapes:** `build-taxi.py` (`scanned_head`) sets the head on the scanned body's collar and bakes his shapes: `look_road`, `look_sora` and `nod` (neck-weighted turns), `talk` (the jaw on its hinge) and `blink` (the lids). Sources and credits are in the asset tracker (V1-209 to V1-217).
+- **Body:** Renderpeople's "Eric" (CC BY 4.0), posed seated with two-bone IK, his hands curled round the rim. One recoloured copy of the scan's photo dresses all of him (`driver_photo`), decided pixel by pixel so every edge follows the photo rather than the mesh. His skin takes the same sun-browned curve as his face. The white shirt becomes a plain, washed, old cream that keeps only its soft large folds: the studio shadows of the scan's A-pose are gone. The waistcoat, trousers and shoes stay as photographed. The whole collar stays, up to its sewn edge; only his own neck, head and hair are cut away.
+- **Sleeves (`simulate_sleeves`):** split off, then cloth-simulated as cotton while the arms move from the A-pose to the wheel, over a collider 1 cm inside them. The cloth is simulated coarse (about 2 cm) with stiff bending, so it falls in broad, heavy folds: at the elbow, and hanging from the forearm. After it settles it is lightly smoothed and subdivided. A fine, soft simulation had crumpled like paper, and self-collision cost twenty minutes for no visible gain. The simulation adds about a minute to `build-taxi.py -- cabin`.
+- **No tangents in the GLB:** they push the instanced trim past WebGPU's eight vertex buffers and break the face's blend shapes. The face's relief reads well with the renderer's own tangents.
+
+**Sora's legs.** Renderpeople's "Carla" (CC BY 4.0), posed into the footwell, her heels and the balls of her feet set on the Rosalie's floorboards by a ray to the floor. The glen-check trousers are re-dyed plain dark cotton and keep the scan's folds. Her top becomes a cream blouse tucked in at the waist, and the cut above it is closed with blouse, so the old flat cloth over her lap is gone. Her black leather pumps rest on the mat.
+
+**The Neak Ta's skin is real.** The roadside figure keeps its photoscanned body (LaPresse3D, CC BY 4.0) and gets its own baked skin (`soot_skin` in `build-neakta-roadside.py`):
+- **Colour:** the scan's photo graded to deep soot-brown, so its pores, veins and old faded markings still show. Ash is dusted on in patches, and mud has dried in runs down the shins and feet.
+- **Roughness:** rain runs wet in streaks; the ash is dry.
+- **Relief:** baked in the body's own space. A relief taken from the photo creased along each of its hundreds of UV islands.
+
+The rebuilt right side's copied split normals are cleared. (Smoothing the arms' scan noise was tried: it shrank them to spikes.) The runtime no longer multiplies the skin by near-black (0.009), which had left only a chrome-like sheen. It dims the baked colour to about a quarter, so under the lightning it reads as a soot-dark man with skin, not black plastic. The sash is soaked nearly black. The hair is finer and sparser, with wet strands gathered into clumps that pinch together at the tips.
+
+**Budgets and tests.** The people keep 2K maps, with the face in UASTC, and the cabin GLB is now about 22 MB (budget 26 MiB). The roadside is 15.9 MB (budget 17 MiB) and the Neak Ta 6.3 MB. `taxiAssets.test.ts` now checks the Rosalie (its own linings, its roof height, a floor sealed below Sora's eyes, the walnut fascia and dials) and the scanned people (shapes and maps on the face, shoes visible from Sora's eyes, no lap cloth). `optimise-taxi.mjs` caps everything else at 1024 px through the gltf-transform API, because the CLI's `--pattern` cannot exclude names.
+
+## Wardrobe pass, 26 Nov 2026: a real cap, real hands, a cloth krama
+
+The user's playtest screenshot showed the driver's cap, krama, clothes and grip all reading as generated. Each is now a scan or a simulation, built by `tools/travel/taxi_driver_wardrobe.py` and called from `taxi_people_refine.py`:
+- **Cap:** "Flat Cap" (kevjumba, CC BY 4.0, V1-240), a photoscan of a real wool flat cap. Its five 65k-vertex chunks are welded and reduced to 16,000 triangles. An ellipse is fitted to the opening's back and sides (the front hides under the peak), and the cap is warped onto his hat line: just above the brows, over the ear tops, low at the back. The stiff peak hinges up 14° at the brow so his eyes show beneath it, and the scalp under the cap tucks 2.8 mm inside it. It rides the head's five shapes as before.
+- **Hands:** "Hand Scan Rigged And Animated" (Dakta.Grower.Nzl, CC BY 4.0, V1-241). The download has no skeleton, so it is rigged from its own geometry. Geodesic rings from each fingertip give every digit's centre line, and its joints sit at fixed fractions of the tip-to-web length. Skin weights come from the same geodesics, and dual-quaternion skinning keeps the knuckles full. The left hand is the right one mirrored.
+- **Grip (`solve_grip`):** the rim runs across the distal palm, slanting toward the wrist on the little-finger side, index uppermost. The palm rolls round the 25 mm bakelite tube until the wrist points back to the elbow. Each finger joint (base, middle, tip) then curls until its own skin touches the tube. The thumb swings across to the driver's side of the rim and curls on. Nothing passes inside the bakelite. The left hand holds near ten o'clock; the right, on Sora's side, near three and a little looser.
+- **Arms:** reach to each solved wrist, and the hand bone turns the same way so the sleeve's forearm twist follows. Eric's hands are cut away at the cuff plane, along with any loose finger left past it. The sleeve end gets a folded 3.5 mm hem and a lining 2.5 cm up the sleeve.
+- **Shapes:** every arm shape (`steer_left`, `steer_right`, `grip_tense`, `breathe`, `lean_peer`) re-solves the grip, so the hands move with the rim and clench into it. The near hand adds `grip`: its index and middle fingers lift off the rim. `taxiDriverFace` already drives `grip` as he talks, and before this pass nothing played it.
+- **Skin:** the scan's photo colour is re-toned to his weathered brown (luminance and a little of its own redness kept, broad patches evened out, forearm hair softened). Its scanned normal map keeps the creases, veins and nail edges.
+- **Krama:** a 1.3 × 0.26 m krama (a man's krama folded once lengthwise) is laid round the nape in loose pleats. It is cloth-simulated for 90 frames onto his body, neck and collar, then subdivided and relaxed. It follows his breathing and leaning through a surface-deform binding to the body's shapes. The weave is generated: red-and-cream gingham with 12 mm checks, per-yarn dye variation, a striped border and a plain heading at each end, and eleven knotted tassels per end.
+- **Collar:** a 2.6 cm cotton stand collar, open 3 cm at the throat, replaces the old lofted ring.
+- **Clothes:** the linen weave squeezed into the whole-body atlas, and the drawn twill on the waistcoat, only aliased into a fuzzy "felt". They are gone, and the scan's own folds and seams carry the cloth.
+
+The cultural advisor should review the krama's pattern and how it is worn (V1-242).
+
+**Smoothing pass, same day.** After the first look the user said it still was not smooth. Close-ups from Sora's seat found:
+- **Jaw and neck:** the photoscan's jaw, under-chin and neck were coarse polygon facets. A Taubin smoothing (shrink, then swell, so the jaw keeps its volume) eases everything below the ear lobes, leaving the lips, chin front and ears as scanned. The face's relief map drops from 0.55 to 0.40, because it lit the jaw's UV seam as a bright scratch.
+- **Collar:** the stand collar had been aimed from a centre that drifted toward the turned jaw and flared into a plate. It is now sewn onto the shirt's own neck opening, which is smoothed as one loop. An older step had pulled only the opening's edge vertices in, which left shards.
+- **Krama:** it starts flatter and untwisted, as stiffer cotton, settles for 120 frames and is relaxed more, so it drapes instead of crumpling.
+- **Cuffs:** the old cuff lip came out as a zigzag on the cut's uneven vertices, so it is off for the scanned hands. Wherever the posed scanned wrist would cut through the sleeve's last 6.5 cm, the sleeve is let out to 5 mm clear of it, and the hem is grown only after the forearms are tailored.
+- **Hands:** skin weights are diffused over the skin (no lumps at the knuckles), the rim-contact push spreads over the pad instead of dimpling single vertices, and the relief is blurred so the forearm hairs stop glinting under the cabin light.
+
+**Elbow and krama pass, same day.** The user flagged the far arm and the krama in a crop from Sora's seat:
+- **Elbows:** the wheel sits close, so his elbows fold to about 70°. Plain skinning collapsed the inside of each sleeve: the forearm pushed through the upper arm in a hard edge and a balloon. A corrective smooth against the scan's rest shape (`ElbowRelax`, weighted 7–17 cm round each elbow) now relaxes the elbows in every pose.
+- **Sleeves:** eased toward the arm bones to a real shirt sleeve's width (5.6 cm round the upper arm to 4.4 cm at the forearm), in each shape with that shape's own arm.
+- **Cuff hem:** it folds toward the opening's own centre, because folding toward the wrist joint turned part of it out as a flap.
+- **Left hand:** rides a little lower, at about twenty to ten.
+- **Krama:** its weave is now one seamless 7.2 cm tile (6 × 6 checks) repeated along the cloth, about 7 texels per millimetre, shipped as UASTC. The single stretched image had gone soft in game. The fringe is 22 knotted, three-sided tassels per end.
+
+**One real man, same day.** The user said he still did not read as a real person (face and skin, body and clothes, hands), and chose to rebuild from the existing scans:
+- **Skin:** the old head bake's curve had left him spray-tan orange (about 1.36 : 0.86 : 0.58). Face, neck and hands now share one Khmer brown (`SKIN_CHROMA`, 1.27 : 0.93 : 0.70). Each texture keeps its own variation: rosier lips, darker creases, stubble. At runtime the translucency tint is blood-red rather than orange.
+- **Head:** scaled to 93% about the neck base, because the scanned head read large, doll-like, on Eric's shoulders.
+- **Neck:** carries his own jaw skin (pores, fine stubble) tiled round it, with stronger neck muscles and Adam's apple.
+- **Cheek creases:** two diagonal creases on each cheek (from the scan's hoodie strings) are relaxed in shape and repainted as softened skin with his jaw's pores, and the relief there is flattened.
+- **Collar:** the generated stand collar is gone. The scan's own shirt, tie and waistcoat show in the V, and the krama covers the neck opening.
+- **Clothes:** at runtime a cotton-drill detail map (`makeClothWeave`) gives the shirt, waistcoat and cuffs a woven surface up close.
+- **Grip:** resting fingers only meet the rim, and fear squeezes; the left hand is a little looser too.
+
+## Hands and krama rebuild, 27 Nov 2026
+
+The user said the driver was "still not good at all" and named the krama and the hands as the weak parts.
+
+**Hands.** The raw scan was never the problem: rendered on its own it is a real, finely detailed hand. The posing was.
+- **Skinning:** dual-quaternion skinning swells every joint it bends far, so at 90° each knuckle of the fist ballooned and the back of the hand read as one swollen bulb. The hand now uses optimised centre-of-rotation skinning (Le & Hodgins 2016). Each blended vertex turns about the centroid of the skin whose weights resemble its own, a point on the joint's axis, so the knuckles, tendons and the back of the hand keep their scanned shape.
+- **Grip:** each joint used to curl in turn until it touched the rim, so the index and little fingers stayed straight at the knuckle and bent 80–90° at the middle joint, a claw. A finger now curls as a real power grip does: its three joints move together (base : middle : tip = 0.62 : 1 : 0.66) until the middle and end phalanges meet the bakelite. The ring and little fingers of the looser right hand lie a touch open.
+- **Skin:** the scan's pale forearm hairs glinted as white specks. Every bright fleck is now lifted out of the colour map, and the relief is blurred a little more. The broad tone-evening measures covered skin only (the UV atlas is rasterised to find it). It used to bleed the padding's tone into each island edge, which drew a lighter band across the left hand's fingers.
+
+**Krama** (`build_rolled_krama`). It used to lie on his shoulders as a flat, stiff sheet, like a bib. Now it is worn as Khmer men wear one: folded lengthwise and rolled into a soft, uneven, twisted roll.
+- The roll lies over the shirt's collar opening round the back of the neck. Its path follows the body mesh's own opening ring, so it also hides the neck seal.
+- At the collarbones it unrolls into two ends that hang down his chest in loose vertical folds, the left one longer.
+- The roll is built as a real spiral of cloth (4–5 turns of the 26 cm folded width), its outer edge winding round about every 24 cm, unevenly. It holds its shape (pinned in the simulation), while the ends are cloth-simulated onto his chest and belly.
+- The weave is old hand-loomed cotton: 16 mm checks of faded madder red and unbleached cotton. The bands differ slightly in width as on a hand loom, with a thin dark line in each red band, uneven dye lots, slubs and sun-fading. One seamless 9.6 cm tile repeats along the cloth.
+- Twenty knotted tassels finish each end, found from the cloth's UVs.
+- It still follows his breathing and leaning through the body's shape keys.
+
+The cultural advisor should still review the pattern and how it is worn (V1-242).
+
+**Sleeves, same day.** His sleeves are rolled up to mid-forearm, as a driver's would be in Phnom Penh heat. The stiff cuff at the wrist had read as paper, so now 12.8 cm of the scanned forearm shows, tendons and all. Each sleeve is cut square to the forearm 9.3 cm above the wrist. Its edge is rolled outward and back up the arm into a soft cotton band, about 4 cm wide and 1 cm proud, uneven round the arm. The band wears the cuff cotton, toned to the shirt's own colour at the sleeves.
+
+**Fixes found in the game.**
+- **Inside-out body:** recalculating normals guesses "outside" for an open shell, and the rolled bands tipped the guess, so the whole body shell came out inside-out (hollow shoulders). Each connected piece is now checked against his torso and turned outward. `taxiAssets.test.ts` fails if less than 80% of his torso faces outward.
+- **Krama ends:** the hanging ends start in front of his outermost layer, since one started straddling the waistcoat's open edge and the simulation dragged it under. They collide double-sided with the body only.
+- **Rim size:** the grip uses the rim mesh's measured size (centre line 0.1974 m, tube 12.7 mm).
+- **Steering wheel:** the driver's left forearm lies along the lower-left rim and crosses a spoke, and posing the arm clear of it read worse. At the user's call, only that part of the wheel is hidden (`cut_wheel_inside_driver`): on his left, every rim, spoke and spoke-cap face his clothes pass through in any of his shapes, each shape tested with the wheel turned as that shape holds it. The rim cut becomes one arc, from under his sleeve into the middle of his left fist (`_rim_cut_into_fists`), so neither end shows as he moves. The left spoke keeps its length up to where his sleeve covers it at rest: it is sliced 4 mm inside the sleeve and capped (`_trim_spokes_at_sleeve`), so the wheel still shows all three spokes. His right cuff only grazes the rim in a few shapes, so that side stays whole. From Sora's seat the wheel reads whole, the rim running into his fist and behind his forearm. Each wheel part keeps an untouched copy in the blend (`<name>__full`) and is cut from it afresh on every build.
+
+## The sculpted driver, 27 Nov 2026
+
+The user replaced the scanned driver with their own sculpt, `taxi-driver.glb` (made with Tripo, V1-243), and asked for it to be coloured and fitted. The old head, cap, hands, body and krama scans are retired (V1-214, V1-215, V1-240 to V1-242). `tools/travel/taxi_driver_tripo.py` builds him from `art-source/library/scans/taxi_driver_tripo.glb`, called from `taxi_people_refine.apply_people_realism`:
+
+- **The sculpt:** one 4.9-million-triangle surface of a seated man at the wheel. He wears a newsboy cap, a work shirt (collar, placket, chest pocket, cuffed long sleeves), an open sleeveless vest, a belt, trousers and tall leather boots. It has no UVs and no colour.
+- **Fit:** scaled by 1.18 so his head is 22 cm from crown to chin. He is turned to face the road, sat on the cushion (sunk 3 cm) with his back on the seatback; his eyes are at 1.04 m and his cap clears the roof by 7 cm.
+- **His own wheel goes:** his small wheel (25 cm across, not quite round) is cut away along a centre line measured every 5°. Inside each fist only the rim's own surface goes (its normal points straight out of the tube), so no finger is cut. The spokes are cut along their refitted axes, then the hub, the column stub and any loose pieces.
+- **Hands on the Rosalie's rim:** each hand turns and moves from his rim onto the cabin's nearest rim point (4.4 cm and 6.6 cm). The arm follows, fading out by the shoulder by distance along his skin. The fist then closes round the thinner 12.7 mm bakelite tube. The cabin's wheel stays whole (`cut_wheel_inside_driver` only restores it when he is the sculpt).
+- **Garments:** rough regions first: the cap above its band, the collar up to just above its top edge (an open V at the throat), the sleeves past each armhole, the hands past a line 5.8 cm back from each grip, then the shirt front, the vest round the sides and back, the belt, the trousers, and the boots below their folded tops. Each edge is then moved onto the sculpt's own seam by a random walk that crosses smooth cloth easily and a seam's groove or ridge hardly at all. The collar's turned-down edge is snapped against the vest on its own. The vest's edge over the shirt front has no groove, so it keeps its rough line. Stray patches are folded in and the edges straightened.
+- **Colour:** painted per vertex on the full sculpt, then baked:
+  - **Cloth:** dark tweed cap with herringbone ribs; washed cream shirt, sweat-yellowed at the collar and grimy at the cuffs; brown-grey wool vest; khaki drill trousers dusty at the knees.
+  - **Leather and metal:** brown belt with an iron buckle; polished brown boots, scuffed at the toes.
+  - **Wear:** grime in every fold and seam, lighter wear on ridges.
+  - **Skin:** sun-browned, warmer at the nose, cheeks and ears, darker under the eyes, light stubble on the jaw and upper lip. Black hair under the cap at the temples, round the ears and down to the nape; brows, lips, eyes (iris, pupil, warm whites, lash line).
+  - **Roughness:** oily nose and forehead, wet eyes and lips, dry hair and cloth.
+- **Photo materials (after the user's review: "looks like a plastic toy"):** the bake multiplies each garment's paint by real photographed detail, box-projected in place and reduced to its fine detail only (each pixel over its blurred surround, so the photo's own light and colour go):
+  - the shirt and trousers: Poly Haven's rough linen;
+  - the cap and vest: wool from the photoscanned flat cap (V1-240's scan, used as material only);
+  - the belt and boots: Poly Haven's brown leather;
+  - his hands: skin from the scanned hand (V1-241's scan, used as material only).
+  The same detail goes into the relief as a fine bump. His face's pores, mottling and stubble are generated in the bake shader instead (a small scanned cheek patch tiled over a whole face repeated its marks). The painted blotches are toned right down, the shirt is a washed off-white rather than cream-white, the brows break into hairs and the whites of the eyes are dulled and shaded by the upper lid.
+- **Game mesh:** 120,000 triangles in three materials, each with its own UVs. Skin (face, neck, hands) has 2048 px colour (UASTC) and 2048 px relief. Cloth has 2048 px colour and 1024 px relief. Leather has 1024 px maps. Colour, roughness and relief are baked from the full sculpt garment by garment: each garment's faces see only its own part of the sculpt, so a collar never catches the vest under its overhang, nor a cuff the wrist. The reduction spares every vertex on a garment's edge, so the edges keep the fine line they were painted with instead of zigzagging along big triangles.
+- **Shapes** (the runtime already plays them):
+  - **Steering and grip:** `steer_left`/`steer_right` turn his hands ±0.16 rad with the wheel, arms following; `grip_tense` clenches.
+  - **Body:** `breathe` fills the chest and lifts the shoulders; `lean_peer` leans him 5° in from the hips, hands kept on the rim.
+  - **Head:** `look_road`, `look_sora` (30° toward her, chin down) and `nod`; his head rests turned 18° from the sculpt's pose, so he looks at the road. `talk` drops the jaw 5°.
+  - **Not included:** there is no blink (the sculpt's eyes have no lids to close) and no finger tap.
+- **No krama.** A folded krama still lies on the back seat.
+- **Gear knob:** the scan's old gear-lever knob, left floating at his right elbow when its rod was removed, is gone too (`_strip_scan_gear_knob`).
+
+Runtime (`TaxiVisuals`): `M_taxi_driver_skin` keeps its baked roughness map with a little translucency, `M_taxi_driver_cloth` gets sheen and a fine plain-weave detail map (no diagonal twill across the atlas), and `M_taxi_driver_leather` gets a light clear coat. The baked relief is kept faint (0.35 to 0.4): it is baked against Blender's tangents, the GLB ships none (WebGPU's vertex-buffer limit with blend shapes), and at full strength the game's derived tangents facet the cheeks and sleeves.

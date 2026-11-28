@@ -1,0 +1,95 @@
+.ep1-clock-card {
+  position: fixed;
+  top: clamp(20px, 6vh, 52px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  z-index: var(--ui-z-hud, 22);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 22px;
+  background: var(--ui-overlay-bg, rgba(11, 10, 9, 0.72));
+  border: 1px solid rgba(224, 207, 169, 0.22);
+  border-radius: var(--ui-radius, 3px);
+  opacity: 0;
+  transition:
+    opacity 0.65s ease,
+    transform 0.65s ease;
+}
+
+.ep1-clock-card.shown {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.ep1-clock-card.glitched {
+  border-color: rgba(188, 58, 42, 0.62);
+}
+
+.ep1-clock-time {
+  font-family: var(--ui-font-display);
+  font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  color: #efe2c6;
+  margin: 0;
+}
+
+.ep1-clock-card.glitched .ep1-clock-time {
+  color: #cf5643;
+  text-shadow: 0 0 14px rgba(188, 58, 42, 0.55);
+}
+
+.ep1-clock-label {
+  font-family: var(--ui-font-body);
+  font-size: var(--ui-caption, 0.78rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-muted, #c8bfb0);
+  margin: 0;
+}
+
+.ep1-watch-glance {
+  position: fixed;
+  bottom: clamp(22px, 5vh, 42px);
+  right: clamp(20px, 4vw, 38px);
+  z-index: var(--ui-z-hud, 22);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 10px 16px;
+  background: var(--ui-hud-bg, rgba(11, 10, 9, 0.76));
+  border: 1px solid rgba(224, 207, 169, 0.24);
+  border-radius: var(--ui-radius, 3px);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.ep1-watch-glance.shown {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ep1-watch-glance.glitched {
+  border-color: rgba(188, 58, 42, 0.65);
+}
+
+.ep1-watch-glance .ep1-clock-time {
+  font-size: 1.25rem;
+}
+
+.ep1-watch-sub {
+  margin: 0;
+  font-family: var(--ui-font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ui-subtle, #9e9587);
+}

@@ -1,0 +1,71 @@
+/* Graphics and controls settings (graphicsMenu.ts), in the title screen's dialog and
+   the pause menu. Rows of label and control, with a quiet note under each. */
+.settings-graphics,
+.settings-look {
+  margin-top: var(--ui-space-6);
+}
+.settings-heading {
+  margin: var(--ui-space-6) 0 var(--ui-space-2);
+  padding-bottom: var(--ui-space-2);
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-accent-bright);
+  font: 500 var(--ui-caption) / 1.4 var(--ui-font-body);
+  letter-spacing: var(--ui-label-tracking, 0.08em);
+  text-transform: uppercase;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-4);
+  min-height: 44px;
+  margin: var(--ui-space-2) 0 0;
+  font-size: var(--ui-body);
+  text-align: start;
+}
+.settings-row select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 62%;
+  min-height: 40px;
+  padding: 0 var(--ui-space-3);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font: inherit;
+  font-size: var(--ui-small);
+}
+.settings-row input {
+  accent-color: var(--ui-accent);
+}
+.settings-check input[type="checkbox"] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.settings-row input[type="range"] {
+  flex: 1 1 10rem;
+  max-width: 60%;
+  min-height: 40px;
+}
+.settings-graphics .settings-note,
+.settings-look .settings-note {
+  margin: var(--ui-space-1) 0 0;
+  color: var(--ui-muted);
+  font-size: var(--ui-small);
+  text-align: start;
+  text-wrap: pretty;
+}
+.settings-reload {
+  margin: var(--ui-space-6) 0 0;
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border-left: 2px solid var(--ui-accent);
+  background: rgb(163 21 15 / 0.12);
+  color: var(--ui-text);
+  font-size: var(--ui-small);
+  text-align: start;
+}
+.settings-reload[hidden] {
+  display: none;
+}

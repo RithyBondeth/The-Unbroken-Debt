@@ -5,6 +5,7 @@ import { seededRandom } from "@/audio/synth";
 import type { PlantSite, TreeVoice } from "@/render/plantHeights";
 import { FRONT_SPEED, GUST_RISE, type Gust, type WindState } from "@/render/wind";
 import type { Sting } from "@/audio/sounds/dreadSounds";
+import { ep2AudioUrls } from "./VillageAudio";
 import {
   GUST_SECONDS,
   bambooKnock,
@@ -130,31 +131,34 @@ export class WindAudio {
     const audio = this.game.audio;
     if (!audio) return;
     const rate = audio.context.sampleRate;
-    const bed = async (name: string, samples: Float32Array[]) => {
-      const sound = await audio.sound(name, audio.buffer(samples, rate), "ambience", 0);
+    const loadBed = async (name: string, clip: string, fallback: () => Float32Array[]) => {
+      const rec = await audio.load(ep2AudioUrls(clip));
+      const sound = await audio.sound(name, rec ?? audio.buffer(fallback(), rate), "ambience", 0);
       sound.loop = true;
       sound.play();
       return sound;
     };
-    this.roar = await bed("wind_roar", [
+    this.roar = await loadBed("wind_roar", "amb_ep2_wind_canopy", () => [
       windRoar(rate, seededRandom(7401)),
       windRoar(rate, seededRandom(7402)),
     ]);
-    this.hiss = await bed("wind_leaves", [
+    this.hiss = await loadBed("wind_leaves", "amb_ep2_wind_leaves", () => [
       leafHiss(rate, seededRandom(7403)),
       leafHiss(rate, seededRandom(7404)),
     ]);
-    for (let k = 0; k < 2; k++)
+    for (let k = 0; k < 2; k++) {
+      const recGust = await audio.load(ep2AudioUrls(`sfx_ep2_gust_${k + 1}`));
       this.gusts.push({
         sound: await audio.spatialSound(
           `wind_gust_${k}`,
-          audio.buffer(gustSwell(rate, seededRandom(7405 + k)), rate),
+          recGust ?? audio.buffer(gustSwell(rate, seededRandom(7405 + k)), rate),
           "ambience",
           Vector3.Zero(),
           { minDistance: 14, maxDistance: 120 },
         ),
         gust: null,
       });
+    }
     if (this.options.vehicle)
       this.buffet = await audio.sound(
         "wind_buffet",
@@ -162,26 +166,28 @@ export class WindAudio {
         "sfx",
         0,
       );
-    const kinds: [TreeSound, (rate: number, random: () => number) => Float32Array][] = [
-      ["rustle", crownRustle],
-      ["bamboo", bambooKnock],
-      ["fronds", frondClatter],
-      ["groan", trunkGroan],
+    const kinds: [TreeSound, string[], (rate: number, random: () => number) => Float32Array][] = [
+      ["rustle", ["sfx_ep2_gust_3", "sfx_ep2_gust_4"], crownRustle],
+      ["bamboo", ["sfx_ep2_creak_bamboo_1", "sfx_ep2_creak_bamboo_2"], bambooKnock],
+      ["fronds", ["sfx_ep2_gust_5", "sfx_ep2_gust_2"], frondClatter],
+      ["groan", ["sfx_ep2_creak_tree_1", "sfx_ep2_creak_tree_2"], trunkGroan],
     ];
     if (this.options.sites?.length)
-      for (const [kind, make] of kinds)
-        for (let k = 0; k < 2; k++)
+      for (const [kind, clips, make] of kinds)
+        for (let k = 0; k < 2; k++) {
+          const recTree = await audio.load(ep2AudioUrls(clips[k % clips.length]));
           this.voices.push({
             kind,
             busyUntil: 0,
             sound: await audio.spatialSound(
               `wind_${kind}_${k}`,
-              audio.buffer(make(rate, seededRandom(7420 + this.voices.length)), rate),
+              recTree ?? audio.buffer(make(rate, seededRandom(7420 + this.voices.length)), rate),
               "ambience",
               Vector3.Zero(),
-              { minDistance: 4, maxDistance: 40 },
+              { minDistance: 5, maxDistance: 40 },
             ),
           });
+        }
     // The swell's height lands as the front's height reaches the listener.
     this.wind.onGust = (gust, arrivesIn) =>
       this.pending.push({ gust, at: this.wind.time + arrivesIn - GUST_RISE * GUST_SECONDS });

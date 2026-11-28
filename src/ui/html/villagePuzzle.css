@@ -1,0 +1,444 @@
+.vp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ui-z-dialog, 40);
+  display: grid;
+  place-items: center;
+  padding: var(--ui-safe-edge, 16px);
+  background: radial-gradient(circle at 50% 45%, rgba(18, 14, 11, 0.72), rgba(7, 6, 5, 0.88));
+  backdrop-filter: blur(4px);
+  font-family: var(--ui-font-body);
+  color: var(--ui-text);
+}
+
+.vp-overlay[hidden] {
+  display: none;
+}
+
+.vp-panel {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px 26px;
+  background: linear-gradient(180deg, #1d1914 0%, #13100d 100%);
+  border: 1px solid rgba(208, 174, 114, 0.28);
+  border-radius: 4px;
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.82),
+    inset 0 1px 0 rgba(236, 207, 152, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vp-eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #c9925a;
+}
+
+.vp-title {
+  margin: 0;
+  font-family: var(--ui-font-display);
+  font-size: 1.48rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #f3e6cc;
+}
+
+.vp-copy {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: #c8bfb0;
+}
+
+.vp-inscription {
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(9, 8, 7, 0.55);
+  border-left: 3px solid #b57b42;
+  font-style: italic;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: #ddd0b7;
+}
+
+/* Clue strip for roadside lock */
+.vp-clue-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.vp-clue-chip {
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(212, 182, 130, 0.16);
+  background: rgba(10, 9, 8, 0.52);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.vp-clue-found {
+  border-color: rgba(201, 146, 90, 0.45);
+  background: rgba(74, 46, 24, 0.24);
+}
+
+.vp-clue-shop {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d6a46c;
+}
+
+.vp-clue-missing .vp-clue-shop {
+  color: #7e7568;
+}
+
+.vp-clue-note {
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: #e4d8c1;
+}
+
+.vp-clue-missing .vp-clue-note {
+  color: #756c60;
+  font-style: italic;
+}
+
+/* Sculpted mechanical brass padlock visual */
+.vp-padlock-shackle {
+  width: 112px;
+  height: 40px;
+  margin: 4px auto -16px;
+  border: 10px solid #59554e;
+  border-bottom: none;
+  border-radius: 56px 56px 0 0;
+  box-shadow:
+    inset 0 3px 6px rgba(255, 245, 224, 0.2),
+    0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+.vp-padlock-body {
+  padding: 14px;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #332718 0%, #221910 55%, #17110b 100%);
+  border: 1px solid rgba(209, 169, 98, 0.42);
+  box-shadow:
+    inset 0 2px 10px rgba(255, 228, 175, 0.12),
+    inset 0 -6px 16px rgba(0, 0, 0, 0.65),
+    0 12px 28px rgba(0, 0, 0, 0.6);
+}
+
+.vp-shake {
+  animation: vp-padlock-shake 0.32s ease;
+}
+
+@keyframes vp-padlock-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  45% {
+    transform: translateX(6px);
+  }
+  70% {
+    transform: translateX(-4px);
+  }
+}
+
+.vp-dials {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.vp-dials-clock {
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.vp-colon {
+  font-family: var(--ui-font-display);
+  font-size: 2rem;
+  color: #d49658;
+  text-align: center;
+}
+
+.vp-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  background: rgba(11, 9, 8, 0.72);
+  border: 1px solid rgba(224, 207, 169, 0.18);
+  border-radius: 4px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.vp-dial-active {
+  border-color: rgba(217, 159, 92, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(217, 159, 92, 0.35),
+    0 0 18px rgba(196, 134, 68, 0.18);
+}
+
+.vp-dial-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #a69986;
+}
+
+.vp-drum {
+  width: 66px;
+  padding: 4px 0;
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    #251b10 0%,
+    #7f6033 26%,
+    #b78f4c 50%,
+    #77592e 74%,
+    #22180e 100%
+  );
+  border: 1px solid rgba(242, 211, 146, 0.38);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+}
+
+.vp-drum-ghost {
+  font-family: var(--ui-font-display);
+  font-size: 0.85rem;
+  color: rgba(26, 17, 8, 0.5);
+  line-height: 1;
+}
+
+.vp-drum-current {
+  font-family: var(--ui-font-display);
+  font-size: 1.95rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #1c1208;
+  text-shadow: 0 1px 0 rgba(255, 232, 180, 0.45);
+}
+
+.vp-dial-value {
+  font-family: var(--ui-font-display);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: #efe2c6;
+  text-shadow: 0 0 18px rgba(201, 136, 91, 0.25);
+}
+
+.vp-step-row {
+  display: flex;
+  gap: 5px;
+}
+
+.vp-step {
+  min-width: 38px;
+  min-height: 36px;
+  padding: 0 8px;
+  background: rgba(255, 245, 224, 0.06);
+  border: 1px solid rgba(224, 207, 169, 0.24);
+  border-radius: 3px;
+  color: #f0e4cc;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.vp-step:hover,
+.vp-step:focus-visible {
+  background: #2f281f;
+  border-color: #d49658;
+}
+
+.vp-kbd-hint {
+  margin: -4px 0 0;
+  font-size: 0.74rem;
+  color: #847a6d;
+  text-align: center;
+}
+
+/* Ward station ritual cards */
+.vp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vp-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.vp-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 82px;
+  padding: 10px 11px;
+  text-align: left;
+  background: rgba(11, 10, 9, 0.62);
+  border: 1px solid rgba(224, 207, 169, 0.2);
+  border-radius: 4px;
+  color: var(--ui-text);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.vp-choice-card:hover:not(:disabled) {
+  border-color: rgba(212, 150, 88, 0.55);
+  background: rgba(40, 32, 24, 0.7);
+}
+
+.vp-choice-card[aria-pressed="true"] {
+  background: rgba(146, 62, 34, 0.28);
+  border-color: #d99556;
+  box-shadow: inset 0 0 16px rgba(201, 118, 56, 0.18);
+}
+
+.vp-choice-card:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
+.vp-choice-icon,
+.vp-choice-sticks {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #dfa05e;
+  letter-spacing: 0.08em;
+}
+
+.vp-choice-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #f3e6ce;
+}
+
+.vp-choice-sub {
+  font-size: 0.74rem;
+  line-height: 1.3;
+  color: #9e9384;
+}
+
+/* Interactive analog hall clock modal */
+.vp-clock-stage {
+  display: flex;
+  justify-content: center;
+  margin: 2px 0;
+}
+
+.vp-clock-svg {
+  width: 168px;
+  height: 168px;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.72));
+}
+
+.vp-clock-period {
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #d39b5e;
+  margin-top: -6px;
+}
+
+.vp-clock-clues {
+  margin: 0;
+  padding: 10px 14px 10px 26px;
+  background: rgba(10, 9, 8, 0.52);
+  border: 1px solid rgba(212, 182, 130, 0.15);
+  border-radius: 3px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: #cbbda6;
+}
+
+.vp-status {
+  min-height: 1.3em;
+  margin: 0;
+  font-size: 0.88rem;
+  color: #e09658;
+}
+
+.vp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* Non-blocking brick well rope-tug tension HUD */
+.vp-tension {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(400px, calc(100vw - 32px));
+  padding: 10px 14px;
+  background: rgba(14, 11, 9, 0.86);
+  border: 1px solid rgba(208, 152, 88, 0.48);
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+}
+
+.vp-tension-danger {
+  border-color: rgba(208, 66, 46, 0.88);
+  background: rgba(34, 11, 9, 0.9);
+}
+
+.vp-tension-label {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: #f0dec0;
+}
+
+.vp-tension-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 240, 215, 0.12);
+  overflow: hidden;
+}
+
+.vp-tension-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #b86f34, #e7b56b);
+  transition: width 0.08s linear;
+}
+
+.vp-tension-danger .vp-tension-fill {
+  background: linear-gradient(90deg, #8e2018, #d94c38);
+}
+
+@media (max-width: 520px) {
+  .vp-clue-strip,
+  .vp-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}

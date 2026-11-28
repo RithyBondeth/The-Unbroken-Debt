@@ -39,7 +39,17 @@ const after = (seconds: number) =>
  * Control hints with shared type and keycaps that fade: shown the first time an action
  * is needed, never again once the player has done it (Controls and Interface, 6.3).
  */
+/** Hints that name the mouse or W A S D, as they read with the touch controls. */
+const TOUCH_HINTS: Partial<Record<StringKey, StringKey>> = {
+  "hint.look": "touch.hint.look",
+  "hint.move": "touch.hint.move",
+  "hint.refill": "touch.hint.refill",
+  "hint.raise": "touch.hint.raise",
+};
+
 export class Hints {
+  /** Playing with the touch controls: hints about the mouse and keys read for touch. */
+  touch = false;
   private readonly node = element("div", "story-hint");
   private readonly performedKeys = new Set<string>();
   private current: StringKey | null = null;
@@ -48,7 +58,7 @@ export class Hints {
   show(key: StringKey, seconds = 7): void {
     if (this.performedKeys.has(key)) return;
     this.current = key;
-    setControlText(this.node, t(key));
+    setControlText(this.node, t((this.touch && TOUCH_HINTS[key]) || key));
     this.node.classList.add("shown");
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.hide(), seconds * 1000);
@@ -220,6 +230,23 @@ export class ScreenFade {
 
   hideCard(): void {
     this.card.classList.remove("shown");
+  }
+
+  /** Shows or clears a quiet loading notice on the black fade so boot never looks frozen. */
+  setLoading(message: string | null): void {
+    if (!message) {
+      this.card.classList.remove("shown");
+      this.card.replaceChildren();
+      return;
+    }
+    this.node.style.transitionDuration = "0s";
+    this.node.style.opacity = "1";
+    this.card.classList.remove("story-entry");
+    this.card.replaceChildren();
+    const p = document.createElement("p");
+    p.textContent = message;
+    this.card.appendChild(p);
+    this.card.classList.add("shown");
   }
 
   /** Keep audio unlock and pointer capture in the player's activation gesture. */

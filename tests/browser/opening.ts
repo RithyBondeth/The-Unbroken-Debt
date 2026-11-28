@@ -16,7 +16,8 @@ const button = (label: string, action: () => void) => {
   const b = document.createElement("button");
   b.textContent = label;
   b.onclick = action;
-  b.style.cssText = "padding:8px 12px;background:#d8ceb3;color:#211d17;cursor:pointer";
+  b.style.cssText =
+    "padding:4px 8px;font-size:11px;background:#d8ceb3;color:#211d17;cursor:pointer";
   nav.append(b);
 };
 async function boot() {
@@ -48,7 +49,7 @@ async function boot() {
         Object.assign(data.flags, {
           "ep1.checkpoint": "CP1",
           "ep1.travel.complete": true,
-          "ep1.early.required": true,
+          "ep1.village.puzzlesActive": true,
           "ep1.arrival.road": true,
           "checkpoint.location": "Village · Flooded road",
         });
@@ -75,7 +76,7 @@ async function boot() {
     if (params.has("review"))
       game.scene.onBeforeRenderObservable.add(() => {
         if (inspectionTime !== null) taxi.elapsed = inspectionTime;
-        if (taxi.elapsed > 56) taxi.elapsed = 8;
+        else if (taxi.elapsed > 56) taxi.elapsed = 8;
       });
     for (const [name, yaw, pitch] of [
       ["Road", 0, 0.025],
@@ -93,15 +94,93 @@ async function boot() {
         game.player.yaw = yaw;
         game.player.pitch = pitch;
       });
-    if (params.has("review"))
+    if (params.has("review")) {
+      button("Noodle & barber", () => {
+        view = "shop-noodle-barber";
+        inspectionTime = 1.1;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Shop & posters", () => {
+        view = "shop-posters";
+        inspectionTime = 2.6;
+        game.player.yaw = 0.12;
+        game.player.pitch = 0.015;
+      });
+      button("Dentist & TV shops", () => {
+        view = "shops-dentist-tv";
+        inspectionTime = 6.2;
+        game.player.yaw = 0.04;
+        game.player.pitch = 0.015;
+      });
+      button("Moto & grocery", () => {
+        view = "shops-mid";
+        inspectionTime = 11.2;
+        game.player.yaw = -0.06;
+        game.player.pitch = 0.015;
+      });
+      button("Rice & palms", () => {
+        view = "rice-palms";
+        inspectionTime = 5.4;
+        game.player.yaw = 0.56;
+        game.player.pitch = 0.03;
+      });
+      button("Jungle & bananas", () => {
+        view = "jungle-bananas";
+        inspectionTime = 28.5;
+        game.player.yaw = 0.02;
+        game.player.pitch = 0.02;
+      });
+      button("Verge ghost", () => {
+        view = "verge-ghost";
+        inspectionTime = 22.25;
+        game.player.yaw = 0.14;
+        game.player.pitch = 0.02;
+      });
       button("Lightning detail", () => {
         view = "lightning";
         inspectionTime = 37.8;
         game.player.yaw = -0.12;
         game.player.pitch = 0.025;
       });
+      button("Mirror ghost", () => {
+        view = "mirror-ghost";
+        inspectionTime = 52.22;
+        game.player.yaw = -0.44;
+        game.player.pitch = -0.08;
+      });
+      button("Rear seat ghost", () => {
+        view = "rear-ghost";
+        inspectionTime = 52.24;
+        game.player.yaw = -2.88;
+        game.player.pitch = 0.04;
+      });
+      button("Window ghost", () => {
+        view = "window-ghost";
+        inspectionTime = 60.56;
+        game.player.yaw = 1.42;
+        game.player.pitch = 0.0;
+      });
+      button("Bonnet ghost", () => {
+        view = "bonnet-ghost";
+        inspectionTime = 65.56;
+        game.player.yaw = -0.05;
+        game.player.pitch = 0.02;
+      });
+    }
     const captureStatus = document.createElement("output");
     captureStatus.setAttribute("aria-live", "polite");
+    captureStatus.style.cssText =
+      "padding:4px 8px;background:rgba(16,14,12,0.88);color:#eee5d1;border-radius:3px;font-size:11px";
+    nav.style.maxWidth = "calc(100vw - 340px)";
+    nav.style.gap = "4px";
+    output.style.top = "224px";
+    output.style.bottom = "auto";
+    output.style.left = "auto";
+    output.style.right = "8px";
+    output.style.maxWidth = "220px";
+    output.style.fontSize = "9px";
+    output.style.lineHeight = "1.25";
     nav.append(captureStatus);
     button("Save screenshot", () => {
       engine.setSize(1600, 1000);
@@ -114,11 +193,18 @@ async function boot() {
         })
         .finally(() => engine.resize());
     });
-    button("Hide review overlays", () => {
-      nav.style.display = "none";
-      output.hidden = true;
+    const setDebugUiVisible = (visible: boolean) => {
+      nav.style.display = visible ? "flex" : "none";
+      output.hidden = !visible;
       const perf = document.querySelector<HTMLElement>(".perf-overlay");
-      if (perf) perf.style.display = "none";
+      if (perf) perf.style.display = visible ? "" : "none";
+    };
+    button("Hide review overlays", () => setDebugUiVisible(false));
+    // Clean fullscreen playtest when opened without ?review or ?qa (F9 toggles QA HUD anytime).
+    const showQa = params.has("review") || params.has("qa");
+    setDebugUiVisible(showQa);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "F9" && !e.repeat) setDebugUiVisible(Boolean(output.hidden));
     });
   }
   button("Notebook Q", () => window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" })));
@@ -140,14 +226,11 @@ async function boot() {
       game.player.teleport(new Vector3(0, 0, 17), Math.PI);
       game.player.pitch = 0.02;
     });
-    button("Trigger a real catch", () => {
-      game.inventory.add("matches", 2);
-      game.flags.set("qa.afterCheckpoint", true);
-      game.player.teleport(
-        act.early.brain.position.add(act.early.brain.direction.scale(0.6)),
-        Math.PI,
-      );
-      game.gated.holdStill = true;
+    button("Trigger Preay ambush", () => {
+      act.horror.triggerProvokedPreay(game.player.feet.add(new Vector3(0, 0, -4)));
+    });
+    button("Summon Rice-Field Krasue", () => {
+      act.krasue.summon(0);
     });
     button("Reach safe courtyard", () => {
       game.notebook.close();
@@ -166,7 +249,7 @@ async function boot() {
     const feet = game.player.feet,
       last = game.checkpoints.last;
     const road = taxi ? game.scene.meshes.find((m) => m.material?.name === "M_wet_mud") : null;
-    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Passage required=${act.early.required} active=${act.early.active} brain=${act.early.brain.state} at=${act.early.brain.position.toString()} time=${act.early.brain.elapsed.toFixed(1)} threat=${game.threatActive} sight=${act.early.canSeeSora()} suspicion=${act.early.brain.suspicion.toFixed(2)} · passage survived=${game.flags.get("ep1.early.complete", false)}` : ""}`;
+    output.textContent = `Isolated QA database; ${game.resumedSave?.checkpoint} · ${game.flags.get("ep1.travel.pending", false) ? "TAXI" : game.flags.get("ep1.checkpoint", "CP0")}\nCheckpoint: ${last?.flags["checkpoint.location"] ?? last?.checkpoint} · matches ${game.inventory.count("matches")} · post-checkpoint flag ${game.flags.get("qa.afterCheckpoint", false)}\nFeet ${feet.x.toFixed(1)},${feet.y.toFixed(1)},${feet.z.toFixed(1)} · target ${game.interaction.focus ?? "none"}\n${act ? `Horror active=${act.horror.active} chill=${act.horror.preayChill.toFixed(2)} krasue=${act.krasue.brain.state} clock=${act.clock.state.displayTime} gateOpen=${game.flags.get("ep1.puzzle.gate.open", false)} clockSolved=${game.flags.get("ep1.puzzle.clock.solved", false)}` : ""}`;
     const spoken = document.querySelector(".story-subtitles:not([hidden])")?.textContent?.trim();
     if (taxi && spoken && !conversationTrace.some((line) => line.endsWith(spoken))) {
       conversationTrace.push(`${taxi.elapsed.toFixed(1)}s ${spoken}`);

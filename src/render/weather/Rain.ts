@@ -1,4 +1,5 @@
 import type { Scene } from "@babylonjs/core/scene";
+import type { Observer } from "@babylonjs/core/Misc/observable";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
@@ -198,8 +199,20 @@ export class Rain {
  * Falling rain as stretched streaks (S7 look): place the emitter box, and call
  * `light` with the lightning level so the rain flashes white with the sky.
  */
+/** A roof the rain doesn't come through: the ground it covers and its top (world). */
+export interface Shelter {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  top: number;
+}
+
 export class RainStreaks {
   readonly system: ParticleSystem;
+  /** Drops that reach under one of these end there (`shelter`). */
+  private shelters: readonly Shelter[] = [];
+  private readonly sheltering: Observer<Scene> | null = null;
 
   constructor(scene: Scene, capacity: number, perSecond: number) {
     const streak = new DynamicTexture("T_rain_streak", { width: 8, height: 64 }, scene, false);
@@ -234,6 +247,24 @@ export class RainStreaks {
     ps.preWarmCycles = 60;
     ps.start();
     this.system = ps;
+    this.sheltering = scene.onBeforeRenderObservable.add(() => this.endUnderRoofs());
+  }
+
+  /** The roofs the rain stops at (it would fall through them into the rooms below). */
+  shelter(shelters: readonly Shelter[]): void {
+    this.shelters = shelters;
+  }
+
+  private endUnderRoofs(): void {
+    if (!this.shelters.length) return;
+    for (const p of this.system.particles) {
+      const at = p.position;
+      for (const s of this.shelters)
+        if (at.y < s.top && at.x > s.minX && at.x < s.maxX && at.z > s.minZ && at.z < s.maxZ) {
+          p.age = p.lifeTime;
+          break;
+        }
+    }
   }
 
   /**
@@ -258,6 +289,7 @@ export class RainStreaks {
   }
 
   dispose(): void {
+    this.sheltering?.remove();
     this.system.dispose();
   }
 }

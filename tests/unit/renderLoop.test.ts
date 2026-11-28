@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FrameFailures, MAX_LOGGED_ERRORS } from "@/render/renderLoop";
+import {
+  FrameFailures,
+  FramePacer,
+  MAX_LOGGED_ERRORS,
+  refreshesPerFrame,
+} from "@/render/renderLoop";
 
 const FRAME = 1000 / 60;
 
@@ -89,5 +94,89 @@ describe("FrameFailures", () => {
     // Ten seconds without frames, then one more failure: still a short streak.
     expect(f.failed(new Error("x"), 10_000).stalled).toBe(false);
     expect(f.rendered(10_000 + FRAME)?.ms).toBeLessThan(500);
+  });
+});
+
+describe("refreshesPerFrame", () => {
+  it("renders every refresh up to about 75 Hz and every second refresh on 120-165 Hz panels", () => {
+    expect(refreshesPerFrame(1000 / 60)).toBe(1);
+    expect(refreshesPerFrame(1000 / 75)).toBe(1);
+    expect(refreshesPerFrame(1000 / 90)).toBe(1);
+    expect(refreshesPerFrame(1000 / 120)).toBe(2);
+    expect(refreshesPerFrame(1000 / 144)).toBe(2);
+    expect(refreshesPerFrame(1000 / 165)).toBe(2);
+    expect(refreshesPerFrame(1000 / 240)).toBe(4);
+  });
+
+  it("falls back to every refresh when the interval is unknown", () => {
+    expect(refreshesPerFrame(0)).toBe(1);
+    expect(refreshesPerFrame(Number.NaN)).toBe(1);
+  });
+});
+
+describe("FramePacer", () => {
+  /**
+   * Drives the pacer with display refreshes at `times` (ms); returns when frames
+   * rendered. With `slowAfter`, a frame rendered past that time overruns the next
+   * refresh, which then brings no callback (as in a browser).
+   */
+  function drive(targetFps: number, times: number[], slowAfter = Infinity): number[] {
+    const queue: FrameRequestCallback[] = [];
+    const g = globalThis as unknown as { window?: unknown };
+    const previous = g.window;
+    g.window = {
+      requestAnimationFrame: (cb: FrameRequestCallback) => queue.push(cb),
+      cancelAnimationFrame: () => undefined,
+    };
+    try {
+      const pacer = new FramePacer(targetFps);
+      const rendered: number[] = [];
+      const render = (now: number) => {
+        rendered.push(now);
+        pacer.requestAnimationFrame(render);
+      };
+      pacer.requestAnimationFrame(render);
+      let overran = false;
+      for (const t of times) {
+        if (overran) {
+          overran = false;
+          continue;
+        }
+        const before = rendered.length;
+        queue.shift()?.(t);
+        overran = rendered.length > before && t > slowAfter;
+      }
+      return rendered;
+    } finally {
+      g.window = previous;
+    }
+  }
+
+  const refreshes = (hz: number, count: number) =>
+    Array.from({ length: count }, (_, i) => (i * 1000) / hz);
+
+  it("renders every refresh while it measures, then holds the cap", () => {
+    const rendered = drive(30, refreshes(60, 181));
+    const after = rendered.filter((t) => t > 1100);
+    const gaps = after.slice(1).map((t, i) => t - after[i]);
+    expect(Math.min(...gaps)).toBeCloseTo(1000 / 30, 6);
+    expect(Math.max(...gaps)).toBeCloseTo(1000 / 30, 6);
+  });
+
+  it("keeps 30 fps when each frame overruns a refresh (no callback for the missed one)", () => {
+    const rendered = drive(30, refreshes(60, 400), 1100).filter((t) => t > 1300);
+    const span = rendered[rendered.length - 1] - rendered[0];
+    const fps = ((rendered.length - 1) * 1000) / span;
+    expect(fps).toBeGreaterThan(28);
+  });
+
+  it("renders every refresh with no cap", () => {
+    expect(drive(0, refreshes(120, 300)).length).toBe(300);
+  });
+
+  it("paces a 120 Hz display at 60 fps", () => {
+    const rendered = drive(60, refreshes(120, 300)).filter((t) => t > 1000);
+    const gaps = rendered.slice(1).map((t, i) => t - rendered[i]);
+    expect(Math.min(...gaps)).toBeCloseTo(1000 / 60, 6);
   });
 });

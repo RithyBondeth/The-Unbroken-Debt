@@ -7,7 +7,13 @@ import type { Material } from "@babylonjs/core/Materials/material";
 import { seededRandom } from "@/audio/synth";
 import { buildFarTreeCards, CARD_VARIANT, type FarTreeCard } from "@/render/farTreeCards";
 import type { WindState } from "@/render/wind";
-import { taxiRoadPoint, taxiRoadX } from "./taxiMotion";
+import {
+  TAXI_FOREST_START,
+  TAXI_GROUND_DROP,
+  TAXI_PADDY_END,
+  taxiRoadPoint,
+  taxiRoadX,
+} from "./taxiMotion";
 
 /** The authored route, with a little either end for what is seen beyond it. */
 const ROUTE = { from: -70, to: 610 };
@@ -19,7 +25,9 @@ const BELT = { near: 33, far: 125 };
 /** Metres of route merged into one batch of cards, as the authored roadside's chunks. */
 const CHUNK = 40;
 /** The road's own ground runs out at 70 m; the floor carries on under the far cards. */
-const FLOOR = { near: 64, far: 132, y: -0.32 };
+const FLOOR = { near: 64, far: 132, y: -0.32 + TAXI_GROUND_DROP };
+/** Across the paddies only the far tree line stands, at the fields' edge in the haze. */
+const TREE_LINE = { near: 118, far: 138 };
 
 /**
  * The far forest as Episode 2 lays it: crossed painted cards in a belt, densest
@@ -38,8 +46,12 @@ export function layoutTaxiFarForest(seed = 6242311): FarTreeCard[] {
       const side = random() < 0.5 ? -1 : 1;
       // Biased towards the near edge of the belt; emergents spread evenly.
       const t = tall ? 0.05 + random() * 0.95 : random() ** 1.45;
-      const lateral = side * (BELT.near + depth * t),
-        along = ROUTE.from + random() * length;
+      const along = ROUTE.from + random() * length,
+        open = along < TAXI_PADDY_END + 4;
+      // Out over the paddies the belt is pushed back to the tree line at the fields' far edge.
+      const lateral = open
+        ? side * (TREE_LINE.near + (TREE_LINE.far - TREE_LINE.near) * t)
+        : side * (BELT.near + depth * t);
       const at = taxiRoadPoint(lateral, along);
       const height = tall ? 30 + random() * 10 : 17 + random() * 13 + t * 6;
       const roll = random();
@@ -54,7 +66,7 @@ export function layoutTaxiFarForest(seed = 6242311): FarTreeCard[] {
               : CARD_VARIANT.broadleaf[Math.floor(random() * 3)];
       trees.push({
         x: at.x,
-        y: -0.35,
+        y: (open ? -0.88 : -0.35) + TAXI_GROUND_DROP,
         z: at.z,
         yaw: random() * Math.PI,
         width: height * (tall ? 0.6 + random() * 0.25 : 0.75 + random() * 0.3),
@@ -84,7 +96,7 @@ export function buildTaxiFarForest(
   const meshes = buildFarTreeCards(scene, "taxi_far_forest", layoutTaxiFarForest(), wind, route);
   if (!ground) return meshes;
   for (const side of [-1, 1])
-    for (let from = ROUTE.from; from < ROUTE.to; from += CHUNK) {
+    for (let from = TAXI_FOREST_START - 10; from < ROUTE.to; from += CHUNK) {
       const positions: number[] = [],
         normals: number[] = [],
         uvs: number[] = [],
@@ -134,9 +146,10 @@ export function thickenTaxiUnderstorey(landscape: readonly Mesh[]): AbstractMesh
   for (const mesh of landscape) {
     if (!UNDERSTOREY.test(mesh.material?.name ?? "")) continue;
     const z = mesh.getBoundingInfo().boundingBox.centerWorld.z;
-    for (const shift of [9.5, -13]) {
+    for (const shift of [9.5]) {
       const to = z + shift;
-      if (to < 0 || to > 540) continue;
+      // Never out past the forest's edge onto the paddies.
+      if (to < TAXI_FOREST_START + 4 || to > 540) continue;
       const copy = mesh.clone(`${mesh.name}_again_${shift}`, mesh.parent);
       copy.position.x += taxiRoadX(to) - taxiRoadX(z);
       copy.position.z += shift;

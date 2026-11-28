@@ -1,191 +1,113 @@
 import { describe, expect, it } from "vitest";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import {
-  KRASUE_ARRIVAL,
-  KRASUE_DELAYS,
-  KRASUE_REST,
+  KRASUE_FIRST_WAIT,
+  KRASUE_PASS_RANGE,
   KrasueBrain,
 } from "@/episodes/ep1/entities/KrasueBrain";
-import { inKrasueKitchen, KRASUE_WINDOWS, throughKrasueWindow } from "@/episodes/ep1/data/krasue";
+import { KRASUE_PADDY_PATHS, exposedToPaddies } from "@/episodes/ep1/data/krasue";
 import { krasueLament, krasueShriek, krasueSting } from "@/audio/sounds/krasueSounds";
 import { rms, seededRandom } from "@/audio/synth";
 
-const eye = new Vector3(4.8, 4.08, -13);
-function tick(brain: KrasueBrain, seconds: number, seen = true, lamp = false, lurk = seen): void {
-  for (let i = 0; i < Math.ceil(seconds * 60); i++) brain.update(1 / 60, eye, seen, lamp, lurk);
+function tick(
+  brain: KrasueBrain,
+  seconds: number,
+  eye: Vector3,
+  looking = false,
+  lampOpen = false,
+  exposed = true,
+): void {
+  for (let i = 0; i < Math.ceil(seconds * 60); i++) {
+    brain.update(1 / 60, eye, looking, lampOpen, exposed);
+  }
 }
 
-describe("Krasue window sight", () => {
-  for (const w of KRASUE_WINDOWS) {
-    it(`uses the actual ${w.id} opening, blocking boards, sill and lintel`, () => {
-      const outside = w.center.add(w.normal.scale(2.5));
-      const inside = w.center.subtract(w.normal.scale(1.3));
-      expect(throughKrasueWindow(outside, inside, w)).toBe(true);
-      expect(throughKrasueWindow(outside, inside.add(w.tangent.scale(2)), w)).toBe(false);
-      expect(throughKrasueWindow(outside, inside.add(new Vector3(0, 1, 0)), w)).toBe(false);
-      expect(throughKrasueWindow(outside, inside.subtract(new Vector3(0, 1.2, 0)), w)).toBe(false);
-      expect(throughKrasueWindow(outside, outside.add(w.normal), w)).toBe(false);
-    });
-  }
-  it("keeps downstairs, adjacent rooms and the veranda outside the ambush", () => {
-    expect(inKrasueKitchen(eye)).toBe(true);
-    for (const p of [
-      new Vector3(4.8, 1.58, -13),
-      new Vector3(2.8, 4.08, -13),
-      new Vector3(4.8, 4.08, -15),
-      new Vector3(4.8, 4.08, -11),
-    ])
-      expect(inKrasueKitchen(p)).toBe(false);
+describe("Krasue rice-field exposure", () => {
+  it("treats the road, paddies, and open yard as exposed while sheltering indoors", () => {
+    expect(exposedToPaddies({ x: 0, y: 0, z: 32 })).toBe(true);
+    expect(exposedToPaddies({ x: 18, y: 0, z: 22 })).toBe(true);
+    expect(exposedToPaddies({ x: 0, y: 2.5, z: -15 })).toBe(false);
+    expect(exposedToPaddies({ x: 24, y: 0, z: -18 })).toBe(false);
+    expect(exposedToPaddies({ x: -24, y: 0, z: -22 })).toBe(false);
   });
 });
 
-/** Sora stands at the window long enough for it to come, and it arrives. */
-function arrive(brain: KrasueBrain, seen = false): void {
-  for (let i = 0; i < 60 * 30 && brain.state !== "patrol"; i++)
-    brain.update(1 / 60, eye, seen && brain.state === "arriving", false, true);
-  expect(brain.state).toBe("patrol");
-}
+describe("Rice-Field Krasue brain", () => {
+  it("stays dormant until the sighting wait expires, then drifts over the rice paddies", () => {
+    const brain = new KrasueBrain();
+    const roadEye = new Vector3(0, 1.58, 32);
+    expect(brain.state).toBe("dormant");
+    expect(brain.hidden).toBe(true);
 
-describe("Krasue obstacle", () => {
-  it("waits far out over the fields, hidden, until Sora lingers at a window", () => {
-    for (const window of KRASUE_WINDOWS) {
-      const b = new KrasueBrain();
-      b.selectWindow(window);
-      tick(b, 30, true, false, false);
-      expect(b.state).toBe("away");
-      expect(b.hidden).toBe(true);
-      expect(Vector3.Distance(b.position, window.center)).toBeGreaterThan(30);
-      // A glance is not enough; standing there is.
-      tick(b, 1, false, false, true);
-      tick(b, 1, false, false, false);
-      expect(b.state).toBe("away");
-      tick(b, KRASUE_DELAYS[0] + 0.1, false, false, true);
-      expect(b.state).toBe("arriving");
-      expect(b.arrivals).toBe(1);
-      expect(b.hidden).toBe(false);
+    tick(brain, KRASUE_FIRST_WAIT - 1, roadEye, false, false, true);
+    expect(brain.state).toBe("dormant");
+
+    tick(brain, 2, roadEye, false, false, true);
+    expect(brain.state).toBe("drifting");
+    expect(brain.hidden).toBe(false);
+    expect(brain.sightings).toBe(1);
+    expect(brain.redness).toBeCloseTo(KRASUE_PADDY_PATHS[0].baseRedness, 1);
+  });
+
+  it("shifts emerald-green to blood-red when Sora holds an open lamp nearby, and calms when doused", () => {
+    const brain = new KrasueBrain();
+    brain.summon(0); // west_paddies_green (baseRedness 0)
+    // Stand near the first waypoint with an open lamp and watch it
+    const nearEye = brain.position.add(new Vector3(-12, -1, 0));
+    expect(brain.redness).toBeLessThan(0.1);
+
+    tick(brain, 2.2, nearEye, true, true, true);
+    expect(brain.state).toBe("alert");
+    expect(brain.alerts).toBe(1);
+    expect(brain.redness).toBeGreaterThan(0.6);
+
+    // Dousing the lamp and looking away calms it into retreating
+    tick(brain, 1.8, nearEye, false, false, true);
+    expect(brain.state).toBe("retreating");
+  });
+
+  it("approaches and makes a close pass if Sora keeps the lamp open after turning red", () => {
+    const brain = new KrasueBrain();
+    brain.summon(0);
+    // Stand ~18m away in the open fields so alert -> approaching -> pass steps are clearly observable
+    const nearEye = brain.position.add(new Vector3(0, -1, 18));
+
+    // Agitate to alert
+    tick(brain, 2.0, nearEye, true, true, true);
+    expect(brain.state).toBe("alert");
+
+    // Continue shining lamp past the 1.9s alert warning into approaching
+    tick(brain, 2.2, nearEye, true, true, true);
+    expect(brain.state).toBe("approaching");
+
+    for (let i = 0; i < 60 * 10 && brain.state === "approaching"; i++) {
+      brain.update(1 / 60, nearEye, true, true, true);
     }
+    expect(brain.passes).toBe(1);
+    expect(brain.state).toBe("pass");
+    expect(Vector3.Distance(brain.position, nearEye)).toBeLessThanOrEqual(KRASUE_PASS_RANGE + 0.5);
+
+    // After pass it retreats and eventually returns to dormant
+    tick(brain, 10, nearEye, false, false, true);
+    expect(brain.state).toBe("dormant");
   });
-  it("swoops in and brakes just outside the window, then hovers with a changing heading", () => {
-    for (const window of KRASUE_WINDOWS) {
-      const b = new KrasueBrain();
-      b.selectWindow(window);
-      tick(b, KRASUE_DELAYS[0] + 0.05, false, false, true);
-      const start = Vector3.Distance(b.position, window.center);
-      tick(b, KRASUE_ARRIVAL * 0.4, false, false, true);
-      // Most of the distance is covered at once: it is suddenly there.
-      expect(Vector3.Distance(b.position, window.center)).toBeLessThan(start * 0.3);
-      tick(b, KRASUE_ARRIVAL * 0.7, false, false, true);
-      expect(b.state).toBe("patrol");
-      const side: number[] = [],
-        depth: number[] = [],
-        height: number[] = [];
-      for (let i = 0; i < 260; i++) {
-        b.update(1 / 60, eye, false, false, true);
-        const offset = b.position.subtract(window.center);
-        side.push(Vector3.Dot(offset, window.tangent));
-        depth.push(Vector3.Dot(offset, window.normal));
-        height.push(offset.y);
-        expect(b.direction.length()).toBeCloseTo(1, 5);
-      }
-      const span = (a: number[]) => Math.max(...a) - Math.min(...a);
-      expect(span(side)).toBeGreaterThan(0.4);
-      expect(span(height)).toBeGreaterThan(0.1);
-      expect(Math.min(...depth)).toBeGreaterThan(1.9);
-    }
-  });
-  it("gives up when nobody is seen, flies away and rests before it can come again", () => {
-    const b = new KrasueBrain();
-    arrive(b);
-    tick(b, 4.6, false, false, true);
-    expect(b.state).toBe("cooldown");
-    tick(b, 5, false, false, true);
-    expect(b.state).toBe("away");
-    tick(b, KRASUE_REST - 1, false, false, true);
-    expect(b.state).toBe("away");
-    tick(b, 2 + KRASUE_DELAYS[1], false, false, true);
-    expect(b.arrivals).toBe(2);
-  });
-  it("hovers without seeing through walls and ignores a fleeting exposure", () => {
-    const b = new KrasueBrain();
-    arrive(b);
-    tick(b, 2, false, false, true);
-    expect(b.state).toBe("patrol");
-    expect(b.position.x).toBeGreaterThan(7.5);
-    tick(b, 0.15, true, false, true);
-    tick(b, 0.3, false, false, true);
-    expect(b.state).toBe("patrol");
-  });
-  it("warns, flies to the outside of the window, then kills an exposed player even if they turn away", () => {
-    const b = new KrasueBrain();
-    arrive(b);
-    tick(b, 0.35);
-    expect(b.state).toBe("watching");
-    tick(b, 0.4, true, false);
-    expect(b.state).toBe("charging");
-    for (let i = 0; i < 150 && b.state !== "caught"; i++) {
-      b.update(1 / 60, eye, true, false);
-      expect(b.position.x).toBeGreaterThanOrEqual(6.75);
-    }
-    expect(b.state).toBe("caught");
-  });
-  it("lets cover cancel suspicion and escape a charge, then rearms for later visits", () => {
-    const b = new KrasueBrain();
-    arrive(b);
-    tick(b, 0.4);
-    tick(b, 1, false);
-    expect(b.state).toBe("cooldown");
-    tick(b, 6, false);
-    expect(b.state).toBe("away");
-    arrive(b);
-    tick(b, 0.9);
-    expect(b.state).toBe("charging");
-    tick(b, 0.3, false);
-    expect(b.state).toBe("searching");
-    tick(b, 3, false);
-    expect(b.state).toBe("cooldown");
-    expect(b.active).toBe(false);
-    expect(b.position.x).toBeGreaterThan(6.4);
-  });
-  it("cannot skip its warning after a background stall and resets cleanly", () => {
-    const b = new KrasueBrain();
-    b.update(120, eye, true, true, true);
-    expect(b.state).toBe("away");
-    arrive(b);
-    tick(b, 1.4);
-    b.reset();
-    expect(b.state).toBe("away");
-    expect(b.hidden).toBe(true);
-    expect(b.suspicion).toBe(0);
-    expect(b.active).toBe(false);
-  });
-  it("confirms one sighting, then accelerates into its rush", () => {
-    const b = new KrasueBrain();
-    arrive(b);
-    tick(b, 0.3);
-    expect(b.state).toBe("watching");
-    expect(b.sightings).toBe(1);
-    tick(b, 0.4);
-    expect(b.state).toBe("charging");
-    const speed = b.speed;
-    tick(b, 0.2);
-    expect(b.speed).toBeGreaterThan(speed);
-    expect(b.sightings).toBe(1);
-    tick(b, 1);
-    expect(b.sightings).toBe(1);
-  });
-  it("only changes windows while away and reacts faster to an exposed lamp", () => {
-    const dark = new KrasueBrain(),
-      lit = new KrasueBrain();
-    lit.selectWindow(KRASUE_WINDOWS[1]);
-    expect(lit.position.z).toBeGreaterThan(10);
-    arrive(dark);
-    arrive(lit);
-    tick(dark, 0.6, true, false);
-    tick(lit, 0.6, true, true);
-    expect(dark.state).toBe("watching");
-    expect(lit.state).toBe("charging");
-    lit.selectWindow(KRASUE_WINDOWS[0]);
-    expect(lit.window.id).toBe("south");
+
+  it("breaks off an approach immediately when Sora steps under shelter and resets cleanly", () => {
+    const brain = new KrasueBrain();
+    brain.summon(1);
+    const nearEye = brain.position.add(new Vector3(0, -1, 18));
+    tick(brain, 4.1, nearEye, true, true, true);
+    expect(brain.state).toBe("approaching");
+
+    // Step indoors (playerExposed = false)
+    tick(brain, 0.2, nearEye, false, true, false);
+    expect(brain.state).toBe("retreating");
+
+    brain.reset();
+    expect(brain.state).toBe("dormant");
+    expect(brain.hidden).toBe(true);
+    expect(brain.agitation).toBe(0);
+    expect(brain.redness).toBe(0);
   });
 });
 

@@ -1,5 +1,6 @@
 import type { StaticSound } from "@babylonjs/core/AudioV2/abstractAudio/staticSound";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
+import { inHall } from "../data/funeral";
 import { Axis } from "@babylonjs/core/Maths/math.axis";
 import { Ray } from "@babylonjs/core/Culling/ray";
 import type { Game } from "@/core/Game";
@@ -13,6 +14,7 @@ import { JOURNAL_B, FAILING_LAMPS } from "../data/desk";
 import { drawerOpen, pickUp } from "../audio/prologueSounds";
 import { branchSnap, breathOut } from "@/audio/sounds/nightSounds";
 import { boardCreak, seededRandom } from "@/audio/synth";
+import { inFuneralRoom } from "../data/funeral";
 
 /** Altar key → locked desk → final instructions → ash / portrait → CP4. */
 export class DeskInvestigation {
@@ -82,7 +84,7 @@ export class DeskInvestigation {
       ["drawer", drawerOpen(rate, seededRandom(1041)), this.models.desk.position, 0.65],
       ["key", pickUp(rate, seededRandom(1042)), this.models.compartment.position, 0.55],
       ["portrait", breathOut(rate, seededRandom(1043)), this.models.portrait.position, 0.65],
-      ["snap", branchSnap(rate, seededRandom(1044)), new Vector3(0, 2.3, -7), 0.85],
+      ["snap", branchSnap(rate, seededRandom(1044)), inHall(0, 2.3, -7), 0.85],
     ] as const)
       this.sounds.set(
         name,
@@ -98,7 +100,7 @@ export class DeskInvestigation {
       p = this.progress;
     this.models.update(dt, p.compartmentOpen, p.drawerOpen, p.portraitAwake);
     const feet = g.player.feet;
-    const underTent = Math.abs(feet.x) < 3.8 && feet.z < -1 && feet.z > -7 && feet.y < 0.5;
+    const underTent = inFuneralRoom(feet);
     const event = p.update(
       dt,
       underTent,
@@ -193,7 +195,7 @@ export class DeskInvestigation {
     g.gated.holdStill = true;
     g.gated.holdLook = true;
     g.hints.hide();
-    if (document.pointerLockElement) document.exitPointerLock();
+    document.exitPointerLock();
     this.reader.show(
       g.flags.get("ep1.journalB.page", 0),
       () => {

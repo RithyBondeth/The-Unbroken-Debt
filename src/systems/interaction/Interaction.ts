@@ -1,7 +1,7 @@
 import type { Scene } from "@babylonjs/core/scene";
 import type { Camera } from "@babylonjs/core/Cameras/camera";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
-import type { Material } from "@babylonjs/core/Materials/material";
+import { Material } from "@babylonjs/core/Materials/material";
 import { MultiMaterial } from "@babylonjs/core/Materials/multiMaterial";
 import { InteractionHint } from "./InteractionHint";
 import type { Node } from "@babylonjs/core/node";
@@ -39,6 +39,16 @@ export function meshesOf(node: Node): AbstractMesh[] {
   return [...own, ...node.getChildMeshes(false)].filter((m) => m.getTotalVertices() > 0);
 }
 
+/** Excludes contact-shadow planes, invisible pickup boxes, and unpickable overlay decals from focus outlines. */
+function isHintableMesh(mesh: AbstractMesh): boolean {
+  if (mesh.isDisposed() || !mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0)
+    return false;
+  if (mesh.name.endsWith("_contact_shadow")) return false;
+  const mat = mesh.material;
+  if (mat && (mat.alpha === 0 || (mat.disableDepthWrite && !mesh.isPickable))) return false;
+  return true;
+}
+
 /**
  * The object at the centre of the view, within reach and not hidden behind a
  * wall, is focused: it gets a warm rim and ivory contour and `interact:focus`. E uses
@@ -51,6 +61,12 @@ export class Interaction {
   allow: (id: string) => boolean = () => true;
   /** How far the nearest solid thing straight ahead is (m), or Infinity beyond reach. */
   distance = Infinity;
+  /**
+   * When E is pressed with nothing in focus, use the nearest usable thing within this
+   * many degrees of the centre of the view instead (0: off). Areas where every press
+   * should count (the studio's packing) turn it on.
+   */
+  pressAssistDegrees = 0;
 
   private readonly targets = new Map<string, Target>();
   private readonly byMesh = new Map<number, Target>();
@@ -77,10 +93,14 @@ export class Interaction {
   add(id: string, node: Node | AbstractMesh[], hintMeshes?: readonly AbstractMesh[]): void {
     this.remove(id);
     const meshes = Array.isArray(node) ? node : meshesOf(node);
+    const visualMeshes = meshes.filter(
+      (m) =>
+        !m.name.endsWith("_contact_shadow") && !(m.material?.disableDepthWrite && !m.isPickable),
+    );
     const target = {
       id,
       meshes,
-      hintMeshes: hintMeshes ? meshes.filter((m) => hintMeshes.includes(m)) : meshes,
+      hintMeshes: hintMeshes ? visualMeshes.filter((m) => hintMeshes.includes(m)) : visualMeshes,
     };
     this.targets.set(id, target);
     for (const mesh of meshes) {
@@ -127,11 +147,11 @@ export class Interaction {
    * in reach, not behind whatever the ray hit (`blocked` metres away) and not hidden
    * behind anything else.
    */
-  private nearMiss(blocked: number): Target | null {
+  private nearMiss(blocked: number, cone = AIM_ASSIST): Target | null {
     const eye = this.ray.origin,
       forward = this.ray.direction;
     let best: Target | null = null,
-      bestCos = AIM_ASSIST;
+      bestCos = cone;
     for (const target of this.targets.values()) {
       if (!this.allow(target.id)) continue;
       for (const mesh of target.meshes) {
@@ -161,8 +181,14 @@ export class Interaction {
 
   /** E: uses the focused object. Returns its id, or null if nothing is in focus. */
   use(): string | null {
-    if (!this.active || !this.focused) return null;
-    const id = this.focused.id;
+    if (!this.active) return null;
+    const target =
+      this.focused ??
+      (this.pressAssistDegrees > 0
+        ? this.nearMiss(this.distance, Math.cos((this.pressAssistDegrees * Math.PI) / 180))
+        : null);
+    if (!target) return null;
+    const id = target.id;
     this.bus.emit("interact:use", { id });
     return id;
   }
@@ -177,6 +203,7 @@ export class Interaction {
       material.getClassName() === "StandardMaterial"
     ) {
       new InteractionHint(material, (mesh) => this.hintStrength.get(mesh) ?? 0);
+      material.markAsDirty(Material.MiscDirtyFlag);
     }
   }
 
@@ -185,16 +212,12 @@ export class Interaction {
     this.hintStrength.delete(mesh);
   }
 
-  /** All registered targets share the hint; invisible pickup volumes never draw. */
+  /** All registered targets share the hint; invisible pickup volumes and shadow pads never draw. */
   private setFocus(target: Target | null): void {
     if (target === this.focused) return;
     this.focused = target;
     for (const mesh of target?.hintMeshes ?? []) {
-      if (mesh.isDisposed() || !mesh.isEnabled() || !mesh.isVisible || mesh.visibility <= 0)
-        continue;
-      // Texture-based offering slots already have a soft focus ring. Their
-      // transparent interaction patch must not acquire an opaque disc border.
-      if (mesh.material?.alpha === 0) continue;
+      if (!isHintableMesh(mesh)) continue;
       this.prepareMaterial(mesh.material);
       if (!mesh.edgesRenderer) mesh.enableEdgesRendering(EDGE_EPSILON);
       mesh.edgesColor = OUTLINE.clone();

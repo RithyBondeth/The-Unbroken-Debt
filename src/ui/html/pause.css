@@ -156,6 +156,7 @@
 }
 .pause-menu[hidden],
 .pause-controls[hidden],
+.pause-settings[hidden],
 .pause-confirm[hidden] {
   display: none;
 }
@@ -217,6 +218,43 @@
   grid-column: 1 / -1;
   justify-self: start;
   margin-top: var(--ui-space-3);
+}
+/* Settings: a scrolling column of the shared settings rows (settings.css). */
+.pause-settings {
+  width: min(32rem, 100%);
+  max-height: min(62vh, 36rem);
+  overflow-y: auto;
+  padding-right: var(--ui-space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border) transparent;
+}
+.pause-settings > :first-child,
+.pause-settings .settings-heading:first-child {
+  margin-top: 0;
+}
+.pause-settings select {
+  background: rgb(5 6 6 / 0.7);
+}
+.pause-settings .pause-back {
+  margin-top: var(--ui-space-4);
+}
+/* A phone held sideways: the settings take the whole height. */
+@media (max-height: 560px) {
+  .pause.pause-in-settings .pause-eyebrow,
+  .pause.pause-in-settings .pause-title,
+  .pause.pause-in-settings .pause-whisper,
+  .pause.pause-in-settings .pause-hint {
+    display: none;
+  }
+  .pause-settings {
+    max-height: calc(100dvh - 2 * var(--ui-safe-bottom));
+  }
+}
+/* No keyboard to press Esc on. */
+@media (hover: none) and (pointer: coarse) {
+  .pause-hint {
+    display: none;
+  }
 }
 .pause-confirm p {
   max-width: 26rem;

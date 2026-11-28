@@ -30,11 +30,69 @@ const KIT_STONE =
   "@(T_ep2_stupa_*_BC|T_ep2_image_whole_BC|T_ep2_image_worn_BC|T_ep2_image_headless_BC|T_ep2_guardian_*_BC)";
 
 const LINE_ART =
-  "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";
+  "@(T_*_illustration_*|T_*_print_*|T_*_study_*|T_*_journal_*|T_*_funeral_tribute_banner_*|T_*_funeral_photos_*)";
+
+/**
+ * Characters seen close and for themselves keep every bit of their textures: 4K, normal
+ * maps not halved, colour in UASTC (the user, November 19: the dancer ghost "in a high
+ * quality").
+ */
+const SHOWCASE = new Set(["ep1/dancer_ghost.glb"]);
+const SHOWCASE_COLOUR = "@(T_dancer_ghost_BC)";
 
 // Hero assets and player items get 4K textures; everything else 2K (Art Bible, section 6).
 function maxTextureSize(file) {
-  return /(^|\/)(shared_|hero_)/.test(file) ? 4096 : 2048;
+  return /(^|\/)(shared_|hero_)/.test(file) || SHOWCASE.has(file) ? 4096 : 2048;
+}
+
+/** Areas with a baked lightmap: their second UV set (TEXCOORD_1) is used by no glTF texture and must survive prune. */
+const LIGHTMAPPED = new Set(["ep1/ep1_area_studio.glb"]);
+
+/**
+ * Baked lightmaps (tools/areas/bake_studio_lightmap.py) to KTX2: UASTC with Zstandard,
+ * mipmapped, full size and half size (the Low preset). The PNG holds sRGB-encoded
+ * values; the KTX2 is tagged linear so every GPU returns those values unchanged and
+ * the shader decodes them (Studio.ts sets gammaSpace).
+ */
+const LIGHTMAPS = [
+  [
+    "ep1/ep1_area_studio.glb",
+    "art-source/textures/ep1/T_studio_lightmap.png",
+    "public/assets/ep1/studio_lightmap",
+  ],
+];
+
+function ktx(...args) {
+  execFileSync("ktx", args, { stdio: "inherit" });
+}
+
+function buildLightmaps() {
+  for (const [area, png, out] of LIGHTMAPS) {
+    if (!area.startsWith(filter)) continue;
+    if (!existsSync(png)) {
+      console.warn(`(no ${png}: bake it first)`);
+      continue;
+    }
+    const common = [
+      "create",
+      "--format",
+      "R8G8B8A8_UNORM",
+      "--assign-tf",
+      "linear",
+      "--encode",
+      "uastc",
+      "--uastc-quality",
+      "2",
+      "--zstd",
+      "18",
+      "--generate-mipmap",
+    ];
+    ktx(...common, png, `${out}.ktx2`);
+    ktx(...common, "--scale", "0.5", png, `${out}_2k.ktx2`);
+    console.log(
+      `✔ ${png} → ${out}.ktx2 (${kb(statSync(`${out}.ktx2`).size)}), ${out}_2k.ktx2 (${kb(statSync(`${out}_2k.ktx2`).size)})`,
+    );
+  }
 }
 
 function gltf(...args) {
@@ -55,6 +113,8 @@ const kb = (bytes) => `${(bytes / 1024).toFixed(0)} KB`;
 let totalIn = 0;
 let totalOut = 0;
 
+buildLightmaps();
+
 const files = findGlbs(SRC).filter((f) => relative(SRC, f).startsWith(filter));
 if (files.length === 0) {
   console.log(`No .glb files found in ${SRC}/${filter}`);
@@ -69,7 +129,14 @@ for (const input of files) {
 
   gltf("dedup", input, output);
   // Keep empty leaf nodes: spawn_ and patrol_ markers are empties (TDD section 7.1).
-  gltf("prune", output, output, "--keep-leaves", "true");
+  gltf(
+    "prune",
+    output,
+    output,
+    "--keep-leaves",
+    "true",
+    ...(LIGHTMAPPED.has(relative(SRC, input)) ? ["--keep-attributes", "true"] : []),
+  );
   gltf("weld", output, output);
   // Preserve the authored facial contours within 0.1% mesh-radius error while
   // keeping the shared ancestral apparition inside its 60K triangle budget.
@@ -78,13 +145,15 @@ for (const input of files) {
   gltf("resize", output, output, "--width", size, "--height", size);
   // Normal and packed occlusion-roughness-metal maps at 1K: detail the eye barely sees at
   // furniture scale, and the biggest share of download size (Phase 2 studio: 122 MB → see TDD 8).
-  gltf("resize", output, output, "--width", "1024", "--height", "1024", "--pattern", DETAIL_MAPS);
+  if (!SHOWCASE.has(relative(SRC, input)))
+    gltf("resize", output, output, "--width", "1024", "--height", "1024", "--pattern", DETAIL_MAPS);
   // Slot globs use @(a|b): the CLI's argument parser splits {a,b} into separate arguments.
   // UASTC for line art first (ETC1S blocks smear thin pen lines and small Khmer letters),
   // then ETC1S (small) for the remaining colour and ORM; UASTC (no block artefacts in
   // lighting) for normals. Each step skips textures that are already KTX2.
   gltf("uastc", output, output, "--pattern", LINE_ART, "--slots", "baseColorTexture");
   gltf("uastc", output, output, "--pattern", KIT_STONE, "--slots", "baseColorTexture");
+  gltf("uastc", output, output, "--pattern", SHOWCASE_COLOUR, "--slots", "baseColorTexture");
   gltf(
     "etc1s",
     output,

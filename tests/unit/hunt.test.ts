@@ -5,7 +5,17 @@ import { Inventory } from "@/systems/inventory/Inventory";
 import { HuntProgress } from "@/episodes/ep1/act3/HuntProgress";
 import { HuntNavigation } from "@/episodes/ep1/act3/HuntNavigation";
 import { RoamerBrain } from "@/episodes/ep1/act3/RoamerBrain";
-import { JARS, ROAMER_ROUTE, FRAGMENT_IDS, CP5_FEET } from "@/episodes/ep1/data/hunt";
+import {
+  JARS,
+  ROAMER_ROUTE,
+  FRAGMENT_IDS,
+  CP5_FEET,
+  BARN_ARENA,
+  BARN_FLOOR,
+  BARN_ROUTE,
+  ROAMER_FOLLOWS_AFTER,
+  arenaAt,
+} from "@/episodes/ep1/data/hunt";
 
 function setup() {
   const flags = new Flags(),
@@ -29,7 +39,8 @@ describe("under-house durable progress", () => {
       expect(p.take(j.id)).toBe(false);
     }
     expect(p.pieces).toBe(3);
-    expect(inventory.count("oil")).toBe(2);
+    expect(inventory.count("oil")).toBe(1);
+    expect(inventory.has("barn_gate_key")).toBe(true);
     expect(flags.get("ep1.lore", 0)).toBe(1);
     expect(flags.get("ep1.fragments.3", false)).toBe(true);
   });
@@ -65,7 +76,8 @@ describe("under-house obstacle navigation", () => {
   it("routes every patrol leg and jar approach around posts, jars and storage", () => {
     for (const from of ROAMER_ROUTE) {
       expect(nav.walkable(from), String(from)).toBe(true);
-      for (const to of [...ROAMER_ROUTE, ...JARS.map((j) => j.at)]) {
+      // The jars under the house (the barn's two are reached by its own ground).
+      for (const to of [...ROAMER_ROUTE, ...JARS.filter((j) => j.at.y < 0.5).map((j) => j.at)]) {
         const path = nav.path(from, to);
         expect(path.length, `${String(from)} → ${String(to)}`).toBeGreaterThan(0);
         let last = from;
@@ -77,8 +89,8 @@ describe("under-house obstacle navigation", () => {
       }
     }
   });
-  it("blocks direct shortcuts through the central post", () => {
-    expect(nav.clear(new Vector3(-1, 0, -14), new Vector3(1, 0, -14))).toBe(false);
+  it("blocks direct shortcuts through a stilt", () => {
+    expect(nav.clear(new Vector3(-4.35, 0, -25), new Vector3(-4.35, 0, -27))).toBe(false);
   });
 });
 describe("under-house roamer senses", () => {
@@ -94,18 +106,18 @@ describe("under-house roamer senses", () => {
     ] as const) {
       const b = new RoamerBrain();
       b.start();
-      b.position.set(-4.5, 0, -15);
-      expect(b.hear(new Vector3(-4.5 + distance, 0, -15), noise, jar)).toBe(heard);
+      b.position.set(-6, 0, -28);
+      expect(b.hear(new Vector3(-6 + distance, 0, -28), noise, jar)).toBe(heard);
     }
     const b = new RoamerBrain();
     b.start();
-    expect(b.hear(new Vector3(0, 2.5, -15), 1)).toBe(false);
+    expect(b.hear(new Vector3(0, 2.5, -28), 1)).toBe(false);
   });
   it("tracks exposed lamplight, loses an occluded target and returns from a blocked jar center", () => {
     const b = new RoamerBrain();
     b.start();
-    b.position.set(0, 0, -12);
-    const sora = new Vector3(4, 0, -12);
+    b.position.set(-2.5, 0, -28);
+    const sora = new Vector3(2.5, 0, -28);
     b.update(0.1, sora, false, true);
     expect(b.state).toBe("patrol");
     b.update(0.1, sora, true, false);
@@ -115,24 +127,25 @@ describe("under-house roamer senses", () => {
     b.update(3, CP5_FEET, false, false);
     expect(b.state).toBe("investigating");
     b.start();
-    expect(b.hear(JARS[3].at, 1, true)).toBe(true);
+    expect(b.hear(JARS[2].at, 1, true)).toBe(true);
     b.update(30, CP5_FEET, false, false);
     expect(b.state).toBe("patrol");
   });
   it("does not catch through a jar, upstairs or outside the hunt; catches nearby ground targets", () => {
     const b = new RoamerBrain();
     b.start();
-    b.position.set(1.5, 0, -17.1);
-    b.update(0.05, new Vector3(1.5, 0, -16.4), false, false);
+    // Either side of jar J2 (2.6, -28.2).
+    b.position.set(2.6, 0, -28.9);
+    b.update(0.05, new Vector3(2.6, 0, -27.5), false, false);
     expect(b.state).not.toBe("caught");
-    b.position.set(1, 0, -11);
-    b.update(0.05, new Vector3(1, 2.5, -11), true, true);
+    b.position.set(1, 0, -28);
+    b.update(0.05, new Vector3(1, 2.5, -28), true, true);
     expect(b.state).not.toBe("caught");
-    b.position.set(1, 0, -10.2);
+    b.position.set(-1, 0, -22.2);
     b.update(0.05, CP5_FEET, true, true);
     expect(b.state).not.toBe("caught");
-    b.position.set(1, 0, -12);
-    b.update(0.05, new Vector3(1.3, 0, -12), false, false);
+    b.position.set(-2, 0, -28);
+    b.update(0.05, new Vector3(-1.7, 0, -28), false, false);
     expect(b.state).toBe("caught");
   });
   it("patrols continuously without entering obstacles, independent of frame size", () => {
@@ -147,5 +160,45 @@ describe("under-house roamer senses", () => {
     for (let i = 0; i < 300; i++) b.update(0.2, CP5_FEET, false, false);
     expect(Vector3.Distance(a.position, b.position)).toBeLessThan(0.01);
     expect(Vector3.Distance(a.position, ROAMER_ROUTE[0])).toBeGreaterThan(1);
+  });
+});
+
+describe("the rice barn's part of the hunt", () => {
+  const barnFloor = (x: number, z: number) => new Vector3(x, BARN_FLOOR, z);
+  it("routes every barn patrol leg and jar approach round the bins, sacks and ladder", () => {
+    const nav = new HuntNavigation(BARN_ARENA);
+    for (const p of BARN_ROUTE) expect(nav.walkable(p)).toBe(true);
+    for (const from of BARN_ROUTE)
+      for (const to of [...BARN_ROUTE, ...JARS.filter((j) => j.at.y > 0.5).map((j) => j.at)]) {
+        const path = nav.path(from, to);
+        expect(path.length).toBeGreaterThan(0);
+        let at = from;
+        for (const next of path) {
+          expect(nav.clear(at, next, 0.3)).toBe(true);
+          at = next;
+        }
+      }
+  });
+  it("puts the barn's floor and the ground under the back block in their own arenas", () => {
+    expect(arenaAt(new Vector3(0, 0, -27))?.id).toBe("house");
+    expect(arenaAt(CP5_FEET)).toBeNull(); // CP5: at the funeral's edge, outside
+    expect(arenaAt(barnFloor(-25, -22.5))?.id).toBe("barn");
+    expect(arenaAt(new Vector3(-25, 0, -22.5))).toBeNull(); // under the barn's floor
+    expect(arenaAt(new Vector3(-16, 0, -22.5))).toBeNull(); // the barn yard
+  });
+  it("comes after Sora into the barn, neither hearing nor catching across arenas", () => {
+    const b = new RoamerBrain();
+    b.start();
+    const sora = barnFloor(-24.5, -22.3);
+    expect(b.hear(sora, 1)).toBe(false);
+    b.update(ROAMER_FOLLOWS_AFTER - 0.5, sora, true, true);
+    expect(b.arena.id).toBe("house");
+    expect(b.state).not.toBe("caught");
+    b.update(1, sora, false, false);
+    expect(b.arena.id).toBe("barn");
+    expect(b.position.y).toBeCloseTo(BARN_FLOOR);
+    expect(b.hear(sora, 1)).toBe(true);
+    for (let i = 0; i < 400 && b.state !== "caught"; i++) b.update(0.05, sora, true, true);
+    expect(b.state).toBe("caught");
   });
 });

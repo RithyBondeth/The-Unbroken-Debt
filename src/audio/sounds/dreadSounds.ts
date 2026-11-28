@@ -71,22 +71,43 @@ function beamCrack(rate: number, rand: () => number): Float32Array {
 }
 
 /**
- * Bowed metal shrieking: detuned saws a semitone apart, each with a fast,
- * nervous vibrato, rough as a bow dragged too hard. Mono into one channel each.
+ * Bowed contrabass and hollow iron scrape: low dark minor-second and tritone
+ * intervals built from smooth damped harmonics and bow-rosin air, kept well
+ * under 1.4 kHz so it feels heavy and dread-filled rather than harsh or buzzy.
  */
-function shriek(rate: number, length: number, start: number, gain: number): Stereo {
+function darkBowScrape(
+  rate: number,
+  length: number,
+  start: number,
+  gain: number,
+  rand: () => number,
+): Stereo {
   const sides: Stereo = [new Float32Array(length), new Float32Array(length)];
-  [740, 784, 830.6, 880, 932.3, 1244.5].forEach((f, n) => {
+  const rosinL = biquad(noise(length, rand), rate, "bandpass", 420, 1.4);
+  const rosinR = biquad(noise(length, rand), rate, "bandpass", 490, 1.4);
+  [110, 116.5, 164.8, 220, 233.1, 311.1].forEach((f, n) => {
     let phase = 0;
     for (let i = start; i < length; i++) {
       const t = (i - start) / rate;
-      const wobble = 1 + 0.014 * Math.sin(t * 2 * Math.PI * (6.3 + n * 0.9)) - 0.03 * t;
-      phase = (phase + (f * wobble) / rate) % 1;
-      const env = Math.min(1, t / 0.02) * Math.exp(-t / (0.9 + n * 0.15));
-      sides[n % 2][i] += (phase * 2 - 1) * env * gain;
+      const slide =
+        1 - 0.045 * Math.min(1, t / 1.4) + 0.008 * Math.sin(t * 2 * Math.PI * (3.1 + n * 0.45));
+      phase += (f * slide) / rate;
+      const w = 2 * Math.PI * phase;
+      const bow = Math.sin(w) + 0.42 * Math.sin(2 * w) + 0.18 * Math.sin(3 * w);
+      const env = Math.min(1, t / 0.035) * Math.exp(-t / (1.05 + n * 0.14));
+      sides[n % 2][i] += bow * env * gain * 0.48;
     }
   });
-  for (const side of sides) biquad(side, rate, "highpass", Math.min(700, rate * 0.4), 0.7);
+  for (let i = start; i < length; i++) {
+    const t = (i - start) / rate;
+    const env = Math.min(1, t / 0.025) * Math.exp(-t / 0.85) * gain * 1.1;
+    sides[0][i] += rosinL[i] * env;
+    sides[1][i] += rosinR[i] * env;
+  }
+  for (const side of sides) {
+    biquad(side, rate, "highpass", Math.min(90, rate * 0.2), 0.7);
+    biquad(side, rate, "lowpass", Math.min(1350, rate * 0.4), 0.7);
+  }
   return sides;
 }
 
@@ -142,18 +163,29 @@ export function sting(rate: number, kind: Sting): Stereo {
     place(right, beam, rate, hitAt + 0.011, 0.6);
   }
   if (kind === "shock") {
-    subDrop(left, rate, hitAt, 1, 0.7);
-    subDrop(right, rate, hitAt, 1, 0.7);
-    const [sl, sr] = shriek(rate, length, hit, 0.15);
-    const torn = whisper(rate, rand, 1.1);
+    subDrop(left, rate, hitAt, 1.1, 0.85);
+    subDrop(right, rate, hitAt, 1.1, 0.85);
+    const beam = beamCrack(rate, rand);
+    place(left, beam, rate, hitAt, 0.65);
+    place(right, beam, rate, hitAt + 0.009, 0.6);
+    const [sl, sr] = darkBowScrape(rate, length, hit, 0.32, rand);
+    const bodyAirL = biquad(airL.slice(), rate, "lowpass", Math.min(1100, rate * 0.35), 0.7);
+    const bodyAirR = biquad(airR.slice(), rate, "lowpass", Math.min(1100, rate * 0.35), 0.7);
+    const torn = biquad(
+      whisper(rate, rand, 0.95),
+      rate,
+      "lowpass",
+      Math.min(2400, rate * 0.4),
+      0.7,
+    );
     for (let i = 0; i < length; i++) {
       const t = (i - hit) / rate;
-      const crack = i >= hit ? Math.exp(-t * 30) : 0;
-      left[i] += sl[i] + airL[i] * crack * 0.6;
-      right[i] += sr[i] + airR[i] * crack * 0.6;
+      const crack = i >= hit ? Math.exp(-t * 22) : 0;
+      left[i] += sl[i] + bodyAirL[i] * crack * 0.55;
+      right[i] += sr[i] + bodyAirR[i] * crack * 0.55;
     }
-    place(left, torn, rate, hitAt + 0.05, 1.1);
-    place(right, torn, rate, hitAt + 0.07, 0.35);
+    place(left, torn, rate, hitAt + 0.07, 0.55);
+    place(right, torn, rate, hitAt + 0.09, 0.28);
   }
   if (kind === "drop") {
     subDrop(left, rate, 0, 0.8, 0.45);
@@ -185,22 +217,23 @@ export function pressureBed(rate: number): Stereo {
   const length = rate * 34;
   const rand = seededRandom(4111);
   const sides: Stereo = [new Float32Array(length), new Float32Array(length)];
-  const breathL = biquad(brown(length, rand, 0.998), rate, "lowpass", 260, 0.7);
-  const breathR = biquad(brown(length, rand, 0.998), rate, "lowpass", 280, 0.7);
+  const breathL = biquad(brown(length, rand, 0.9985), rate, "lowpass", 190, 0.7);
+  const breathR = biquad(brown(length, rand, 0.9985), rate, "lowpass", 210, 0.7);
   for (let i = 0; i < length; i++) {
     const t = i / rate;
-    // Every note and swell repeats a whole number of times in the 32 s loop, so the seam is clean.
+    // Slow organic swells aligned to the 32 s loop seam so it never pulses mechanically.
     const swell =
-      0.6 + 0.4 * Math.sin((2 * Math.PI * t) / 8 + Math.sin((2 * Math.PI * t) / 32) * 2);
-    const upper = 0.5 + 0.5 * Math.sin((2 * Math.PI * t) / 4);
+      0.65 + 0.35 * Math.sin((2 * Math.PI * t) / 16 + Math.sin((2 * Math.PI * t) / 32) * 1.4);
+    const upper = 0.35 + 0.3 * Math.sin((2 * Math.PI * t) / 16 + 0.8);
     const tone = (f: number) =>
       Math.sin(2 * Math.PI * f * t) +
-      0.5 * upper * Math.sin(4 * Math.PI * f * t) +
-      0.3 * upper * Math.sin(6 * Math.PI * f * t);
-    const inhale = Math.max(0, Math.sin((2 * Math.PI * t) / 6.4)) ** 3;
-    sides[0][i] += (tone(49) * 0.45 + tone(73.5) * 0.12) * swell + breathL[i] * (0.5 + inhale * 2);
+      0.32 * upper * Math.sin(4 * Math.PI * f * t) +
+      0.14 * upper * Math.sin(6 * Math.PI * f * t);
+    const inhale = Math.max(0, Math.sin((2 * Math.PI * t) / 10.6667)) ** 2.5;
+    sides[0][i] +=
+      (tone(41.2) * 0.35 + tone(61.7) * 0.08) * swell + breathL[i] * (0.9 + inhale * 1.4);
     sides[1][i] +=
-      (tone(51.5) * 0.45 + tone(73.5) * 0.12) * swell + breathR[i] * (0.5 + inhale * 2);
+      (tone(41.7) * 0.35 + tone(61.7) * 0.08) * swell + breathR[i] * (0.9 + inhale * 1.4);
   }
   for (const [at, side] of [
     [5.5, 0],
@@ -208,37 +241,42 @@ export function pressureBed(rate: number): Stereo {
     [26.4, 0],
   ] as const) {
     // Far-off timbers, deeper than the house's own creaks.
-    const groan = biquad(creak(rate, rand, 1.6 + rand()), rate, "lowpass", 600, 0.7);
-    place(sides[side], groan, rate, at, 0.25);
-    place(sides[1 - side], groan, rate, at + 0.03, 0.1);
+    const groan = biquad(creak(rate, rand, 1.6 + rand()), rate, "lowpass", 420, 0.7);
+    place(sides[side], groan, rate, at, 0.2);
+    place(sides[1 - side], groan, rate, at + 0.03, 0.09);
   }
   return [
-    normalise(loopify(hall(sides[0], rate, 0.45), rate, 2), 0.5),
-    normalise(loopify(hall(sides[1], rate, 0.45), rate, 2), 0.5),
+    normalise(loopify(hall(sides[0], rate, 0.45), rate, 2), 0.46),
+    normalise(loopify(hall(sides[1], rate, 0.45), rate, 2), 0.46),
   ];
 }
 
 /**
- * The ringing left in the ears after a scream down the line: a thin high tone,
- * a little different in each ear so it beats, fading over about seven seconds.
+ * The stunned pressure left in the ears after a shock down the line: a warm,
+ * muffled underwater air-pressure hush and hollow dark resonance that clears
+ * over ~6 seconds, without any harsh high-pitched tinnitus whine.
  */
 export function ringingEars(rate: number): Stereo {
-  const length = Math.round(rate * 7);
+  const length = Math.round(rate * 6.5);
   const rand = seededRandom(4121);
-  const f = Math.min(5800, rate * 0.42);
-  const hissL = biquad(noise(length, rand), rate, "bandpass", f, 12);
-  const hissR = biquad(noise(length, rand), rate, "bandpass", f * 1.004, 12);
+  const pressureL = biquad(brown(length, rand, 0.996), rate, "lowpass", 240, 0.7);
+  const pressureR = biquad(brown(length, rand, 0.996), rate, "lowpass", 260, 0.7);
+  const airL = biquad(noise(length, rand), rate, "bandpass", 580, 1.8);
+  const airR = biquad(noise(length, rand), rate, "bandpass", 640, 1.8);
+  const f = Math.min(1850, rate * 0.35);
   const left = new Float32Array(length);
   const right = new Float32Array(length);
   for (let i = 0; i < length; i++) {
     const t = i / rate;
-    const env = Math.min(1, t / 0.08) * Math.exp(-t / 2.2);
-    left[i] = (Math.sin(2 * Math.PI * f * t) * 0.6 + hissL[i] * 2) * env;
-    right[i] = (Math.sin(2 * Math.PI * f * 1.0035 * t) * 0.6 + hissR[i] * 2) * env;
+    const env = Math.min(1, t / 0.12) * Math.exp(-t / 1.85);
+    const hush = Math.min(1, t / 0.08) * Math.exp(-t / 0.95) * 0.045;
+    left[i] = (pressureL[i] * 2.2 + airL[i] * 0.35) * env + Math.sin(2 * Math.PI * f * t) * hush;
+    right[i] =
+      (pressureR[i] * 2.2 + airR[i] * 0.35) * env + Math.sin(2 * Math.PI * f * 1.003 * t) * hush;
   }
-  fadeTail(left, rate, 0.5);
-  fadeTail(right, rate, 0.5);
-  return normaliseStereo([left, right], 0.22);
+  fadeTail(left, rate, 0.8);
+  fadeTail(right, rate, 0.8);
+  return normaliseStereo([left, right], 0.18);
 }
 
 /** Hooves on a wet street, far off: a horse cart passing slowly, two-beat walk. */

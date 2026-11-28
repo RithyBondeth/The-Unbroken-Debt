@@ -17,10 +17,19 @@ import { Flags } from "./Flags";
 import type { GameEvents } from "./events";
 import { enablePhysics } from "./physics";
 import type { DeviceProfile } from "@/render/DeviceProfile";
-import { getPreset, type QualityPreset } from "@/render/qualityPresets";
+import type { QualityPreset } from "@/render/qualityPresets";
+import {
+  DEFAULT_GRAPHICS,
+  resolveGraphics,
+  writeGraphicsSettings,
+  type GraphicsSettings,
+} from "@/render/graphicsSettings";
 import { createPostPipeline, type PostPipeline } from "@/render/renderSetup";
-import { DynamicResolution } from "@/render/DynamicResolution";
-import { runRenderLoop } from "@/render/renderLoop";
+import { DynamicResolution, gpuFrameTimer } from "@/render/DynamicResolution";
+import { FramePacer, runRenderLoop } from "@/render/renderLoop";
+import { TouchControls } from "@/ui/html/TouchControls";
+import { FpsCounter } from "@/ui/html/FpsCounter";
+import { readWelcomeSettings, writeWelcomeSettings } from "@/ui/html/welcomeScreen";
 import { keepLightBudgets } from "@/render/lightBudget";
 import { installSoftLampFalloff } from "@/render/softLampFalloff";
 import { renderStallNotice } from "@/ui/html/renderStallNotice";
@@ -128,6 +137,13 @@ export class Game {
   readonly fallGuard = new FallGuard();
   private readonly feetNow = new Vector3();
   private resolution!: DynamicResolution;
+  private pacer: FramePacer | null = null;
+  private touch: TouchControls | null = null;
+  private fps: FpsCounter | null = null;
+  /** The player's graphics settings now, and as the game loaded (quality and effects need a reload). */
+  private graphics: GraphicsSettings;
+  private readonly loadedGraphics: GraphicsSettings;
+  private readonly targetFps: number;
   private inspection: Vector3 | null = null;
   private inspectionRadius = 0.31;
   private readonly normalFov = (75 * Math.PI) / 180;
@@ -170,18 +186,33 @@ export class Game {
 
   constructor(
     private readonly engine: WebGPUEngine,
-    device: DeviceProfile,
+    private readonly device: DeviceProfile,
     saveDatabase?: string,
+    options: {
+      /** The player's graphics settings; review fixtures leave them at the defaults. */
+      graphics?: GraphicsSettings;
+      /** On-screen touch controls (phones and tablets). */
+      touch?: boolean;
+    } = {},
   ) {
     this.saves = new SaveStore(
       (saving, result) => this.saveIndicator.set(saving, result),
       saveDatabase,
     );
-    this.preset = getPreset(device.quality);
+    this.graphics = structuredClone(options.graphics ?? DEFAULT_GRAPHICS);
+    this.loadedGraphics = structuredClone(this.graphics);
+    const resolved = resolveGraphics(this.graphics, device);
+    this.preset = resolved.preset;
+    // ?fps=max renders every refresh, whatever the setting.
+    this.targetFps =
+      new URLSearchParams(location.search).get("fps") === "max" ? 0 : resolved.targetFps;
+    console.info(
+      `[Game] ${this.preset.name} preset · ${device.formFactor} · ${this.targetFps || "display"} fps target`,
+    );
     // Before any material compiles: the falloff Sora's lamp uses (VillageLights).
     installSoftLampFalloff();
     this.scene = new Scene(engine);
-    keepSurfaceDetail(this.scene, device.quality);
+    keepSurfaceDetail(this.scene, this.preset.name);
     this.scene.clearColor = new Color4(0.01, 0.01, 0.012, 1);
     this.scene.skipPointerMovePicking = true;
     keepLightBudgets(this.scene);
@@ -196,6 +227,10 @@ export class Game {
     const canvas = engine.getRenderingCanvas() as HTMLCanvasElement;
     canvas.tabIndex = 0;
     this.input = new KeyboardMouseInput(canvas, 0.0022);
+    if (options.touch) {
+      this.input.enableTouch();
+      this.hints.touch = true;
+    }
     this.gated = new GatedInput(this.input);
     this.interaction = new Interaction(this.scene, this.camera, this.bus);
     this.notebook = new NotebookReader(this);
@@ -211,6 +246,11 @@ export class Game {
         if (!document.pointerLockElement && !this.paused && !this.cutscene && this.nothingOpen())
           this.pause();
       }, 120);
+    });
+    // Touch has no pointer lock to lose: switching apps or locking the phone pauses instead.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && this.input.touchEnabled && !this.cutscene && this.nothingOpen())
+        this.pause();
     });
     if (import.meta.env.DEV)
       window.addEventListener(
@@ -236,6 +276,7 @@ export class Game {
 
   /** Visual review fixtures can omit audio initialization; normal play enables it. */
   async start({ audio = true }: { audio?: boolean } = {}): Promise<void> {
+    this.fade.setLoading("Loading…");
     await Promise.all([enablePhysics(this.scene), loadSketchbookFonts(), this.hands.load()]);
     this.audio = audio
       ? await AudioSystem.create(undefined, { hideUnmuteButton: true }).catch((error: unknown) => {
@@ -245,7 +286,12 @@ export class Game {
       : null;
     this.audio?.attachListener(this.camera);
     if (this.audio) this.footsteps = await Footsteps.load(this.audio, this.bus);
-    this.resolution = new DynamicResolution(this.engine, this.preset);
+    this.resolution = new DynamicResolution(this.engine, this.preset, {
+      enabled: this.graphics.dynamicResolution,
+      gpuMs: gpuFrameTimer(this.engine),
+      targetMs: 1000 / (this.targetFps || 60),
+      maxScale: this.graphics.renderScale,
+    });
     const section = await this.chooseSection();
     await section.load();
     this.pipeline = createPostPipeline(this.scene, this.camera, this.preset);
@@ -256,6 +302,9 @@ export class Game {
       await this.fade.to(1, 0);
       await section.warmup();
     }
+    // Shader compiles during loading and warm-up are not the scene's real cost.
+    this.resolution.restart();
+    this.fade.setLoading(null);
     if (import.meta.env.DEV)
       new PerfOverlay(this.engine, this.scene, document.body, () => [
         `input diagnostic v1`,
@@ -268,8 +317,13 @@ export class Game {
         ...(section instanceof Prologue ? [section.debugStatus] : []),
       ]);
     this.scene.onBeforeRenderObservable.add(() => this.update());
+    if (this.input.touchEnabled) this.touch = new TouchControls(this.input);
+    this.applyGraphics(this.graphics, false);
     void section.begin();
     this.started = true;
+    // An even frame rate on 120 Hz displays and the frame-rate cap (see FramePacer).
+    this.pacer = new FramePacer(this.targetFps);
+    this.engine.customAnimationFrameRequester = this.pacer;
     // Paused, the last frame stays on screen and the world stops (scripts run on frame time).
     runRenderLoop(
       this.engine,
@@ -426,7 +480,37 @@ export class Game {
   spawnPlayer(feet = Vector3.Zero(), yaw = 0): void {
     this.player = new PlayerController(this.scene, this.camera, this.gated, feet, this.bus);
     this.player.yaw = yaw;
+    this.player.headBobEnabled = this.graphics.headBob;
+    this.player.reducedMotion = !this.graphics.cameraShake;
     this.fallGuard.reset(feet);
+  }
+
+  /**
+   * Applies the graphics settings that can change while playing: resolution,
+   * dynamic resolution, frame rate, camera motion and the frame-rate readout.
+   * Quality and effects are saved for the next load (they shape loading itself).
+   * `save` is off at start: fixtures and `?quality=` must not overwrite the player's choices.
+   */
+  applyGraphics(next: GraphicsSettings, save = true): void {
+    this.graphics = structuredClone(next);
+    if (save) writeGraphicsSettings(this.graphics);
+    const resolved = resolveGraphics(this.graphics, this.device);
+    const fps = new URLSearchParams(location.search).get("fps") === "max" ? 0 : resolved.targetFps;
+    if (this.resolution) {
+      this.resolution.maxScale = resolved.maxScale;
+      this.resolution.enabled = resolved.dynamicResolution;
+      this.resolution.targetMs = 1000 / (fps || 60);
+    }
+    if (this.pacer) this.pacer.targetFps = fps;
+    if (this.player) {
+      this.player.headBobEnabled = this.graphics.headBob;
+      this.player.reducedMotion = !this.graphics.cameraShake;
+    }
+    if (this.graphics.showFps && !this.fps) this.fps = new FpsCounter(this.engine);
+    if (!this.graphics.showFps && this.fps) {
+      this.fps.dispose();
+      this.fps = null;
+    }
   }
 
   /** The sketchbook in Sora's hands (S5), lit by its own reading light. */
@@ -492,7 +576,10 @@ export class Game {
           ),
         )
       : this.normalFov;
-    this.camera.fov += (fov - this.camera.fov) * (1 - Math.exp(-this.deltaSeconds * 8));
+    // Lands exactly on the target, so the projection stops being rebuilt every frame.
+    const nextFov =
+      this.camera.fov + (fov - this.camera.fov) * (1 - Math.exp(-this.deltaSeconds * 8));
+    this.camera.fov = Math.abs(fov - nextFov) < 1e-5 ? fov : nextFov;
     this.gated.reading = this.notebook.isOpen || ((book?.isVisible || book?.isBusy) ?? false);
     this.interaction.active =
       !this.cutscene && !this.hiding && !this.gated.reading && !this.satchel.isOpen;
@@ -510,6 +597,11 @@ export class Game {
       this.player?.speed ?? 0,
       book?.turnState ?? null,
     );
+    this.touch?.update({
+      playing: !this.cutscene && !this.paused,
+      bookRaised: book?.isRaised ?? false,
+      episode: this.episode,
+    });
   }
 
   /** Back to the last solid footing, behind a brief black, if Sora has dropped out of the world. */
@@ -561,8 +653,9 @@ export class Game {
     this.input.clear();
     this.stopInspecting();
     void (this.audio?.context as AudioContext | undefined)?.suspend?.();
-    if (document.pointerLockElement) document.exitPointerLock();
+    document.exitPointerLock();
     const last = this.checkpoints.last;
+    const ep1Clock = this.episode === 1 ? this.flags.get<string>("ep1.clock", "") : "";
     this.pauseMenu.open({
       resume: () => this.resume(),
       restart: last
@@ -573,6 +666,21 @@ export class Game {
               .catch(() => this.reload(true))
         : null,
       quit: () => this.reload(false),
+      clock: ep1Clock ? `${ep1Clock} · Episode 1` : undefined,
+      settings: {
+        graphics: structuredClone(this.graphics),
+        loaded: this.loadedGraphics,
+        device: this.device,
+        sensitivity: this.input.sensitivity,
+        invertY: this.input.invertY,
+        touch: this.input.touchEnabled,
+        onGraphics: (graphics) => this.applyGraphics(graphics),
+        onLook: (sensitivity, invertY) => {
+          this.input.sensitivity = sensitivity;
+          this.input.invertY = invertY;
+          writeWelcomeSettings({ ...readWelcomeSettings(), sensitivity, invertY });
+        },
+      },
     });
   }
 

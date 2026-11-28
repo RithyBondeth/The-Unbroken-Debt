@@ -1,0 +1,115 @@
+{
+  "_about": "Where each archive print sits in the Ep1 studio print atlases (pixel rects [x, y, w, h], origin top-left). Read by tools/drawings/studio.mjs, which paints the aged prints, and tools/areas/ep1_area_studio.py, which maps each print's paper onto its rect. Sources and licences: art-source/library/polyhaven.json, archive section.",
+  "atlases": {
+    "posters": {
+      "file": "T_studio_print_posters_BC",
+      "size": [2048, 2048],
+      "items": {
+        "PD1906": { "rect": [0, 0, 720, 1008], "kind": "poster", "seed": 1906 },
+        "PJ1906": { "rect": [728, 0, 696, 1012], "kind": "magazine", "seed": 624 },
+        "A36113": { "rect": [1432, 0, 608, 810], "kind": "mounted", "seed": 36113 },
+        "A35913": { "rect": [0, 1024, 608, 810], "kind": "mounted", "seed": 35913 },
+        "A35914": { "rect": [616, 1024, 712, 540], "kind": "mounted", "seed": 35914 },
+        "A35915": { "rect": [1336, 1024, 712, 540], "kind": "mounted", "seed": 35915 }
+      }
+    },
+    "cards": {
+      "file": "T_studio_print_cards_BC",
+      "size": [2048, 2048],
+      "items": {
+        "DIEU1662": { "rect": [0, 0, 1000, 642], "kind": "postcard", "seed": 1662 },
+        "DIEU1658": { "rect": [1024, 0, 1000, 642], "kind": "postcard", "seed": 1658 },
+        "DIEU1604": { "rect": [0, 660, 1000, 642], "kind": "postcard", "seed": 1604 },
+        "DIEUPROM": { "rect": [1024, 660, 1000, 642], "kind": "postcard", "seed": 1605 },
+        "THRONE1910": { "rect": [0, 1320, 1000, 642], "kind": "postcard", "seed": 1626 }
+      }
+    },
+    "colour": {
+      "file": "T_studio_print_colour_BC",
+      "size": [2048, 2048],
+      "items": {
+        "KULING": { "rect": [0, 0, 700, 977], "kind": "poster", "seed": 1920 },
+        "SIAM1893": { "rect": [708, 0, 640, 924], "kind": "magazine", "seed": 1893 },
+        "PIOT": { "rect": [1356, 0, 680, 1004], "kind": "mounted", "seed": 1906 },
+        "A36116": { "rect": [0, 1010, 600, 800], "kind": "mounted", "seed": 36116 },
+        "A36112": { "rect": [608, 1010, 600, 800], "kind": "mounted", "seed": 36112 },
+        "A36107": { "rect": [1216, 1010, 600, 800], "kind": "mounted", "seed": 36107 }
+      }
+    },
+    "nineties_p": {
+      "_about": "The user's posters (90s Posters/, November 2026), portrait, and one 1921 Busy autochrome (A36155, in place of the barbershop sign the user took down). Every cell is the same size, so the game can hand any of them to any portrait slot (src/episodes/ep1/prologue/posterShuffle.ts). Sources: art-source/library/posters/.",
+      "file": "T_studio_print_nineties_p_BC",
+      "size": [2048, 2048],
+      "folder": "posters",
+      "items": {
+        "POSTER90_1": { "rect": [0, 0, 672, 960], "kind": "poster", "seed": 9001 },
+        "POSTER90_2": { "rect": [688, 0, 672, 960], "kind": "poster", "seed": 9002 },
+        "POSTER90_3": { "rect": [1376, 0, 672, 960], "kind": "poster", "seed": 9003 },
+        "POSTER90_6": { "rect": [0, 976, 672, 960], "kind": "photo", "seed": 9006 },
+        "POSTER90_7": { "rect": [688, 976, 672, 960], "kind": "poster", "seed": 9007 },
+        "A36155": {
+          "rect": [1376, 976, 672, 960],
+          "kind": "mounted",
+          "seed": 36155,
+          "path": "archive/A36155.jpg",
+          "crop": [0, 0.045, 0, 0]
+        }
+      }
+    },
+    "nineties_l": {
+      "_about": "The user's posters, landscape, for the framed slots; cells the same size (posterShuffle.ts).",
+      "file": "T_studio_print_nineties_l_BC",
+      "size": [2048, 2048],
+      "folder": "posters",
+      "items": {
+        "POSTER90_4": { "rect": [0, 0, 1008, 741], "kind": "photo", "seed": 9004 },
+        "POSTER90_5": { "rect": [1032, 0, 1008, 741], "kind": "photo", "seed": 9005 },
+        "POSTER90_8": { "rect": [0, 760, 1008, 741], "kind": "board", "seed": 9008 }
+      }
+    },
+    "house": {
+      "_about": "Episode 1's re-planned house (Nov 22, 2026): the Vessantara Jataka (Walters Art Museum) and the Phra Malai manuscript (LACMA), Marseille colonial exhibition posters of 1906 and 1922, a Ligue maritime et coloniale poster of about 1930, King Sisowath Monivong's portrait of 1929. All public domain.",
+      "file": "T_studio_print_house_BC",
+      "size": [2048, 2560],
+      "items": {
+        "VJ_KANHA": {
+          "rect": [0, 0, 747, 560],
+          "kind": "mounted",
+          "seed": 4401,
+          "crop": [0.165, 0.165, 0.165, 0.165]
+        },
+        "VJ_CHARIOT": {
+          "rect": [755, 0, 747, 560],
+          "kind": "mounted",
+          "seed": 4402,
+          "crop": [0.165, 0.165, 0.165, 0.165]
+        },
+        "MARSEILLE1906": { "rect": [1510, 0, 400, 560], "kind": "poster", "seed": 1906 },
+        "VJ_JALI": {
+          "rect": [0, 576, 747, 560],
+          "kind": "mounted",
+          "seed": 4403,
+          "crop": [0.165, 0.165, 0.165, 0.165]
+        },
+        "VJ_JUJAKA": {
+          "rect": [755, 576, 747, 560],
+          "kind": "mounted",
+          "seed": 4404,
+          "crop": [0.165, 0.165, 0.165, 0.165]
+        },
+        "DELLEPIANE1922": { "rect": [1510, 576, 400, 560], "kind": "poster", "seed": 1922 },
+        "VJ_RETURN": {
+          "rect": [0, 1152, 747, 560],
+          "kind": "mounted",
+          "seed": 4405,
+          "crop": [0.165, 0.165, 0.165, 0.165]
+        },
+        "LIGUE1930": { "rect": [755, 1152, 784, 560], "kind": "poster", "seed": 1930 },
+        "PHRAMALAI4": { "rect": [1547, 1152, 373, 560], "kind": "mounted", "seed": 1864 },
+        "MONIVONG1929": { "rect": [0, 1728, 566, 820], "kind": "mounted", "seed": 1929 },
+        "CAPPIELLO1922": { "rect": [574, 1728, 513, 820], "kind": "poster", "seed": 1923 },
+        "PHRAMALAI2": { "rect": [1095, 1728, 945, 446], "kind": "mounted", "seed": 1862 }
+      }
+    }
+  }
+}

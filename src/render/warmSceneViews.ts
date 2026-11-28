@@ -21,7 +21,11 @@ export async function warmSceneViews(
   const quaternion = camera.rotationQuaternion?.clone() ?? null;
   const engine = scene.getEngine();
   let index = 0,
-    stable = 0;
+    stable = 0,
+    frames = 0;
+  // A view whose meshes never all report ready (a texture that never arrives) must not
+  // hold the game on a black screen: cap each view tightly (~0.4 s) so loading never stalls.
+  const MAX_FRAMES = 24;
   const place = scene.onBeforeRenderObservable.add(() => {
     camera.position.copyFrom(views[index].eye);
     camera.setTarget(views[index].target);
@@ -39,8 +43,18 @@ export async function warmSceneViews(
               break;
             }
           stable = ready ? stable + 1 : 0;
-          if (stable < 3) return;
+          if (stable < 3 && ++frames < MAX_FRAMES) return;
+          if (stable < 3 && import.meta.env.DEV) {
+            const waiting: string[] = [];
+            for (let i = 0; i < active.length; i++)
+              if (!active.data[i].isReady(true)) waiting.push(active.data[i].name);
+            console.warn(
+              `[warmSceneViews] view ${index} not ready after ${MAX_FRAMES} frames`,
+              waiting.slice(0, 12),
+            );
+          }
           stable = 0;
+          frames = 0;
           if (++index < views.length) return;
           engine.stopRenderLoop(frame);
           resolve();

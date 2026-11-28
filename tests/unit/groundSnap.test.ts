@@ -6,7 +6,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { CreateCylinder } from "@babylonjs/core/Meshes/Builders/cylinderBuilder";
 import { CreateBox } from "@babylonjs/core/Meshes/Builders/boxBuilder";
 import { GROUNDED, clearance, snapToGround } from "@/render/groundSnap";
-import { inWalk, layoutBorder, pathDistance } from "@/episodes/ep1/data/forestBorder";
+import { GROW_FOREST, inWalk, layoutBorder } from "@/episodes/ep1/data/forestBorder";
 
 describe("ground snap", () => {
   it("measures the smallest gap between points and the ground under each", () => {
@@ -76,24 +76,24 @@ describe("ground snap", () => {
   });
 });
 
-describe("thick forest beside the walk", () => {
-  it("grows off the trodden path, short of the road, clear of the first Neak Ta's patrol", () => {
+describe("the walk between the paddies", () => {
+  it("keeps its zone off the trodden path, short of the road, clear of the first Neak Ta's patrol", () => {
     expect(inWalk(-12, 45)).toBe(true);
     expect(inWalk(-1.5, 45)).toBe(false); // the path
     expect(inWalk(0, 20)).toBe(false); // the patrol
     expect(inWalk(-12, 62)).toBe(false); // the road
-    const layout = layoutBorder({ nearDepth: 14, farDepth: 44, density: 0.85, clear: () => true });
-    const walk = layout.plants.filter((p) => inWalk(p.x, p.z));
-    expect(walk.filter((p) => p.layer === "canopy").length).toBeGreaterThan(20);
-    expect(walk.every((p) => pathDistance(p.x, p.z) > 3.4)).toBe(true);
-    const thin = layoutBorder({
-      nearDepth: 8,
-      farDepth: 24,
-      density: 0.55,
-      walkCanopy: 0.45,
-      clear: () => true,
-    });
-    const thinWalk = thin.plants.filter((p) => inWalk(p.x, p.z) && p.layer === "canopy");
-    expect(thinWalk.length).toBeLessThan(walk.filter((p) => p.layer === "canopy").length);
   });
+
+  it.skipIf(!GROW_FOREST)(
+    "grows no runtime forest there: the countryside is authored in the village file",
+    () => {
+      const layout = layoutBorder({
+        nearDepth: 14,
+        farDepth: 44,
+        density: 0.85,
+        clear: () => true,
+      });
+      expect(layout.plants.filter((p) => inWalk(p.x, p.z))).toHaveLength(0);
+    },
+  );
 });

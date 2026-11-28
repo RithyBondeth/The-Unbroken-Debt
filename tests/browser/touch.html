@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>The Unbroken Debt · Touch controls preview</title>
+    <link rel="stylesheet" href="/src/ui/html/base.css" />
+    <style>
+      #game {
+        background: radial-gradient(circle at 60% 40%, #2a2219, #050606 70%);
+      }
+      .touch-log {
+        position: fixed;
+        z-index: 5;
+        left: 50%;
+        top: 42%;
+        translate: -50% 0;
+        margin: 0;
+        padding: 8px 12px;
+        background: rgb(5 6 6 / 0.7);
+        color: #d9d6cc;
+        font:
+          12px/1.5 ui-monospace,
+          monospace;
+        white-space: pre;
+        pointer-events: none;
+      }
+      .touch-preview-bar {
+        position: fixed;
+        z-index: 30;
+        left: 50%;
+        top: 56px;
+        translate: -50% 0;
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" tabindex="0" aria-label="Touch preview background"></canvas>
+    <pre class="touch-log" aria-live="polite"></pre>
+    <nav class="touch-preview-bar" aria-label="Touch preview">
+      <button type="button" class="ui-button" data-episode="1">Episode 1</button>
+      <button type="button" class="ui-button" data-episode="2">Episode 2</button>
+      <button type="button" class="ui-button" data-episode="3">Episode 3</button>
+      <button type="button" class="ui-button" data-book>Book</button>
+      <button type="button" class="ui-button" data-pause>Pause settings</button>
+    </nav>
+    <script type="module" src="./touch.ts"></script>
+  </body>
+</html>

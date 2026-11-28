@@ -8,6 +8,11 @@
 import { ellipse, Sheet } from "./pen.mjs";
 import { villageTextures } from "./village.mjs";
 import { funeralTributeTextures } from "./funeral.mjs";
+import { studioPrintTextures } from "./studio.mjs";
+import { studioBookTextures } from "./books.mjs";
+import { crackTextures } from "./cracks.mjs";
+import { journalTextures } from "./journal.mjs";
+import { shopGoodsTextures } from "./shopGoods.mjs";
 
 /** Every Khmer string on the studio's paper, with its meaning. Review: pending. */
 export const KHMER = {
@@ -60,6 +65,102 @@ export const KHMER = {
   primaryCertificate: [
     "សញ្ញាបត្របឋមសិក្សា",
     "primary-school certificate, on Sok's 1907 certificate (village.mjs, house_papers); check the term of the time",
+  ],
+  // The village road's shop goods (shopGoods.mjs, Nov 25, 2026): labels, packets and notices.
+  goodsMadeIn: [
+    "ផលិតនៅកម្ពុជា",
+    "made in Cambodia (small print on every label of the village road's shop goods, shopGoods.mjs)",
+  ],
+  goodsFishSauce: ["ទឹកត្រី", "fish sauce (bottle label, shopGoods.mjs)"],
+  goodsSoySauce: ["ទឹកស៊ីអ៊ីវ", "soy sauce (bottle label)"],
+  goodsChili: ["ទឹកម្ទេស", "chili sauce (bottle label)"],
+  goodsCookingOil: ["ប្រេងឆា", "cooking oil (bottle label)"],
+  goodsOrangeDrink: ["ទឹកក្រូច", "orange drink (bottle label)"],
+  goodsBeer: ["ស្រាបៀរ", "beer (bottle label)"],
+  goodsRiceSpirit: ["ស្រាស", "rice spirit (bottle label)"],
+  goodsCondensedMilk: ["ទឹកដោះគោខាប់", "sweetened condensed milk (tin label)"],
+  goodsCoffee: ["កាហ្វេ", "coffee (tin label; the price list)"],
+  goodsHairOil: ["ប្រេងលាបសក់", "hair oil (barber's bottle)"],
+  goodsBalm: ["ប្រេងខ្យល់", "medicated oil (small bottle)"],
+  goodsTalc: ["ម្សៅក្រអូប", "scented talcum powder (tin)"],
+  goodsShampoo: ["សាប៊ូកក់សក់", "shampoo (bottle)"],
+  goodsVinegar: ["ទឹកខ្មេះ", "vinegar (bottle)"],
+  goodsSoda: ["ទឹកសូដា", "soda water (bottle label; the price list)"],
+  goodsCannedFish: ["ត្រីកំប៉ុង", "canned fish (tin)"],
+  goodsEngineOil: ["ប្រេងម៉ាស៊ីន", "engine oil (can, moto repair shop)"],
+  goodsKerosene: ["ប្រេងកាត", "kerosene (bottle)"],
+  goodsCoughSyrup: ["ថ្នាំក្អក", "cough syrup (bottle)"],
+  goodsPerfume: ["ទឹកអប់", "perfume (salon bottle)"],
+  goodsThread: ["អំបោះ", "sewing thread (spool label)"],
+  goodsSweets: ["ស្ករគ្រាប់", "sweets (jar label)"],
+  goodsPalmSugar: ["ស្ករត្នោត", "palm sugar (jar label)"],
+  goodsPickles: ["ជ្រក់", "pickles (jar label)"],
+  goodsPrahok: ["ប្រហុក", "prahok, fermented fish paste (jar label)"],
+  goodsTea: ["តែ", "tea (tin and box; the price list)"],
+  goodsBiscuits: ["នំប៊ីស្គី", "biscuits (tin and box)"],
+  goodsBattery: ["ថ្មពិល", "battery (cell wrapper)"],
+  goodsGrease: ["ខាញ់", "grease (tin, moto repair shop)"],
+  goodsCoconutWater: ["ទឹកដូង", "coconut water (can)"],
+  goodsLotion: ["ឡេលាបខ្លួន", "body lotion (salon bottle)"],
+  goodsAlcohol: ["អាល់កុល", "surgical spirit (dentist's bottle)"],
+  goodsCigarettes: ["បារី", "cigarettes (packet; the price list)"],
+  goodsMatches: ["ឈើគូស", "matches (matchbox)"],
+  goodsInstantNoodles: ["មីកញ្ចប់", "instant noodles (packet; the price list)"],
+  goodsBarSoap: ["សាប៊ូដុំ", "bar soap (wrapper)"],
+  goodsIncense: ["ធូប", "incense (bundle wrapper)"],
+  goodsCandles: ["ទៀន", "candles (box; the price list)"],
+  goodsWashingPowder: ["ម្សៅសាប៊ូ", "washing powder (box)"],
+  goodsToothpaste: ["ថ្នាំដុសធ្មេញ", "toothpaste (box)"],
+  goodsMedicine: ["ថ្នាំ", "medicine (box)"],
+  goodsRazor: ["កាំបិតកោរ", "razor blades (packet, barber)"],
+  goodsSongs: ["ចម្រៀង", "songs (cassette tape covers)"],
+  goodsSnacks: ["នំកញ្ចប់", "packet snacks"],
+  goodsDriedSquid: ["មឹកងៀត", "dried squid (snack packet)"],
+  goodsShrimpCrackers: ["នំប៉័ងគា", "shrimp crackers (snack packet)"],
+  goodsHairDye: ["ថ្នាំជ្រលក់សក់", "hair dye (box, salon)"],
+  goodsSparkPlug: ["ប៊ូហ្ស៊ី", "spark plug (box, moto repair shop)"],
+  goodsNeedles: ["ម្ជុល", "needles (card, tailor)"],
+  goodsCalendar: ["ប្រតិទិន", "calendar (shop wall calendar, no year)"],
+  goodsNotebook: ["សៀវភៅ", "exercise book"],
+  goodsLottery: ["ឆ្នោត", "lottery ticket"],
+  goodsFacePowder: ["ម្សៅលាបមុខ", "face powder (compact, salon)"],
+  goodsWatch: ["នាឡិកា", "watch (box, the watch repair counter)"],
+  goodsTeeth: ["ធ្មេញ", "teeth (heading of the dentist's chart)"],
+  goodsPriceList: ["តារាងតម្លៃ", "price list (hand-lettered on cardboard)"],
+  goodsShrinePaper: [
+    "សេចក្ដីសុខ",
+    "peace and well-being (red paper blessing by a shop's spirit shrine); check the wording",
+  ],
+  goodsNoCredit: [
+    "សុំកុំជំពាក់",
+    "please, no credit (hand-lettered cardboard notice by the counter)",
+  ],
+  // Sora's diary on her writing desk, the studio's save point (journal.mjs). One string per
+  // paragraph, in her voice; the last breaks off mid-sentence when the telephone rings.
+  diaryHeading: ["ភ្នំពេញ ឆ្នាំ ១៩៣២", "Phnom Penh, 1932 (the head of the page)"],
+  diaryLeft: [
+    [
+      "យប់នេះ ភ្លៀងធ្លាក់មិនឈប់សោះ។ ខ្ញុំគូររូបវត្តភ្នំមិនទាន់រួចទេ ហើយទឹកខ្មៅក៏ជិតអស់ដែរ។",
+      "ម្ចាស់រោងពុម្ពចង់បានគំនូរទាំងប្រាំមួយ នៅថ្ងៃច័ន្ទក្រោយ។ ខ្ញុំនៅត្រូវគូរទន្លេសាប និងដើមត្នោតទៀត។",
+      "សំបុត្ររបស់យាយម៉ី នៅក្នុងថតតុដដែល។ ខ្ញុំមិនទាន់ហ៊ានបើកមើលទេ។ យាយប្រហែលជាខឹងនឹងខ្ញុំណាស់ ព្រោះខ្ញុំមិនបានទៅបុណ្យម្ដាយទៀតហើយ។",
+      "ផ្ទះនេះស្ងាត់ពេក។ ពេលយប់ ខ្ញុំឮដូចជាមានគេដើរនៅបន្ទប់ខាងក្រោយ ប៉ុន្តែពេលខ្ញុំទៅមើល គ្មាននរណាម្នាក់សោះ។",
+      "យប់មិញ រូបភាពក្នុងស៊ុមដែលព្យួរក្បែរទ្វាររានហាល ធ្លាក់ពីជញ្ជាំងដោយខ្លួនឯង។ ដែកគោលនៅតែជាប់នឹងជញ្ជាំងដដែល។ ព្រឹកនេះ ខ្ញុំព្យួរវាឡើងវិញហើយ។",
+    ],
+    "Tonight the rain hasn't stopped at all. I haven't finished the drawing of Wat Phnom, and the ink is nearly gone too. / " +
+      "The printing-house owner wants all six drawings by next Monday. I still have to draw the Tonle Sap and the sugar palms. / " +
+      "Yay Mey's letters are still in the desk drawer. I haven't dared to open them yet. Grandmother must be very angry with me, because I missed Mother's memorial again. / " +
+      "This house is too quiet. At night it sounds as if someone is walking in the back room, but when I go and look there is nobody at all. / " +
+      "Last night the framed picture that hangs by the balcony door fell off the wall by itself. The nail was still in the wall. This morning I hung it back up.",
+  ],
+  diaryRight: [
+    [
+      "ក្រោយមក ពេលផ្លេកបន្ទោរ ខ្ញុំឃើញស្រមោលនៅលើជញ្ជាំងក្បែរខ្លួន ដូចជាមានស្ត្រីសក់វែងម្នាក់ឈរនៅពីក្រោយខ្ញុំ។ ខ្ញុំងាកទៅមើល គ្មាននរណាម្នាក់សោះ។ ខ្ញុំគូរវាទុក កុំឲ្យភ្លេច។",
+      "យាយធ្លាប់និយាយថា បំណុលចាស់ មិនដែលរលុបទេ ហើយបើធ្នើព្រះធ្លាក់ គឺជាប្រផ្នូលអាក្រក់។ ខ្ញុំមិនជឿរឿងទាំងនេះទេ។",
+      "ប៉ុន្តែយប់នេះ ធូបលើធ្នើព្រះរលត់ម្ដងទៀត មុនឆេះបានពាក់កណ្ដាល។ ម៉ោងប្រាំបីហើយ ខ្ញុំគួរតែ",
+    ],
+    "Later, when the lightning flashed, I saw a shadow on the wall beside me, as if a woman with long hair stood behind me. I turned to look; there was no one at all. I drew it so as not to forget. / " +
+      "Grandmother used to say an old debt is never wiped out, and that if the Buddha shelf falls it is a bad omen. I don't believe these things. / " +
+      "But tonight the incense on the Buddha shelf has gone out again, before it had burned halfway. It's eight o'clock already, I should (breaks off)",
   ],
 };
 
@@ -2667,6 +2768,15 @@ export const drawings = [
     draw: letteringStudy,
   },
   { name: "study_boats", file: "T_studio_study_boats_BC", size: [1024, 1024], draw: boatStudy },
+  ...studioPrintTextures,
+  ...studioBookTextures,
+  ...crackTextures,
+  ...journalTextures({
+    heading: KHMER.diaryHeading[0],
+    left: KHMER.diaryLeft[0],
+    right: KHMER.diaryRight[0],
+  }),
   ...villageTextures,
   ...funeralTributeTextures(KHMER),
+  ...shopGoodsTextures(KHMER),
 ];

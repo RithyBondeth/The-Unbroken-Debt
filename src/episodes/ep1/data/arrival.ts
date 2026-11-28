@@ -73,7 +73,7 @@ export const ARRIVAL: Record<"road" | "greeting" | "vuthy" | "duties", Line[]> =
     {
       id: "E1-A1-05-4",
       speaker: "Mak Yey · Phone",
-      text: "And the thread around the tent. It must not break. Whatever you hear.",
+      text: "And the thread around the coffin. It must not break. Whatever you hear.",
       seconds: 5,
     },
   ],
@@ -87,9 +87,12 @@ export const ACT_TWO_OPENING = {
   endSeconds: 13,
 };
 
-/** Flames in the pavilion must remain separate from static batches so they can go out. */
+/**
+ * The funeral's flames must remain separate from static batches so they can go out: the
+ * old pavilion's, and the candles' under the house (fu_flame_, Nov 22, 2026).
+ */
 export const TENT_FLAME_MESH =
-  /^(lantern_flame_\d+|altar_candle_\d+_flame|altar_globe_\d+|coffin_lamp_flame|step_candle_\d+_flame)$/;
+  /^(lantern_flame_\d+|altar_candle_\d+_flame|altar_globe_\d+|coffin_lamp_flame|step_candle_\d+_flame|fu_flame_\d+)$/;
 
 export const ARRIVAL_NOTE = [
   {

@@ -1,12 +1,14 @@
 import { seededRandom } from "@/audio/synth";
-import { inSaveShrineClearing } from "./saveShrine";
-import { PLAY, ROAD_Z, YARD, inBelt, inBund, inside, outside, pathDistance } from "./forestBorder";
+import { FARM } from "./farmLayout";
+import { farmWildness } from "./farmGround";
+import { fbm } from "./pathGround";
 
 /**
- * Tall grass (smau) round the village: thick on the road bank, along the
- * paddies' bunds and at the edge of the swept yard, where light reaches the
- * ground; only a thin fringe along the forest path under the old canopy. The trodden path, the road, the yard, the shrine
- * clearing, the pond and the wells stay bare. Babylon space, metres.
+ * Tall grass (smau) on the farmstead (Nov 22, 2026): patches of it thick where nobody
+ * walks (away from the paths and the doors, at the feet of the fences, on the fields'
+ * bunds), a few clumps elsewhere; none on the paths, the cart track, in the buildings or
+ * on the fields' stubble. The same measure of wildness as the authored weeds
+ * (tools/areas/farmstead.py ground_cover). Babylon space, metres.
  */
 
 export interface GrassClump {
@@ -15,7 +17,7 @@ export interface GrassClump {
   yaw: number;
   /** Height of the clump (m). */
   scale: number;
-  /** 0, 1 green; 2 dry, straw-tipped (more of it on the road's sunny bank). */
+  /** 0, 1 green; 2 dry, straw-tipped (more of it in the open). */
   variant: number;
 }
 
@@ -27,38 +29,20 @@ export interface GrassOptions {
   clear: (x: number, z: number, radius: number) => boolean;
 }
 
-const POND = { x: 20, z: -19, rx: 5.5, rz: 4.5 };
-const WELLS: readonly (readonly [number, number])[] = [
-  [17, -7.5],
-  [-9.5, 33],
-];
-
-/** A verge: none on the trodden ground, thickest a step off it, thinning away. */
-function verge(d: number, edge: number, width: number): number {
-  if (d < edge || d > edge + width) return 0;
-  const t = (d - edge) / width;
-  return Math.min(1, t * 5) * (1 - t * t);
+/** How likely tall grass is to grow at a point, 0-1. */
+export function grassChance(x: number, z: number): number {
+  const wild = farmWildness(x, z);
+  if (wild <= 0) return 0;
+  // Thick in patches a few metres across (the previews' smau), and the yard between them
+  // grown over too (the approved previews: grass to the house's feet, Nov 22, 2026).
+  const patch = fbm(x / 7 + 31, z / 7 - 17);
+  if (wild > 0.45 && patch > 0.42) return 0.95;
+  return 0.22 + 0.55 * wild * smooth01((patch - 0.22) / 0.3);
 }
 
-/** How likely tall grass is to grow at a point, 0–1. */
-export function grassChance(x: number, z: number): number {
-  if (!inside(PLAY, x, z, 0.5)) return 0;
-  if (inSaveShrineClearing(x, z, 0.5)) return 0;
-  if (inside(YARD, x, z, 0.4)) return 0;
-  if (((x - POND.x) / POND.rx) ** 2 + ((z - POND.z) / POND.rz) ** 2 < 1) return 0;
-  if (WELLS.some(([wx, wz]) => Math.hypot(x - wx, z - wz) < 1.8)) return 0;
-  const path = pathDistance(x, z);
-  const road = Math.abs(z - ROAD_Z);
-  if (path < 0.9 || road < 2.4) return 0;
-  let chance = 0;
-  // Under the old-growth canopy little grass grows: a thin fringe along the trodden path.
-  if (z > 2 && z < 61) chance = Math.max(chance, 0.45 * verge(path, 0.9, 3.4));
-  if (Math.abs(x) < 34) chance = Math.max(chance, 0.85 * verge(road, 2.4, 3.2));
-  if (inBund(x, z)) chance = Math.max(chance, 0.6);
-  const yard = outside(YARD, x, z);
-  if (yard > 0 && yard < 3) chance = Math.max(chance, 0.45 * (1 - yard / 3));
-  if (inBelt(x, z)) chance = Math.max(chance, 0.22);
-  return chance;
+function smooth01(t: number): number {
+  const c = Math.max(0, Math.min(1, t));
+  return c * c * (3 - 2 * c);
 }
 
 /** Clumps on a jittered grid, kept where `grassChance` allows. Deterministic. */
@@ -66,8 +50,8 @@ export function layoutGrass(options: GrassOptions): GrassClump[] {
   const random = seededRandom(options.seed ?? 6242070);
   const s = options.spacing;
   const clumps: GrassClump[] = [];
-  for (let gx = PLAY.minX; gx < PLAY.maxX; gx += s)
-    for (let gz = PLAY.minZ; gz < PLAY.maxZ; gz += s) {
+  for (let gx = FARM.minX; gx < FARM.maxX; gx += s)
+    for (let gz = FARM.minZ; gz < FARM.maxZ; gz += s) {
       const x = gx + s * random(),
         z = gz + s * random();
       const u = random(),
@@ -76,13 +60,14 @@ export function layoutGrass(options: GrassOptions): GrassClump[] {
         v = random();
       const chance = grassChance(x, z);
       if (u > chance || !options.clear(x, z, 0.3)) continue;
-      const roadside = Math.abs(z - ROAD_Z) < 6;
+      // Straw-tipped clumps where the sun reaches: on the fields' bunds and the open yard.
+      const open = chance > 0.9 ? 0.3 : 0.18;
       clumps.push({
         x,
         z,
         yaw,
         scale: (0.45 + 0.65 * k) * (0.65 + 0.35 * chance),
-        variant: v < (roadside ? 0.45 : 0.18) ? 2 : v < 0.6 ? 0 : 1,
+        variant: v < open ? 2 : v < 0.6 ? 0 : 1,
       });
     }
   return clumps;

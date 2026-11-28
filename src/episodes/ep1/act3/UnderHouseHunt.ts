@@ -7,10 +7,10 @@ import type { Vigil } from "../act1/Vigil";
 import { wetStep, seededRandom } from "@/audio/synth";
 import { jarLid } from "../audio/actThreeSounds";
 import { StalkerVoice } from "../audio/StalkerVoice";
-import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, JARS, inHunt } from "../data/hunt";
+import { CP5_FEET, CP5_YAW, FRAGMENT_IDS, HOUSE_ARENA, JARS, arenaAt, inHunt } from "../data/hunt";
 import { HuntProgress } from "./HuntProgress";
 import { RoamerBrain } from "./RoamerBrain";
-import type { HuntModels } from "./HuntModels";
+import type { HuntModels, SearchJar } from "./HuntModels";
 import "@/ui/html/walker.css";
 
 const after = (seconds: number) => new Promise<void>((done) => setTimeout(done, seconds * 1000));
@@ -20,10 +20,12 @@ export class UnderHouseHunt {
   readonly progress: HuntProgress;
   readonly brain = new RoamerBrain();
   restarts = 0;
+  /** Told when Sora lifts a jar's lid (the J4 jump scare is in one of them). */
+  onJarOpened: ((jar: SearchJar) => void) | null = null;
   private checkpoint: SaveData | null = null;
   private recovering = false;
   private intro = 0;
-  private stepIn = 0;
+  private stepCount = 0;
   private assembly = -1;
   private actionState = "";
   private readonly entries: string[] = [];
@@ -43,6 +45,16 @@ export class UnderHouseHunt {
     this.progress = new HuntProgress(game.flags, game.inventory);
     if (game.resumedSave?.checkpoint === "CP5") this.checkpoint = structuredClone(game.resumedSave);
     models.createPreview(game.camera);
+    // Her bare feet in the mud under the house, with her heels.
+    models.onStep = (at) => {
+      if (!this.brain.active) return;
+      const step = this.steps[this.stepCount++ % Math.max(1, this.steps.length)];
+      if (step) {
+        step.spatial.position = at.clone();
+        step.play();
+      }
+      this.voice.step(this.brain.position);
+    };
     this.restoreModels();
     for (const jar of models.jars) {
       game.interaction.add(`interact_jar_${jar.id}`, jar.root);
@@ -90,7 +102,7 @@ export class UnderHouseHunt {
         this.brain.position,
         { minDistance: 2.5, volume: 0.6 },
       );
-      sound.playbackRate = 0.58 + i * 0.04;
+      sound.playbackRate = 0.8 + i * 0.04;
       this.steps.push(sound);
     }
     this.lidSound = await audio.spatialSound(
@@ -123,9 +135,9 @@ export class UnderHouseHunt {
       g.stopInspecting();
       g.satchel.close();
       g.sketchbook?.close();
-      this.brain.start();
+      this.brain.start(arenaAt(g.player.feet) ?? HOUSE_ARENA);
       this.intro = 2.5;
-      this.stepIn = 0;
+      this.stepCount = 0;
       g.hints.show("hint.underHouse", 12);
       void g.subtitles.say(
         "Sora",
@@ -149,17 +161,6 @@ export class UnderHouseHunt {
         this.brain.elapsed,
         Math.min(1, Math.max(0, 1 - this.intro)),
       );
-      this.stepIn -= dt;
-      if (this.stepIn <= 0) {
-        const step =
-          this.steps[Math.floor(this.brain.elapsed * 1.2) % Math.max(1, this.steps.length)];
-        if (step) {
-          step.spatial.position = this.brain.position.add(new Vector3(0, 0.1, 0));
-          step.play();
-        }
-        this.voice.step(this.brain.position);
-        this.stepIn = this.brain.state === "chasing" ? 0.55 : 0.95;
-      }
       const state = this.brain.state;
       // Wet breath on its patrol, ragged when it hunts; it stops to scent where it lost her.
       this.voice.breathe(
@@ -265,6 +266,7 @@ export class UnderHouseHunt {
         this.lidSound.play();
       }
       g.hints.show("hint.jarTake", 4);
+      this.onJarOpened?.(jar);
     } else {
       if (jar.opening < 0.9 || !this.progress.take(jar.id)) return;
       this.models.jarState(jar.id, true, true);
@@ -275,7 +277,8 @@ export class UnderHouseHunt {
       } else if (spec.contents === "lore") {
         this.remember("L2");
         g.hints.show("note.jarLore", 5);
-      } else g.hints.show("note.jarOil", 4);
+      } else if (spec.contents === "gate") g.hints.show("note.barnKey", 5);
+      else g.hints.show("note.jarOil", 4);
     }
     this.commit();
   }
@@ -359,12 +362,7 @@ export class UnderHouseHunt {
     g.satchel.close();
     g.hints.hide();
     const forward = g.camera.getForwardRay().direction;
-    this.models.pose(
-      g.camera.globalPosition.add(forward.scale(0.65)).subtract(new Vector3(0, 1.55, 0)),
-      forward.negate(),
-      0,
-      1,
-    );
+    this.models.confront(g.camera.globalPosition, forward, 0.6);
     await after(0.65);
     this.caught.hidden = false;
     await after(0.65);

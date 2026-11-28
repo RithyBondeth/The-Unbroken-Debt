@@ -35,6 +35,23 @@ const SHAPES: Record<FoliageKind, readonly [number, number, number, number, numb
  */
 const PLANTS: [RegExp, FoliageKind][] = [
   [/^M_forest_far_cards$/, "card"],
+  // Episode 1's scanned plants (tools/areas/village_nature.py, November 2026): the
+  // user's trees, palm, bamboo and bananas, and the Poly Haven plants beside them.
+  [/^(M_paddy_rice_(green|ripe)|M_flora_grass_(medium_0\d|bermuda_01)_.*)$/, "grass"],
+  // The banana's stems, petioles, fruit and bell (tools/areas/banana_clump.py "Stem")
+  // bend as a trunk does; its leaves flap.
+  [/^M_flora_banana_clump_Stem$/, "bark"],
+  [/^M_flora_(sugar_palm_Material_5\d|banana_clump_.*)$/, "frond"],
+  // Their vines hang from high limbs: they go with the crown (uv6 is height above the
+  // foot here, not the length a strand hangs, which "hanging" expects).
+  [
+    /^M_flora_(forest_tree_gn_(ClusterB2?|VinesB)|forest_banyan_(BanyanTreeLeaves_\d|Branches_\d+|Vines_\d+)|bamboo_clump_(Leaves\d|Branches\d)|(fern_02|shrub_0\d|anthurium_botany_01|calathea_orbifolia_01|periwinkle_plant|nettle_plant|weed_plant_02|shrub_sorrel_01)_.*)$/,
+    "leaf",
+  ],
+  [
+    /^M_flora_(forest_tree_gn_(BarkB|CortexB)|forest_banyan_(BanyanTreeBark|Cap_\d+)|sugar_palm_Material_49|bamboo_clump_(Trunks\d|material))$/,
+    "bark",
+  ],
   [/^(M_forest_grass|grass_medium_\d+)$/, "grass"],
   [/^(M_banana_leaf|M_palm_fan(_dead)?|M_coconut_leaf)$/, "frond"],
   [

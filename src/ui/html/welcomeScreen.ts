@@ -5,6 +5,9 @@ import { STINGER_HIT, type Stinger } from "@/audio/welcomeDread";
 import { animateCords, type CordLayer } from "./welcomeCords";
 import "./welcome.css";
 import { setControlText } from "./controlText";
+import { mountGraphicsMenu } from "./graphicsMenu";
+import type { DeviceProfile } from "@/render/DeviceProfile";
+import { readGraphicsSettings, writeGraphicsSettings } from "@/render/graphicsSettings";
 
 /** Third-party scans, adapted for the game. CC BY 4.0 requires this credit wherever they ship. */
 const MODEL_CREDITS = `<p class="welcome-note">3D scans, adapted for this game (decimated, weathered, re-rigged or partly reused). CC BY 4.0: ${[
@@ -22,6 +25,22 @@ const MODEL_CREDITS = `<p class="welcome-note">3D scans, adapted for this game (
     "fdhlan21",
     "kuntilanak-merah-scary-f403d41cda214c06ab6044d780463b7e",
   ],
+  ["Tree GN", "TechArtBGN", "tree-gn-40da979cb23f492583ec89c4196cff4e"],
+  [
+    "Chinese Banyan (Ficus Microcarpa)",
+    "Valery.Li",
+    "chinese-banyan-ficus-microcarpa-2a0dbcdf8f5d48f5ad79987c7a8170ce",
+  ],
+  [
+    "Washingtonia Robusta Palm_01",
+    "andre.arq.89",
+    "washingtonia-robusta-palm-01-e59d8c7f054248fbbf32cfe4851b8911",
+  ],
+  [
+    "Smartinius Scarecrow Complete Mesh",
+    "smartinius",
+    "smartinius-scarecrow-complete-mesh-451f6d6c41cb47e5aee8aae4ec082d64",
+  ],
 ]
   .map(
     ([title, author, slug]) =>
@@ -31,14 +50,39 @@ const MODEL_CREDITS = `<p class="welcome-note">3D scans, adapted for this game (
     "; ",
   )} (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">licence</a>). CC0: Prajnaparamita, Minneapolis Institute of Art; 1987.14.2 Naga Finial, Cleveland Museum of Art.</p><p class="welcome-note">The motion capture data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.</p>`;
 
+/** On-screen touch controls: "auto" shows them on phones and tablets. */
+export type TouchChoice = "auto" | "on" | "off";
+
 export interface WelcomeSettings {
   sound: boolean;
   sensitivity: number;
   invertY: boolean;
+  touchControls: TouchChoice;
 }
 
-const defaults: WelcomeSettings = { sound: true, sensitivity: 0.0022, invertY: false };
+const defaults: WelcomeSettings = {
+  sound: true,
+  sensitivity: 0.0022,
+  invertY: false,
+  touchControls: "auto",
+};
 const settingsKey = "boon-sop.welcome-settings";
+
+export function writeWelcomeSettings(settings: WelcomeSettings): void {
+  try {
+    localStorage.setItem(settingsKey, JSON.stringify(settings));
+  } catch {
+    /* Session settings still apply. */
+  }
+}
+
+/** Whether touch controls drive the game, from the setting and the device. */
+export function wantsTouch(
+  choice: TouchChoice,
+  device: Pick<DeviceProfile, "formFactor">,
+): boolean {
+  return choice === "on" || (choice === "auto" && device.formFactor !== "desktop");
+}
 
 export function readWelcomeSettings(): WelcomeSettings {
   try {
@@ -52,6 +96,10 @@ export function readWelcomeSettings(): WelcomeSettings {
         typeof saved?.sensitivity === "number" && Number.isFinite(saved.sensitivity)
           ? Math.min(0.005, Math.max(0.0005, saved.sensitivity))
           : defaults.sensitivity,
+      touchControls:
+        saved?.touchControls === "on" || saved?.touchControls === "off"
+          ? saved.touchControls
+          : defaults.touchControls,
     };
   } catch {
     return { ...defaults };
@@ -62,8 +110,12 @@ export function readWelcomeSettings(): WelcomeSettings {
 export async function showWelcomeScreen(
   root: HTMLElement,
   saves: Pick<SaveStore, "load"> = new SaveStore(),
+  /** The device check, run alongside: "Auto" quality names its pick once it is known. */
+  detecting: Promise<DeviceProfile> | null = null,
 ): Promise<WelcomeSettings> {
   const settings = readWelcomeSettings();
+  let device: DeviceProfile | null = null;
+  void detecting?.then((profile) => (device = profile)).catch(() => undefined);
   root.hidden = false;
   root.innerHTML = `
     <main class="welcome" aria-label="The Unbroken Debt main menu">
@@ -179,6 +231,8 @@ export async function showWelcomeScreen(
     root.addEventListener("pointerdown", gesture, listen);
     root.addEventListener("keydown", gesture, listen);
     const start = (continuing: boolean) => {
+      // Phones and tablets play best full screen and sideways; the press is the gesture that allows it.
+      if (device && wantsTouch(settings.touchControls, device)) enterFullscreenLandscape();
       abort.abort();
       ambience.dispose();
       soundButton.disabled = true;
@@ -233,13 +287,30 @@ export async function showWelcomeScreen(
             <p class="welcome-note">Controls the title theme, ambience and game sound. Headphones recommended.</p>
             <label class="welcome-setting" for="welcome-sensitivity">Mouse sensitivity</label>
             <input id="welcome-sensitivity" name="sensitivity" aria-label="Mouse sensitivity" type="range" min="0.0005" max="0.005" step="0.0001" value="${settings.sensitivity}">
-            <label class="welcome-setting">Invert vertical look <input name="invertY" type="checkbox" ${settings.invertY ? "checked" : ""}></label>`,
+            <label class="welcome-setting">Invert vertical look <input name="invertY" type="checkbox" ${settings.invertY ? "checked" : ""}></label>
+            <label class="welcome-setting" for="welcome-touch">Touch controls
+              <select id="welcome-touch" name="touchControls" class="welcome-select">
+                <option value="auto"${settings.touchControls === "auto" ? " selected" : ""}>Auto (phones and tablets)</option>
+                <option value="on"${settings.touchControls === "on" ? " selected" : ""}>On</option>
+                <option value="off"${settings.touchControls === "off" ? " selected" : ""}>Off</option>
+              </select></label>`,
             );
+            {
+              const menu = mountGraphicsMenu(
+                dialog.querySelector<HTMLElement>(".welcome-dialog-content")!,
+                {
+                  settings: readGraphicsSettings(),
+                  device,
+                  onChange: writeGraphicsSettings,
+                },
+              );
+              if (!device) void detecting?.then((profile) => menu.setDevice(profile));
+            }
             break;
           case "controls":
             open(
               "How to play",
-              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / save at a spirit house or writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>X</dt><dd>Episode 2: slide lamp shutter</dd><dt>Space</dt><dd>Episode 2: hold breath (six seconds)</dd><dt>G</dt><dd>Episode 2: throw empty clay bowl</dd><dt>R</dt><dd>Episode 2: refill lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape pauses the game.</p>`,
+              `<p>Return to the house. Listen closely. Keep your lamp near.</p><dl class="welcome-controls"><dt>W A S D</dt><dd>Move</dd><dt>Mouse</dt><dd>Look</dd><dt>E</dt><dd>Interact / save at a spirit house or writing desk</dd><dt>Shift</dt><dd>Hurry</dd><dt>C / Ctrl</dt><dd>Hold to crouch</dd><dt>F</dt><dd>Light or put out the lamp</dd><dt>X</dt><dd>Episode 2: slide lamp shutter</dd><dt>Space</dt><dd>Episode 2: hold breath (six seconds)</dd><dt>G</dt><dd>Episode 2: throw empty clay bowl</dd><dt>R</dt><dd>Episode 2: refill lamp</dd><dt>Q</dt><dd>Notebook: objective, map, clues and people</dd><dt>Tab</dt><dd>Satchel</dd></dl><p class="welcome-note">Progress saves at checkpoints. Being caught returns you to your last safe checkpoint. Click inside the game to capture your mouse. Escape pauses the game.</p><p class="welcome-note">On a phone or tablet: drag on the left of the screen to walk (push to the rim to hurry), drag anywhere else to look, and use the buttons in the corners. Each button shows the key it stands for. Keys, top left, opens every other key.</p>`,
             );
             break;
           case "credits":
@@ -262,11 +333,7 @@ export async function showWelcomeScreen(
             ambience.setEnabled(settings.sound);
             if (settings.sound) unlockAmbience();
             updateSoundButton();
-            try {
-              localStorage.setItem(settingsKey, JSON.stringify(settings));
-            } catch {
-              /* Session only. */
-            }
+            writeWelcomeSettings(settings);
             break;
         }
       },
@@ -279,7 +346,9 @@ export async function showWelcomeScreen(
         const content = dialog.querySelector<HTMLElement>(".welcome-dialog-content")!;
         const focusable: HTMLElement[] = [
           ...(content.scrollHeight > content.clientHeight ? [content] : []),
-          ...dialog.querySelectorAll<HTMLElement>("input:not(:disabled), button:not(:disabled)"),
+          ...dialog.querySelectorAll<HTMLElement>(
+            "input:not(:disabled), select:not(:disabled), button:not(:disabled)",
+          ),
         ];
         event.preventDefault();
         const current = focusable.indexOf(document.activeElement as HTMLElement);
@@ -297,6 +366,8 @@ export async function showWelcomeScreen(
       "change",
       (event) => {
         const input = event.target as HTMLInputElement;
+        if (input.name === "touchControls")
+          settings.touchControls = input.value as WelcomeSettings["touchControls"];
         if (input.name === "sound") {
           settings.sound = input.checked;
           ambience.setEnabled(settings.sound);
@@ -305,11 +376,7 @@ export async function showWelcomeScreen(
         }
         if (input.name === "invertY") settings.invertY = input.checked;
         if (input.name === "sensitivity") settings.sensitivity = Number(input.value);
-        try {
-          localStorage.setItem(settingsKey, JSON.stringify(settings));
-        } catch {
-          /* Session settings still apply. */
-        }
+        writeWelcomeSettings(settings);
       },
       listen,
     );
@@ -386,6 +453,21 @@ function haunt(
   };
   schedule("far");
   signal.addEventListener("abort", () => clearTimeout(timer));
+}
+
+/** Best effort: iPhone Safari has no page fullscreen, and orientation lock needs fullscreen. */
+function enterFullscreenLandscape(): void {
+  const page = document.documentElement;
+  if (document.fullscreenElement || typeof page.requestFullscreen !== "function") return;
+  void page
+    .requestFullscreen({ navigationUI: "hide" })
+    .then(() => {
+      const orientation = screen.orientation as ScreenOrientation & {
+        lock?: (orientation: string) => Promise<void>;
+      };
+      return orientation.lock?.("landscape");
+    })
+    .catch(() => undefined);
 }
 
 export function showBootError(root: HTMLElement): void {

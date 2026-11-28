@@ -1,9 +1,15 @@
 import type { Game } from "./core/Game";
 import { detectDevice } from "./render/detectDevice";
+import { readGraphicsSettings } from "./render/graphicsSettings";
 import { isQualityName } from "./render/qualityPresets";
 import { hasSpike, runSpike } from "./spikes";
 import { showRequirementsPage } from "./ui/html/requirementsPage";
-import { readWelcomeSettings, showBootError, showWelcomeScreen } from "./ui/html/welcomeScreen";
+import {
+  readWelcomeSettings,
+  showBootError,
+  showWelcomeScreen,
+  wantsTouch,
+} from "./ui/html/welcomeScreen";
 
 /**
  * The engine and the game are a separate chunk, so the welcome screen appears
@@ -27,10 +33,14 @@ async function boot(): Promise<void> {
   // Keep existing developer/checkpoint entry URLs direct.
   const direct =
     hasSpike(spike) || params.has("start") || params.has("continue") || params.has("episode");
-  const settings = direct ? readWelcomeSettings() : await showWelcomeScreen(overlay);
+  // The device check runs behind the title screen, whose settings name the "Auto" pick.
+  const detecting = detectDevice();
+  const settings = direct
+    ? readWelcomeSettings()
+    : await showWelcomeScreen(overlay, undefined, detecting);
 
-  // Phones, tablets and browsers without (hardware) WebGPU get the requirements page.
-  const device = await detectDevice();
+  // Browsers without (hardware) WebGPU get the requirements page.
+  const device = await detecting;
   console.info(`[boot] ${device.label} → ${device.blocked ?? `${device.quality} preset`}`);
   if (device.blocked) {
     showRequirementsPage(overlay, device.blocked);
@@ -38,7 +48,7 @@ async function boot(): Promise<void> {
   }
 
   const [{ Game }, { createEngine }, { useLocalDecoders }] = await gameModules;
-  const engine = await createEngine(canvas);
+  const engine = await createEngine(canvas, { handheld: device.formFactor !== "desktop" });
   if (!engine) {
     showRequirementsPage(overlay, "no-webgpu");
     return;
@@ -52,14 +62,18 @@ async function boot(): Promise<void> {
     return;
   }
 
-  // Development builds only: ?quality=low|medium|high|ultra tests a preset this machine wouldn't pick.
+  // The player's graphics settings. Development builds only: ?quality=low|medium|high|ultra
+  // tests a preset without changing them.
+  const graphics = readGraphicsSettings();
   const forced = params.get("quality");
+  if (import.meta.env.DEV && isQualityName(forced)) graphics.preset = forced;
   const game = new Game(
     engine,
-    import.meta.env.DEV && isQualityName(forced) ? { ...device, quality: forced } : device,
+    device,
     import.meta.env.DEV && ["ep2-play", "ep3-play"].includes(params.get("profile") ?? "")
       ? `boon-sop-${params.get("profile")}`
       : undefined,
+    { graphics, touch: wantsTouch(settings.touchControls, device) },
   );
   game.input.sensitivity = settings.sensitivity;
   game.input.invertY = settings.invertY;

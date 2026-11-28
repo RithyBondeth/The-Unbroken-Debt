@@ -44,6 +44,7 @@ export class HuntProgress {
     this.flags.set(`ep1.jar.${id}.taken`, true);
     if (jar.contents === "key") this.inventory.add(FRAGMENT_IDS[jar.piece]);
     else if (jar.contents === "oil") this.inventory.add("oil");
+    else if (jar.contents === "gate") this.inventory.add("barn_gate_key");
     else {
       this.flags.set("lore.ep1.L2", true);
       this.flags.increment("ep1.lore");
