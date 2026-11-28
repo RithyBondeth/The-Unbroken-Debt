@@ -195,7 +195,7 @@ export class DeskInvestigation {
     g.gated.holdStill = true;
     g.gated.holdLook = true;
     g.hints.hide();
-    if (document.pointerLockElement) document.exitPointerLock();
+    document.exitPointerLock();
     this.reader.show(
       g.flags.get("ep1.journalB.page", 0),
       () => {

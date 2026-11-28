@@ -325,3 +325,19 @@
     padding: var(--ui-space-2) var(--ui-space-4);
   }
 }
+
+/* "Show frame rate" (FpsCounter.ts). */
+.fps-counter {
+  position: fixed;
+  z-index: var(--ui-z-hud);
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  translate: -50% 0;
+  margin: 0;
+  padding: 2px 8px;
+  background: rgb(5 6 6 / 0.55);
+  color: rgb(217 214 204 / 0.8);
+  font: 500 0.7rem / 1.4 var(--ui-font-body);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}

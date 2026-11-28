@@ -39,7 +39,17 @@ const after = (seconds: number) =>
  * Control hints with shared type and keycaps that fade: shown the first time an action
  * is needed, never again once the player has done it (Controls and Interface, 6.3).
  */
+/** Hints that name the mouse or W A S D, as they read with the touch controls. */
+const TOUCH_HINTS: Partial<Record<StringKey, StringKey>> = {
+  "hint.look": "touch.hint.look",
+  "hint.move": "touch.hint.move",
+  "hint.refill": "touch.hint.refill",
+  "hint.raise": "touch.hint.raise",
+};
+
 export class Hints {
+  /** Playing with the touch controls: hints about the mouse and keys read for touch. */
+  touch = false;
   private readonly node = element("div", "story-hint");
   private readonly performedKeys = new Set<string>();
   private current: StringKey | null = null;
@@ -48,7 +58,7 @@ export class Hints {
   show(key: StringKey, seconds = 7): void {
     if (this.performedKeys.has(key)) return;
     this.current = key;
-    setControlText(this.node, t(key));
+    setControlText(this.node, t((this.touch && TOUCH_HINTS[key]) || key));
     this.node.classList.add("shown");
     clearTimeout(this.timer);
     this.timer = setTimeout(() => this.hide(), seconds * 1000);

@@ -2,6 +2,23 @@ import "./pause.css";
 import { t } from "@/data/strings";
 import { EntryAmbience } from "@/audio/EntryAmbience";
 import { readWelcomeSettings } from "./welcomeScreen";
+import { mountGraphicsMenu } from "./graphicsMenu";
+import type { DeviceProfile } from "@/render/DeviceProfile";
+import type { GraphicsSettings } from "@/render/graphicsSettings";
+
+/** The settings the pause menu can change while playing. */
+export interface PauseSettings {
+  graphics: GraphicsSettings;
+  /** What the game loaded with: quality and effects only change on the next load. */
+  loaded: GraphicsSettings;
+  device: Pick<DeviceProfile, "quality" | "formFactor">;
+  sensitivity: number;
+  invertY: boolean;
+  /** Touch controls are on: the Controls panel describes them. */
+  touch: boolean;
+  onGraphics(next: GraphicsSettings): void;
+  onLook(sensitivity: number, invertY: boolean): void;
+}
 
 export interface PauseActions {
   resume(): void;
@@ -10,7 +27,21 @@ export interface PauseActions {
   quit(): void;
   /** Optional Episode 1 Night Clock string (e.g. "23:45 · The Farmstead"). */
   clock?: string;
+  settings?: PauseSettings;
 }
+
+const TOUCH_CONTROLS: [string, string][] = [
+  ["Left thumb", "Drag to walk; push to the rim to hurry"],
+  ["Right thumb", "Drag to look"],
+  ["Use · E", "Use, take, open; hold where the game says hold"],
+  ["Lamp · F", "Light or put out the lamp"],
+  ["Crouch · C", "Crouch or stand (a toggle)"],
+  ["Raise", "Raise the lamp (right mouse on a computer)"],
+  ["Notebook · Q", "Objective, map, clues and people"],
+  ["Satchel · Tab", "What Sora carries"],
+  ["Keys", "Every other key, top left"],
+  ["Pause", "Pause, settings and checkpoints"],
+];
 
 /** Lines the dark says while the game waits. */
 const WHISPERS = ["pause.whisper1", "pause.whisper2", "pause.whisper3", "pause.whisper4"] as const;
@@ -25,6 +56,7 @@ export class PauseMenu {
   private readonly node = document.createElement("div");
   private readonly menu = document.createElement("nav");
   private readonly controls = document.createElement("dl");
+  private readonly settingsPanel = document.createElement("div");
   private readonly confirm = document.createElement("div");
   private readonly whisper = document.createElement("p");
   private readonly clockLine = document.createElement("p");
@@ -83,6 +115,8 @@ export class PauseMenu {
     ]
       .map(([key, what]) => `<dt>${key}</dt><dd>${what}</dd>`)
       .join("");
+    this.settingsPanel.className = "pause-settings";
+    this.settingsPanel.hidden = true;
     this.confirm.className = "pause-confirm";
     this.confirm.hidden = true;
 
@@ -93,6 +127,7 @@ export class PauseMenu {
       this.whisper,
       this.menu,
       this.controls,
+      this.settingsPanel,
       this.confirm,
     );
     const hint = document.createElement("p");
@@ -105,10 +140,12 @@ export class PauseMenu {
       if (event.code !== "Tab") return;
       // Keep keyboard focus inside the menu while it is open.
       const focusable = [
-        ...node.querySelectorAll<HTMLButtonElement>("button:not([hidden])"),
+        ...node.querySelectorAll<HTMLElement>(
+          "button:not([hidden]), select:not([disabled]), input:not([disabled])",
+        ),
       ].filter((b) => b.offsetParent !== null);
       if (!focusable.length) return;
-      const at = focusable.indexOf(document.activeElement as HTMLButtonElement);
+      const at = focusable.indexOf(document.activeElement as HTMLElement);
       const next = event.shiftKey
         ? (at <= 0 ? focusable.length : at) - 1
         : (at + 1) % focusable.length;
@@ -155,13 +192,16 @@ export class PauseMenu {
 
   /** Escape inside the menu: back out of a sub-panel first, then resume. */
   back(): void {
-    if (!this.controls.hidden || !this.confirm.hidden) this.showMenu();
+    if (!this.controls.hidden || !this.confirm.hidden || !this.settingsPanel.hidden)
+      this.showMenu();
     else this.actions?.resume();
   }
 
   private showMenu(): void {
     const actions = this.actions;
     this.controls.hidden = true;
+    this.settingsPanel.hidden = true;
+    this.node.classList.remove("pause-in-settings");
     this.confirm.hidden = true;
     this.menu.hidden = false;
     this.menu.replaceChildren();
@@ -177,12 +217,57 @@ export class PauseMenu {
     item(t("pause.controls"), () => {
       this.menu.hidden = true;
       this.controls.hidden = false;
+      this.showControls(actions?.settings?.touch ?? false);
       this.backButton(this.controls);
     });
+    const settings = actions?.settings;
+    if (settings) item(t("pause.settings"), () => this.showSettings(settings));
     const restart = actions?.restart;
     if (restart) item(t("pause.restart"), () => this.ask(t("pause.restartConfirm"), restart));
     item(t("pause.quit"), () => this.ask(t("pause.quitConfirm"), () => this.actions?.quit()));
     this.menu.querySelector("button")?.focus({ preventScroll: true });
+  }
+
+  private showControls(touch: boolean): void {
+    if (!touch) return;
+    this.controls.innerHTML = TOUCH_CONTROLS.map(
+      ([key, what]) => `<dt>${key}</dt><dd>${what}</dd>`,
+    ).join("");
+  }
+
+  /** Look and graphics settings; most apply at once, quality and effects on the next load. */
+  private showSettings(settings: PauseSettings): void {
+    this.menu.hidden = true;
+    this.node.classList.add("pause-in-settings");
+    const panel = this.settingsPanel;
+    panel.hidden = false;
+    panel.replaceChildren();
+    const look = document.createElement("section");
+    look.className = "settings-look";
+    look.innerHTML = `
+      <h3 class="settings-heading">${t("pause.look")}</h3>
+      <div class="settings-row"><label for="pause-sensitivity">${t("pause.sensitivity")}</label>
+        <input id="pause-sensitivity" name="sensitivity" type="range" min="0.0005" max="0.005" step="0.0001" value="${settings.sensitivity}"></div>
+      <label class="settings-row settings-check" for="pause-invert">${t("pause.invertY")}<input id="pause-invert" name="invertY" type="checkbox"${settings.invertY ? " checked" : ""}></label>`;
+    look.addEventListener("change", () => {
+      const sensitivity = Number(look.querySelector<HTMLInputElement>("#pause-sensitivity")!.value);
+      const invertY = look.querySelector<HTMLInputElement>("#pause-invert")!.checked;
+      settings.sensitivity = sensitivity;
+      settings.invertY = invertY;
+      settings.onLook(sensitivity, invertY);
+    });
+    panel.append(look);
+    mountGraphicsMenu(panel, {
+      settings: settings.graphics,
+      device: settings.device,
+      loaded: settings.loaded,
+      onChange: (next) => {
+        settings.graphics = next;
+        settings.onGraphics(next);
+      },
+    });
+    this.backButton(panel);
+    panel.querySelector<HTMLElement>("input, select")?.focus({ preventScroll: true });
   }
 
   private backButton(panel: HTMLElement): void {

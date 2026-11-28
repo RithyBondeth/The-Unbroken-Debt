@@ -12,6 +12,10 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  /* No pull-to-refresh or rubber-banding on phones and tablets. */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   background: var(--ui-bg);
   font-family: var(--ui-font-body);
 }
@@ -21,6 +25,10 @@ body {
   width: 100%;
   height: 100%;
   outline: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #overlay {

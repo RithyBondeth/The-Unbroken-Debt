@@ -15,7 +15,7 @@ export interface PlayerConfig {
   hurrySpeed: number;
   crouchSpeed: number;
   climbSpeed: number;
-  /** Ground acceleration towards the wished speed. */
+  /** Ground acceleration towards the wished speed, m/s² (the character controller's maxAcceleration). */
   acceleration: number;
   /** How much steering is possible while airborne (0–1). */
   airControl: number;

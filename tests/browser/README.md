@@ -8,6 +8,14 @@ thunder rolls on their own. See `docs/production/act0-act1-dread-audio.md`.
 The **Wind** group plays the wind beds, a gust, each tree's voice and the taxi
 buffet; see `docs/production/forest-wind-and-omens.md`.
 
+## Touch controls
+
+Open `/tests/browser/touch.html` with touch emulation (the browser's device
+toolbar) or on a phone. No WebGPU needed: the real touch controls drive the real
+input, and a log shows the keys, clicks, movement and look they produce. The
+toolbar switches episode buttons, raises the sketchbook's page buttons and opens
+the pause menu's settings. See `docs/production/stability-and-mobile-2026-11-28.md`.
+
 ## Unified notebook
 
 Open `/tests/browser/notebook.html` and click to begin. **Verify flows** exercises

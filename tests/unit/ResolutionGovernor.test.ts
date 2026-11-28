@@ -75,3 +75,46 @@ describe("ResolutionGovernor floor (sketchbook open)", () => {
     expect(run(g, 5, TARGET, 22)).toBe(0.6);
   });
 });
+
+describe("ResolutionGovernor: changing as rarely as it can", () => {
+  /** Counts the scale changes while a GPU cost follows the scale (cost ∝ pixels). */
+  function changes(g: ResolutionGovernor, seconds: number, fullScaleGpuMs: number): number {
+    let count = 0;
+    let last = g.scale;
+    for (let t = 0; t < seconds * 1000; t += TARGET) {
+      g.update(TARGET, fullScaleGpuMs * g.scale * g.scale);
+      if (g.scale !== last) count++;
+      last = g.scale;
+    }
+    return count;
+  }
+
+  it("drops straight to a scale that fits, instead of step after step", () => {
+    const g = new ResolutionGovernor({ targetMs: TARGET, minScale: 0.5 });
+    const count = changes(g, 3, 26);
+    expect(count).toBeLessThanOrEqual(3);
+    expect(26 * g.scale * g.scale).toBeLessThan(TARGET * 0.95);
+  });
+
+  it("settles instead of oscillating when the load follows the scale", () => {
+    const g = new ResolutionGovernor({ targetMs: TARGET, minScale: 0.5 });
+    changes(g, 5, 24);
+    expect(changes(g, 60, 24)).toBe(0);
+  });
+
+  it("respects the player's resolution setting and a 30 fps budget", () => {
+    const g = new ResolutionGovernor({ targetMs: 1000 / 30, minScale: 0.5, maxScale: 0.75 });
+    expect(g.scale).toBe(0.75);
+    // 25 ms frames are fine at 30 fps: no reason to drop.
+    expect(run(g, 5, 1000 / 30, 25)).toBe(0.75);
+    g.setMaxScale(1);
+    expect(g.scale).toBe(0.75);
+  });
+
+  it("starts over at the top after a reset", () => {
+    const g = new ResolutionGovernor({ targetMs: TARGET, minScale: 0.6 });
+    run(g, 5, TARGET, 22);
+    g.reset();
+    expect(g.scale).toBe(1);
+  });
+});

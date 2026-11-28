@@ -16,28 +16,43 @@ const desktop = (gpu: Partial<DeviceSignals>, ua = WIN): DeviceSignals => ({
   uaMobile: false,
   maxTouchPoints: 0,
   touchOnly: false,
+  screenShort: 900,
   ...gpu,
 });
 
+const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15";
+const ANDROID_PHONE =
+  "Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 Chrome/141.0 Mobile Safari/537.36";
+const ANDROID_TABLET =
+  "Mozilla/5.0 (Linux; Android 16; Pixel Tablet) AppleWebKit/537.36 Chrome/141.0 Safari/537.36";
+
 describe("classifyDevice: who can play", () => {
-  it("blocks phones", () => {
-    const iphone = desktop(
-      { vendor: "apple" },
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)",
+  it("lets phones with WebGPU play, on Low", () => {
+    const iphone = classifyDevice(desktop({ vendor: "apple", screenShort: 393 }, IPHONE));
+    expect(iphone).toMatchObject({ blocked: null, formFactor: "phone", quality: "low" });
+    const android = classifyDevice(
+      desktop({ vendor: "qualcomm", uaMobile: true, screenShort: 412 }, ANDROID_PHONE),
     );
-    expect(classifyDevice(iphone).blocked).toBe("mobile");
-    const android = desktop({ vendor: "qualcomm" }, "Mozilla/5.0 (Linux; Android 16) Mobile");
-    expect(classifyDevice({ ...android, uaMobile: true }).blocked).toBe("mobile");
+    expect(android).toMatchObject({ blocked: null, formFactor: "phone", quality: "low" });
   });
 
-  it("blocks iPads, which report a Mac user agent with a touch screen", () => {
-    expect(classifyDevice(desktop({ vendor: "apple", maxTouchPoints: 5 }, MAC)).blocked).toBe(
-      "mobile",
-    );
+  it("lets tablets play, iPads included (they report a Mac user agent with a touch screen)", () => {
+    const ipad = classifyDevice(desktop({ vendor: "apple", maxTouchPoints: 5 }, MAC));
+    expect(ipad).toMatchObject({ blocked: null, formFactor: "tablet", quality: "low" });
+    const android = classifyDevice(desktop({ vendor: "arm", screenShort: 800 }, ANDROID_TABLET));
+    expect(android).toMatchObject({ blocked: null, formFactor: "tablet" });
   });
 
-  it("blocks devices with no mouse or trackpad", () => {
-    expect(classifyDevice(desktop({ vendor: "nvidia", touchOnly: true })).blocked).toBe("mobile");
+  it("treats devices with no mouse or trackpad as touch devices", () => {
+    expect(classifyDevice(desktop({ vendor: "intel", touchOnly: true })).formFactor).toBe("tablet");
+    expect(
+      classifyDevice(desktop({ vendor: "intel", touchOnly: true, screenShort: 360 })).formFactor,
+    ).toBe("phone");
+  });
+
+  it("names WebGPU browsers to phones and tablets without one", () => {
+    expect(classifyDevice(desktop({ webgpu: false }, IPHONE)).blocked).toBe("mobile");
+    expect(classifyDevice(desktop({ webgpu: false }, ANDROID_TABLET)).blocked).toBe("mobile");
   });
 
   it("blocks browsers without WebGPU and software renderers", () => {
@@ -46,13 +61,16 @@ describe("classifyDevice: who can play", () => {
     expect(classifyDevice(desktop({ vendor: "google", architecture: "swiftshader" })).blocked).toBe(
       "software-renderer",
     );
+    expect(
+      classifyDevice(desktop({ vendor: "google", architecture: "swiftshader" }, IPHONE)).blocked,
+    ).toBe("software-renderer");
   });
 
-  it("lets touch-screen laptops with a trackpad play", () => {
-    expect(
-      classifyDevice(desktop({ vendor: "intel", architecture: "gen-12lp", maxTouchPoints: 10 }))
-        .blocked,
-    ).toBeNull();
+  it("keeps touch-screen laptops with a trackpad on the desktop path", () => {
+    const laptop = classifyDevice(
+      desktop({ vendor: "intel", architecture: "gen-12lp", maxTouchPoints: 10 }),
+    );
+    expect(laptop).toMatchObject({ blocked: null, formFactor: "desktop" });
   });
 });
 
